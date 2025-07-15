@@ -486,7 +486,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     const float gain{slot->Gain};
     if(IsAmbisonic(mChannels))
     {
-        DeviceBase *device{context->mDevice};
+        auto const device = al::get_not_null(context->mDevice);
         if(mChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device->mPostProcess))
         {
             mMix = &ConvolutionState::UpsampleMix;
@@ -546,8 +546,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     }
     else
     {
-        DeviceBase *device{context->mDevice};
-        std::span<const ChanPosMap> chanmap{};
+        auto const device = al::get_not_null(context->mDevice);
+        auto chanmap = std::span<const ChanPosMap>{};
         switch(mChannels)
         {
         case FmtMono: chanmap = MonoMap; break;

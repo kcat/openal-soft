@@ -625,7 +625,7 @@ auto CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     {
         if(auto *target = slot->Target)
             return EffectTarget{&target->Wet, nullptr};
-        auto *device = context->mDevice;
+        auto const device = al::get_not_null(context->mDevice);
         return EffectTarget{&device->Dry, &device->RealOut};
     });
     state->update(context, slot, &slot->mEffectProps, output);
@@ -1647,8 +1647,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
 void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    const auto &props = voice->mProps;
-    auto *device = context->mDevice;
+    auto const &props = voice->mProps;
+    auto const device = al::get_not_null(context->mDevice);
     auto sendslots = std::array<EffectSlot*,MaxSendCount>{};
 
     voice->mDirect.Buffer = device->Dry.Buffer;
@@ -1699,9 +1699,9 @@ void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
 
 void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    const auto &props = voice->mProps;
-    auto *device = context->mDevice;
-    const auto numsends = device->NumAuxSends;
+    auto const &props = voice->mProps;
+    auto const device = al::get_not_null(context->mDevice);
+    auto const numsends = device->NumAuxSends;
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = device->Dry.Buffer;

@@ -76,7 +76,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<DistortionProps>(*props_);
-    const auto *device = context->mDevice;
+    auto const device = al::get_not_null(context->mDevice);
 
     /* Store waveshaper edge settings. */
     const auto edge = std::min(std::sin(std::numbers::pi_v<float>*0.5f * props.Edge), 0.99f);

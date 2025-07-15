@@ -123,7 +123,7 @@ ALeffect ALCcontext::sDefaultEffect;
 
 ALCcontext::ALCcontext(const gsl::strict_not_null<al::intrusive_ptr<al::Device>> &device,
     ContextFlagBitset flags)
-    : ContextBase{std::to_address(device)}, mALDevice{device}, mContextFlags{flags}
+    : ContextBase{al::get_not_null(device)}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
     , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
 {

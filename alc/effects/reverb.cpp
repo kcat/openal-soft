@@ -1208,7 +1208,7 @@ void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<ReverbProps>(*props_);
-    const auto *Device = Context->mDevice;
+    const auto Device = al::get_not_null(Context->mDevice);
     const auto frequency = static_cast<float>(Device->mSampleRate);
 
     /* If the HF limit parameter is flagged, calculate an appropriate limit

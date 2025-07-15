@@ -110,8 +110,8 @@ void AutowahState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<AutowahProps>(*props_);
-    const auto *device = context->mDevice;
-    const auto frequency = static_cast<float>(device->mSampleRate);
+    auto const device = al::get_not_null(context->mDevice);
+    auto const frequency = static_cast<float>(device->mSampleRate);
 
     const auto ReleaseTime = std::clamp(props.ReleaseTime, 0.001f, 1.0f);
 

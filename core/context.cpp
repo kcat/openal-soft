@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <functional>
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -23,7 +22,7 @@
 static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "atomic<bitset> isn't lock-free");
 #endif
 
-ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
+ContextBase::ContextBase(gsl::strict_not_null<DeviceBase*> device) : mDevice{device}
 { Expects(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()

@@ -15,6 +15,7 @@
 #include "async_event.h"
 #include "atomic.h"
 #include "flexarray.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
@@ -82,7 +83,7 @@ struct ContextParams {
 };
 
 struct ContextBase {
-    DeviceBase *const mDevice;
+    gsl::strict_not_null<DeviceBase*> const mDevice;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
@@ -175,7 +176,7 @@ struct ContextBase {
     std::vector<ContextPropsCluster> mContextPropClusters;
 
 
-    explicit ContextBase(DeviceBase *device LIFETIMEBOUND);
+    explicit ContextBase(gsl::strict_not_null<DeviceBase*> device LIFETIMEBOUND);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
     virtual ~ContextBase();

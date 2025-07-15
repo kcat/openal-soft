@@ -1383,8 +1383,8 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 
 void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
 {
-    auto *device = context->mDevice;
-    const auto count = AmbiChannelsFromOrder(device->mAmbiOrder);
+    auto const device = al::get_not_null(context->mDevice);
+    auto const count = AmbiChannelsFromOrder(device->mAmbiOrder);
 
     slot->mWetBuffer.resize(count);
 

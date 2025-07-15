@@ -718,8 +718,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
     ASSUME(SamplesToDo > 0);
 
-    auto *Device = Context->mDevice;
-    const auto NumSends = Device->NumAuxSends;
+    auto const Device = al::get_not_null(Context->mDevice);
+    auto const NumSends = Device->NumAuxSends;
 
     /* Get voice info */
     auto DataPosInt = mPosition.load(std::memory_order_relaxed);

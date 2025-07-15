@@ -89,10 +89,6 @@ public:
 
     explicit constexpr operator bool() const noexcept { return mPtr != nullptr; }
 
-    template<typename U=T> requires std::equality_comparable_with<T*,U*>
-    constexpr auto operator==(const intrusive_ptr<U> &rhs) const noexcept -> bool
-    { return mPtr == rhs.mPtr; }
-
     [[nodiscard]] constexpr auto operator*() const noexcept -> T& { return *mPtr; }
     [[nodiscard]] constexpr auto operator->() const noexcept -> T* { return mPtr; }
     [[nodiscard]] constexpr auto get() const noexcept -> T* { return mPtr; }
@@ -113,7 +109,7 @@ public:
 template<typename T>
 void swap(intrusive_ptr<T> &lhs, intrusive_ptr<T> &rhs) noexcept { lhs.swap(rhs); }
 
-template<typename T> [[nodiscard]]
+template<typename T> requires std::three_way_comparable_with<T*,std::nullptr_t> [[nodiscard]]
 constexpr auto operator<=>(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
 { return std::compare_three_way{}(lhs.get(), nullptr); }
 
@@ -125,7 +121,7 @@ template<typename T> [[nodiscard]]
 constexpr auto operator!=(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
 { return !(lhs == nullptr); }
 
-template<typename T> [[nodiscard]]
+template<typename T> requires std::three_way_comparable_with<std::nullptr_t,T*> [[nodiscard]]
 constexpr auto operator<=>(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
 { return std::compare_three_way{}(nullptr, rhs.get()); }
 
@@ -138,15 +134,15 @@ constexpr auto operator!=(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
 { return !(rhs == nullptr); }
 
 
-template<typename T, typename U> [[nodiscard]]
+template<typename T, typename U> requires std::three_way_comparable_with<T*,U*> [[nodiscard]]
 constexpr auto operator<=>(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
 { return std::compare_three_way{}(lhs.get(), rhs.get()); }
 
-template<typename T, typename U> [[nodiscard]]
+template<typename T, typename U> requires std::equality_comparable_with<T*,U*> [[nodiscard]]
 constexpr auto operator==(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
 { return lhs.get() == rhs.get(); }
 
-template<typename T, typename U> [[nodiscard]]
+template<typename T, typename U> requires std::equality_comparable_with<T*,U*> [[nodiscard]]
 constexpr auto operator!=(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
 { return !(lhs == rhs); }
 

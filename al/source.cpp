@@ -855,8 +855,8 @@ auto LookupBuffer(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integ
     context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
 
-inline auto LookupFilter(gsl::strict_not_null<al::Device*> device, std::unsigned_integral auto id)
-    noexcept -> ALfilter*
+inline auto LookupFilter(std::nothrow_t, gsl::strict_not_null<al::Device*> device,
+    std::unsigned_integral auto id) noexcept -> ALfilter*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -870,7 +870,16 @@ inline auto LookupFilter(gsl::strict_not_null<al::Device*> device, std::unsigned
         gsl::narrow_cast<ptrdiff_t>(slidx)));
 };
 
-inline auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context,
+[[nodiscard]]
+auto LookupFilter(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
+    -> gsl::strict_not_null<ALfilter*>
+{
+    if(auto *filter = LookupFilter(std::nothrow, al::get_not_null(context->mALDevice), id))
+        [[likely]] return gsl::make_not_null(filter);
+    context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
+}
+
+inline auto LookupEffectSlot(std::nothrow_t, gsl::strict_not_null<ALCcontext*> context,
     std::unsigned_integral auto id) noexcept -> ALeffectslot*
 {
     const auto lidx = (id-1) >> 6;
@@ -878,11 +887,20 @@ inline auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context,
 
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
-    EffectSlotSubList &sublist{context->mEffectSlotList[gsl::narrow_cast<size_t>(lidx)]};
+    auto &sublist{context->mEffectSlotList[gsl::narrow_cast<size_t>(lidx)]};
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.EffectSlots->begin() + gsl::narrow_cast<size_t>(slidx));
 };
+
+[[nodiscard]]
+auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
+    -> gsl::strict_not_null<ALeffectslot*>
+{
+    if(auto *slot = LookupEffectSlot(std::nothrow, context, id))
+        [[likely]] return gsl::make_not_null(slot);
+    context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", id);
+}
 
 
 inline auto StereoModeFromEnum(std::signed_integral auto mode) noexcept
@@ -1833,9 +1851,7 @@ NOINLINE void SetProperty(const gsl::strict_not_null<ALsource*> Source,
             if(values[0])
             {
                 const auto filterlock = std::lock_guard{device->FilterLock};
-                const auto *filter = LookupFilter(device, filterid);
-                if(!filter)
-                    Context->throw_error(AL_INVALID_VALUE, "Invalid filter ID {}", filterid);
+                const auto filter = LookupFilter(Context, filterid);
                 Source->Direct.Gain = filter->Gain;
                 Source->Direct.GainHF = filter->GainHF;
                 Source->Direct.HFReference = filter->HFReference;
@@ -1972,12 +1988,7 @@ NOINLINE void SetProperty(const gsl::strict_not_null<ALsource*> Source,
             const auto slotlock = std::unique_lock{Context->mEffectSlotLock};
             auto slot = al::intrusive_ptr<ALeffectslot>{};
             if(slotid)
-            {
-                auto auxslot = LookupEffectSlot(Context, slotid);
-                if(!auxslot)
-                    Context->throw_error(AL_INVALID_VALUE, "Invalid effect ID {}", slotid);
-                slot = auxslot->newReference();
-            }
+                slot = LookupEffectSlot(Context, slotid)->newReference();
 
             if(sendidx >= device->NumAuxSends)
                 Context->throw_error(AL_INVALID_VALUE, "Invalid send {}", sendidx);
@@ -1986,10 +1997,7 @@ NOINLINE void SetProperty(const gsl::strict_not_null<ALsource*> Source,
             if(filterid)
             {
                 const auto filterlock = std::lock_guard{device->FilterLock};
-                const auto *filter = LookupFilter(device, filterid);
-                if(!filter)
-                    Context->throw_error(AL_INVALID_VALUE, "Invalid filter ID {}", filterid);
-
+                const auto filter = LookupFilter(Context, filterid);
                 send.mGain = filter->Gain;
                 send.mGainHF = filter->GainHF;
                 send.mHFReference = filter->HFReference;

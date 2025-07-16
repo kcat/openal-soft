@@ -318,8 +318,8 @@ struct ChorusStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto ChorusStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto ChorusStateFactory_getFactory() -> gsl::strict_not_null<EffectStateFactory*>
 {
     static ChorusStateFactory ChorusFactory{};
-    return &ChorusFactory;
+    return gsl::make_not_null(&ChorusFactory);
 }

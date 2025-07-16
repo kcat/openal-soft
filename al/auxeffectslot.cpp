@@ -74,7 +74,7 @@ namespace {
 using SubListAllocator = al::allocator<std::array<ALeffectslot,64>>;
 
 [[nodiscard]]
-auto getFactoryByType(EffectSlotType type) -> gsl::not_null<EffectStateFactory*>
+auto getFactoryByType(EffectSlotType type) -> gsl::strict_not_null<EffectStateFactory*>
 {
     switch(type)
     {

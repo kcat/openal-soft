@@ -2798,12 +2798,13 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(auto *slot = context->mDefaultSlot.get())
     {
-        const auto sloterr = slot->initEffect(0, ALCcontext::sDefaultEffect.type,
-            ALCcontext::sDefaultEffect.Props, gsl::make_not_null(context.get()));
-        if(sloterr == AL_NO_ERROR)
-            slot->updateProps(gsl::make_not_null(context.get()));
-        else
-            ERR("Failed to initialize the default effect");
+        try {
+            slot->initEffect(0, ALCcontext::sDefaultEffect.type, ALCcontext::sDefaultEffect.Props,
+                gsl::make_not_null(context.get()));
+        }
+        catch(std::exception& e) {
+            ERR("Exception initializing the default effect: {}", e.what());
+        }
     }
 
     TRACE("Created context {}", voidp{context.get()});

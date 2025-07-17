@@ -86,7 +86,7 @@ struct ALeffectslot {
     }
 
     auto initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
-        gsl::strict_not_null<ALCcontext*> context) -> ALenum;
+        gsl::strict_not_null<ALCcontext*> context) -> void;
     void updateProps(gsl::strict_not_null<ALCcontext*> context) const;
 
     static void SetName(gsl::strict_not_null<ALCcontext*> context, ALuint id,

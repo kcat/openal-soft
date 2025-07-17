@@ -457,21 +457,20 @@ try {
 
     auto slot = LookupEffectSlot(context, effectslot);
     auto targetref = al::intrusive_ptr<ALeffectslot>{};
-    auto err = ALenum{};
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
         {
             auto const device = al::get_not_null(context->mALDevice);
             const auto effectlock = std::lock_guard{device->EffectLock};
-            auto *effect = value ? LookupEffect(context, as_unsigned(value)).get() : nullptr;
-            if(effect)
-                err = slot->initEffect(effect->id, effect->type, effect->Props, context);
+            if(value == 0)
+                slot->initEffect(0, AL_EFFECT_NULL, EffectProps{}, context);
             else
-                err = slot->initEffect(0, AL_EFFECT_NULL, EffectProps{}, context);
+            {
+                auto const effect = LookupEffect(context, as_unsigned(value));
+                slot->initEffect(effect->id, effect->type, effect->Props, context);
+            }
         }
-        if(err != AL_NO_ERROR)
-            context->throw_error(err, "Effect initialization failed");
 
         if(slot->mState == SlotState::Initial) [[unlikely]]
         {
@@ -836,7 +835,7 @@ ALeffectslot::~ALeffectslot()
 }
 
 auto ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
-    gsl::strict_not_null<ALCcontext*> context) -> ALenum
+    gsl::strict_not_null<ALCcontext*> context) -> void
 {
     const auto newtype = EffectSlotTypeFromEnum(effectType);
     if(newtype != Effect.Type)
@@ -866,8 +865,6 @@ auto ALeffectslot::initEffect(ALuint effectId, ALenum effectType, const EffectPr
         props->State = nullptr;
         props = props->next.load(std::memory_order_relaxed);
     }
-
-    return AL_NO_ERROR;
 }
 
 void ALeffectslot::updateProps(gsl::strict_not_null<ALCcontext*> context) const
@@ -1397,14 +1394,7 @@ void ALeffectslot::eax_set_efx_slot_effect(EaxEffect &effect)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_EFFECT] "
 
-    const auto error = initEffect(0, effect.al_effect_type_, effect.al_effect_props_,
-        mEaxALContext);
-    if(error != AL_NO_ERROR)
-    {
-        ERR(EAX_PREFIX "Failed to initialize an effect.");
-        return;
-    }
-
+    initEffect(0, effect.al_effect_type_, effect.al_effect_props_, mEaxALContext);
     if(mState == SlotState::Initial)
     {
         mPropsDirty = false;

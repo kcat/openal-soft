@@ -161,7 +161,7 @@ struct ContextBase {
     std::vector<VoicePropsCluster> mVoicePropClusters;
 
 
-    EffectSlot *getEffectSlot() LIFETIMEBOUND;
+    auto getEffectSlot() LIFETIMEBOUND -> gsl::strict_not_null<EffectSlot*>;
 
     using EffectSlotCluster = std::unique_ptr<std::array<EffectSlot,4>>;
     std::vector<EffectSlotCluster> mEffectSlotClusters;

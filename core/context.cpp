@@ -129,14 +129,14 @@ void ContextBase::allocEffectSlotProps()
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
-EffectSlot *ContextBase::getEffectSlot()
+auto ContextBase::getEffectSlot() -> gsl::strict_not_null<EffectSlot*>
 {
     for(auto &clusterptr : mEffectSlotClusters)
     {
         const auto cluster = std::span{*clusterptr};
         if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlot::InUse);
             iter != cluster.end())
-            return std::to_address(iter);
+            return gsl::make_not_null(std::to_address(iter));
     }
 
     auto clusterptr = std::make_unique<EffectSlotCluster::element_type>();
@@ -146,7 +146,7 @@ EffectSlot *ContextBase::getEffectSlot()
     TRACE("Increasing allocated effect slots to {}", totalcount);
 
     mEffectSlotClusters.emplace_back(std::move(clusterptr));
-    return mEffectSlotClusters.back()->data();
+    return gsl::make_not_null(mEffectSlotClusters.back()->data());
 }
 
 

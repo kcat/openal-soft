@@ -102,7 +102,7 @@ struct UhjEncoder final : public UhjEncoderBase {
 struct UhjEncoderIIR final : public UhjEncoderBase {
     struct Tag { using encoder_t = UhjEncoderIIR; };
 
-    static constexpr std::size_t sFilterDelay{1};
+    static constexpr std::size_t sFilterDelay{1_uz};
 
     static consteval auto TypeName() noexcept -> std::string_view
     { return "IIR"; }
@@ -168,7 +168,7 @@ struct UhjDecoder final : public DecoderBase {
     struct Tag { using decoder_t = UhjDecoder<N>; };
 
     /* The number of extra sample frames needed for input. */
-    static constexpr std::size_t sInputPadding{N/2};
+    static constexpr unsigned int sInputPadding{N/2u};
 
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
@@ -177,7 +177,7 @@ struct UhjDecoder final : public DecoderBase {
     alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
     alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize + sInputPadding*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sInputPadding*2_uz> mTemp{};
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
@@ -199,7 +199,7 @@ struct UhjDecoderIIR final : public DecoderBase {
      * by one sample. The first filtered output sample is cut to align it with
      * the first non-filtered sample, similar to the FIR filters.
      */
-    static constexpr std::size_t sInputPadding{1};
+    static constexpr unsigned int sInputPadding{1u};
 
     bool mFirstRun{true};
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
@@ -219,7 +219,7 @@ template<std::size_t N>
 struct UhjStereoDecoder final : public DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoder<N>; };
 
-    static constexpr std::size_t sInputPadding{N/2};
+    static constexpr unsigned int sInputPadding{N/2u};
 
     float mCurrentWidth{-1.0f};
 
@@ -229,7 +229,7 @@ struct UhjStereoDecoder final : public DecoderBase {
     alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
     alignas(16) std::array<float,sInputPadding-1> mSHistory{};
 
-    alignas(16) std::array<float,BufferLineSize + sInputPadding*2> mTemp{};
+    alignas(16) std::array<float,BufferLineSize + sInputPadding*2_uz> mTemp{};
 
     /**
      * Applies Super Stereo processing on a stereo signal to create a B-Format
@@ -243,7 +243,7 @@ struct UhjStereoDecoder final : public DecoderBase {
 struct UhjStereoDecoderIIR final : public DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoderIIR; };
 
-    static constexpr std::size_t sInputPadding{1};
+    static constexpr unsigned int sInputPadding{1u};
 
     bool mFirstRun{true};
     float mCurrentWidth{-1.0f};

@@ -167,7 +167,8 @@ auto jack_load() -> bool
 
 
 /* NOLINTNEXTLINE(*-avoid-c-arrays) */
-using JackPortsPtr = std::unique_ptr<const char*[], decltype([](void *ptr) { jack_free(ptr); })>;
+using JackPortsPtr = std::unique_ptr<gsl::czstring[], decltype([](gsl::czstring *ptr)
+    { jack_free(static_cast<void*>(ptr)); })>;
 
 struct DeviceEntry {
     std::string mName;

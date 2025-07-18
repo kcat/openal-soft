@@ -41,11 +41,11 @@ enum {
 inline std::bitset<MAX_EFFECTS> DisabledEffects;
 
 struct EffectList {
-    const char name[16]; /* NOLINT(*-avoid-c-arrays) */
+    std::string_view name;
     ALuint type;
     ALenum val;
 };
-DECL_HIDDEN extern const std::array<EffectList,16> gEffectList;
+DECL_HIDDEN constinit extern const std::array<EffectList,16> gEffectList;
 
 using EffectHandlerVariant = std::variant<NullEffectHandler,ReverbEffectHandler,
     StdReverbEffectHandler,AutowahEffectHandler,ChorusEffectHandler,CompressorEffectHandler,

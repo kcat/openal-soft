@@ -1149,10 +1149,9 @@ auto GetResource(int /*name*/) noexcept -> std::span<const char>
 
 #else
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char hrtf_default[]{
+constexpr auto hrtf_default = std::to_array({
 #include "default_hrtf.txt"
-};
+});
 
 auto GetResource(int name) noexcept -> std::span<const char>
 {

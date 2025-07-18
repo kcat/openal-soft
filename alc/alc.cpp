@@ -697,7 +697,7 @@ void alc_initconfig()
             const auto entry = std::string_view{namerange.begin(), namerange.end()};
             std::ranges::for_each(gEffectList, [entry](const EffectList &effectitem) noexcept
             {
-                if(entry == std::data(effectitem.name))
+                if(entry == effectitem.name)
                     DisabledEffects.set(effectitem.type);
             });
         });

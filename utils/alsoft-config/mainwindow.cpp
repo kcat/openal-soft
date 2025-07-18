@@ -25,6 +25,7 @@
 #endif
 
 #include "almalloc.h"
+#include "gsl/gsl"
 
 namespace {
 
@@ -33,7 +34,7 @@ struct BackendNamePair {
     QString backend_name;
     QString full_string;
 };
-const std::array backendList{
+const auto backendList = std::array{
 #if HAVE_PIPEWIRE
     BackendNamePair{ QStringLiteral("pipewire"), QStringLiteral("PipeWire") },
 #endif
@@ -84,7 +85,7 @@ struct NameValuePair {
     QString name;
     QString value;
 };
-const std::array speakerModeList{
+const auto speakerModeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Mono"), QStringLiteral("mono") },
     NameValuePair{ QStringLiteral("Stereo"), QStringLiteral("stereo") },
@@ -99,7 +100,7 @@ const std::array speakerModeList{
     NameValuePair{ QStringLiteral("Ambisonic, 3rd Order"), QStringLiteral("ambi3") },
     NameValuePair{ QStringLiteral("Ambisonic, 4th Order"), QStringLiteral("ambi4") },
 };
-const std::array sampleTypeList{
+const auto sampleTypeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("8-bit int"), QStringLiteral("int8") },
     NameValuePair{ QStringLiteral("8-bit uint"), QStringLiteral("uint8") },
@@ -109,7 +110,7 @@ const std::array sampleTypeList{
     NameValuePair{ QStringLiteral("32-bit uint"), QStringLiteral("uint32") },
     NameValuePair{ QStringLiteral("32-bit float"), QStringLiteral("float32") },
 };
-const std::array resamplerList{
+const auto resamplerList = std::array{
     NameValuePair{ QStringLiteral("Point"), QStringLiteral("point") },
     NameValuePair{ QStringLiteral("Linear"), QStringLiteral("linear") },
     NameValuePair{ QStringLiteral("Cubic Spline"), QStringLiteral("spline") },
@@ -122,25 +123,25 @@ const std::array resamplerList{
     NameValuePair{ QStringLiteral("47th order Sinc (fast)"), QStringLiteral("fast_bsinc48") },
     NameValuePair{ QStringLiteral("47th order Sinc"), QStringLiteral("bsinc48") },
 };
-const std::array stereoModeList{
+const auto stereoModeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Speakers"), QStringLiteral("speakers") },
     NameValuePair{ QStringLiteral("Headphones"), QStringLiteral("headphones") },
 };
-const std::array stereoEncList{
+const auto stereoEncList = std::array{
     NameValuePair{ QStringLiteral("Default"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Basic"), QStringLiteral("panpot") },
     NameValuePair{ QStringLiteral("UHJ"), QStringLiteral("uhj") },
     NameValuePair{ QStringLiteral("Binaural"), QStringLiteral("hrtf") },
 };
-const std::array ambiFormatList{
+const auto ambiFormatList = std::array{
     NameValuePair{ QStringLiteral("Default"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("AmbiX (ACN, SN3D)"), QStringLiteral("ambix") },
     NameValuePair{ QStringLiteral("Furse-Malham"), QStringLiteral("fuma") },
     NameValuePair{ QStringLiteral("ACN, N3D"), QStringLiteral("acn+n3d") },
     NameValuePair{ QStringLiteral("ACN, FuMa"), QStringLiteral("acn+fuma") },
 };
-const std::array hrtfModeList{
+const auto hrtfModeList = std::array{
     NameValuePair{ QStringLiteral("1st Order Ambisonic"), QStringLiteral("ambi1") },
     NameValuePair{ QStringLiteral("2nd Order Ambisonic"), QStringLiteral("ambi2") },
     NameValuePair{ QStringLiteral("3rd Order Ambisonic"), QStringLiteral("ambi3") },
@@ -154,13 +155,12 @@ auto GetDefaultIndex(const std::span<const NameValuePair> list) -> uint8_t
 {
     auto iter = std::ranges::find(list, QStringLiteral(""), &NameValuePair::value);
     if(iter != list.end())
-        return static_cast<uint8_t>(std::distance(list.begin(), iter));
+        return gsl::narrow<uint8_t>(std::distance(list.begin(), iter));
     throw std::runtime_error{"Failed to find default entry"};
 }
 
 #ifdef Q_OS_WIN32
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-using WCharBufferPtr = std::unique_ptr<WCHAR[], decltype([](void *buffer)
+using WCharBufferPtr = std::unique_ptr<WCHAR, decltype([](WCHAR *buffer)
     { CoTaskMemFree(buffer); })>;
 #endif
 

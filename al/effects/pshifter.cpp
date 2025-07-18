@@ -114,7 +114,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct PitchShifterCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_PITCH_SHIFTER_EFFECT", message}

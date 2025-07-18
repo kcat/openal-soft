@@ -182,7 +182,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct ModulatorCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_RING_MODULATOR_EFFECT", message}

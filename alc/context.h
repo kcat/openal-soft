@@ -285,6 +285,7 @@ private:
         Eax5Props d; // Deferred.
     };
 
+    /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
     class ContextException final : public EaxException {
     public:
         explicit ContextException(const std::string_view message)

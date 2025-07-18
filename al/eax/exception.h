@@ -6,6 +6,7 @@
 #include <string_view>
 
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxException : public std::runtime_error {
     static std::string make_message(std::string_view context, std::string_view message);
 

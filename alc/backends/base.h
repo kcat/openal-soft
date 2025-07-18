@@ -101,6 +101,7 @@ enum class backend_error {
     OutOfMemory
 };
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class backend_exception final : public base_exception {
     backend_error mErrorCode;
 

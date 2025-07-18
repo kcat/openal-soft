@@ -174,7 +174,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct DistortionCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_DISTORTION_EFFECT", message}

@@ -10,6 +10,7 @@
 
 namespace al {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class base_exception : public std::exception {
     std::string mMessage;
 

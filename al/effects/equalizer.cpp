@@ -272,7 +272,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct EqualizerCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_EQUALIZER_EFFECT", message}

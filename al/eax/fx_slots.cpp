@@ -10,6 +10,7 @@
 namespace
 {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotsException : public EaxException {
 public:
     explicit EaxFxSlotsException(const std::string_view message)

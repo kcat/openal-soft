@@ -34,6 +34,7 @@
 struct ALbuffer;
 
 #if ALSOFT_EAX
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotException : public EaxException {
 public:
     explicit EaxFxSlotException(const std::string_view message)

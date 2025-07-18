@@ -453,12 +453,13 @@ void StdReverbEffectHandler::GetParamfv(ALCcontext *context, const ReverbProps &
 #if ALSOFT_EAX
 namespace {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxReverbEffectException : public EaxException {
 public:
     explicit EaxReverbEffectException(const std::string_view message)
         : EaxException{"EAX_REVERB_EFFECT", message}
     { }
-}; // EaxReverbEffectException
+};
 
 struct EnvironmentValidator1 {
     void operator()(unsigned long ulEnvironment) const
@@ -962,6 +963,7 @@ struct EnvironmentSizeDeferrer3 {
 } // namespace
 
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct EaxReverbCommitter::Exception : public EaxReverbEffectException {
     using EaxReverbEffectException::EaxReverbEffectException;
 };

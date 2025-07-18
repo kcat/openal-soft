@@ -32,7 +32,12 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice { virtual ~ALCdevice() = default; };
+struct ALCdevice {
+    ALCdevice() = default;
+    virtual ~ALCdevice() = default;
+    ALCdevice(const ALCdevice&) = delete;
+    auto operator=(const ALCdevice&) -> ALCdevice& = delete;
+};
 
 namespace al {
 

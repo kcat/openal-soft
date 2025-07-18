@@ -155,7 +155,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct AutowahCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
     { }

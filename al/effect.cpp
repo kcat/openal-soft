@@ -31,7 +31,7 @@
 #include <new>
 #include <numeric>
 #include <span>
-#include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -55,7 +55,6 @@
 #include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
-#include "intrusive_ptr.h"
 #include "opthelpers.h"
 
 using uint = unsigned int;
@@ -82,6 +81,8 @@ const std::array<EffectList,16> gEffectList{{
 
 
 namespace {
+
+using namespace std::string_view_literals;
 
 using SubListAllocator = al::allocator<std::array<ALeffect,64>>;
 
@@ -539,10 +540,10 @@ EffectSubList::~EffectSubList()
 
 
 struct EffectPreset {
-    const char name[32]; /* NOLINT(*-avoid-c-arrays) */
+    std::string_view name;
     EFXEAXREVERBPROPERTIES props;
 };
-#define DECL(x) EffectPreset{#x, EFX_REVERB_PRESET_##x}
+#define DECL(x) EffectPreset{#x##sv, EFX_REVERB_PRESET_##x}
 static constexpr auto reverblist = std::array{
     DECL(GENERIC),
     DECL(PADDEDCELL),
@@ -675,8 +676,6 @@ static constexpr auto reverblist = std::array{
 
 void LoadReverbPreset(const std::string_view name, ALeffect *effect)
 {
-    using namespace std::string_view_literals;
-
     if(al::case_compare(name, "NONE"sv) == 0)
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
@@ -689,46 +688,50 @@ void LoadReverbPreset(const std::string_view name, ALeffect *effect)
     else if(!DisabledEffects.test(REVERB_EFFECT))
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
-        InitEffectParams(effect, AL_EFFECT_NULL);
-    for(const auto &reverbitem : reverblist)
     {
-        if(al::case_compare(name, std::data(reverbitem.name)) != 0)
-            continue;
-
-        TRACE("Loading reverb '{}'", std::data(reverbitem.name));
-        const auto &props = reverbitem.props;
-        auto &dst = std::get<ReverbProps>(effect->Props);
-        dst.Density   = props.flDensity;
-        dst.Diffusion = props.flDiffusion;
-        dst.Gain   = props.flGain;
-        dst.GainHF = props.flGainHF;
-        dst.GainLF = props.flGainLF;
-        dst.DecayTime    = props.flDecayTime;
-        dst.DecayHFRatio = props.flDecayHFRatio;
-        dst.DecayLFRatio = props.flDecayLFRatio;
-        dst.ReflectionsGain   = props.flReflectionsGain;
-        dst.ReflectionsDelay  = props.flReflectionsDelay;
-        dst.ReflectionsPan[0] = props.flReflectionsPan[0];
-        dst.ReflectionsPan[1] = props.flReflectionsPan[1];
-        dst.ReflectionsPan[2] = props.flReflectionsPan[2];
-        dst.LateReverbGain   = props.flLateReverbGain;
-        dst.LateReverbDelay  = props.flLateReverbDelay;
-        dst.LateReverbPan[0] = props.flLateReverbPan[0];
-        dst.LateReverbPan[1] = props.flLateReverbPan[1];
-        dst.LateReverbPan[2] = props.flLateReverbPan[2];
-        dst.EchoTime  = props.flEchoTime;
-        dst.EchoDepth = props.flEchoDepth;
-        dst.ModulationTime  = props.flModulationTime;
-        dst.ModulationDepth = props.flModulationDepth;
-        dst.AirAbsorptionGainHF = props.flAirAbsorptionGainHF;
-        dst.HFReference = props.flHFReference;
-        dst.LFReference = props.flLFReference;
-        dst.RoomRolloffFactor = props.flRoomRolloffFactor;
-        dst.DecayHFLimit = props.iDecayHFLimit ? AL_TRUE : AL_FALSE;
+        TRACE("Reverb disabled, ignoring preset '{}'", name);
+        InitEffectParams(effect, AL_EFFECT_NULL);
         return;
     }
 
-    WARN("Reverb preset '{}' not found", name);
+    const auto preset = std::ranges::find_if(reverblist, [name](const EffectPreset &item) -> bool
+    { return al::case_compare(name, item.name) == 0; });
+    if(preset == reverblist.end())
+    {
+        WARN("Reverb preset '{}' not found", name);
+        return;
+    }
+
+    TRACE("Loading reverb '{}'", preset->name);
+    const auto &props = preset->props;
+    auto &dst = std::get<ReverbProps>(effect->Props);
+    dst.Density   = props.flDensity;
+    dst.Diffusion = props.flDiffusion;
+    dst.Gain   = props.flGain;
+    dst.GainHF = props.flGainHF;
+    dst.GainLF = props.flGainLF;
+    dst.DecayTime    = props.flDecayTime;
+    dst.DecayHFRatio = props.flDecayHFRatio;
+    dst.DecayLFRatio = props.flDecayLFRatio;
+    dst.ReflectionsGain   = props.flReflectionsGain;
+    dst.ReflectionsDelay  = props.flReflectionsDelay;
+    dst.ReflectionsPan[0] = props.flReflectionsPan[0];
+    dst.ReflectionsPan[1] = props.flReflectionsPan[1];
+    dst.ReflectionsPan[2] = props.flReflectionsPan[2];
+    dst.LateReverbGain   = props.flLateReverbGain;
+    dst.LateReverbDelay  = props.flLateReverbDelay;
+    dst.LateReverbPan[0] = props.flLateReverbPan[0];
+    dst.LateReverbPan[1] = props.flLateReverbPan[1];
+    dst.LateReverbPan[2] = props.flLateReverbPan[2];
+    dst.EchoTime  = props.flEchoTime;
+    dst.EchoDepth = props.flEchoDepth;
+    dst.ModulationTime  = props.flModulationTime;
+    dst.ModulationDepth = props.flModulationDepth;
+    dst.AirAbsorptionGainHF = props.flAirAbsorptionGainHF;
+    dst.HFReference = props.flHFReference;
+    dst.LFReference = props.flLFReference;
+    dst.RoomRolloffFactor = props.flRoomRolloffFactor;
+    dst.DecayHFLimit = props.iDecayHFLimit ? AL_TRUE : AL_FALSE;
 }
 
 bool IsValidEffectType(ALenum type) noexcept

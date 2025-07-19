@@ -706,6 +706,8 @@ set(CORE_OBJS
     core/helpers.h
     core/hrtf.cpp
     core/hrtf.h
+    core/hrtf_resource.cpp
+    core/hrtf_resource.hpp
     core/logging.cpp
     core/logging.h
     core/mastering.cpp

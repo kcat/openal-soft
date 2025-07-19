@@ -36,6 +36,7 @@
 #include "fmt/core.h"
 #include "gsl/gsl"
 #include "helpers.h"
+#include "hrtf_resource.hpp"
 #include "logging.h"
 #include "mixer/hrtfdefs.h"
 #include "polyphase_resampler.h"
@@ -1139,28 +1140,6 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
     TRACE("Adding built-in entry \"{}\"", entry.mFilename);
 }
 
-
-#define IDR_DEFAULT_HRTF_MHR 1
-
-#ifndef ALSOFT_EMBED_HRTF_DATA
-
-auto GetResource(int /*name*/) noexcept -> std::span<const char>
-{ return {}; }
-
-#else
-
-constexpr auto hrtf_default = std::to_array({
-#include "default_hrtf.txt"
-});
-
-auto GetResource(int name) noexcept -> std::span<const char>
-{
-    if(name == IDR_DEFAULT_HRTF_MHR)
-        return hrtf_default;
-    return {};
-}
-#endif
-
 } // namespace
 
 
@@ -1193,8 +1172,8 @@ auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::strin
     if(usedefaults)
     {
         std::ranges::for_each(SearchDataFiles(".mhr"sv, "openal/hrtf"sv), AddFileEntry);
-        if(!GetResource(IDR_DEFAULT_HRTF_MHR).empty())
-            AddBuiltInEntry("Built-In HRTF", IDR_DEFAULT_HRTF_MHR);
+        if(!GetHrtfResource(DefaultHrtfResourceID).empty())
+            AddBuiltInEntry("Built-In HRTF", DefaultHrtfResourceID);
     }
 
     auto list = std::vector<std::string>(EnumeratedHrtfs.size());
@@ -1245,7 +1224,7 @@ try {
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading built-in HRTF {}...", residx);
-        auto res = GetResource(residx);
+        auto res = GetHrtfResource(residx);
         if(res.empty())
         {
             ERR("Could not get resource {}, {}", residx, name);

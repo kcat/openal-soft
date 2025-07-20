@@ -22,6 +22,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -439,7 +440,7 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
      * Set up pointers to storage following the main HRTF struct.
      */
-    const auto storage = std::span{reinterpret_cast<char*>(Hrtf.get()), total};
+    const auto storage = std::span{reinterpret_cast<char*>(std::to_address(Hrtf)), total};
     const auto base = storage.begin();
     auto storeiter = base;
     std::advance(storeiter, sizeof(HrtfStore));
@@ -543,14 +544,13 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported HRIR size, irSize={} ({} to {})", irSize,
+            MinIrLength, HrirLength)};
     }
     if(evCount < MinEvCount || evCount > MaxEvCount)
     {
-        ERR("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
-            MaxEvCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported elevation count: evCount={} ({} to {})",
+            evCount, MinEvCount, MaxEvCount)};
     }
 
     auto elevs = std::vector<HrtfStore::Elevation>(evCount);
@@ -563,16 +563,14 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     {
         if(elevs[i].irOffset <= elevs[i-1].irOffset)
         {
-            ERR("Invalid evOffset: evOffset[{}]={} (last={})", i, elevs[i].irOffset,
-                elevs[i-1].irOffset);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid evOffset: evOffset[{}]={} (last={})", i,
+                elevs[i].irOffset, elevs[i-1].irOffset)};
         }
     }
     if(irCount <= elevs.back().irOffset)
     {
-        ERR("Invalid evOffset: evOffset[{}]={} (irCount={})", elevs.size()-1,
-            elevs.back().irOffset, irCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Invalid evOffset: evOffset[{}]={} (irCount={})",
+            elevs.size()-1, elevs.back().irOffset, irCount)};
     }
 
     for(size_t i{1};i < evCount;i++)
@@ -580,17 +578,17 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
         elevs[i-1].azCount = static_cast<ushort>(elevs[i].irOffset - elevs[i-1].irOffset);
         if(elevs[i-1].azCount < MinAzCount || elevs[i-1].azCount > MaxAzCount)
         {
-            ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", i-1, elevs[i-1].azCount,
-                MinAzCount, MaxAzCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported azimuth count: azCount[{}]={} ({} to {})", i-1, elevs[i-1].azCount,
+                MinAzCount, MaxAzCount)};
         }
     }
     elevs.back().azCount = static_cast<ushort>(irCount - elevs.back().irOffset);
     if(elevs.back().azCount < MinAzCount || elevs.back().azCount > MaxAzCount)
     {
-        ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", elevs.size()-1,
-            elevs.back().azCount, MinAzCount, MaxAzCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format(
+            "Unsupported azimuth count: azCount[{}]={} ({} to {})", elevs.size()-1,
+            elevs.back().azCount, MinAzCount, MaxAzCount)};
     }
 
     auto coeffs = std::vector<HrirArray>(irCount, HrirArray{});
@@ -608,8 +606,8 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     {
         if(delays[i][0] > MaxHrirDelay)
         {
-            ERR("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}]: {} ({})", i, delays[i][0],
+                MaxHrirDelay)};
         }
         delays[i][0] <<= HrirDelayFracBits;
     }
@@ -631,14 +629,13 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported HRIR size, irSize={} ({} to {})", irSize,
+            MinIrLength, HrirLength)};
     }
     if(evCount < MinEvCount || evCount > MaxEvCount)
     {
-        ERR("Unsupported elevation count: evCount={} ({} to {})", evCount, MinEvCount,
-            MaxEvCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported elevation count: evCount={} ({} to {})",
+            evCount, MinEvCount, MaxEvCount)};
     }
 
     auto elevs = std::vector<HrtfStore::Elevation>(evCount);
@@ -651,9 +648,9 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
     {
         if(elevs[i].azCount < MinAzCount || elevs[i].azCount > MaxAzCount)
         {
-            ERR("Unsupported azimuth count: azCount[{}]={} ({} to {})", i, elevs[i].azCount,
-                MinAzCount, MaxAzCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported azimuth count: azCount[{}]={} ({} to {})", i, elevs[i].azCount,
+                MinAzCount, MaxAzCount)};
         }
     }
 
@@ -677,8 +674,8 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
     {
         if(delays[i][0] > MaxHrirDelay)
         {
-            ERR("Invalid delays[{}]: {} ({})", i, delays[i][0], MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}]: {} ({})", i, delays[i][0],
+                MaxHrirDelay)};
         }
         delays[i][0] <<= HrirDelayFracBits;
     }
@@ -706,26 +703,20 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         throw std::runtime_error{"Premature end of file"};
 
     if(sampleType > SampleType_S24)
-    {
-        ERR("Unsupported sample type: {}", sampleType);
-        return nullptr;
-    }
+        throw std::runtime_error{fmt::format("Unsupported sample type: {}", sampleType)};
     if(channelType > ChanType_LeftRight)
-    {
-        ERR("Unsupported channel type: {}", channelType);
-        return nullptr;
-    }
+        throw std::runtime_error{fmt::format("Unsupported channel type: {}", channelType)};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported HRIR size, irSize={} ({} to {})", irSize,
+            MinIrLength, HrirLength)};
     }
     if(fdCount < 1 || fdCount > MaxFdCount)
     {
-        ERR("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
-            MaxFdCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format(
+            "Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
+            MaxFdCount)};
     }
 
     auto fields = std::vector<HrtfStore::Field>(fdCount);
@@ -739,24 +730,24 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
-            ERR("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
-                MinFdDistance, MaxFdDistance);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
+                MinFdDistance, MaxFdDistance)};
         }
         if(evCount < MinEvCount || evCount > MaxEvCount)
         {
-            ERR("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
-                MinEvCount, MaxEvCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount, MinEvCount,
+                MaxEvCount)};
         }
 
         fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance > fields[f-1].distance))
         {
-            ERR("Field distance[{}] is not after previous ({} > {})", f, fields[f].distance,
-                fields[f-1].distance);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Field distance[{}] is not after previous ({} > {})", f, fields[f].distance,
+                fields[f-1].distance)};
         }
 
         const auto ebase = elevs.size();
@@ -773,9 +764,9 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invazi != new_azs.end())
         {
             const auto idx = std::distance(new_azs.begin(), invazi);
-            ERR("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, idx, *invazi,
-                MinAzCount, MaxAzCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, idx, *invazi,
+                MinAzCount, MaxAzCount)};
         }
     }
 
@@ -820,8 +811,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invdelay != ldelays.end())
         {
             const auto idx = std::distance(ldelays.begin(), invdelay);
-            ERR("Invalid delays[{}][0]: {} > {}", idx, *invdelay, MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}][0]: {} > {}", idx, *invdelay,
+                MaxHrirDelay)};
         }
 
         std::ranges::transform(ldelays, ldelays.begin(), [](const ubyte delay) -> ubyte
@@ -859,8 +850,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invdelay != joined_delays.end())
         {
             const auto idx = std::distance(joined_delays.begin(), invdelay);
-            ERR("Invalid delays[{}][{}]: {} > {}", idx>>1, idx&1, *invdelay, MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}][{}]: {} > {}", idx>>1, idx&1,
+                *invdelay, MaxHrirDelay)};
         }
 
         std::ranges::transform(joined_delays, joined_delays.begin(), [](const ubyte delay) -> ubyte
@@ -949,21 +940,18 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         throw std::runtime_error{"Premature end of file"};
 
     if(channelType > ChanType_LeftRight)
-    {
-        ERR("Unsupported channel type: {}", channelType);
-        return nullptr;
-    }
+        throw std::runtime_error{fmt::format("Unsupported channel type: {}", channelType)};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
-        ERR("Unsupported HRIR size, irSize={} ({} to {})", irSize, MinIrLength, HrirLength);
-        return nullptr;
+        throw std::runtime_error{fmt::format("Unsupported HRIR size, irSize={} ({} to {})", irSize,
+            MinIrLength, HrirLength)};
     }
     if(fdCount < 1 || fdCount > MaxFdCount)
     {
-        ERR("Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
-            MaxFdCount);
-        return nullptr;
+        throw std::runtime_error{fmt::format(
+            "Unsupported number of field-depths: fdCount={} ({} to {})", fdCount, MinFdCount,
+            MaxFdCount)};
     }
 
     auto fields = std::vector<HrtfStore::Field>(fdCount);
@@ -977,24 +965,24 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
 
         if(distance < MinFdDistance || distance > MaxFdDistance)
         {
-            ERR("Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
-                MinFdDistance, MaxFdDistance);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported field distance[{}]={} ({} to {} millimeters)", f, distance,
+                MinFdDistance, MaxFdDistance)};
         }
         if(evCount < MinEvCount || evCount > MaxEvCount)
         {
-            ERR("Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount,
-                MinEvCount, MaxEvCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported elevation count: evCount[{}]={} ({} to {})", f, evCount, MinEvCount,
+                MaxEvCount)};
         }
 
         fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance < fields[f-1].distance))
         {
-            ERR("Field distance[{}] is not before previous ({} < {})", f, fields[f].distance,
-                fields[f-1].distance);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Field distance[{}] is not before previous ({} < {})", f, fields[f].distance,
+                fields[f-1].distance)};
         }
 
         const auto ebase = elevs.size();
@@ -1011,9 +999,9 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invazi != new_azs.end())
         {
             const auto idx = std::distance(new_azs.begin(), invazi);
-            ERR("Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, idx, *invazi,
-                MinAzCount, MaxAzCount);
-            return nullptr;
+            throw std::runtime_error{fmt::format(
+                "Unsupported azimuth count: azCount[{}][{}]={} ({} to {})", f, idx, *invazi,
+                MinAzCount, MaxAzCount)};
         }
     }
 
@@ -1047,9 +1035,8 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invdelay != ldelays.end())
         {
             const auto idx = std::distance(ldelays.begin(), invdelay);
-            ERR("Invalid delays[{}][0]: {:f} > {}", idx, *invdelay/float{HrirDelayFracOne},
-                MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}][0]: {:f} > {}", idx,
+                *invdelay/float{HrirDelayFracOne}, MaxHrirDelay)};
         }
 
         /* Mirror the left ear responses to the right ear. */
@@ -1073,9 +1060,8 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(invdelay != joined_delays.end())
         {
             const auto idx = std::distance(joined_delays.begin(), invdelay);
-            ERR("Invalid delays[{}][{}]: {:f} ({})", idx>>1, idx&1,
-                *invdelay/float{HrirDelayFracOne}, MaxHrirDelay);
-            return nullptr;
+            throw std::runtime_error{fmt::format("Invalid delays[{}][{}]: {:f} ({})", idx>>1,
+                idx&1, *invdelay/float{HrirDelayFracOne}, MaxHrirDelay)};
         }
     }
 
@@ -1247,37 +1233,38 @@ try {
         stream = std::move(fstr);
     }
 
-    auto hrtf = std::unique_ptr<HrtfStore>{};
-    auto magic = std::array<char,HeaderMarkerSize>{};
-    stream->read(magic.data(), magic.size());
-    if(stream->gcount() < std::streamsize{magic.size()})
-        ERR("{} data is too short ({} bytes)", name, stream->gcount());
-    else if(std::ranges::equal(GetMarker03Name(), magic))
+    auto hrtf = std::invoke([&stream]() -> std::unique_ptr<HrtfStore>
     {
-        TRACE("Detected data set format v3");
-        hrtf = LoadHrtf03(*stream);
-    }
-    else if(std::ranges::equal(GetMarker02Name(), magic))
-    {
-        TRACE("Detected data set format v2");
-        hrtf = LoadHrtf02(*stream);
-    }
-    else if(std::ranges::equal(GetMarker01Name(), magic))
-    {
-        TRACE("Detected data set format v1");
-        hrtf = LoadHrtf01(*stream);
-    }
-    else if(std::ranges::equal(GetMarker00Name(), magic))
-    {
-        TRACE("Detected data set format v0");
-        hrtf = LoadHrtf00(*stream);
-    }
-    else
-        ERR("Invalid header in {}: {::#04X}", name, std::as_bytes(std::span{magic}));
+        auto magic = std::array<char,HeaderMarkerSize>{};
+        stream->read(magic.data(), magic.size());
+        if(stream->gcount() < std::streamsize{magic.size()})
+            throw std::runtime_error{fmt::format("Data is too short ({} bytes)",
+                stream->gcount())};
+        if(std::ranges::equal(GetMarker03Name(), magic))
+        {
+            TRACE("Detected data set format v3");
+            return LoadHrtf03(*stream);
+        }
+        if(std::ranges::equal(GetMarker02Name(), magic))
+        {
+            TRACE("Detected data set format v2");
+            return LoadHrtf02(*stream);
+        }
+        if(std::ranges::equal(GetMarker01Name(), magic))
+        {
+            TRACE("Detected data set format v1");
+            return LoadHrtf01(*stream);
+        }
+        if(std::ranges::equal(GetMarker00Name(), magic))
+        {
+            TRACE("Detected data set format v0");
+            return LoadHrtf00(*stream);
+        }
+        throw std::runtime_error{fmt::format("Invalid header: {::#04X}",
+            std::as_bytes(std::span{magic}))};
+    });
     stream.reset();
-
-    if(!hrtf)
-        return nullptr;
+    Expects(hrtf != nullptr);
 
     if(hrtf->mSampleRate != devrate)
     {

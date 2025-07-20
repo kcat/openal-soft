@@ -34,6 +34,7 @@
 #include "filesystem.h"
 #include "filters/splitter.h"
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "helpers.h"
 #include "hrtf_resource.hpp"
@@ -1251,28 +1252,28 @@ try {
     stream->read(magic.data(), magic.size());
     if(stream->gcount() < std::streamsize{magic.size()})
         ERR("{} data is too short ({} bytes)", name, stream->gcount());
-    else if(GetMarker03Name() == std::string_view{magic.data(), magic.size()})
+    else if(std::ranges::equal(GetMarker03Name(), magic))
     {
         TRACE("Detected data set format v3");
         hrtf = LoadHrtf03(*stream);
     }
-    else if(GetMarker02Name() == std::string_view{magic.data(), magic.size()})
+    else if(std::ranges::equal(GetMarker02Name(), magic))
     {
         TRACE("Detected data set format v2");
         hrtf = LoadHrtf02(*stream);
     }
-    else if(GetMarker01Name() == std::string_view{magic.data(), magic.size()})
+    else if(std::ranges::equal(GetMarker01Name(), magic))
     {
         TRACE("Detected data set format v1");
         hrtf = LoadHrtf01(*stream);
     }
-    else if(GetMarker00Name() == std::string_view{magic.data(), magic.size()})
+    else if(std::ranges::equal(GetMarker00Name(), magic))
     {
         TRACE("Detected data set format v0");
         hrtf = LoadHrtf00(*stream);
     }
     else
-        ERR("Invalid header in {}: \"{}\"", name, std::string_view{magic.data(), magic.size()});
+        ERR("Invalid header in {}: {::#04X}", name, std::as_bytes(std::span{magic}));
     stream.reset();
 
     if(!hrtf)

@@ -1283,12 +1283,6 @@ try {
     {
         TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, uint{hrtf->mSampleRate}, devrate);
 
-        /* Calculate the last elevation's index and get the total IR count. */
-        const auto lastEv = std::accumulate(hrtf->mFields.begin(), hrtf->mFields.end(), 0_uz,
-            [](const size_t curval, const HrtfStore::Field &field) noexcept -> size_t
-            { return curval + field.evCount; }) - 1;
-        const auto irCount = size_t{hrtf->mElev[lastEv].irOffset} + hrtf->mElev[lastEv].azCount;
-
         /* Resample all the IRs. */
         auto inout = std::array<std::array<double,HrirLength>,2>{};
         auto rs = PPhaseResampler{};
@@ -1314,7 +1308,7 @@ try {
 
         /* Scale the delays for the new sample rate. */
         auto max_delay = 0.0f;
-        auto new_delays = std::vector<float>(irCount*2_uz);
+        auto new_delays = std::vector<float>(hrtf->mDelays.size()*2_uz);
         const auto rate_scale = static_cast<float>(devrate)/static_cast<float>(hrtf->mSampleRate);
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
             [&max_delay,rate_scale](const ubyte oldval)

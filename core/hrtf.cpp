@@ -1300,12 +1300,14 @@ try {
             auto coeffs0 = coeffs | std::views::elements<0>;
             std::ranges::copy(coeffs0, inout[0].begin());
             rs.process(inout[0], inout[1]);
-            std::ranges::copy(inout[1], coeffs0.begin());
+            std::ranges::transform(inout[1], coeffs0.begin(),
+                [](const double d) noexcept { return gsl::narrow_cast<float>(d); });
 
             auto coeffs1 = coeffs | std::views::elements<1>;
             std::ranges::copy(coeffs1, inout[0].begin());
             rs.process(inout[0], inout[1]);
-            std::ranges::copy(inout[1], coeffs1.begin());
+            std::ranges::transform(inout[1], coeffs1.begin(),
+                [](const double d) noexcept { return gsl::narrow_cast<float>(d); });
         });
         rs = {};
 

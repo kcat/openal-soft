@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <span>
 
 #include "hrtf_resource.hpp"
@@ -9,14 +8,19 @@
 
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-auto GetResource(int /*name*/) noexcept -> std::span<const char>
+auto GetResource(int name [[maybe_unused]]) noexcept -> std::span<const char>
 { return {}; }
 
 #else
 
-constexpr auto hrtf_default = std::to_array<char>({
+namespace {
+
+/* NOLINTNEXTLINE(*-avoid-c-arrays) */
+constexpr char hrtf_default[] = {
 #include "default_hrtf.txt"
-});
+};
+
+} // namespace
 
 auto GetHrtfResource(int name) noexcept -> std::span<const char>
 {

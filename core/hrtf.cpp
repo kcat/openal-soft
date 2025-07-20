@@ -767,7 +767,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        const auto invazi = std::ranges::find_if_not(new_azs, [](const ubyte azi) noexcept
+        const auto invazi = std::ranges::find_if_not(new_azs, [](const auto &azi) noexcept
         { return azi >= MinAzCount && azi <= MaxAzCount; });
         if(invazi != new_azs.end())
         {

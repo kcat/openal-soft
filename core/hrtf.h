@@ -58,6 +58,20 @@ struct HrtfStore {
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 
+/* Data set limits must be the same as or more flexible than those defined in
+ * the makemhr utility.
+ */
+constexpr inline auto MaxHrirDelay = uint{HrtfHistoryLength} - 1u;
+
+constexpr inline auto HrirDelayFracBits = 2u;
+constexpr inline auto HrirDelayFracOne = 1u << HrirDelayFracBits;
+constexpr inline auto HrirDelayFracHalf = HrirDelayFracOne >> 1u;
+
+/* The sample rate is stored as a 24-bit integer, so 16MHz is the largest
+ * supported.
+ */
+constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ffu;
+
 
 struct EvRadians { float value; };
 struct AzRadians { float value; };

@@ -33,6 +33,7 @@
 #include <stdexcept>
 
 #include "bs2b.h"
+#include "gsl/gsl"
 
 namespace {
 
@@ -71,11 +72,11 @@ void init(Bs2b::bs2b_processor *bs2b)
      * $d  = 1 / 2 / pi / $fc;
      * $x  = exp(-1 / $d);
      */
-    auto x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_lo/static_cast<float>(bs2b->srate));
+    auto x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_lo/gsl::narrow_cast<float>(bs2b->srate));
     bs2b->b1_lo = x;
     bs2b->a0_lo = G_lo * (1.0f - x) * g;
 
-    x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_hi/static_cast<float>(bs2b->srate));
+    x = std::exp(-std::numbers::pi_v<float>*2.0f*Fc_hi/gsl::narrow_cast<float>(bs2b->srate));
     bs2b->b1_hi = x;
     bs2b->a0_hi = (1.0f - G_hi * (1.0f - x)) * g;
     bs2b->a1_hi = -x * g;

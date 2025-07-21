@@ -18,6 +18,7 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
 #include "defs.h"
+#include "gsl/gsl"
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
@@ -215,8 +216,8 @@ void Resample_<CubicTag,SSETag>(const InterpState *state, const std::span<const 
     auto pos = size_t{MaxResamplerEdge-1};
     std::ranges::generate(dst, [&pos,&frac,src,increment,filter]() -> float
     {
-        const auto pi = frac >> CubicPhaseDiffBits; ASSUME(pi < CubicPhaseCount);
-        const auto pf = static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne);
+        const auto pi = size_t{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+        const auto pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)*(1.0f/CubicPhaseDiffOne);
         const auto pf4 = _mm_set1_ps(pf);
 
         /* Apply the phase interpolated filter. */
@@ -257,7 +258,7 @@ void Resample_<BSincTag,SSETag>(const InterpState *state, const std::span<const 
     {
         // Calculate the phase index and factor.
         const auto pi = size_t{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-        const auto pf = static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne);
+        const auto pf = gsl::narrow_cast<float>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
 
         // Apply the scale and phase interpolated filter.
         auto r4 = _mm_setzero_ps();
@@ -309,7 +310,7 @@ void Resample_<FastBSincTag,SSETag>(const InterpState *state, const std::span<co
     {
         // Calculate the phase index and factor.
         const auto pi = size_t{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-        const auto pf = static_cast<float>(frac&BSincPhaseDiffMask) * (1.0f/BSincPhaseDiffOne);
+        const auto pf = gsl::narrow_cast<float>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
 
         // Apply the phase interpolated filter.
         auto r4 = _mm_setzero_ps();
@@ -373,7 +374,7 @@ void Mix_<SSETag>(const std::span<const float> InSamples,
     if((OutPos&3) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
 
-    const auto delta = (Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f;
+    const auto delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 
@@ -392,7 +393,7 @@ void Mix_<SSETag>(const std::span<const float> InSamples, const std::span<float>
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
         return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 
-    const auto delta = (Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f;
+    const auto delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     const auto fade_len = std::min(Counter, InSamples.size());
     const auto realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 

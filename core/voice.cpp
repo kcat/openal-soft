@@ -296,7 +296,7 @@ inline void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<const I
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
-    static constexpr auto MaxStepIndex = static_cast<int>(IMAStep_size.size()) - 1;
+    static constexpr auto MaxStepIndex = gsl::narrow<int>(IMAStep_size.size()) - 1;
 
     Expects(srcStep > 0 || srcStep <= 2);
     Expects(srcChan < srcStep);
@@ -327,7 +327,7 @@ inline void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<const I
 
         if(skip == 0)
         {
-            dstSamples[0] = static_cast<float>(prevSample) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(prevSample) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -349,7 +349,7 @@ inline void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<const I
             const auto byteval = nibbleData[byteOffset].value;
             const auto nibble = std::to_integer<uint8_t>((byteval>>byteShift)&NibbleMask);
 
-            prevSample += IMA4Codeword[nibble] * IMAStep_size[static_cast<uint>(prevIndex)] / 8;
+            prevSample += IMA4Codeword[nibble] * IMAStep_size[gsl::narrow_cast<uint>(prevIndex)]/8;
             prevSample = std::clamp(prevSample, -32768, 32767);
 
             prevIndex += IMA4Index_adjust[nibble];
@@ -379,7 +379,7 @@ inline void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<const I
             const auto sample = decode_nibble(nibbleOffset);
             ++nibbleOffset;
 
-            return static_cast<float>(sample) / 32768.0f;
+            return gsl::narrow_cast<float>(sample) / 32768.0f;
         });
         dstSamples = std::span{dst, dstSamples.end()};
     }
@@ -429,16 +429,16 @@ inline void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<cons
          */
         if(skip == 0)
         {
-            dstSamples[0] = static_cast<float>(sampleHistory[1]) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[1]) / 32768.0f;
             if(dstSamples.size() < 2) return;
-            dstSamples[1] = static_cast<float>(sampleHistory[0]) / 32768.0f;
+            dstSamples[1] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(2);
             if(dstSamples.empty()) return;
         }
         else if(skip == 1)
         {
             --skip;
-            dstSamples[0] = static_cast<float>(sampleHistory[0]) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -489,7 +489,7 @@ inline void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<cons
             const auto sample = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;
 
-            return static_cast<float>(sample) / 32768.0f;
+            return gsl::narrow_cast<float>(sample) / 32768.0f;
         });
         dstSamples = std::span{dst, dstSamples.end()};
     }
@@ -635,14 +635,14 @@ void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const 
          */
         if(Counter > fademix)
         {
-            const auto a = static_cast<float>(fademix) / static_cast<float>(Counter);
+            const auto a = gsl::narrow_cast<float>(fademix) / gsl::narrow_cast<float>(Counter);
             gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
         const auto hrtfparams = MixHrtfFilter{
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
-            0.0f, gain / static_cast<float>(fademix)};
+            0.0f, gain / gsl::narrow_cast<float>(fademix)};
         MixHrtfBlendSamples(HrtfSamples, AccumSamples.subspan(OutPos), IrSize, &parms.Hrtf.Old,
             &hrtfparams, fademix);
 
@@ -655,14 +655,14 @@ void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const 
     if(fademix < samples.size())
     {
         const auto todo = samples.size() - fademix;
-        auto gain{TargetGain};
+        auto gain = TargetGain;
 
         /* Interpolate the target gain if the gain fading lasts longer than
          * this mix.
          */
         if(Counter > samples.size())
         {
-            const auto a = static_cast<float>(todo) / static_cast<float>(Counter-fademix);
+            const auto a = gsl::narrow_cast<float>(todo)/gsl::narrow_cast<float>(Counter-fademix);
             gain = lerpf(parms.Hrtf.Old.Gain, TargetGain, a);
         }
 
@@ -670,7 +670,7 @@ void DoHrtfMix(const std::span<const float> samples, DirectParams &parms, const 
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             parms.Hrtf.Old.Gain,
-            (gain - parms.Hrtf.Old.Gain) / static_cast<float>(todo)};
+            (gain - parms.Hrtf.Old.Gain) / gsl::narrow_cast<float>(todo)};
         MixHrtfSamples(HrtfSamples.subspan(fademix), AccumSamples.subspan(OutPos), IrSize,
             &hrtfparams, todo);
 
@@ -769,7 +769,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
          * should start at. Skip this update if it's beyond the output sample
          * count.
          */
-        OutPos = static_cast<uint>(round<seconds>(diff * Device->mSampleRate).count());
+        OutPos = gsl::narrow_cast<uint>(round<seconds>(diff * Device->mSampleRate).count());
         if(OutPos >= SamplesToDo) return;
     }
 
@@ -844,7 +844,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 dataSize64 += ext + MaxResamplerEdge;
 
                 if(dataSize64 <= SrcSizeMax)
-                    return std::array{dstRemaining, static_cast<uint>(dataSize64)};
+                    return std::array{dstRemaining, gsl::narrow_cast<uint>(dataSize64)};
 
                 /* If the source size got saturated, we can't fill the desired
                  * dst size. Figure out how many dst samples we can fill.
@@ -857,7 +857,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                      * aligned, so limit to a multiple of 4 samples to maintain
                      * alignment if we need to do another iteration after this.
                      */
-                    return std::array{static_cast<uint>(dataSize64)&~3u, SrcSizeMax};
+                    return std::array{gsl::narrow_cast<uint>(dataSize64)&~3u, SrcSizeMax};
                 }
                 return std::array{dstRemaining, SrcSizeMax};
             });
@@ -868,7 +868,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 /* If the current position is negative, there's that many
                  * silent samples to load before using the buffer.
                  */
-                srcSampleDelay = static_cast<uint>(-intPos);
+                srcSampleDelay = gsl::narrow_cast<uint>(-intPos);
                 if(srcSampleDelay >= srcBufferSize)
                 {
                     /* If the number of silent source samples exceeds the
@@ -902,7 +902,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
             else if(mFlags.test(VoiceIsStatic))
             {
-                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                const auto uintPos = gsl::narrow_cast<uint>(std::max(intPos, 0));
                 const auto bufferSamples = resampleBuffer.first(srcBufferSize)
                     .subspan(srcSampleDelay);
                 LoadBufferStatic(BufferListItem, BufferLoopItem, uintPos, chan, mFrameStep,
@@ -922,16 +922,16 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                     { return std::as_writable_bytes(splspan); }, BufferListItem->mSamples);
 
                     const auto gotBytes = BufferListItem->mCallback(BufferListItem->mUserData,
-                        &samples[byteOffset], static_cast<int>(needBytes));
+                        &samples[byteOffset], gsl::narrow_cast<int>(needBytes));
                     if(gotBytes < 0)
                         mFlags.set(VoiceCallbackStopped);
-                    else if(static_cast<uint>(gotBytes) < needBytes)
+                    else if(gsl::narrow_cast<uint>(gotBytes) < needBytes)
                     {
                         mFlags.set(VoiceCallbackStopped);
-                        mNumCallbackBlocks += static_cast<uint>(gotBytes) / mBytesPerBlock;
+                        mNumCallbackBlocks += gsl::narrow_cast<uint>(gotBytes) / mBytesPerBlock;
                     }
                     else
-                        mNumCallbackBlocks = static_cast<uint>(needBlocks);
+                        mNumCallbackBlocks = gsl::narrow_cast<uint>(needBlocks);
                 }
                 const auto numSamples = size_t{mNumCallbackBlocks} * mSamplesPerBlock;
                 const auto bufferSamples = resampleBuffer.first(srcBufferSize)
@@ -941,7 +941,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
             }
             else
             {
-                const auto uintPos = static_cast<uint>(std::max(intPos, 0));
+                const auto uintPos = gsl::narrow_cast<uint>(std::max(intPos, 0));
                 const auto bufferSamples = resampleBuffer.first(srcBufferSize)
                     .subspan(srcSampleDelay);
                 LoadBufferQueue(BufferListItem, BufferLoopItem, uintPos, chan, mFrameStep,
@@ -981,7 +981,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 fracPos += dstBufferSize*increment;
                 const auto srcOffset = fracPos >> MixerFracBits;
                 fracPos &= MixerFracMask;
-                intPos = al::add_sat(intPos, static_cast<int>(srcOffset));
+                intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
                 cbOffset += srcOffset;
 
                 /* If more samples need to be loaded, copy the back of the
@@ -1103,7 +1103,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
     /* Update voice positions and buffers as needed. */
     DataPosFrac += increment*samplesToMix;
     auto const samplesDone = DataPosFrac >> MixerFracBits;
-    DataPosInt = al::add_sat(DataPosInt, static_cast<int>(samplesDone));
+    DataPosInt = al::add_sat(DataPosInt, gsl::narrow_cast<int>(samplesDone));
     DataPosFrac &= MixerFracMask;
 
     auto buffers_done = 0u;
@@ -1116,18 +1116,18 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
                 /* Handle looping static source */
                 const auto LoopStart = BufferListItem->mLoopStart;
                 const auto LoopEnd = BufferListItem->mLoopEnd;
-                auto DataPosUInt = static_cast<uint>(DataPosInt);
+                auto DataPosUInt = gsl::narrow_cast<uint>(DataPosInt);
                 if(DataPosUInt >= LoopEnd)
                 {
                     Expects(LoopEnd > LoopStart);
                     DataPosUInt = ((DataPosUInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
-                    DataPosInt = static_cast<int>(DataPosUInt);
+                    DataPosInt = gsl::narrow_cast<int>(DataPosUInt);
                 }
             }
             else
             {
                 /* Handle non-looping static source */
-                if(static_cast<uint>(DataPosInt) >= BufferListItem->mSampleLen)
+                if(gsl::narrow_cast<uint>(DataPosInt) >= BufferListItem->mSampleLen)
                     BufferListItem = nullptr;
             }
         }
@@ -1160,10 +1160,10 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         {
             /* Handle streaming source */
             do {
-                if(BufferListItem->mSampleLen > static_cast<uint>(DataPosInt))
+                if(BufferListItem->mSampleLen > gsl::narrow_cast<uint>(DataPosInt))
                     break;
 
-                DataPosInt -= static_cast<int>(BufferListItem->mSampleLen);
+                DataPosInt -= gsl::narrow_cast<int>(BufferListItem->mSampleLen);
 
                 ++buffers_done;
                 BufferListItem = BufferListItem->mNext.load(std::memory_order_relaxed);
@@ -1301,7 +1301,7 @@ void Voice::prepare(DeviceBase *device)
          * identity, so don't mess with it).
          */
         const auto splitter = BandSplitter{device->mXOverFreq
-            / static_cast<float>(device->mSampleRate)};
+            / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ranges::for_each(mChans, [splitter,device](Voice::ChannelData &chandata)
         {
             chandata.mAmbiHFScale = 1.0f;
@@ -1329,7 +1329,7 @@ void Voice::prepare(DeviceBase *device)
             device->m2DMixing);
 
         const auto splitter = BandSplitter{device->mXOverFreq
-            / static_cast<float>(device->mSampleRate)};
+            / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ignore = std::ranges::mismatch(mChans, OrdersSpan,
             [&scales,splitter,device](Voice::ChannelData &chandata, const size_t scaleidx)
         {

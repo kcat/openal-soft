@@ -676,7 +676,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         {
             const auto idx = std::distance(ldelays.begin(), invdelay);
             throw std::runtime_error{fmt::format("Invalid delays[{}][0]: {:f} > {}", idx,
-                *invdelay/float{HrirDelayFracOne}, MaxHrirDelay)};
+                gsl::narrow_cast<float>(*invdelay)/float{HrirDelayFracOne}, MaxHrirDelay)};
         }
 
         /* Mirror the left ear responses to the right ear. */
@@ -701,7 +701,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         {
             const auto idx = std::distance(joined_delays.begin(), invdelay);
             throw std::runtime_error{fmt::format("Invalid delays[{}][{}]: {:f} ({})", idx>>1,
-                idx&1, *invdelay/float{HrirDelayFracOne}, MaxHrirDelay)};
+                idx&1, gsl::narrow_cast<float>(*invdelay)/float{HrirDelayFracOne}, MaxHrirDelay)};
         }
     }
 

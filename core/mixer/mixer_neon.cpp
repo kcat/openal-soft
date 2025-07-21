@@ -16,6 +16,7 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
 #include "defs.h"
+#include "gsl/gsl"
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
@@ -238,7 +239,7 @@ void Resample_<LerpTag,NEONTag>(const InterpState*, const std::span<const float>
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment]
         {
             const auto output = lerpf(src[pos+0], src[pos+1],
-                static_cast<float>(frac) * (1.0f/MixerFracOne));
+                gsl::narrow_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             pos  += frac>>MixerFracBits;
@@ -320,7 +321,8 @@ void Resample_<CubicTag,NEONTag>(const InterpState *state, const std::span<const
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment,filter]
         {
             const auto pi = frac >> CubicPhaseDiffBits; ASSUME(pi < CubicPhaseCount);
-            const auto pf = static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne);
+            const auto pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)
+                * (1.0f/CubicPhaseDiffOne);
             const auto pf4 = vdupq_n_f32(pf);
 
             const auto f4 = vmlaq_f32(vld1q_f32(filter[pi].mCoeffs.data()), pf4,

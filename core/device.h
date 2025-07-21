@@ -104,7 +104,7 @@ public:
 };
 
 
-constexpr auto InvalidChannelIndex = static_cast<std::uint8_t>(~0u);
+constexpr auto InvalidChannelIndex = gsl::narrow_cast<std::uint8_t>(~0u);
 
 struct BFChannelConfig {
     float Scale;
@@ -139,7 +139,7 @@ struct MixParams {
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = static_cast<std::uint8_t>(j);
+                    idx = gsl::narrow_cast<std::uint8_t>(j);
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }

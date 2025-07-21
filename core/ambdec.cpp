@@ -266,7 +266,7 @@ auto AmbDecConf::load(const std::string_view fname) noexcept
         }
         else if(command == "/end")
         {
-            const auto endpos = static_cast<std::size_t>(istr.tellg());
+            const auto endpos = gsl::narrow_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
                 return make_error(linenum, "Extra junk on end: {}",
                     std::string_view{buffer}.substr(endpos));
@@ -283,7 +283,7 @@ auto AmbDecConf::load(const std::string_view fname) noexcept
             return make_error(linenum, "Unexpected command: {}", command);
 
         istr.clear();
-        const auto endpos = static_cast<std::size_t>(istr.tellg());
+        const auto endpos = gsl::narrow_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
             return make_error(linenum, "Extra junk on line: {}",
                 std::string_view{buffer}.substr(endpos));

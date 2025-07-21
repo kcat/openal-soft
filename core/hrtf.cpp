@@ -75,7 +75,7 @@ struct LoadedHrtf {
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr auto PassthruCoeff = static_cast<float>(1.0/std::numbers::sqrt2);
+constexpr auto PassthruCoeff = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
 
 auto LoadedHrtfLock = std::mutex{};
 auto LoadedHrtfs = std::vector<LoadedHrtf>{};
@@ -135,7 +135,7 @@ class databuf final : public std::streambuf {
         if(pos < 0 || pos > egptr()-eback())
             return traits_type::eof();
 
-        setg(eback(), eback()+static_cast<size_t>(pos), egptr());
+        setg(eback(), eback()+gsl::narrow_cast<size_t>(pos), egptr());
         return pos;
     }
 
@@ -162,10 +162,10 @@ struct IdxBlend { uint idx; float blend; };
  */
 auto CalcEvIndex(uint evcount, float ev) -> IdxBlend
 {
-    ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * static_cast<float>(evcount-1);
+    ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * gsl::narrow_cast<float>(evcount-1);
 
     const auto idx = float2uint(ev);
-    return IdxBlend{std::min(idx, evcount-1u), ev-static_cast<float>(idx)};
+    return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<float>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
@@ -173,10 +173,10 @@ auto CalcEvIndex(uint evcount, float ev) -> IdxBlend
  */
 auto CalcAzIndex(uint azcount, float az) -> IdxBlend
 {
-    az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * static_cast<float>(azcount);
+    az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * gsl::narrow_cast<float>(azcount);
 
     const auto idx = float2uint(az);
-    return IdxBlend{idx%azcount, az-static_cast<float>(idx)};
+    return IdxBlend{idx%azcount, az-gsl::narrow_cast<float>(idx)};
 }
 
 } // namespace
@@ -270,7 +270,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     };
 
     const auto xover_norm = double{XOverFreq} / Hrtf->mSampleRate;
-    mChannels[0].mSplitter.init(static_cast<float>(xover_norm));
+    mChannels[0].mSplitter.init(gsl::narrow_cast<float>(xover_norm));
     std::ranges::fill(mChannels | std::views::transform(&HrtfChannelState::mSplitter)
         | std::views::drop(1), mChannels[0].mSplitter);
 
@@ -352,7 +352,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     const auto join_join = std::views::join | std::views::join;
     std::ignore = std::ranges::transform(tmpres | join_join,
         (mChannels | std::views::transform(&HrtfChannelState::mCoeffs) | join_join).begin(),
-        [](const double in) noexcept { return static_cast<float>(in); });
+        [](const double in) noexcept { return gsl::narrow_cast<float>(in); });
     tmpres.clear();
 
     const auto max_length = std::min(hrir_delay_round(max_delay) + irSize, HrirLength);
@@ -561,7 +561,8 @@ try {
         /* Scale the delays for the new sample rate. */
         auto max_delay = 0.0f;
         auto new_delays = std::vector<float>(hrtf->mDelays.size()*2_uz);
-        const auto rate_scale = static_cast<float>(devrate)/static_cast<float>(hrtf->mSampleRate);
+        const auto rate_scale = gsl::narrow_cast<float>(devrate)
+            / gsl::narrow_cast<float>(uint{hrtf->mSampleRate});
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
             [&max_delay,rate_scale](const ubyte oldval)
         {
@@ -587,14 +588,14 @@ try {
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
             [delay_scale](const float fdelay) -> ubyte
         {
-            return static_cast<ubyte>(float2int(fdelay*delay_scale + 0.5f));
+            return gsl::narrow_cast<ubyte>(float2int(fdelay*delay_scale + 0.5f));
         });
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        const auto newIrSize = std::round(static_cast<float>(hrtf->mIrSize) * rate_scale);
-        hrtf->mIrSize = static_cast<uint8_t>(std::min(float{HrirLength}, newIrSize));
+        const auto newIrSize = std::round(gsl::narrow_cast<float>(uint{hrtf->mIrSize})*rate_scale);
+        hrtf->mIrSize = gsl::narrow_cast<uint8_t>(std::min(float{HrirLength}, newIrSize));
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 

@@ -10,6 +10,7 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "gsl/gsl"
 
 namespace {
 
@@ -24,7 +25,7 @@ static_assert(AmbiIndex::FromFuMa2D.size() == MaxAmbi2DChannels);
 
 using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
 
-constexpr auto inv_sqrt3f = static_cast<float>(1.0/std::numbers::sqrt3);
+constexpr auto inv_sqrt3f = gsl::narrow_cast<float>(1.0/std::numbers::sqrt3);
 
 
 /* These HF gains are derived from the same 32-point speaker array. The scale
@@ -294,7 +295,7 @@ constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decode
             auto sum = 0.0;
             for(const auto k : std::views::iota(0_uz, decoder.size()))
                 sum += double{decoder[k][i]} * encoder[k][j];
-            res[i][j] = static_cast<float>(sum);
+            res[i][j] = gsl::narrow_cast<float>(sum);
         }
     }
 

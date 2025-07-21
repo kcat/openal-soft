@@ -16,6 +16,7 @@
 
 #include "alcomplex.h"
 #include "alnumeric.h"
+#include "gsl/gsl"
 #include "pffft.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -70,13 +71,14 @@ struct SegmentedFilter {
         auto tmpBuffer = std::vector<double>(FilterSize, 0.0);
         for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
-            const auto k = int{FilterSize/2} - static_cast<int>(i*2 + 1);
+            const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/double{FilterSize} * static_cast<double>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{FilterSize}
+                * gsl::narrow_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = std::numbers::pi * static_cast<double>(k);
+            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
             tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
         }
 
@@ -99,8 +101,8 @@ struct SegmentedFilter {
              */
             for(const auto i : std::views::iota(0_uz, sSampleLength))
             {
-                fftTmp[i*2 + 0] = static_cast<float>(fftBuffer[i].real()) / float{sFftLength};
-                fftTmp[i*2 + 1] = static_cast<float>((i == 0) ? fftBuffer[sSampleLength].real()
+                fftTmp[i*2 + 0] = gsl::narrow_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = gsl::narrow_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
                     : fftBuffer[i].imag()) / float{sFftLength};
             }
             mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);
@@ -563,7 +565,7 @@ void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, cons
         }
         else
         {
-            const auto wstep = (wtarget - wcurrent) / static_cast<float>(samplesToDo);
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
             auto fi = 0.0f;
 
             const auto lfade = left.first(samplesToDo);
@@ -640,7 +642,7 @@ void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, cons
         }
         else
         {
-            const auto wstep = (wtarget - wcurrent) / static_cast<float>(samplesToDo);
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
             auto fi = 0.0f;
 
             const auto lfade = left.first(samplesToDo);

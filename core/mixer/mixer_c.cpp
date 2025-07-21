@@ -14,6 +14,7 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.h"
 #include "defs.h"
+#include "gsl/gsl"
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
@@ -45,14 +46,14 @@ auto do_point(const std::span<const float> vals, const size_t pos, const uint) n
 { return vals[pos]; }
 [[nodiscard]] constexpr
 auto do_lerp(const std::span<const float> vals, const size_t pos, const uint frac) noexcept -> float
-{ return lerpf(vals[pos+0], vals[pos+1], static_cast<float>(frac)*(1.0f/MixerFracOne)); }
+{ return lerpf(vals[pos+0], vals[pos+1], gsl::narrow_cast<float>(frac)*(1.0f/MixerFracOne)); }
 [[nodiscard]] constexpr
 auto do_cubic(const CubicState &istate, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
-    const float pf{static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne)};
+    const auto pi = uint{frac>>CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+    const auto pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne);
 
     const auto fil = std::span{istate.filter[pi].mCoeffs};
     const auto phd = std::span{istate.filter[pi].mDeltas};
@@ -65,19 +66,19 @@ auto do_cubic(const CubicState &istate, const std::span<const float> vals, const
 auto do_fastbsinc(const BsincState &bsinc, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
-    const size_t m{bsinc.m};
+    const auto m = size_t{bsinc.m};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
+    const auto pi = uint{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
+    const auto pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne);
 
     const auto fil = bsinc.filter.subspan(2_uz*pi*m);
     const auto phd = fil.subspan(m);
 
     /* Apply the phase interpolated filter. */
-    float r{0.0f};
+    auto r = 0.0f;
     for(size_t j_f{0};j_f < m;++j_f)
         r += (fil[j_f] + pf*phd[j_f]) * vals[pos+j_f];
     return r;
@@ -86,13 +87,13 @@ auto do_fastbsinc(const BsincState &bsinc, const std::span<const float> vals, co
 auto do_bsinc(const BsincState &bsinc, const std::span<const float> vals, const size_t pos,
     const uint frac) noexcept -> float
 {
-    const size_t m{bsinc.m};
+    const auto m = size_t{bsinc.m};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
     /* Calculate the phase index and factor. */
-    const uint pi{frac >> BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-    const float pf{static_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne)};
+    const auto pi = uint{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
+    const auto pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne);
 
     const auto fil = bsinc.filter.subspan(2_uz*pi*m);
     const auto phd = fil.subspan(m);
@@ -100,7 +101,7 @@ auto do_bsinc(const BsincState &bsinc, const std::span<const float> vals, const 
     const auto spd = scd.subspan(m);
 
     /* Apply the scale and phase interpolated filter. */
-    float r{0.0f};
+    auto r = 0.0f;
     for(size_t j_f{0};j_f < m;++j_f)
         r += (fil[j_f] + bsinc.sf*scd[j_f] + pf*(phd[j_f] + bsinc.sf*spd[j_f])) * vals[pos+j_f];
     return r;
@@ -111,10 +112,10 @@ void DoResample(const std::span<const float> src, uint frac, const uint incremen
     const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
-    size_t pos{0};
+    auto pos = 0_uz;
     std::generate(dst.begin(), dst.end(), [&pos,&frac,src,increment]() -> float
     {
-        const float output{Sampler(src, pos, frac)};
+        const auto output = Sampler(src, pos, frac);
         frac += increment;
         pos  += frac>>MixerFracBits;
         frac &= MixerFracMask;
@@ -127,10 +128,10 @@ void DoResample(const U istate, const std::span<const float> src, uint frac, con
     const std::span<float> dst)
 {
     ASSUME(frac < MixerFracOne);
-    size_t pos{0};
+    auto pos = 0_uz;
     std::generate(dst.begin(), dst.end(), [istate,src,&pos,&frac,increment]() -> float
     {
-        const float output{Sampler(istate, src, pos, frac)};
+        const auto output = Sampler(istate, src, pos, frac);
         frac += increment;
         pos  += frac>>MixerFracBits;
         frac &= MixerFracMask;
@@ -258,7 +259,7 @@ void Mix_<CTag>(const std::span<const float> InSamples, const std::span<FloatBuf
     const std::span<float> CurrentGains, const std::span<const float> TargetGains,
     const size_t Counter, const size_t OutPos)
 {
-    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
+    const auto delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     const auto fade_len = std::min(Counter, InSamples.size());
 
     auto curgains = CurrentGains.begin();
@@ -272,7 +273,7 @@ template<>
 void Mix_<CTag>(const std::span<const float> InSamples, const std::span<float> OutBuffer,
     float &CurrentGain, const float TargetGain, const size_t Counter)
 {
-    const float delta{(Counter > 0) ? 1.0f / static_cast<float>(Counter) : 0.0f};
+    const auto delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     const auto fade_len = std::min(Counter, InSamples.size());
 
     MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, fade_len, Counter);

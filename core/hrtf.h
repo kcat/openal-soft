@@ -28,8 +28,8 @@ struct HrtfStore {
         float distance;
         ubyte evCount;
     };
-    /* NOTE: Fields are stored *backwards*. field[0] is the farthest field, and
-     * field[fdCount-1] is the nearest.
+    /* NOTE: Fields are stored *backwards*. mFields.front() is the farthest
+     * field, and mFields.back() is the nearest.
      */
     std::span<const Field> mFields;
 

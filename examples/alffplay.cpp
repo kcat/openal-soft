@@ -1312,7 +1312,7 @@ void AudioState::handler()
             std::ranges::fill(mBufferData, uint8_t{});
 
             mReadPos.store(0, std::memory_order_relaxed);
-            mWritePos.store(RoundDown(mBufferData.size()/2_uz, mFrameSize),
+            mWritePos.store(RoundFromZero(mBufferData.size()/2_uz, mFrameSize),
                 std::memory_order_relaxed);
 
             auto refresh = ALCint{};

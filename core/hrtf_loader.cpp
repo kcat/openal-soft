@@ -66,11 +66,11 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
 
     const auto irCount = size_t{elevs.back().azCount} + elevs.back().irOffset;
     auto total = sizeof(HrtfStore);
-    total  = RoundUp(total, alignof(HrtfStore::Field)); /* Align for field infos */
+    total  = RoundFromZero(total, alignof(HrtfStore::Field)); /* Align for field infos */
     total += fields.size_bytes();
-    total  = RoundUp(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
+    total  = RoundFromZero(total, alignof(HrtfStore::Elevation)); /* Align for elevation infos */
     total += elevs.size_bytes();
-    total  = RoundUp(total, 16); /* Align for coefficients using SIMD */
+    total  = RoundFromZero(total, 16); /* Align for coefficients using SIMD */
     total += coeffs.size_bytes();
     total += delays.size_bytes();
 
@@ -97,7 +97,7 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
         elevs.size()};
     std::advance(storeiter, elevs.size_bytes());
 
-    storeiter = RoundUp(storeiter-base, 16)+base; /* Align for coefficients using SIMD */
+    storeiter = RoundFromZero(storeiter-base, 16)+base; /* Align for coefficients using SIMD */
     auto coeffs_ = std::span{reinterpret_cast<HrirArray*>(std::to_address(storeiter)), irCount};
     std::advance(storeiter, coeffs.size_bytes());
 

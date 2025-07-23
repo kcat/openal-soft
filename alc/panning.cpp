@@ -342,7 +342,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
         /* Round up to the next 4th sample, so each channel buffer starts
          * 16-byte aligned.
          */
-        total += RoundUp(ChanDelay[idx].Length, 4);
+        total += RoundFromZero(ChanDelay[idx].Length, 4);
     }
 
     if(total > 0)
@@ -356,7 +356,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
             auto ret = DistanceComp::ChanData{};
             ret.Buffer = std::span{chanbuffer, data.Length};
             ret.Gain = data.Gain;
-            std::advance(chanbuffer, RoundUp(data.Length, 4));
+            std::advance(chanbuffer, RoundFromZero(data.Length, 4));
             return ret;
         });
         device->ChannelDelays = std::move(chandelays);

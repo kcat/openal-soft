@@ -334,7 +334,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mComplexData.resize(complex_length, 0.0f);
 
     /* Load the samples from the buffer. */
-    const auto srclinelength = size_t{RoundUp(buffer->mSampleLen+DecoderPadding, 16_uz)};
+    const auto srclinelength = size_t{RoundFromZero(buffer->mSampleLen+DecoderPadding, 16_uz)};
     auto srcsamples = std::vector<float>(srclinelength * numChannels);
     std::ranges::fill(srcsamples, 0.0f);
     for(const auto c : std::views::iota(0_uz, std::min<size_t>(numChannels, realChannels)))

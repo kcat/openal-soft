@@ -124,19 +124,24 @@ inline uint32_t NextPowerOf2(uint32_t value) noexcept
 }
 
 /**
- * If the value is not already a multiple of r, round down to the next
+ * If the value is not already a multiple of r, round toward zero to the next
  * multiple.
  */
-template<typename T>
-constexpr T RoundDown(T value, std::type_identity_t<T> r) noexcept
+template<std::integral T>
+constexpr auto RoundToZero(T value, std::type_identity_t<T> r) noexcept -> T
 { return value - (value%r); }
 
 /**
- * If the value is not already a multiple of r, round up to the next multiple.
+ * If the value is not already a multiple of r, round away from zero to the
+ * next multiple.
  */
-template<typename T>
-constexpr T RoundUp(T value, std::type_identity_t<T> r) noexcept
-{ return RoundDown(value + r-1, r); }
+template<std::integral T>
+constexpr auto RoundFromZero(T value, std::type_identity_t<T> r) noexcept -> T
+{
+    if(value >= 0)
+        return RoundToZero(value + r-1, r);
+    return RoundToZero(value - r+1, r);
+}
 
 
 /**

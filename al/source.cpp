@@ -373,9 +373,9 @@ NOINLINE auto GetSourceOffset(gsl::strict_not_null<ALsource*> Source, ALenum nam
         else
         {
             if(readPos > std::numeric_limits<T>::max())
-                return RoundDown(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
+                return RoundToZero(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
             if(readPos < std::numeric_limits<T>::min())
-                return RoundUp(std::numeric_limits<T>::min(), gsl::narrow_cast<T>(BlockSize));
+                return RoundToZero(std::numeric_limits<T>::min(), gsl::narrow_cast<T>(BlockSize));
             return gsl::narrow_cast<T>(readPos);
         }
     }
@@ -430,7 +430,7 @@ NOINLINE auto GetSourceLength(gsl::strict_not_null<const ALsource*> source, ALen
         else
         {
             if(alignedlen > uint64_t{std::numeric_limits<T>::max()})
-                return RoundDown(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
+                return RoundToZero(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
             return gsl::narrow_cast<T>(alignedlen);
         }
     }

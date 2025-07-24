@@ -1662,7 +1662,7 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
         if(depth > 0)
         {
             depth = std::clamp(depth, 2, 24);
-            device->DitherDepth = std::pow(2.0f, gsl::narrow_cast<float>(depth-1));
+            device->DitherDepth = gsl::narrow_cast<float>(1 << (depth-1));
         }
     }
     if(!(device->DitherDepth > 0.0f))

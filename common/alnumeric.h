@@ -109,7 +109,7 @@ constexpr auto lerpf(float val1, float val2, float mu) noexcept -> float
 
 
 /** Find the next power-of-2 for non-power-of-2 numbers. */
-inline uint32_t NextPowerOf2(uint32_t value) noexcept
+constexpr auto NextPowerOf2(uint32_t value) noexcept -> uint32_t
 {
     if(value > 0)
     {

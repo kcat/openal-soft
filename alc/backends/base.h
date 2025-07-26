@@ -14,6 +14,7 @@
 #include "core/device.h"
 #include "core/except.h"
 #include "fmt/core.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 using uint = unsigned int;
@@ -36,13 +37,13 @@ struct BackendBase {
 
     virtual auto getClockLatency() -> ClockLatency;
 
-    DeviceBase *const mDevice;
+    gsl::strict_not_null<DeviceBase*> const mDevice;
     std::string mDeviceName;
 
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;
     BackendBase(BackendBase&&) = delete;
-    explicit BackendBase(DeviceBase *device) noexcept : mDevice{device} { }
+    explicit BackendBase(gsl::strict_not_null<DeviceBase*> device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
     void operator=(const BackendBase&) = delete;
@@ -91,7 +92,8 @@ struct BackendFactory {
 
     virtual auto enumerate(BackendType type) -> std::vector<std::string> = 0;
 
-    virtual auto createBackend(DeviceBase *device, BackendType type) -> BackendPtr = 0;
+    virtual auto createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+        -> BackendPtr = 0;
 };
 
 namespace al {

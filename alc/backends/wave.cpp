@@ -130,7 +130,8 @@ void fwrite64be(uint64_t val, FILE *f)
 
 
 struct WaveBackend final : public BackendBase {
-    explicit WaveBackend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WaveBackend(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~WaveBackend() override;
 
     void mixerProc();
@@ -525,7 +526,8 @@ auto WaveBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return {};
 }
 
-BackendPtr WaveBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto WaveBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WaveBackend{device}};

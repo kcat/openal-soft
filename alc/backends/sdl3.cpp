@@ -91,7 +91,8 @@ void EnumeratePlaybackDevices()
 
 
 struct Sdl3Backend final : public BackendBase {
-    explicit Sdl3Backend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit Sdl3Backend(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~Sdl3Backend() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
@@ -373,7 +374,8 @@ auto SDL3BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto SDL3BackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto SDL3BackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl3Backend{device}};

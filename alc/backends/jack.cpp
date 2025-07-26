@@ -275,7 +275,8 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 
 
 struct JackPlayback final : public BackendBase {
-    explicit JackPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit JackPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~JackPlayback() override;
 
     int processRt(jack_nframes_t numframes) noexcept;
@@ -715,7 +716,8 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-BackendPtr JackBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto JackBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new JackPlayback{device}};

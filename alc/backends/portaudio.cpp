@@ -108,7 +108,8 @@ void EnumerateDevices()
 struct StreamParamsExt : public PaStreamParameters { uint updateSize; };
 
 struct PortPlayback final : public BackendBase {
-    explicit PortPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PortPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~PortPlayback() override;
 
     int writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -290,7 +291,8 @@ void PortPlayback::stop()
 
 
 struct PortCapture final : public BackendBase {
-    explicit PortCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PortCapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~PortCapture() override;
 
     auto readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -542,7 +544,8 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return devices;
 }
 
-BackendPtr PortBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto PortBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PortPlayback{device}};

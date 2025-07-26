@@ -24,7 +24,7 @@ using namespace std::string_view_literals;
 
 
 struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback {
-    explicit OboePlayback(DeviceBase *device) : BackendBase{device} { }
+    explicit OboePlayback(gsl::strict_not_null<DeviceBase*> device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 
@@ -213,7 +213,7 @@ void OboePlayback::stop()
 
 
 struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback {
-    explicit OboeCapture(DeviceBase *device) : BackendBase{device} { }
+    explicit OboeCapture(gsl::strict_not_null<DeviceBase*> device) : BackendBase{device} { }
 
     oboe::ManagedStream mStream;
 
@@ -352,7 +352,8 @@ auto OboeBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return {};
 }
 
-auto OboeBackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto OboeBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OboePlayback{device}};

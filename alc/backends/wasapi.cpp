@@ -1164,7 +1164,9 @@ void DuplicateSamples(std::span<BYTE> insamples, DevFmtType sampletype, size_t s
 
 
 struct WasapiPlayback final : public BackendBase {
-    explicit WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept
+        : BackendBase{device}
+    { }
     ~WasapiPlayback() override;
 
     struct PlainDevice {
@@ -2386,7 +2388,8 @@ ClockLatency WasapiPlayback::getClockLatency()
 
 
 struct WasapiCapture final : public BackendBase {
-    explicit WasapiCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiCapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~WasapiCapture() override;
 
     void recordProc(IAudioClient *client, IAudioCaptureClient *capture);
@@ -3111,7 +3114,8 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     return outnames;
 }
 
-BackendPtr WasapiBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto WasapiBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device,
+    BackendType type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WasapiPlayback{device}};

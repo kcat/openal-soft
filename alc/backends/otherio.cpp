@@ -500,7 +500,9 @@ void OtherIOProxy::messageHandler(std::promise<HRESULT> *promise)
 
 
 struct OtherIOPlayback final : public BackendBase, OtherIOProxy {
-    explicit OtherIOPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OtherIOPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept
+        : BackendBase{device}
+    { }
     ~OtherIOPlayback() final;
 
     void mixerProc();
@@ -678,7 +680,8 @@ auto OtherIOBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     return outnames;
 }
 
-auto OtherIOBackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto OtherIOBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device,
+    BackendType type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OtherIOPlayback{device}};

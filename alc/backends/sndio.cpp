@@ -54,7 +54,8 @@ struct SioPar : public sio_par {
 };
 
 struct SndioPlayback final : public BackendBase {
-    explicit SndioPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit SndioPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~SndioPlayback() override;
 
     int mixerProc();
@@ -270,7 +271,8 @@ void SndioPlayback::stop()
  * capture buffer sizes apps may request.
  */
 struct SndioCapture final : public BackendBase {
-    explicit SndioCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit SndioCapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~SndioCapture() override;
 
     void recordProc();
@@ -514,7 +516,8 @@ auto SndIOBackendFactory::enumerate(BackendType type) -> std::vector<std::string
     return {};
 }
 
-BackendPtr SndIOBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto SndIOBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SndioPlayback{device}};

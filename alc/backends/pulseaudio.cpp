@@ -686,7 +686,8 @@ auto gGlobalMainloop = PulseMainloop{};
 
 
 struct PulsePlayback final : public BackendBase {
-    explicit PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulsePlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
@@ -1114,7 +1115,8 @@ auto PulsePlayback::getClockLatency() -> ClockLatency
 
 
 struct PulseCapture final : public BackendBase {
-    explicit PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulseCapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
+    { }
     ~PulseCapture() override;
 
     void streamStateCallback(pa_stream *stream) noexcept;
@@ -1535,7 +1537,8 @@ auto PulseBackendFactory::enumerate(BackendType type) -> std::vector<std::string
     return outnames;
 }
 
-auto PulseBackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto PulseBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PulsePlayback{device}};

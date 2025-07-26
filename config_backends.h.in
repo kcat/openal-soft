@@ -28,8 +28,6 @@
 
 #cmakedefine01 HAVE_OBOE
 
-#cmakedefine01 HAVE_OTHERIO
-
 #cmakedefine01 HAVE_WAVE
 
 #cmakedefine01 HAVE_SDL3

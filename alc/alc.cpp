@@ -161,9 +161,6 @@
 #if HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
-#if HAVE_OTHERIO
-#include "backends/otherio.h"
-#endif
 #if HAVE_WAVE
 #include "backends/wave.h"
 #endif
@@ -268,9 +265,6 @@ std::array BackendList{
 #endif
 #if HAVE_JACK
     BackendInfo{"jack"sv, JackBackendFactory::getFactory},
-#endif
-#if HAVE_OTHERIO
-    BackendInfo{"otherio"sv, OtherIOBackendFactory::getFactory},
 #endif
 
     BackendInfo{"null"sv, NullBackendFactory::getFactory},

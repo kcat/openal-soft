@@ -77,7 +77,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
 
     using OutputMode = OutputMode1;
 
-    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
+    std::atomic<ALCenum> mLastError{ALC_NO_ERROR};
 
     // Map of Buffers for this device
     std::mutex BufferLock;
@@ -114,6 +114,17 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
 
     template<typename T>
     auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
+
+    /** Stores the latest ALC device error. */
+    static void SetGlobalError(ALCenum errorCode) { SetError(nullptr, errorCode); };
+    void setError(ALCenum errorCode) { SetError(this, errorCode); }
+
+    static inline std::atomic<ALCenum> sLastGlobalError{ALC_NO_ERROR};
+    /* Flag to trap ALC device errors */
+    static inline bool sTrapALCError{false};
+
+private:
+    static void SetError(Device *device, ALCenum errorCode);
 };
 
 template<> inline
@@ -133,8 +144,5 @@ auto Device::configValue(const std::string_view block, const std::string_view ke
 { return ConfigValueBool(mDeviceName, block, key); }
 
 } // namespace al
-
-/** Stores the latest ALC device error. */
-void alcSetError(al::Device *device, ALCenum errorCode);
 
 #endif

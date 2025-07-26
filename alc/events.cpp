@@ -59,19 +59,19 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
 {
     if(enable != ALC_FALSE && enable != ALC_TRUE)
     {
-        alcSetError(nullptr, ALC_INVALID_ENUM);
+        al::Device::SetGlobalError(ALC_INVALID_ENUM);
         return ALC_FALSE;
     }
     if(count < 0)
     {
-        alcSetError(nullptr, ALC_INVALID_VALUE);
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return ALC_FALSE;
     }
     if(count == 0)
         return ALC_TRUE;
     if(!events)
     {
-        alcSetError(nullptr, ALC_INVALID_VALUE);
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return ALC_FALSE;
     }
 
@@ -88,7 +88,7 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
     if(invalidevent != eventrange.end())
     {
         WARN("Invalid event type: {:#04x}", as_unsigned(*invalidevent));
-        alcSetError(nullptr, ALC_INVALID_ENUM);
+        al::Device::SetGlobalError(ALC_INVALID_ENUM);
         return ALC_FALSE;
     }
 

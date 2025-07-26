@@ -395,8 +395,8 @@ using DeviceRef = al::intrusive_ptr<al::Device>;
 /************************************************
  * Device lists
  ************************************************/
-std::vector<al::Device*> DeviceList;
-std::vector<gsl::strict_not_null<ALCcontext*>> ContextList;
+auto DeviceList = std::vector<gsl::strict_not_null<al::Device*>>{};
+auto ContextList = std::vector<gsl::strict_not_null<ALCcontext*>>{};
 
 auto ListLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction? */
 
@@ -654,7 +654,7 @@ void alc_initconfig()
         backends = std::span{backends.begin(), iter.base()};
     }
 
-    std::ignore = std::ranges::any_of(backends, [](BackendInfo &backend)
+    std::ignore = std::ranges::find_if(backends, [](const BackendInfo &backend)
     {
         auto &factory = backend.getFactory();
         if(!factory.init())
@@ -1027,7 +1027,7 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(const al::Device *device, const float threshold)
+auto CreateDeviceLimiter(gsl::strict_not_null<const al::Device*> device, const float threshold)
     -> std::unique_ptr<Compressor>
 {
     static constexpr float LookAheadTime{0.001f};
@@ -1053,7 +1053,7 @@ auto CreateDeviceLimiter(const al::Device *device, const float threshold)
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-inline void UpdateClockBase(al::Device *device)
+inline void UpdateClockBase(gsl::strict_not_null<al::Device*> device)
 {
     using std::chrono::duration_cast;
 
@@ -1077,7 +1077,8 @@ inline void UpdateClockBase(al::Device *device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList) -> ALCenum
+auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
+    const std::span<const int> attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
     {
@@ -1881,7 +1882,8 @@ auto UpdateDeviceParams(al::Device *device, const std::span<const int> attrList)
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) -> bool
+auto ResetDeviceParams(gsl::strict_not_null<al::Device*> device,
+    const std::span<const int> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
     if(!device->Connected.load(std::memory_order_relaxed))
@@ -1926,23 +1928,27 @@ auto ResetDeviceParams(al::Device *device, const std::span<const int> attrList) 
 }
 
 
-/** Checks if the device handle is valid, and returns a new reference if so. */
-DeviceRef VerifyDevice(ALCdevice *device)
+/**
+ * Checks if the given device is a valid handle, returning a new reference to
+ * it or setting the global error state and throwing an exception.
+ */
+auto VerifyDevice(ALCdevice *device) -> gsl::strict_not_null<DeviceRef>
 {
     auto listlock = std::lock_guard{ListLock};
     const auto iter = std::ranges::lower_bound(DeviceList, device);
     if(iter != DeviceList.end() && *iter == device)
     {
         (*iter)->inc_ref();
-        return DeviceRef{*iter};
+        return gsl::make_strict_not_null(DeviceRef{*iter});
     }
-    return nullptr;
+    al::Device::SetGlobalError(ALC_INVALID_DEVICE);
+    throw al::base_exception{fmt::format("Invalid device handle {}", voidp{device})};
 }
 
 
 /**
  * Checks if the given context is a valid handle, returning a new reference to
- * it or throwing an exception.
+ * it or setting the global error state and throwing an exception.
  */
 auto VerifyContext(ALCcontext *context) -> gsl::strict_not_null<ContextRef>
 {
@@ -1993,9 +1999,15 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
     if(!gProcessRunning)
         return ALC_INVALID_DEVICE;
 
-    if(auto dev = VerifyDevice(device))
-        return dev->mLastError.exchange(ALC_NO_ERROR);
-    return al::Device::sLastGlobalError.exchange(ALC_NO_ERROR);
+    if(!device)
+        return al::Device::sLastGlobalError.exchange(ALC_NO_ERROR);
+    try {
+        return VerifyDevice(device)->mLastError.exchange(ALC_NO_ERROR);
+    }
+    catch(al::base_exception&) {
+        /* Will return ALC_INVALID_DEVICE. */
+        return al::Device::sLastGlobalError.exchange(ALC_NO_ERROR);
+    }
 }
 
 
@@ -2039,7 +2051,7 @@ catch(al::base_exception&) {
 
 
 ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcept -> const ALCchar*
-{
+try {
     switch(param)
     {
     case ALC_NO_ERROR: return GetNoErrorString();
@@ -2053,8 +2065,13 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
         return GetDefaultName();
 
     case ALC_ALL_DEVICES_SPECIFIER:
-        if(auto dev = VerifyDevice(Device))
+        if(!Device)
         {
+            ProbeAllDevicesList();
+            return alcAllDevicesList.c_str();
+        }
+        {
+            auto dev = VerifyDevice(Device);
             if(dev->Type == DeviceType::Capture)
             {
                 dev->setError(ALC_INVALID_ENUM);
@@ -2066,12 +2083,15 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
             auto statelock = std::lock_guard{dev->StateLock};
             return dev->mDeviceName.c_str();
         }
-        ProbeAllDevicesList();
-        return alcAllDevicesList.c_str();
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        if(auto dev = VerifyDevice(Device))
+        if(!Device)
         {
+            ProbeCaptureDeviceList();
+            return alcCaptureDeviceList.c_str();
+        }
+        {
+            auto dev = VerifyDevice(Device);
             if(dev->Type != DeviceType::Capture)
             {
                 dev->setError(ALC_INVALID_ENUM);
@@ -2081,8 +2101,6 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
             auto statelock = std::lock_guard{dev->StateLock};
             return dev->mDeviceName.c_str();
         }
-        ProbeCaptureDeviceList();
-        return alcCaptureDeviceList.c_str();
 
     /* Default devices are always first in the list */
     case ALC_DEFAULT_DEVICE_SPECIFIER:
@@ -2111,26 +2129,27 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcep
         return alcCaptureDefaultDeviceSpecifier.c_str();
 
     case ALC_EXTENSIONS:
-        if(VerifyDevice(Device))
-            return GetExtensionString();
-        return GetNoDeviceExtString();
+        if(!Device)
+            return GetNoDeviceExtString();
+        return GetExtensionString();
 
     case ALC_HRTF_SPECIFIER_SOFT:
-        if(auto dev = VerifyDevice(Device))
         {
+            auto dev = VerifyDevice(Device);
             auto statelock = std::lock_guard{dev->StateLock};
             return dev->mHrtf ? dev->mHrtfName.c_str() : "";
         }
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return nullptr;
 
     default:
-        if(auto dev = VerifyDevice(Device))
-            dev->setError(ALC_INVALID_ENUM);
-        else
+        if(!Device)
             al::Device::SetGlobalError(ALC_INVALID_ENUM);
+        else
+            VerifyDevice(Device)->setError(ALC_INVALID_ENUM);
     }
 
+    return nullptr;
+}
+catch(al::base_exception&) {
     return nullptr;
 }
 
@@ -2452,9 +2471,10 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
 }
 } // namespace
 
-ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) noexcept
-{
-    auto dev = VerifyDevice(device);
+ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size,
+    ALCint *values) noexcept
+try {
+    auto dev = device ? VerifyDevice(device).get() : DeviceRef{};
     if(size <= 0 || values == nullptr)
     {
         if(dev)
@@ -2463,12 +2483,15 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
     }
     else
-        GetIntegerv(dev.get(), param, {values, gsl::narrow_cast<uint>(size)});
+        GetIntegerv(std::to_address(dev), param, {values, gsl::narrow_cast<uint>(size)});
+}
+catch(al::base_exception&) {
 }
 
-ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size, ALCint64SOFT *values) noexcept
-{
-    auto dev = VerifyDevice(device);
+ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size,
+    ALCint64SOFT *values) noexcept
+try {
+    auto dev = device ? VerifyDevice(device).get() : DeviceRef{};
     if(size <= 0 || values == nullptr)
     {
         if(dev)
@@ -2482,7 +2505,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
     {
         auto ivals = std::vector<int>(valuespan.size());
         if(const auto got = GetIntegerv(dev.get(), pname, ivals))
-            std::copy_n(ivals.cbegin(), got, valuespan.begin());
+            std::ranges::copy(ivals | std::views::take(got), valuespan.begin());
         return;
     }
     /* render device */
@@ -2611,11 +2634,14 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         break;
     }
 }
+catch(al::base_exception&) {
+}
 
 
-ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName) noexcept
-{
-    auto dev = VerifyDevice(device);
+ALC_API auto ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName) noexcept
+    -> ALCboolean
+try {
+    auto dev = device ? VerifyDevice(device).get() : DeviceRef{};
     if(!extName)
     {
         if(dev)
@@ -2633,16 +2659,21 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     { return tofind.size() == entry.size() && al::case_compare(tofind, entry) == 0; };
     return std::ranges::any_of(extlist, matchext) ? ALC_TRUE : ALC_FALSE;
 }
+catch(al::base_exception&) {
+    return ALC_FALSE;
+}
 
 
-ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) noexcept
+auto ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) noexcept
+    -> ALCvoid*
 { return alcGetProcAddress(device, funcName); }
 
-ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName) noexcept
-{
+ALC_API auto ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName) noexcept
+    -> ALCvoid*
+try {
     if(!funcName)
     {
-        if(auto dev = VerifyDevice(device))
+        if(auto dev = device ? VerifyDevice(device).get() : DeviceRef{})
             dev->setError(ALC_INVALID_VALUE);
         else
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
@@ -2662,13 +2693,17 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
         &FuncExport::funcName);
     return (iter != std::end(alcFunctions)) ? iter->address : nullptr;
 }
+catch(al::base_exception&) {
+    return nullptr;
+}
 
 
-ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName) noexcept
-{
+ALC_API auto ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName) noexcept
+    -> ALCenum
+try {
     if(!enumName)
     {
-        if(auto dev = VerifyDevice(device))
+        if(auto dev = device ? VerifyDevice(device).get() : DeviceRef{})
             dev->setError(ALC_INVALID_VALUE);
         else
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
@@ -2687,21 +2722,20 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         &EnumExport::enumName);
     return (iter != std::end(alcEnumerations)) ? iter->value : 0;
 }
+catch(al::base_exception&) {
+    return 0;
+}
 
 
-ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList) noexcept
-{
+ALC_API auto ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList) noexcept
+    -> ALCcontext*
+try {
     /* Explicitly hold the list lock while taking the StateLock in case the
      * device is asynchronously destroyed, to ensure this new context is
      * properly cleaned up after being made.
      */
     auto listlock = std::unique_lock{ListLock};
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return nullptr;
-    }
     if(dev->Type == DeviceType::Capture || !dev->Connected.load(std::memory_order_relaxed))
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -2713,7 +2747,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     dev->mLastError.store(ALC_NO_ERROR);
 
     const auto attrSpan = SpanFromAttributeList(attrList);
-    if(const auto err = UpdateDeviceParams(dev.get(), attrSpan); err != ALC_NO_ERROR)
+    if(const auto err = UpdateDeviceParams(al::get_not_null(dev), attrSpan); err != ALC_NO_ERROR)
     {
         dev->setError(err);
         return nullptr;
@@ -2729,8 +2763,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
     }
 
-    auto context = ContextRef{new(std::nothrow) ALCcontext{
-        gsl::make_strict_not_null(dev), ctxflags}};
+    auto context = ContextRef{new(std::nothrow) ALCcontext{dev, ctxflags}};
     if(!context)
     {
         dev->setError(ALC_OUT_OF_MEMORY);
@@ -2797,6 +2830,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     TRACE("Created context {}", voidp{context.get()});
     return context.release();
 }
+catch(al::base_exception&) {
+    return nullptr;
+}
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
@@ -2843,7 +2879,7 @@ ALC_API auto ALC_APIENTRY alcGetCurrentContext() noexcept -> ALCcontext*
 ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
 { return ALCcontext::getThreadContext(); }
 
-ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept
+ALC_API auto ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept -> ALCboolean
 try {
     /* context must be valid or nullptr */
     auto ctx = context ? VerifyContext(context).get() : ContextRef{};
@@ -2874,7 +2910,7 @@ catch(al::base_exception&) {
 }
 
 /** Makes the given context the active context for the current thread. */
-ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept
+ALC_API auto ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept -> ALCboolean
 try {
     /* context must be valid or nullptr */
     auto ctx = context ? VerifyContext(context).get() : ContextRef{};
@@ -2890,7 +2926,7 @@ catch(al::base_exception&) {
 }
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexcept
+ALC_API auto ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexcept -> ALCdevice*
 try {
     return std::to_address(VerifyContext(Context)->mALDevice);
 }
@@ -2899,7 +2935,7 @@ catch(al::base_exception&) {
 }
 
 
-ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept
+ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> ALCdevice*
 {
     InitConfig();
 
@@ -3012,7 +3048,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcep
     return device.release();
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
+ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboolean
 {
     if(!gProcessRunning)
         return ALC_FALSE;
@@ -3072,8 +3108,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept
 /************************************************
  * ALC capture functions
  ************************************************/
-ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency,
-    ALCenum format, ALCsizei samples) noexcept
+ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency,
+    ALCenum format, ALCsizei samples) noexcept -> ALCdevice*
 {
     InitConfig();
 
@@ -3089,7 +3125,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return nullptr;
     }
 
-    auto devname = std::string_view{deviceName ? deviceName : ""};
+    auto devname = deviceName ? std::string_view{deviceName} : std::string_view{};
     if(!devname.empty())
     {
         TRACE("Opening capture device \"{}\"", devname);
@@ -3160,7 +3196,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     return device.release();
 }
 
-ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept
+ALC_API auto ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept -> ALCboolean
 {
     if(!gProcessRunning)
         return ALC_FALSE;
@@ -3193,13 +3229,8 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcep
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
-{
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return;
-    }
     if(dev->Type != DeviceType::Capture)
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -3224,13 +3255,13 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
         }
     }
 }
+catch(al::base_exception&) {
+}
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
-{
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    else if(dev->Type != DeviceType::Capture)
+    if(dev->Type != DeviceType::Capture)
         dev->setError(ALC_INVALID_DEVICE);
     else
     {
@@ -3242,15 +3273,13 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
         }
     }
 }
+catch(al::base_exception&) {
+}
 
-ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) noexcept
-{
+ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
+    noexcept
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return;
-    }
     if(dev->Type != DeviceType::Capture)
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -3278,6 +3307,8 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
     backend->captureSamples(std::span{static_cast<std::byte*>(buffer),
         size_t{usamples}*dev->frameSizeFromFmt()});
 }
+catch(al::base_exception&) {
+}
 
 
 /************************************************
@@ -3285,7 +3316,8 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
  ************************************************/
 
 /** Open a loopback device, for manual rendering. */
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) noexcept
+ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) noexcept
+    -> ALCdevice*
 {
     InitConfig();
 
@@ -3352,13 +3384,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 /**
  * Determines if the loopback device supports the given format for rendering.
  */
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq,
-    ALCenum channels, ALCenum type) noexcept
-{
+ALC_API auto ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq,
+    ALCenum channels, ALCenum type) noexcept -> ALCboolean
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    else if(dev->Type != DeviceType::Loopback)
+    if(dev->Type != DeviceType::Loopback)
         dev->setError(ALC_INVALID_DEVICE);
     else if(freq <= 0)
         dev->setError(ALC_INVALID_VALUE);
@@ -3369,6 +3399,9 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
             return ALC_TRUE;
     }
 
+    return ALC_FALSE;
+}
+catch(al::base_exception&) {
     return ALC_FALSE;
 }
 
@@ -3403,11 +3436,9 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 
 /** Pause the DSP to stop audio processing. */
 ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) noexcept
-{
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    else if(dev->Type != DeviceType::Playback)
+    if(dev->Type != DeviceType::Playback)
         dev->setError(ALC_INVALID_DEVICE);
     else
     {
@@ -3420,16 +3451,13 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) noexcept
         dev->Flags.set(DevicePaused);
     }
 }
+catch(al::base_exception&) {
+}
 
 /** Resume the DSP to restart audio processing. */
 ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
-{
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return;
-    }
     if(dev->Type != DeviceType::Playback)
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -3470,6 +3498,8 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
         DevFmtChannelsString(dev->FmtChans), DevFmtTypeString(dev->FmtType),
         dev->mSampleRate, dev->mUpdateSize, dev->mBufferSize);
 }
+catch(al::base_exception&) {
+}
 
 
 /************************************************
@@ -3477,13 +3507,11 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
  ************************************************/
 
 /** Gets a string parameter at the given index. */
-ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName,
-    ALCsizei index) noexcept
-{
+ALC_API auto ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
+    noexcept -> const ALCchar*
+try {
     auto dev = VerifyDevice(device);
-    if(!dev)
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    else if(dev->Type == DeviceType::Capture)
+    if(dev->Type == DeviceType::Capture)
         dev->setError(ALC_INVALID_ENUM);
     else switch(paramName)
     {
@@ -3500,17 +3528,16 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
 
     return nullptr;
 }
+catch(al::base_exception&) {
+    return nullptr;
+}
 
 /** Resets the given device output, using the specified attribute list. */
-ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) noexcept
-{
+ALC_API auto ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) noexcept
+    -> ALCboolean
+try {
     auto listlock = std::unique_lock{ListLock};
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return ALC_FALSE;
-    }
     if(dev->Type == DeviceType::Capture)
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -3528,7 +3555,11 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
         dev->mDeviceState = DeviceState::Configured;
     }
 
-    return ResetDeviceParams(dev.get(), SpanFromAttributeList(attribs)) ? ALC_TRUE : ALC_FALSE;
+    return ResetDeviceParams(al::get_not_null(dev), SpanFromAttributeList(attribs)) ? ALC_TRUE
+        : ALC_FALSE;
+}
+catch(al::base_exception&) {
+    return ALC_FALSE;
 }
 
 
@@ -3537,16 +3568,11 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
  ************************************************/
 
 /** Reopens the given device output, using the specified name and attribute list. */
-FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
-    const ALCchar *deviceName, const ALCint *attribs) noexcept
-{
+FORCE_ALIGN auto ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
+    const ALCint *attribs) noexcept -> ALCboolean
+try {
     auto listlock = std::unique_lock{ListLock};
     auto dev = VerifyDevice(device);
-    if(!dev)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-        return ALC_FALSE;
-    }
     if(dev->Type != DeviceType::Playback)
     {
         dev->setError(ALC_INVALID_DEVICE);
@@ -3584,7 +3610,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
 
     auto newbackend = BackendPtr{};
     try {
-        newbackend = PlaybackFactory->createBackend(dev.get(), BackendType::Playback);
+        newbackend = PlaybackFactory->createBackend(std::to_address(dev), BackendType::Playback);
         newbackend->open(devname);
     }
     catch(al::backend_exception &e) {
@@ -3613,7 +3639,7 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
     dev->mDeviceName = std::string{GetDevicePrefix()}+newbackend->mDeviceName;
     dev->Backend = std::move(newbackend);
     dev->mDeviceState = DeviceState::Unprepared;
-    TRACE("Reopened device {}, \"{}\"", voidp{dev.get()}, dev->mDeviceName);
+    TRACE("Reopened device {}, \"{}\"", voidp{std::to_address(dev)}, dev->mDeviceName);
 
     std::string{}.swap(dev->mVendorOverride);
     std::string{}.swap(dev->mVersionOverride);
@@ -3650,16 +3676,19 @@ FORCE_ALIGN ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
      * In this way, we essentially act as if the function succeeded, but
      * immediately disconnects following it.
      */
-    ResetDeviceParams(dev.get(), SpanFromAttributeList(attribs));
+    ResetDeviceParams(al::get_not_null(dev), SpanFromAttributeList(attribs));
     return ALC_TRUE;
+}
+catch(al::base_exception&) {
+    return ALC_FALSE;
 }
 
 /************************************************
  * ALC event query functions
  ************************************************/
 
-FORCE_ALIGN ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum deviceType)
-    noexcept
+FORCE_ALIGN auto ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum deviceType)
+    noexcept -> ALCenum
 {
     auto etype = alc::GetEventType(eventType);
     if(!etype)

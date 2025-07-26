@@ -52,12 +52,10 @@ auto make_error(size_t linenum, fmt::format_string<Args...> fmt, Args&& ...args)
 {
     auto str = fmt::format("Line {}: ", linenum);
     str += fmt::format(std::move(fmt), std::forward<Args>(args)...);
-    return al::unexpected(str);
+    return al::unexpected(std::move(str));
 }
 
 } // namespace
-
-AmbDecConf::~AmbDecConf() = default;
 
 
 auto AmbDecConf::load(const std::string_view fname) noexcept

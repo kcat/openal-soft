@@ -14,9 +14,10 @@
 #include "core/device.h"
 #include "core/except.h"
 #include "fmt/core.h"
-
+#include "opthelpers.h"
 
 using uint = unsigned int;
+
 
 struct ClockLatency {
     std::chrono::nanoseconds ClockTime;
@@ -114,7 +115,7 @@ public:
     { }
     backend_exception(const backend_exception&) = default;
     backend_exception(backend_exception&&) = default;
-    ~backend_exception() override;
+    NOINLINE ~backend_exception() override = default;
 
     backend_exception& operator=(const backend_exception&) = default;
     backend_exception& operator=(backend_exception&&) = default;

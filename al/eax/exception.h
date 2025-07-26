@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include "opthelpers.h"
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxException : public std::runtime_error {
@@ -15,7 +16,7 @@ public:
     EaxException(const EaxException&) = default;
     EaxException(EaxException&&) = default;
     EaxException(std::string_view context, std::string_view message);
-    ~EaxException() override;
+    NOINLINE ~EaxException() override = default;
 
     auto operator=(const EaxException&) -> EaxException& = default;
     auto operator=(EaxException&&) -> EaxException& = default;

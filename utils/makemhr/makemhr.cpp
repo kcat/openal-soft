@@ -98,8 +98,6 @@
 #include "win_main_utf8.h"
 
 
-HrirDataT::~HrirDataT() = default;
-
 namespace {
 
 using namespace std::string_view_literals;

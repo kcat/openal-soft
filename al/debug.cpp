@@ -39,11 +39,6 @@
 #include "source.h"
 
 
-/* Declared here to prevent compilers from thinking it should be inlined, which
- * GCC warns about increasing code size.
- */
-DebugGroup::~DebugGroup() = default;
-
 namespace {
 
 using namespace std::string_view_literals;

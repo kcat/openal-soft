@@ -43,6 +43,7 @@
 #include "dynload.h"
 #include "fmt/format.h"
 #include "gsl/gsl"
+#include "opthelpers.h"
 #include "ringbuffer.h"
 
 #include <jack/jack.h>
@@ -174,9 +175,8 @@ struct DeviceEntry {
     std::string mName;
     std::string mPattern;
 
-    ~DeviceEntry();
+    NOINLINE ~DeviceEntry() = default;
 };
-DeviceEntry::~DeviceEntry() = default;
 
 std::vector<DeviceEntry> PlaybackList;
 

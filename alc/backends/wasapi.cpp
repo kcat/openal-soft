@@ -73,6 +73,7 @@
 #include "fmt/core.h"
 #include "fmt/chrono.h"
 #include "gsl/gsl"
+#include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 
@@ -277,10 +278,8 @@ struct DevMap {
     std::string endpoint_guid; // obtained from PKEY_AudioEndpoint_GUID , set to "Unknown device GUID" if absent.
     std::wstring devid;
 
-    /* To prevent GCC from complaining it doesn't want to inline this. */
-    ~DevMap();
+    NOINLINE ~DevMap() = default;
 };
-DevMap::~DevMap() = default;
 
 auto checkName(const std::span<DevMap> list, const std::string_view name) -> bool
 { return std::ranges::find(list, name, &DevMap::name) != list.end(); }

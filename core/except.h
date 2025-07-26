@@ -20,7 +20,7 @@ public:
     explicit base_exception(T&& msg) : mMessage{std::forward<T>(msg)} { }
     base_exception(const base_exception&) = default;
     base_exception(base_exception&&) = default;
-    ~base_exception() override;
+    NOINLINE ~base_exception() override = default;
 
     auto operator=(const base_exception&) & -> base_exception& = default;
     auto operator=(base_exception&&) & -> base_exception& = default;

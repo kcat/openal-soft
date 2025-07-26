@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "opthelpers.h"
+
 using uint = unsigned int;
 
 
@@ -64,7 +66,7 @@ struct DebugGroup {
     { }
     DebugGroup(const DebugGroup&) = default;
     DebugGroup(DebugGroup&&) = default;
-    ~DebugGroup();
+    NOINLINE ~DebugGroup() = default;
 };
 
 #endif /* AL_DEBUG_H */

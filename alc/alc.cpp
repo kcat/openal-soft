@@ -396,7 +396,7 @@ using DeviceRef = al::intrusive_ptr<al::Device>;
  * Device lists
  ************************************************/
 std::vector<al::Device*> DeviceList;
-std::vector<ALCcontext*> ContextList;
+std::vector<gsl::strict_not_null<ALCcontext*>> ContextList;
 
 auto ListLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction? */
 
@@ -1941,18 +1941,20 @@ DeviceRef VerifyDevice(ALCdevice *device)
 
 
 /**
- * Checks if the given context is valid, returning a new reference to it if so.
+ * Checks if the given context is a valid handle, returning a new reference to
+ * it or throwing an exception.
  */
-ContextRef VerifyContext(ALCcontext *context)
+auto VerifyContext(ALCcontext *context) -> gsl::strict_not_null<ContextRef>
 {
     auto listlock = std::lock_guard{ListLock};
     const auto iter = std::ranges::lower_bound(ContextList, context);
     if(iter != ContextList.end() && *iter == context)
     {
         (*iter)->inc_ref();
-        return ContextRef{*iter};
+        return gsl::make_strict_not_null(ContextRef{*iter});
     }
-    return nullptr;
+    al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
+    throw al::base_exception{fmt::format("Invalid context handle {}", voidp{context})};
 }
 
 } // namespace
@@ -1998,14 +2000,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
 
 
 ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
-{
+try {
     auto ctx = VerifyContext(context);
-    if(!ctx)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-        return;
-    }
-
     if(ctx->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
         ctx->debugMessage(DebugSource::API, DebugType::Portability, 0, DebugSeverity::Medium,
             "alcSuspendContext behavior is not portable -- some implementations suspend all "
@@ -2019,16 +2015,12 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
         ctx->deferUpdates();
     }
 }
+catch(al::base_exception&) {
+}
 
 ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
-{
+try {
     auto ctx = VerifyContext(context);
-    if(!ctx)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-        return;
-    }
-
     if(ctx->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
         ctx->debugMessage(DebugSource::API, DebugType::Portability, 1, DebugSeverity::Medium,
             "alcProcessContext behavior is not portable -- some implementations resume rendering, "
@@ -2041,6 +2033,8 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
         auto proplock = std::lock_guard{ctx->mPropLock};
         ctx->processUpdates();
     }
+}
+catch(al::base_exception&) {
 }
 
 
@@ -2850,18 +2844,10 @@ ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
 { return ALCcontext::getThreadContext(); }
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept
-{
+try {
     /* context must be valid or nullptr */
-    auto ctx = ContextRef{};
-    if(context)
-    {
-        ctx = VerifyContext(context);
-        if(!ctx)
-        {
-            al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-            return ALC_FALSE;
-        }
-    }
+    auto ctx = context ? VerifyContext(context).get() : ContextRef{};
+
     /* Release this reference (if any) to store it in the GlobalContext
      * pointer. Take ownership of the reference (if any) that was previously
      * stored there, and let the reference go.
@@ -2883,38 +2869,33 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexc
 
     return ALC_TRUE;
 }
+catch(al::base_exception&) {
+    return ALC_FALSE;
+}
 
 /** Makes the given context the active context for the current thread. */
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept
-{
+try {
     /* context must be valid or nullptr */
-    auto ctx = ContextRef{};
-    if(context)
-    {
-        ctx = VerifyContext(context);
-        if(!ctx)
-        {
-            al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-            return ALC_FALSE;
-        }
-    }
+    auto ctx = context ? VerifyContext(context).get() : ContextRef{};
+
     /* context's reference count is already incremented */
     auto old = ContextRef{ALCcontext::getThreadContext()};
     ALCcontext::setThreadContext(ctx.release());
 
     return ALC_TRUE;
 }
+catch(al::base_exception&) {
+    return ALC_FALSE;
+}
 
 
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexcept
-{
-    auto ctx = VerifyContext(Context);
-    if(!ctx)
-    {
-        al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-        return nullptr;
-    }
-    return std::to_address(ctx->mALDevice);
+try {
+    return std::to_address(VerifyContext(Context)->mALDevice);
+}
+catch(al::base_exception&) {
+    return nullptr;
 }
 
 

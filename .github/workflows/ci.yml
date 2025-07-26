@@ -67,14 +67,14 @@ jobs:
           }
         - {
             name: "macOS-Release",
-            os: macos-latest,
+            os: macos-15,
             cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON \
               -DALSOFT_TESTS=ON",
             build_type: "Release"
           }
         - {
             name: "iOS-Release",
-            os: macos-latest,
+            os: macos-15,
             cmake_opts: "-GXcode \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DALSOFT_REQUIRE_COREAUDIO=ON \

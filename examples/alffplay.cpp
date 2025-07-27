@@ -34,6 +34,7 @@
 
 #include "almalloc.h"
 #include "alnumeric.h"
+#include "alstring.h"
 #include "common/alhelpers.hpp"
 #include "fmt/core.h"
 #include "fmt/format.h"
@@ -99,6 +100,7 @@ using std::chrono::duration_cast;
 
 constexpr auto AppName = std::to_array("alffplay");
 
+auto PlaybackGain = 1.0f;
 auto DirectOutMode = ALenum{AL_FALSE};
 auto EnableWideStereo = false;
 auto EnableUhj = false;
@@ -1259,6 +1261,31 @@ void AudioState::handler()
     alGenBuffers(gsl::narrow_cast<ALsizei>(mBuffers.size()), mBuffers.data());
     alGenSources(1, &mSource);
 
+    if(PlaybackGain > 1.0f)
+    {
+        const auto maxgain = alIsExtensionPresent("AL_SOFT_gain_clamp_ex")
+            ? alGetFloat(AL_GAIN_LIMIT_SOFT) : 1.0f;
+
+        auto gain = PlaybackGain;
+        if(gain > maxgain)
+        {
+            fmt::println(stderr, "Limiting requested gain {:+}db ({}) to max {:+}db ({})",
+                std::round(std::log10(double{gain})*2000.0) / 100.0, gain,
+                std::round(std::log10(double{maxgain})*2000.0) / 100.0, maxgain);
+            gain = maxgain;
+        }
+        else
+            fmt::println("Setting gain {:+}dB ({})",
+                std::round(std::log10(double{gain})*2000.0) / 100.0, gain);
+        alSourcef(mSource, AL_MAX_GAIN, gain);
+        alSourcef(mSource, AL_GAIN, gain);
+    }
+    else if(PlaybackGain < 1.0f)
+    {
+        fmt::println("Setting gain {:+}dB ({})",
+            std::round(std::log10(double{PlaybackGain})*2000.0) / 100.0, PlaybackGain);
+        alSourcef(mSource, AL_GAIN, PlaybackGain);
+    }
     if(DirectOutMode)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
     if(EnableWideStereo)
@@ -2060,6 +2087,8 @@ auto main(std::span<std::string_view> args) -> int
     {
         fmt::println(stderr, "Usage: {} [-device <device name>] [options] <files...>", args[0]);
         fmt::println(stderr, "\n  Options:\n"
+            "    -gain <g>     Set audio playback gain (prepend +/- or append \"dB\" to \n"
+            "                  indicate decibels, otherwise it's linear amplitude)\n"
             "    -novideo      Disable video playback\n"
             "    -direct       Play audio directly on the output, bypassing virtualization\n"
             "    -superstereo  Apply Super Stereo processing to stereo tracks\n"
@@ -2124,8 +2153,10 @@ auto main(std::span<std::string_view> args) -> int
     }
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-    auto curarg = std::ranges::find_if(args, [](const std::string_view argval)
+    auto curarg = args.begin();
+    for(auto args_end=args.end();curarg != args_end;++curarg)
     {
+        const auto argval = *curarg;
         if(argval == "-direct")
         {
             if(alIsExtensionPresent("AL_SOFT_direct_channels_remix"))
@@ -2140,7 +2171,7 @@ auto main(std::span<std::string_view> args) -> int
             }
             else
                 fmt::println(stderr, "AL_SOFT_direct_channels not supported for direct output");
-            return false;
+            continue;
         }
         if(argval == "-wide")
         {
@@ -2151,7 +2182,7 @@ auto main(std::span<std::string_view> args) -> int
                 fmt::println("Found AL_EXT_STEREO_ANGLES");
                 EnableWideStereo = true;
             }
-            return false;
+            continue;
         }
         if(argval == "-uhj")
         {
@@ -2162,7 +2193,7 @@ auto main(std::span<std::string_view> args) -> int
                 fmt::println("Found AL_SOFT_UHJ");
                 EnableUhj = true;
             }
-            return false;
+            continue;
         }
         if(argval == "-superstereo")
         {
@@ -2173,15 +2204,51 @@ auto main(std::span<std::string_view> args) -> int
                 fmt::println("Found AL_SOFT_UHJ (Super Stereo)");
                 EnableSuperStereo = true;
             }
-            return false;
+            continue;
         }
         if(argval == "-novideo")
         {
             DisableVideo = true;
-            return false;
+            continue;
         }
-        return true;
-    });
+        if(argval == "-gain")
+        {
+            if(curarg+1 == args_end)
+                fmt::println(stderr, "Missing argument for -gain");
+            else
+            {
+                const auto optarg = *++curarg;
+
+                auto endpos = size_t{};
+                const auto gainval = std::invoke([optarg,&endpos]
+                {
+                    try { return std::stof(std::string{optarg}, &endpos); }
+                    catch(std::exception &e) {
+                        fmt::println(stderr, "Exception reading gain value: {}", e.what());
+                    }
+                    return std::numeric_limits<float>::quiet_NaN();
+                });
+                if(optarg.starts_with("+") || optarg.starts_with("-")
+                    || al::case_compare(optarg.substr(endpos), "db") == 0)
+                {
+                    if(!std::isfinite(gainval) || (endpos != optarg.size()
+                            && al::case_compare(optarg.substr(endpos), "db") != 0))
+                        fmt::println(stderr, "Invalid dB gain value: {}", optarg);
+                    else
+                        PlaybackGain = std::pow(10.0f, gainval/20.0f);
+                }
+                else
+                {
+                    if(endpos != optarg.size() || !(gainval >= 0.0f) || !std::isfinite(gainval))
+                        fmt::println(stderr, "Invalid linear gain value: {}", optarg);
+                    else
+                        PlaybackGain = gainval;
+                }
+            }
+            continue;
+        }
+        break;
+    }
 
     auto movState = std::unique_ptr<MovieState>{};
     curarg = std::ranges::find_if(curarg, args.end(), [&movState](const std::string_view argval)

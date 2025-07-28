@@ -56,7 +56,7 @@ struct UhjEncoderBase {
 
 template<std::size_t N>
 struct UhjEncoder final : public UhjEncoderBase {
-    struct Tag { using encoder_t = UhjEncoder<N>; };
+    struct Tag { using encoder_t = UhjEncoder; };
 
     static constexpr std::size_t sFftLength{256};
     static constexpr std::size_t sSegmentSize{sFftLength/2};
@@ -165,7 +165,7 @@ struct DecoderBase {
 
 template<std::size_t N>
 struct UhjDecoder final : public DecoderBase {
-    struct Tag { using decoder_t = UhjDecoder<N>; };
+    struct Tag { using decoder_t = UhjDecoder; };
 
     /* The number of extra sample frames needed for input. */
     static constexpr unsigned int sInputPadding{N/2u};
@@ -217,7 +217,7 @@ struct UhjDecoderIIR final : public DecoderBase {
 
 template<std::size_t N>
 struct UhjStereoDecoder final : public DecoderBase {
-    struct Tag { using decoder_t = UhjStereoDecoder<N>; };
+    struct Tag { using decoder_t = UhjStereoDecoder; };
 
     static constexpr unsigned int sInputPadding{N/2u};
 

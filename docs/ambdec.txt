@@ -48,7 +48,7 @@ single-band or 2 for dual-band.
 Specifies the number of output speakers to decode to.
 
 /dec/coeff_scale <type:string>
-Specifies the scaling used by the decoder coefficients. Currently recognized
+Specifies the scaling used by the decoder coefficients. Currently, recognized
 types are fuma, sn3d, and n3d, for Furse-Malham (FuMa), semi-normalized (SN3D),
 and fully normalized (N3D) scaling, respectively.
 
@@ -103,7 +103,7 @@ the rest.
 Begins the low-frequency decoder matrix definition. The definition should
 include an order_gain command to specify the base gain for the ambisonic
 orders. Each matrix row is defined using the add_row command, and there must be
-a matching number of rows as the number of speakers. Additionally the row
+a matching number of rows as the number of speakers. Additionally, the row
 definitions are in the same order as the speaker definitions. The definitions
 are ended with a "/}". Only valid for dual-band decoders.
 
@@ -111,7 +111,7 @@ are ended with a "/}". Only valid for dual-band decoders.
 Begins the high-frequency decoder matrix definition. The definition should
 include an order_gain command to specify the base gain for the ambisonic
 orders. Each matrix row is defined using the add_row command, and there must be
-a matching number of rows as the number of speakers, Additionally the row
+a matching number of rows as the number of speakers, Additionally, the row
 definitions are in the same order as the speaker definitions. The definitions
 are ended with a "/}". Only valid for dual-band decoders.
 
@@ -119,7 +119,7 @@ are ended with a "/}". Only valid for dual-band decoders.
 Begins the decoder matrix definition. The definition should include an
 order_gain command to specify the base gain for the ambisonic orders. Each
 matrix row is defined using the add_row command, and there must be a matching
-number of rows as the number of speakers. Additionally the row definitions are
+number of rows as the number of speakers. Additionally, the row definitions are
 in the same order as the speaker definitions. The definitions are ended with a
 "/}". Only valid for single-band decoders.
 
@@ -162,7 +162,7 @@ RBT = Top back right
 
 Additionally, configuration files for surround51 will acknowledge back speakers
 for side channels, to avoid issues with a configuration expecting 5.1 to use
-the side channels when the device is configured for back, or vice-versa.
+the side channels when the device is configured for back, or vice versa.
 
 Furthermore, OpenAL Soft does not require a speaker definition for each output
 channel the configuration is used with. So for example a 5.1 configuration may
@@ -188,5 +188,5 @@ using MATLAB or GNU Octave, this may be a good option.
 
 There are plans for OpenAL Soft to include a utility to generate coefficients
 and make configuration files. However, calculating proper coefficients for
-anything other than regular or semi-regular speaker setups is somewhat of a
+anything other than regular or semiregular speaker setups is somewhat of a
 black art, so may take some time.

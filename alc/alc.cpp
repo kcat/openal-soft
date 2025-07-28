@@ -1829,7 +1829,7 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
             if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_relaxed))
                 AtomicReplaceHead(context->mFreeVoiceProps, props);
 
-            /* Force the voice to stopped if it was stopping. */
+            /* Force the voice to "Stopped" if it was stopping. */
             auto vstate = Voice::Stopping;
             voice->mPlayState.compare_exchange_strong(vstate, Voice::Stopped,
                 std::memory_order_acquire, std::memory_order_acquire);

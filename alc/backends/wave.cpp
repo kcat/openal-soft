@@ -182,23 +182,26 @@ void WaveBackend::mixerProc()
             mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
             done += mDevice->mUpdateSize;
 
-            if(std::endian::native != std::endian::little && !mCAFOutput)
+            if constexpr(std::endian::native != std::endian::little)
             {
-                const uint bytesize{mDevice->bytesFromFmt()};
+                if(!mCAFOutput)
+                {
+                    const auto bytesize = mDevice->bytesFromFmt();
 
-                if(bytesize == 2)
-                {
-                    const size_t len{mBuffer.size() & ~1_uz};
-                    for(size_t i{0};i < len;i+=2)
-                        std::swap(mBuffer[i], mBuffer[i+1]);
-                }
-                else if(bytesize == 4)
-                {
-                    const size_t len{mBuffer.size() & ~3_uz};
-                    for(size_t i{0};i < len;i+=4)
+                    if(bytesize == 2)
                     {
-                        std::swap(mBuffer[i  ], mBuffer[i+3]);
-                        std::swap(mBuffer[i+1], mBuffer[i+2]);
+                        const auto len = mBuffer.size() & ~1_uz;
+                        for(size_t i{0};i < len;i+=2)
+                            std::swap(mBuffer[i], mBuffer[i+1]);
+                    }
+                    else if(bytesize == 4)
+                    {
+                        const auto len = mBuffer.size() & ~3_uz;
+                        for(size_t i{0};i < len;i+=4)
+                        {
+                            std::swap(mBuffer[i  ], mBuffer[i+3]);
+                            std::swap(mBuffer[i+1], mBuffer[i+2]);
+                        }
                     }
                 }
             }
@@ -411,11 +414,13 @@ bool WaveBackend::reset()
             case DevFmtUInt:
                 if constexpr(std::endian::native == std::endian::little)
                     return 2u; /* kCAFLinearPCMFormatFlagIsLittleEndian */
-                break;
+                else
+                    break;
             case DevFmtFloat:
                 if constexpr(std::endian::native == std::endian::little)
                     return 3u; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
-                return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
+                else
+                    return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
             }
             return 0u;
         });

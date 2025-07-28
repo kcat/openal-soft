@@ -610,7 +610,7 @@ struct EventManager {
     {
         auto plock = MainloopUniqueLock{mLoop};
         auto has_audio = false;
-        plock.wait([this,&has_audio]()
+        plock.wait([this,&has_audio]
         {
             has_audio = mHasAudio.load(std::memory_order_acquire);
             return has_audio || initIsDone(std::memory_order_acquire);
@@ -1692,7 +1692,7 @@ auto PipeWirePlayback::reset() -> bool
             "Error connecting PipeWire stream (res: {})", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     {
         const char *error{};
         const auto state = pw_stream_get_state(stream, &error);
@@ -1727,7 +1727,7 @@ void PipeWirePlayback::start()
     /* Wait for the stream to start playing (would be nice to not, but we need
      * the actual update size which is only available after starting).
      */
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     {
         const char *error{};
         const auto state = pw_stream_get_state(stream, &error);
@@ -1805,7 +1805,7 @@ void PipeWirePlayback::stop()
         ERR("Failed to stop PipeWire stream (res: {})", res);
 
     /* Wait for the stream to stop playing. */
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });
 }
 
@@ -2114,7 +2114,7 @@ void PipeWireCapture::open(std::string_view name)
             "Error connecting PipeWire stream (res: {})", res};
 
     /* Wait for the stream to become paused (ready to start streaming). */
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     {
         const char *error{};
         const auto state = pw_stream_get_state(stream, &error);
@@ -2141,7 +2141,7 @@ void PipeWireCapture::start()
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to start PipeWire stream (res: {})", res};
 
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     {
         const char *error{};
         const auto state = pw_stream_get_state(stream, &error);
@@ -2158,7 +2158,7 @@ void PipeWireCapture::stop()
     if(const auto res = pw_stream_set_active(mStream.get(), false))
         ERR("Failed to stop PipeWire stream (res: {})", res);
 
-    plock.wait([stream=mStream.get()]()
+    plock.wait([stream=mStream.get()]
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });
 }
 

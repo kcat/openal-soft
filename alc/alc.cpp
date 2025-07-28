@@ -731,7 +731,7 @@ void alc_initconfig()
 #endif // ALSOFT_EAX
 }
 inline void InitConfig()
-{ std::call_once(alc_config_once, [](){alc_initconfig();}); }
+{ std::call_once(alc_config_once, [] { alc_initconfig(); }); }
 
 
 /************************************************

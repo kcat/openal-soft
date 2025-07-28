@@ -602,7 +602,7 @@ void MainloopUniqueLock::connectContext()
     auto err = pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr);
     if(err >= 0)
     {
-        wait([&err,this]()
+        wait([&err,this]
         {
             auto state = pa_context_get_state(mutex()->mContext);
             if(!PA_CONTEXT_IS_GOOD(state))
@@ -648,7 +648,7 @@ auto MainloopUniqueLock::connectStream(const char *device_name, pa_stream_flags_
             stream_id, pa_strerror(err)};
     }
 
-    wait([&err,stream,stream_id,this]()
+    wait([&err,stream,stream_id,this]
     {
         auto state = pa_stream_get_state(stream);
         if(!PA_STREAM_IS_GOOD(state))

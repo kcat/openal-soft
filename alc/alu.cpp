@@ -1331,7 +1331,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
 
         if(voice->mFmtChannels == FmtMono && !props.mPanningEnabled)
         {
-            const auto coeffs = std::invoke([xpos,ypos,zpos,spread,device]()
+            const auto coeffs = std::invoke([xpos,ypos,zpos,spread,device]
             {
                 if(device->mRenderMode != RenderMode::Pairwise)
                     return CalcDirectionCoeffs(std::array{xpos, ypos, zpos}, spread);

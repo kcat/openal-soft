@@ -1294,7 +1294,7 @@ void MainWindow::removeHrtfFile()
     QList<gsl::owner<QListWidgetItem*>> selected{ui->hrtfFileList->selectedItems()};
     if(!selected.isEmpty())
     {
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
 }
@@ -1329,7 +1329,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     if(gotAction == removeAction)
     {
         QList<gsl::owner<QListWidgetItem*>> selected{ui->enabledBackendList->selectedItems()};
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)
@@ -1366,7 +1366,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     if(gotAction == removeAction)
     {
         QList<gsl::owner<QListWidgetItem*>> selected{ui->disabledBackendList->selectedItems()};
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)

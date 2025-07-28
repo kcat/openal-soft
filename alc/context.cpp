@@ -109,9 +109,9 @@ std::atomic<ALCcontext*> ALCcontext::sGlobalContext{nullptr};
 
 ALCcontext::ThreadCtx::~ThreadCtx()
 {
-    if(ALCcontext *ctx{std::exchange(ALCcontext::sLocalContext, nullptr)})
+    if(auto *ctx = std::exchange(sLocalContext, nullptr))
     {
-        const bool result{ctx->releaseIfNoDelete()};
+        const auto result = ctx->releaseIfNoDelete();
         ERR("Context {} current for thread being destroyed{}!", voidp{ctx},
             result ? "" : ", leak detected");
     }

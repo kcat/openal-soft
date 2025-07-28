@@ -1302,7 +1302,7 @@ void Voice::prepare(DeviceBase *device)
          */
         const auto splitter = BandSplitter{device->mXOverFreq
             / gsl::narrow_cast<float>(device->mSampleRate)};
-        std::ranges::for_each(mChans, [splitter,device](Voice::ChannelData &chandata)
+        std::ranges::for_each(mChans, [splitter,device](ChannelData &chandata)
         {
             chandata.mAmbiHFScale = 1.0f;
             chandata.mAmbiLFScale = 1.0f;
@@ -1331,7 +1331,7 @@ void Voice::prepare(DeviceBase *device)
         const auto splitter = BandSplitter{device->mXOverFreq
             / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ignore = std::ranges::mismatch(mChans, OrdersSpan,
-            [&scales,splitter,device](Voice::ChannelData &chandata, const size_t scaleidx)
+            [&scales,splitter,device](ChannelData &chandata, const size_t scaleidx)
         {
             chandata.mAmbiHFScale = scales[scaleidx];
             chandata.mAmbiLFScale = 1.0f;
@@ -1346,7 +1346,7 @@ void Voice::prepare(DeviceBase *device)
     }
     else
     {
-        std::ranges::for_each(mChans, [device](Voice::ChannelData &chandata)
+        std::ranges::for_each(mChans, [device](ChannelData &chandata)
         {
             chandata.mDryParams = DirectParams{};
             chandata.mDryParams.NFCtrlFilter = device->mNFCtrlFilter;

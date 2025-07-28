@@ -101,7 +101,7 @@ void bs2b_processor::set_params(int level_, int srate_)
 
 void bs2b_processor::clear()
 {
-    history.fill(bs2b::t_last_sample{});
+    history.fill(t_last_sample{});
 }
 
 void bs2b_processor::cross_feed(const std::span<float> Left, const std::span<float> Right)

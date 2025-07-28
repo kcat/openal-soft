@@ -120,7 +120,7 @@ void Device::SetError(Device *device, ALCenum errorCode)
     if(device)
         device->mLastError.store(errorCode);
     else
-        Device::sLastGlobalError.store(errorCode);
+        sLastGlobalError.store(errorCode);
 }
 
 } // namespace al

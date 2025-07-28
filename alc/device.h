@@ -116,7 +116,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
 
     /** Stores the latest ALC device error. */
-    static void SetGlobalError(ALCenum errorCode) { SetError(nullptr, errorCode); };
+    static void SetGlobalError(ALCenum errorCode) { SetError(nullptr, errorCode); }
     void setError(ALCenum errorCode) { SetError(this, errorCode); }
 
     static inline std::atomic<ALCenum> sLastGlobalError{ALC_NO_ERROR};

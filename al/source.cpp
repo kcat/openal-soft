@@ -844,7 +844,7 @@ inline auto LookupBuffer(std::nothrow_t, gsl::strict_not_null<al::Device*> devic
         return nullptr;
     return std::to_address(std::next(sublist.Buffers->begin(),
         gsl::narrow_cast<ptrdiff_t>(slidx)));
-};
+}
 
 [[nodiscard]]
 auto LookupBuffer(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
@@ -868,7 +868,7 @@ inline auto LookupFilter(std::nothrow_t, gsl::strict_not_null<al::Device*> devic
         return nullptr;
     return std::to_address(std::next(sublist.Filters->begin(),
         gsl::narrow_cast<ptrdiff_t>(slidx)));
-};
+}
 
 [[nodiscard]]
 auto LookupFilter(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
@@ -891,7 +891,7 @@ inline auto LookupEffectSlot(std::nothrow_t, gsl::strict_not_null<ALCcontext*> c
     if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.EffectSlots->begin() + gsl::narrow_cast<size_t>(slidx));
-};
+}
 
 [[nodiscard]]
 auto LookupEffectSlot(gsl::strict_not_null<ALCcontext*> context, std::unsigned_integral auto id)
@@ -912,8 +912,8 @@ inline auto StereoModeFromEnum(std::signed_integral auto mode) noexcept
     case AL_SUPER_STEREO_SOFT: return SourceStereo::Enhanced;
     }
     return std::nullopt;
-};
-ALenum EnumFromStereoMode(SourceStereo mode)
+}
+auto EnumFromStereoMode(SourceStereo mode) -> ALenum
 {
     switch(mode)
     {
@@ -933,8 +933,8 @@ inline auto SpatializeModeFromEnum(std::signed_integral auto mode) noexcept
     case AL_AUTO_SOFT: return SpatializeMode::Auto;
     }
     return std::nullopt;
-};
-ALenum EnumFromSpatializeMode(SpatializeMode mode)
+}
+auto EnumFromSpatializeMode(SpatializeMode mode) -> ALenum
 {
     switch(mode)
     {
@@ -956,8 +956,8 @@ inline auto DirectModeFromEnum(std::signed_integral auto mode) noexcept
     case AL_REMIX_UNMATCHED_SOFT: return DirectMode::RemixMismatch;
     }
     return std::nullopt;
-};
-ALenum EnumFromDirectMode(DirectMode mode)
+}
+auto EnumFromDirectMode(DirectMode mode) -> ALenum
 {
     switch(mode)
     {
@@ -982,8 +982,8 @@ inline auto DistanceModelFromALenum(std::signed_integral auto model) noexcept
     case AL_EXPONENT_DISTANCE_CLAMPED: return DistanceModel::ExponentClamped;
     }
     return std::nullopt;
-};
-ALenum ALenumFromDistanceModel(DistanceModel model)
+}
+auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
 {
     switch(model)
     {

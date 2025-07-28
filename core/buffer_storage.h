@@ -72,7 +72,7 @@ struct BufferStorage {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
         if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();
         return frameSizeFromFmt();
-    };
+    }
 
     [[nodiscard]] auto isBFormat() const noexcept -> bool { return IsBFormat(mChannels); }
 };

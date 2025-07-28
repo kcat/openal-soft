@@ -102,8 +102,6 @@ namespace {
 
 using namespace std::string_view_literals;
 
-using FilePtr = std::unique_ptr<FILE, decltype([](const gsl::owner<FILE*> f) { fclose(f); })>;
-
 // The epsilon used to maintain signal stability.
 constexpr double Epsilon{1e-9};
 
@@ -148,12 +146,6 @@ constexpr bool DefaultSurface{true};
 constexpr double DefaultLimit{24.0};
 constexpr uint DefaultTruncSize{64};
 constexpr double DefaultCustomRadius{0.0};
-
-/* Channel index enums. Mono uses LeftChannel only. */
-enum ChannelIndex : uint {
-    LeftChannel = 0u,
-    RightChannel = 1u
-};
 
 
 /* Performs a string substitution.  Any case-insensitive occurrences of the

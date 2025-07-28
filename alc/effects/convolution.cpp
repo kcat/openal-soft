@@ -150,8 +150,6 @@ struct ChanPosMap {
 };
 
 
-using complex_f = std::complex<float>;
-
 constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 

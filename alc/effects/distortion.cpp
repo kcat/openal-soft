@@ -53,7 +53,6 @@ struct DistortionState final : public EffectState {
     /* Effect parameters */
     BiquadFilter mLowpass;
     BiquadFilter mBandpass;
-    float mAttenuation{};
     float mEdgeCoeff{};
 
     alignas(16) std::array<FloatBufferLine,2> mBuffer{};

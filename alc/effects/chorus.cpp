@@ -89,11 +89,6 @@ struct ChorusState final : public EffectState {
     void calcTriangleDelays(const size_t todo);
     void calcSinusoidDelays(const size_t todo);
 
-    void deviceUpdate(const DeviceBase *device, const float MaxDelay);
-    void update(const ContextBase *context, const EffectSlot *slot, const ChorusWaveform waveform,
-            const float delay, const float depth, const float feedback, const float rate,
-            int phase, const EffectTarget target);
-
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) final;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) final;

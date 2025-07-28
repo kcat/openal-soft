@@ -55,8 +55,6 @@ namespace {
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-using voidp = void*;
-
 #if HAVE_DYNLOAD
 #define JACK_FUNCS(MAGIC)          \
     MAGIC(jack_client_open);       \

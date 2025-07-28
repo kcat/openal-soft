@@ -15,7 +15,7 @@
 
 
 [[nodiscard]]
-auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
+inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
 {
     struct Handle {
         ALCdevice *device{};
@@ -23,7 +23,7 @@ auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
 
         Handle() = default;
         Handle(const Handle&) = delete;
-        Handle(Handle&& rhs)
+        Handle(Handle&& rhs) noexcept
             : device{std::exchange(rhs.device, nullptr)}
             , context{std::exchange(rhs.context, nullptr)}
         { }

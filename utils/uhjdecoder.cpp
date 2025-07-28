@@ -64,7 +64,6 @@ using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_c
 using ubyte = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
-using complex_d = std::complex<double>;
 
 using byte4 = std::array<std::byte,4>;
 
@@ -101,7 +100,6 @@ auto f32AsLEBytes(const float value) -> byte4
 constexpr auto BufferLineSize = 1024u;
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
-using FloatBufferSpan = std::span<float,BufferLineSize>;
 
 
 struct UhjDecoder {

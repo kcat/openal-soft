@@ -2310,11 +2310,11 @@ void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,
  * chokes on that given the inline specializations.
  */
 template<typename T>
-inline auto SampleConv(float) noexcept -> T;
+auto SampleConv(float) noexcept -> T = delete;
 
-template<> inline auto SampleConv(float val) noexcept -> float
+template<> auto SampleConv(float val) noexcept -> float
 { return val; }
-template<> inline auto SampleConv(float val) noexcept -> int32_t
+template<> auto SampleConv(float val) noexcept -> int32_t
 {
     /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
      * This means a normalized float has at most 25 bits of signed precision.
@@ -2323,17 +2323,17 @@ template<> inline auto SampleConv(float val) noexcept -> int32_t
      */
     return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
-template<> inline auto SampleConv(float val) noexcept -> int16_t
+template<> auto SampleConv(float val) noexcept -> int16_t
 { return gsl::narrow_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
-template<> inline auto SampleConv(float val) noexcept -> int8_t
+template<> auto SampleConv(float val) noexcept -> int8_t
 { return gsl::narrow_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
-template<> inline auto SampleConv(float val) noexcept -> uint32_t
+template<> auto SampleConv(float val) noexcept -> uint32_t
 { return as_unsigned(SampleConv<int32_t>(val)) + 2147483648u; }
-template<> inline auto SampleConv(float val) noexcept -> uint16_t
+template<> auto SampleConv(float val) noexcept -> uint16_t
 { return gsl::narrow_cast<uint16_t>(SampleConv<int16_t>(val) + 32768); }
-template<> inline auto SampleConv(float val) noexcept -> uint8_t
+template<> auto SampleConv(float val) noexcept -> uint8_t
 { return gsl::narrow_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
 template<typename T>

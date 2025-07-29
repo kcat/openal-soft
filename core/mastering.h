@@ -86,13 +86,14 @@ public:
      *
      * \param NumChans      Number of channels to process.
      * \param SampleRate    Sample rate to process.
-     * \param AutoKnee      Whether to automate the knee width parameter.
-     * \param AutoAttack    Whether to automate the attack time parameter.
-     * \param AutoRelease   Whether to automate the release time parameter.
-     * \param AutoPostGain  Whether to automate the make-up (post) gain
-     *        parameter.
-     * \param AutoDeclip    Whether to automate clipping reduction. Ignored
-     *        when not automating make-up gain.
+     * \param AutoFlags     Flags to automate specific parameters:
+     *                      AutoKnee - automate the knee width parameter
+     *                      AutoAttack - automate the attack time parameter
+     *                      AutoRelease - automate the release time parameter
+     *                      AutoPostGain - automate the make-up (post) gain
+     *                                     parameter
+     *                      AutoDeclip - automate clipping reduction. Ignored
+     *                                   when not automating make-up gain
      * \param LookAheadTime Look-ahead time (in seconds).
      * \param HoldTime      Peak hold-time (in seconds).
      * \param PreGainDb     Gain applied before detection (in dB).

@@ -1261,31 +1261,32 @@ void AudioState::handler()
     alGenBuffers(gsl::narrow_cast<ALsizei>(mBuffers.size()), mBuffers.data());
     alGenSources(1, &mSource);
 
-    if(PlaybackGain > 1.0f)
-    {
-        const auto maxgain = alIsExtensionPresent("AL_SOFT_gain_clamp_ex")
-            ? alGetFloat(AL_GAIN_LIMIT_SOFT) : 1.0f;
+    /* The gain limit is the internal max that the calculated source gain is
+     * clamped to after cone and distance attenuation, the filter gain, and
+     * listener gain are applied. Since none of those apply here, there's no
+     * need to raise the source's max gain beyond that limit.
+     */
+    const auto maxgain = alIsExtensionPresent("AL_SOFT_gain_clamp_ex")
+        ? alGetFloat(AL_GAIN_LIMIT_SOFT) : 1.0f;
+    alSourcef(mSource, AL_MAX_GAIN, maxgain);
 
-        auto gain = PlaybackGain;
-        if(gain > maxgain)
-        {
-            fmt::println(stderr, "Limiting requested gain {:+}db ({}) to max {:+}db ({})",
-                std::round(std::log10(double{gain})*2000.0) / 100.0, gain,
-                std::round(std::log10(double{maxgain})*2000.0) / 100.0, maxgain);
-            gain = maxgain;
-        }
-        else
-            fmt::println("Setting gain {:+}dB ({})",
-                std::round(std::log10(double{gain})*2000.0) / 100.0, gain);
-        alSourcef(mSource, AL_MAX_GAIN, gain);
-        alSourcef(mSource, AL_GAIN, gain);
-    }
-    else if(PlaybackGain < 1.0f)
+    /* The source's AL_GAIN can really be set to any non-negative finite value,
+     * but without cone and distance attenuation, there's no real point to
+     * setting it greater than the max gain.
+     */
+    auto gain = PlaybackGain;
+    if(gain > maxgain)
     {
-        fmt::println("Setting gain {:+}dB ({})",
-            std::round(std::log10(double{PlaybackGain})*2000.0) / 100.0, PlaybackGain);
-        alSourcef(mSource, AL_GAIN, PlaybackGain);
+        fmt::println(stderr, "Limiting requested gain {:+}dB ({}) to max {:+}dB ({})",
+            std::round(std::log10(gain)*2000.0f) / 100.0f, gain,
+            std::round(std::log10(maxgain)*2000.0f) / 100.0f, maxgain);
+        gain = maxgain;
     }
+    else
+        fmt::println("Setting gain {:+}dB ({})", std::round(std::log10(gain)*2000.0f) / 100.0f,
+            gain);
+    alSourcef(mSource, AL_GAIN, gain);
+
     if(DirectOutMode)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, DirectOutMode);
     if(EnableWideStereo)

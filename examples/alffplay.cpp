@@ -1340,8 +1340,7 @@ void AudioState::handler()
             std::ranges::fill(mBufferData, uint8_t{});
 
             mReadPos.store(0, std::memory_order_relaxed);
-            mWritePos.store(RoundFromZero(mBufferData.size()/2_uz, mFrameSize),
-                std::memory_order_relaxed);
+            mWritePos.store(0, std::memory_order_relaxed);
 
             auto refresh = ALCint{};
             alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);
@@ -1366,6 +1365,17 @@ void AudioState::handler()
                 break;
         }
     });
+
+    if(alIsExtensionPresent("AL_SOFT_source_start_delay"))
+    {
+        /* Start after a short delay, to give other threads a chance to get
+         * buffered. Prerolling would be better here, but short of that, this
+         * will do.
+         */
+        const auto start_delay = round<seconds>(AudioBufferTotalTime/2
+            * mCodecCtx->sample_rate).count();
+        alSourcei(mSource, AL_SAMPLE_OFFSET, -gsl::narrow_cast<int>(start_delay));
+    }
 
     srclock.lock();
     mSamplesLen = decodeFrame();

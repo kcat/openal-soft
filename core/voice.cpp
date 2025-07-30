@@ -1134,7 +1134,8 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         else if(mFlags.test(VoiceIsCallback))
         {
             /* Handle callback buffer source */
-            const auto endOffset = mCallbackBlockOffset + samplesDone;
+            const auto endOffset = mCallbackBlockOffset
+                + std::min(samplesDone, gsl::narrow_cast<uint>(DataPosInt));
             const auto blocksDone = endOffset / mSamplesPerBlock;
             if(blocksDone == 0)
                 mCallbackBlockOffset = endOffset;

@@ -376,7 +376,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
     const auto needRealloc = std::visit([ALBuf,DstType,newsize,access](auto &datavec) -> bool
     {
         using vector_t = std::remove_cvref_t<decltype(datavec)>;
-        using sample_t = vector_t::value_type;
+        using sample_t = typename vector_t::value_type;
 
         /* A new sample type must reallocate. */
         if(DstType != SampleInfo<sample_t>::format())
@@ -389,7 +389,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
 
             /* Reallocate in situ, to preserve existing samples as needed. */
             datavec.resize(newsize, SampleInfo<sample_t>::silence());
-            ALBuf->mData.emplace<std::span<sample_t>>(datavec);
+            ALBuf->mData = datavec;
         }
         return false;
     }, ALBuf->mDataStorage);
@@ -399,8 +399,8 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
         {
             using sample_t = decltype(value);
             using vector_t = al::vector<sample_t,16>;
-            auto newdata = vector_t(newsize / sizeof(sample_t), value);
-            ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(std::move(newdata));
+            auto &newdata = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(sample_t), value);
+            ALBuf->mData = newdata;
         };
         switch(DstType)
         {
@@ -484,8 +484,8 @@ void PrepareCallback(gsl::strict_not_null<ALCcontext*> context,
     {
         using sample_t = decltype(value);
         using vector_t = al::vector<sample_t,16>;
-        auto newdata = vector_t(newsize / sizeof(sample_t), value);
-        ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(std::move(newdata));
+        auto &newdata = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(sample_t), value);
+        ALBuf->mData = newdata;
     };
     switch(DstType)
     {

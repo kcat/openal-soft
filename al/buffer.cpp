@@ -313,8 +313,8 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
         context->throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
             ALBuf->id);
 
-    const auto align = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
-    if(align < 1)
+    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
+    if(samplesPerBlock < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
             ALBuf->UnpackAlign, NameFromFormat(DstType));
 
@@ -337,7 +337,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
         /* Can only preserve data with the same format and alignment. */
         if(ALBuf->mChannels != DstChannels || ALBuf->mType != DstType)
             context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched format");
-        if(ALBuf->mBlockAlign != align)
+        if(ALBuf->mBlockAlign != samplesPerBlock)
             context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched alignment");
         if(ALBuf->mAmbiOrder != ambiorder)
             context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched order");
@@ -345,22 +345,22 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
 
     /* Convert the size in bytes to blocks using the unpack block alignment. */
     const auto NumChannels = ChannelsFromFmt(DstChannels, ambiorder);
-    const auto BlockSize = NumChannels *
-        ((DstType == FmtIMA4) ? (align-1u)/2u + 4u :
-        (DstType == FmtMSADPCM) ? (align-2u)/2u + 7u :
-        (align * BytesFromFmt(DstType)));
-    if((size%BlockSize) != 0)
+    const auto bytesPerBlock = NumChannels *
+        ((DstType == FmtIMA4) ? (samplesPerBlock-1u)/2u + 4u :
+        (DstType == FmtMSADPCM) ? (samplesPerBlock-2u)/2u + 7u :
+        (samplesPerBlock * BytesFromFmt(DstType)));
+    if((size%bytesPerBlock) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Data size {} is not a multiple of frame size {} ({} unpack alignment)",
-            size, BlockSize, align);
-    const auto blocks = size / BlockSize;
+            size, bytesPerBlock, samplesPerBlock);
+    const auto blocks = size / bytesPerBlock;
 
-    if(blocks > std::numeric_limits<ALsizei>::max()/align)
+    if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, {} blocks x {} samples per block", blocks, align);
-    if(blocks > std::numeric_limits<size_t>::max()/BlockSize)
+            "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
+    if(blocks > std::numeric_limits<size_t>::max()/bytesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, {} frames x {} bytes per frame", blocks, BlockSize);
+            "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
 #if ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
@@ -372,7 +372,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
     }
 #endif
 
-    const auto newsize = size_t{blocks} * BlockSize;
+    const auto newsize = size_t{blocks} * bytesPerBlock;
     const auto needRealloc = std::visit([ALBuf,DstType,newsize,access](auto &datavec) -> bool
     {
         using vector_t = std::remove_cvref_t<decltype(datavec)>;
@@ -424,7 +424,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
+    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
 
     ALBuf->OriginalSize = size;
 
@@ -438,7 +438,7 @@ void LoadData(gsl::strict_not_null<ALCcontext*> context, gsl::strict_not_null<AL
     ALBuf->mCallback = nullptr;
     ALBuf->mUserData = nullptr;
 
-    ALBuf->mSampleLen = blocks * align;
+    ALBuf->mSampleLen = blocks * samplesPerBlock;
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 
@@ -460,15 +460,15 @@ void PrepareCallback(gsl::strict_not_null<ALCcontext*> context,
     const auto ambiorder = IsBFormat(DstChannels) ? ALBuf->UnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1u : 0u);
 
-    const auto align = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
-    if(align < 1)
+    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
+    if(samplesPerBlock < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
             ALBuf->UnpackAlign, NameFromFormat(DstType));
 
-    const auto BlockSize = ChannelsFromFmt(DstChannels, ambiorder) *
-        ((DstType == FmtIMA4) ? (align-1u)/2u + 4u :
-        (DstType == FmtMSADPCM) ? (align-2u)/2u + 7u :
-        (align * BytesFromFmt(DstType)));
+    const auto bytesPerBlock = ChannelsFromFmt(DstChannels, ambiorder) *
+        ((DstType == FmtIMA4) ? (samplesPerBlock-1u)/2u + 4u :
+        (DstType == FmtMSADPCM) ? (samplesPerBlock-2u)/2u + 7u :
+        (samplesPerBlock * BytesFromFmt(DstType)));
 
     /* The maximum number of samples a callback buffer may need to store is a
      * full mixing line * max pitch * channel count, since it may need to hold
@@ -477,9 +477,9 @@ void PrepareCallback(gsl::strict_not_null<ALCcontext*> context,
      * voice will hold a history for the past samples).
      */
     static constexpr auto line_size = DeviceBase::MixerLineSize*MaxPitch + MaxResamplerEdge;
-    const auto line_blocks = (line_size + align-1) / align;
+    const auto line_blocks = (line_size + samplesPerBlock-1u) / samplesPerBlock;
 
-    const auto newsize = line_blocks * BlockSize;
+    const auto newsize = line_blocks * bytesPerBlock;
     auto do_realloc = [ALBuf,newsize](auto value)
     {
         using sample_t = decltype(value);
@@ -510,7 +510,7 @@ void PrepareCallback(gsl::strict_not_null<ALCcontext*> context,
     ALBuf->OriginalSize = 0;
     ALBuf->Access = 0;
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
+    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
     ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
     ALBuf->mChannels = DstChannels;
     ALBuf->mType = DstType;
@@ -530,8 +530,8 @@ void PrepareUserPtr(gsl::strict_not_null<ALCcontext*> context [[maybe_unused]],
         context->throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
             ALBuf->id);
 
-    const auto align = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
-    if(align < 1)
+    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf->UnpackAlign);
+    if(samplesPerBlock < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
             ALBuf->UnpackAlign, NameFromFormat(DstType));
 
@@ -564,22 +564,22 @@ void PrepareUserPtr(gsl::strict_not_null<ALCcontext*> context [[maybe_unused]],
 
     /* Convert the size in bytes to blocks using the unpack block alignment. */
     const auto NumChannels = ChannelsFromFmt(DstChannels, ambiorder);
-    const auto BlockSize = NumChannels *
-        ((DstType == FmtIMA4) ? (align-1u)/2u + 4u :
-        (DstType == FmtMSADPCM) ? (align-2u)/2u + 7u :
-        (align * BytesFromFmt(DstType)));
-    if((usrdatalen%BlockSize) != 0)
+    const auto bytesPerBlock = NumChannels *
+        ((DstType == FmtIMA4) ? (samplesPerBlock-1u)/2u + 4u :
+        (DstType == FmtMSADPCM) ? (samplesPerBlock-2u)/2u + 7u :
+        (samplesPerBlock * BytesFromFmt(DstType)));
+    if((usrdatalen%bytesPerBlock) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Data size {} is not a multiple of frame size {} ({} unpack alignment)",
-            usrdatalen, BlockSize, align);
-    const auto blocks = usrdatalen / BlockSize;
+            usrdatalen, bytesPerBlock, samplesPerBlock);
+    const auto blocks = usrdatalen / bytesPerBlock;
 
-    if(blocks > std::numeric_limits<ALsizei>::max()/align)
+    if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, {} blocks x {} samples per block", blocks, align);
-    if(blocks > std::numeric_limits<size_t>::max()/BlockSize)
+            "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
+    if(blocks > std::numeric_limits<size_t>::max()/bytesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
-            "Buffer size overflow, {} frames x {} bytes per frame", blocks, BlockSize);
+            "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
 #if ALSOFT_EAX
     if(ALBuf->eax_x_ram_mode == EaxStorage::Hardware)
@@ -620,13 +620,13 @@ void PrepareUserPtr(gsl::strict_not_null<ALCcontext*> context [[maybe_unused]],
     ALBuf->OriginalSize = usrdatalen;
     ALBuf->Access = 0;
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? align : 1;
+    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
     ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
     ALBuf->mChannels = DstChannels;
     ALBuf->mType = DstType;
     ALBuf->mAmbiOrder = ambiorder;
 
-    ALBuf->mSampleLen = blocks * align;
+    ALBuf->mSampleLen = blocks * samplesPerBlock;
     ALBuf->mLoopStart = 0;
     ALBuf->mLoopEnd = ALBuf->mSampleLen;
 

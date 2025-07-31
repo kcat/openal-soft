@@ -755,7 +755,7 @@ try {
     auto const device = al::get_not_null(context->mALDevice);
     auto buflock = std::lock_guard{device->BufferLock};
 
-    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(n)};
+    const auto bids = std::views::counted(buffers, n);
     if(!EnsureBuffers(device, bids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} buffer{}", n,
             (n==1) ? "" : "s");
@@ -779,7 +779,7 @@ try {
     auto buflock = std::lock_guard{device->BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
-    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(n)};
+    const auto bids = std::views::counted(buffers, n);
     std::ranges::for_each(bids, [context](const ALuint bid)
     {
         if(!bid) return;
@@ -829,13 +829,14 @@ try {
         context->throw_error(AL_INVALID_VALUE,
             "Declaring persistently mapped storage without read or write access");
 
-    auto usrfmt = DecomposeUserFormat(format);
+    auto const usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
-    auto *bdata = static_cast<const std::byte*>(data);
-    LoadData(context, albuf, freq, gsl::narrow_cast<ALuint>(size), usrfmt->channels, usrfmt->type,
-        std::span{bdata, bdata ? gsl::narrow_cast<ALuint>(size) : 0u}, flags);
+    auto *const bdata = static_cast<const std::byte*>(data);
+    auto const usize = gsl::narrow_cast<ALuint>(size);
+    LoadData(context, albuf, freq, usize, usrfmt->channels, usrfmt->type,
+        std::span{bdata, bdata ? usize : 0u}, flags);
 }
 catch(al::base_exception&) {
 }
@@ -1589,7 +1590,7 @@ try {
 
     /* Validate the buffers. */
     auto buflist = std::unordered_set<gsl::strict_not_null<ALbuffer*>>{};
-    for(const ALuint bufid : std::span{buffers, gsl::narrow_cast<uint>(n)})
+    for(const ALuint bufid : std::views::counted(buffers, n))
     {
         if(bufid == AL_NONE)
             continue;

@@ -423,7 +423,7 @@ try {
          */
         if(logBuf)
         {
-            const auto logSpan = std::span{logBuf, gsl::narrow_cast<ALuint>(logBufSize)};
+            const auto logSpan = std::views::counted(logBuf, logBufSize);
             auto counter = 0_uz;
             auto todo = 0u;
             std::ignore = std::ranges::find_if(context->mDebugLog | std::views::take(count),
@@ -464,7 +464,7 @@ try {
 
     if(logBuf)
     {
-        const auto logSpan = std::span{logBuf, gsl::narrow_cast<ALuint>(logBufSize)};
+        const auto logSpan = std::views::counted(logBuf, logBufSize);
         /* C++23...
         std::ranges::copy(logrange | std::views::transform(&DebugLogEntry::mMessage)
             | std::views::join_with('\0'), logSpan.begin());
@@ -537,7 +537,7 @@ try {
     if(label && bufSize == 0)
         context->throw_error(AL_INVALID_VALUE, "Zero label bufSize");
 
-    const auto labelOut = std::span{label, label ? gsl::narrow_cast<ALuint>(bufSize) : 0u};
+    const auto labelOut = std::views::counted(label, label ? bufSize : 0);
     auto copy_name = [name,length,labelOut](std::unordered_map<ALuint,std::string> &names)
     {
         const auto objname = std::invoke([name,&names]

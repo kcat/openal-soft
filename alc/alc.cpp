@@ -2477,7 +2477,7 @@ try {
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
     }
     else
-        GetIntegerv(std::to_address(dev), param, {values, gsl::narrow_cast<uint>(size)});
+        GetIntegerv(std::to_address(dev), param, std::views::counted(values, size));
 }
 catch(al::base_exception&) {
 }
@@ -2494,7 +2494,7 @@ try {
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return;
     }
-    const auto valuespan = std::span{values, gsl::narrow_cast<uint>(size)};
+    const auto valuespan = std::views::counted(values, size);
     if(!dev || dev->Type == DeviceType::Capture)
     {
         auto ivals = std::vector<int>(valuespan.size());

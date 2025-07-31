@@ -378,7 +378,7 @@ try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
 
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    const auto fids = std::views::counted(filters, n);
     if(!EnsureFilters(device, fids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
             (n==1) ? "" : "s");
@@ -402,7 +402,7 @@ try {
     auto filterlock = std::lock_guard{device->FilterLock};
 
     /* First try to find any filters that are invalid. */
-    const auto fids = std::span{filters, gsl::narrow_cast<uint>(n)};
+    const auto fids = std::views::counted(filters, n);
     std::ranges::for_each(fids, [context](const ALuint fid)
     { if(fid != 0) std::ignore = LookupFilter(context, fid); });
 

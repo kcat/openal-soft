@@ -2719,7 +2719,7 @@ try {
     auto srclock = std::unique_lock{context->mSourceLock};
     auto const device = al::get_not_null(context->mALDevice);
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     if(context->mNumSources > device->SourcesMax
         || sids.size() > device->SourcesMax-context->mNumSources)
         context->throw_error(AL_OUT_OF_MEMORY, "Exceeding {} source limit ({} + {})",
@@ -2746,7 +2746,7 @@ try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
     /* Check that all Sources are valid */
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     std::ranges::for_each(sids, [context](const ALuint sid)
     { std::ignore = LookupSource(context, sid); });
 
@@ -3203,7 +3203,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
     if(n <= 0) [[unlikely]] return;
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
 
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3239,7 +3239,7 @@ try {
     if(start_time < 0)
         context->throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
 
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3277,7 +3277,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
     if(n <= 0) [[unlikely]] return;
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
 
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3339,7 +3339,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
     if(n <= 0) [[unlikely]] return;
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
 
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3388,7 +3388,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
     if(n <= 0) [[unlikely]] return;
 
-    const auto sids = std::span{sources, gsl::narrow_cast<ALuint>(n)};
+    const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
 
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3457,7 +3457,7 @@ try {
     });
 
     auto buflock = std::unique_lock{device->BufferLock};
-    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(nb)};
+    const auto bids = std::views::counted(buffers, nb);
     const auto NewListStart = std::ssize(source->mQueue);
     try {
         ALbufferQueueItem *BufferList{nullptr};
@@ -3560,7 +3560,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Unqueueing from looping source {}", src);
 
     /* Make sure enough buffers have been processed to unqueue. */
-    const auto bids = std::span{buffers, gsl::narrow_cast<ALuint>(nb)};
+    const auto bids = std::views::counted(buffers, nb);
     auto processed = 0_uz;
     if(source->state != AL_INITIAL) [[likely]]
     {

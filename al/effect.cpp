@@ -235,7 +235,7 @@ try {
     auto const device = al::get_not_null(context->mALDevice);
     auto effectlock = std::lock_guard{device->EffectLock};
 
-    const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
+    const auto eids = std::views::counted(effects, n);
     if(!EnsureEffects(device, eids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
             (n==1) ? "" : "s");
@@ -259,7 +259,7 @@ try {
     auto effectlock = std::lock_guard{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
-    const auto eids = std::span{effects, gsl::narrow_cast<uint>(n)};
+    const auto eids = std::views::counted(effects, n);
     std::ranges::for_each(eids, [context](const ALuint eid)
     { if(eid != 0) std::ignore = LookupEffect(context, eid); });
 

@@ -9,7 +9,6 @@
 #include <variant>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "almalloc.h"
@@ -63,7 +62,7 @@ struct ALeffect {
     /* Self ID */
     ALuint id{0u};
 
-    static void SetName(gsl::strict_not_null<ALCcontext*> context, ALuint id,
+    static void SetName(gsl::strict_not_null<al::Context*> context, ALuint id,
         std::string_view name);
 
     DISABLE_ALLOC

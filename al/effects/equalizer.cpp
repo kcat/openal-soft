@@ -37,11 +37,11 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps EqualizerEffectProps(genDefaultProps());
 
-void EqualizerEffectHandler::SetParami(ALCcontext *context, EqualizerProps&, ALenum param, int)
+void EqualizerEffectHandler::SetParami(al::Context *context, EqualizerProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property {:#04x}", as_unsigned(param)); }
-void EqualizerEffectHandler::SetParamiv(ALCcontext *context, EqualizerProps&, ALenum param, const int*)
+void EqualizerEffectHandler::SetParamiv(al::Context *context, EqualizerProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer-vector property {:#04x}", as_unsigned(param)); }
-void EqualizerEffectHandler::SetParamf(ALCcontext *context, EqualizerProps &props, ALenum param, float val)
+void EqualizerEffectHandler::SetParamf(al::Context *context, EqualizerProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -109,14 +109,14 @@ void EqualizerEffectHandler::SetParamf(ALCcontext *context, EqualizerProps &prop
     context->throw_error(AL_INVALID_ENUM, "Invalid equalizer float property {:#04x}",
         as_unsigned(param));
 }
-void EqualizerEffectHandler::SetParamfv(ALCcontext *context, EqualizerProps &props, ALenum param, const float *vals)
+void EqualizerEffectHandler::SetParamfv(al::Context *context, EqualizerProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void EqualizerEffectHandler::GetParami(ALCcontext *context, const EqualizerProps&, ALenum param, int*)
+void EqualizerEffectHandler::GetParami(al::Context *context, const EqualizerProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property {:#04x}", as_unsigned(param)); }
-void EqualizerEffectHandler::GetParamiv(ALCcontext *context, const EqualizerProps&, ALenum param, int*)
+void EqualizerEffectHandler::GetParamiv(al::Context *context, const EqualizerProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid equalizer integer-vector property {:#04x}", as_unsigned(param)); }
-void EqualizerEffectHandler::GetParamf(ALCcontext *context, const EqualizerProps &props, ALenum param, float *val)
+void EqualizerEffectHandler::GetParamf(al::Context *context, const EqualizerProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -135,7 +135,7 @@ void EqualizerEffectHandler::GetParamf(ALCcontext *context, const EqualizerProps
     context->throw_error(AL_INVALID_ENUM, "Invalid equalizer float property {:#04x}",
         as_unsigned(param));
 }
-void EqualizerEffectHandler::GetParamfv(ALCcontext *context, const EqualizerProps &props, ALenum param, float *vals)
+void EqualizerEffectHandler::GetParamfv(al::Context *context, const EqualizerProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

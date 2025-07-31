@@ -17,7 +17,6 @@
 #include <variant>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alc/context.h"
@@ -45,7 +44,7 @@ struct overloaded : Ts... { using Ts::operator()...; };
 template<typename... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
-auto EventThread(ALCcontext *context) -> void
+auto EventThread(al::Context *context) -> void
 {
     auto *ring = context->mAsyncEvents.get();
     auto quitnow = false;
@@ -143,7 +142,7 @@ constexpr auto GetEventType(ALenum etype) noexcept -> std::optional<AsyncEnableB
 }
 
 
-void alEventControlSOFT(gsl::strict_not_null<ALCcontext*> context, ALsizei count,
+void alEventControlSOFT(gsl::strict_not_null<al::Context*> context, ALsizei count,
     const ALenum *types, ALboolean enable) noexcept
 try {
     if(count < 0)
@@ -193,7 +192,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEventCallbackSOFT(gsl::strict_not_null<ALCcontext*> context, ALEVENTPROCSOFT callback,
+void alEventCallbackSOFT(gsl::strict_not_null<al::Context*> context, ALEVENTPROCSOFT callback,
     void *userParam) noexcept
 try {
     auto eventlock = std::lock_guard{context->mEventCbLock};
@@ -209,7 +208,7 @@ catch(std::exception &e) {
 } // namespace
 
 
-void StartEventThrd(ALCcontext *ctx)
+void StartEventThrd(al::Context *ctx)
 {
     try {
         ctx->mEventThread = std::thread{EventThread, ctx};
@@ -222,7 +221,7 @@ void StartEventThrd(ALCcontext *ctx)
     }
 }
 
-void StopEventThrd(ALCcontext *ctx)
+void StopEventThrd(al::Context *ctx)
 {
     auto *ring = ctx->mAsyncEvents.get();
     auto evt_span = ring->getWriteVector()[0];

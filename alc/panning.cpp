@@ -41,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alc/context.h"
@@ -1381,7 +1380,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 }
 
 
-void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
+void aluInitEffectPanning(EffectSlot *slot, al::Context *context)
 {
     auto const device = al::get_not_null(context->mDevice);
     auto const count = AmbiChannelsFromOrder(device->mAmbiOrder);

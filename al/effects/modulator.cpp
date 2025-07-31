@@ -56,7 +56,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps ModulatorEffectProps(genDefaultProps());
 
-void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &props, ALenum param, int val)
+void ModulatorEffectHandler::SetParami(al::Context *context, ModulatorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -77,10 +77,10 @@ void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &prop
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamiv(ALCcontext *context, ModulatorProps &props, ALenum param, const int *vals)
+void ModulatorEffectHandler::SetParamiv(al::Context *context, ModulatorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &props, ALenum param, float val)
+void ModulatorEffectHandler::SetParamf(al::Context *context, ModulatorProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -101,10 +101,10 @@ void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &prop
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamfv(ALCcontext *context, ModulatorProps &props, ALenum param, const float *vals)
+void ModulatorEffectHandler::SetParamfv(al::Context *context, ModulatorProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps &props, ALenum param, int *val)
+void ModulatorEffectHandler::GetParami(al::Context *context, const ModulatorProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -116,9 +116,9 @@ void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamiv(ALCcontext *context, const ModulatorProps &props, ALenum param, int *vals)
+void ModulatorEffectHandler::GetParamiv(al::Context *context, const ModulatorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps &props, ALenum param, float *val)
+void ModulatorEffectHandler::GetParamf(al::Context *context, const ModulatorProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -129,7 +129,7 @@ void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamfv(ALCcontext *context, const ModulatorProps &props, ALenum param, float *vals)
+void ModulatorEffectHandler::GetParamfv(al::Context *context, const ModulatorProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

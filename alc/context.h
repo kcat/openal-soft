@@ -77,11 +77,12 @@ struct DebugLogEntry {
 };
 
 
+struct ALCcontext { };
+
 namespace al {
 struct Device;
-} // namespace al
 
-struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
+struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBase {
     const gsl::strict_not_null<al::intrusive_ptr<al::Device>> mALDevice;
 
     bool mPropsDirty{true};
@@ -131,11 +132,11 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    ALCcontext(const gsl::strict_not_null<al::intrusive_ptr<al::Device>> &device,
+    Context(const gsl::strict_not_null<al::intrusive_ptr<Device>> &device,
         ContextFlagBitset flags);
-    ALCcontext(const ALCcontext&) = delete;
-    ALCcontext& operator=(const ALCcontext&) = delete;
-    ~ALCcontext() final;
+    Context(const Context&) = delete;
+    Context& operator=(const Context&) = delete;
+    ~Context() final;
 
     void init();
     /**
@@ -195,11 +196,11 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
 
     /* Process-wide current context */
     static std::atomic<bool> sGlobalContextLock;
-    static std::atomic<ALCcontext*> sGlobalContext;
+    static std::atomic<al::Context*> sGlobalContext;
 
 private:
     /* Thread-local current context. */
-    static inline thread_local ALCcontext *sLocalContext{};
+    static inline thread_local al::Context *sLocalContext{};
 
     /* Thread-local context handling. This handles attempting to release the
      * context which may have been left current when the thread is destroyed.
@@ -217,14 +218,14 @@ private:
          * clear sLocalContext (which isn't a member variable to make read
          * access efficient).
          */
-        void set(ALCcontext *ctx) const noexcept { sLocalContext = ctx; }
+        void set(al::Context *ctx) const noexcept { sLocalContext = ctx; }
         /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
 
 public:
-    static ALCcontext *getThreadContext() noexcept { return sLocalContext; }
-    static void setThreadContext(ALCcontext *context) noexcept { sThreadContext.set(context); }
+    static al::Context *getThreadContext() noexcept { return sLocalContext; }
+    static void setThreadContext(al::Context *context) noexcept { sThreadContext.set(context); }
 
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;
@@ -542,11 +543,13 @@ private:
 #endif // ALSOFT_EAX
 };
 
-using ContextRef = al::intrusive_ptr<ALCcontext>;
+} // namespace al
+
+using ContextRef = al::intrusive_ptr<al::Context>;
 
 ContextRef GetContextRef() noexcept;
 
-void UpdateContextProps(ALCcontext *context);
+void UpdateContextProps(al::Context *context);
 
 
 inline bool TrapALError{false};

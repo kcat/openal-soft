@@ -56,7 +56,7 @@ consteval EffectProps genDefaultProps() noexcept
 
 constinit const EffectProps FshifterEffectProps(genDefaultProps());
 
-void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props, ALenum param, int val)
+void FshifterEffectHandler::SetParami(al::Context *context, FshifterProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -80,10 +80,10 @@ void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::SetParamiv(ALCcontext *context, FshifterProps &props, ALenum param, const int *vals)
+void FshifterEffectHandler::SetParamiv(al::Context *context, FshifterProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void FshifterEffectHandler::SetParamf(ALCcontext *context, FshifterProps &props, ALenum param, float val)
+void FshifterEffectHandler::SetParamf(al::Context *context, FshifterProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -97,10 +97,10 @@ void FshifterEffectHandler::SetParamf(ALCcontext *context, FshifterProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::SetParamfv(ALCcontext *context, FshifterProps &props, ALenum param, const float *vals)
+void FshifterEffectHandler::SetParamfv(al::Context *context, FshifterProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void FshifterEffectHandler::GetParami(ALCcontext *context, const FshifterProps &props, ALenum param, int *val)
+void FshifterEffectHandler::GetParami(al::Context *context, const FshifterProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -115,10 +115,10 @@ void FshifterEffectHandler::GetParami(ALCcontext *context, const FshifterProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::GetParamiv(ALCcontext *context, const FshifterProps &props, ALenum param, int *vals)
+void FshifterEffectHandler::GetParamiv(al::Context *context, const FshifterProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
-void FshifterEffectHandler::GetParamf(ALCcontext *context, const FshifterProps &props, ALenum param, float *val)
+void FshifterEffectHandler::GetParamf(al::Context *context, const FshifterProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -128,7 +128,7 @@ void FshifterEffectHandler::GetParamf(ALCcontext *context, const FshifterProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::GetParamfv(ALCcontext *context, const FshifterProps &props, ALenum param, float *vals)
+void FshifterEffectHandler::GetParamfv(al::Context *context, const FshifterProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

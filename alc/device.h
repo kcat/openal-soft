@@ -33,10 +33,11 @@ using uint = unsigned int;
 
 
 struct ALCdevice {
-    ALCdevice() = default;
-    virtual ~ALCdevice() = default;
     ALCdevice(const ALCdevice&) = delete;
     auto operator=(const ALCdevice&) -> ALCdevice& = delete;
+    virtual ~ALCdevice() = default;
+protected:
+    ALCdevice() = default;
 };
 
 namespace al {

@@ -390,7 +390,7 @@ using DeviceRef = al::intrusive_ptr<al::Device>;
  * Device lists
  ************************************************/
 auto DeviceList = std::vector<gsl::strict_not_null<al::Device*>>{};
-auto ContextList = std::vector<gsl::strict_not_null<ALCcontext*>>{};
+auto ContextList = std::vector<gsl::strict_not_null<al::Context*>>{};
 
 auto ListLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction? */
 
@@ -692,10 +692,10 @@ void alc_initconfig()
         });
     }
 
-    InitEffect(&ALCcontext::sDefaultEffect);
+    InitEffect(&al::Context::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
     if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb"sv);
-    if(defrevopt) LoadReverbPreset(*defrevopt, &ALCcontext::sDefaultEffect);
+    if(defrevopt) LoadReverbPreset(*defrevopt, &al::Context::sDefaultEffect);
 
 #if ALSOFT_EAX
     if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))
@@ -1723,7 +1723,7 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
     auto mixer_mode = FPUCtl{};
     std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
     {
-        auto const context = gsl::make_not_null(dynamic_cast<ALCcontext*>(ctxbase));
+        auto const context = gsl::make_not_null(dynamic_cast<al::Context*>(ctxbase));
 
         auto proplock = std::unique_lock{context->mPropLock};
         auto slotlock = std::unique_lock{context->mEffectSlotLock};
@@ -1888,7 +1888,7 @@ auto ResetDeviceParams(gsl::strict_not_null<al::Device*> device,
         std::ranges::for_each(*device->mContexts.load(std::memory_order_acquire),
             [](ContextBase *ctxbase)
         {
-            auto *ctx = dynamic_cast<ALCcontext*>(ctxbase);
+            auto *ctx = dynamic_cast<al::Context*>(ctxbase);
             Ensures(ctx != nullptr);
             if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
                 return;
@@ -1967,19 +1967,19 @@ FORCE_ALIGN void ALC_APIENTRY alsoft_set_log_callback(LPALSOFTLOGCALLBACK callba
 /** Returns a new reference to the currently active context for this thread. */
 ContextRef GetContextRef() noexcept
 {
-    auto *context = ALCcontext::getThreadContext();
+    auto *context = al::Context::getThreadContext();
     if(context)
         context->inc_ref();
     else
     {
-        while(ALCcontext::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
+        while(al::Context::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
             /* Wait to make sure another thread isn't trying to change the
              * current context and bring its refcount to 0.
              */
         }
-        context = ALCcontext::sGlobalContext.load(std::memory_order_acquire);
+        context = al::Context::sGlobalContext.load(std::memory_order_acquire);
         if(context) [[likely]] context->inc_ref();
-        ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
+        al::Context::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};
 }
@@ -2757,7 +2757,7 @@ try {
         }
     }
 
-    auto context = ContextRef{new(std::nothrow) ALCcontext{dev, ctxflags}};
+    auto context = ContextRef{new(std::nothrow) al::Context{dev, ctxflags}};
     if(!context)
     {
         dev->setError(ALC_OUT_OF_MEMORY);
@@ -2813,8 +2813,8 @@ try {
     if(auto *slot = context->mDefaultSlot.get())
     {
         try {
-            slot->initEffect(0, ALCcontext::sDefaultEffect.type, ALCcontext::sDefaultEffect.Props,
-                gsl::make_not_null(context.get()));
+            slot->initEffect(0, al::Context::sDefaultEffect.type,
+                al::Context::sDefaultEffect.Props, gsl::make_not_null(context.get()));
         }
         catch(std::exception& e) {
             ERR("Exception initializing the default effect: {}", e.what());
@@ -2864,14 +2864,14 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 
 ALC_API auto ALC_APIENTRY alcGetCurrentContext() noexcept -> ALCcontext*
 {
-    auto *Context = ALCcontext::getThreadContext();
-    if(!Context) Context = ALCcontext::sGlobalContext.load();
+    auto *Context = al::Context::getThreadContext();
+    if(!Context) Context = al::Context::sGlobalContext.load();
     return Context;
 }
 
 /** Returns the currently active thread-local context. */
 ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
-{ return ALCcontext::getThreadContext(); }
+{ return al::Context::getThreadContext(); }
 
 ALC_API auto ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept -> ALCboolean
 try {
@@ -2882,19 +2882,19 @@ try {
      * pointer. Take ownership of the reference (if any) that was previously
      * stored there, and let the reference go.
      */
-    while(ALCcontext::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
+    while(al::Context::sGlobalContextLock.exchange(true, std::memory_order_acquire)) {
         /* Wait to make sure another thread isn't getting or trying to change
          * the current context as its refcount is decremented.
          */
     }
-    ctx = ContextRef{ALCcontext::sGlobalContext.exchange(ctx.release())};
-    ALCcontext::sGlobalContextLock.store(false, std::memory_order_release);
+    ctx = ContextRef{al::Context::sGlobalContext.exchange(ctx.release())};
+    al::Context::sGlobalContextLock.store(false, std::memory_order_release);
 
     /* Take ownership of the thread-local context reference (if any), clearing
      * the storage to null.
      */
-    ctx = ContextRef{ALCcontext::getThreadContext()};
-    if(ctx) ALCcontext::setThreadContext(nullptr);
+    ctx = ContextRef{al::Context::getThreadContext()};
+    if(ctx) al::Context::setThreadContext(nullptr);
     /* Reset (decrement) the previous thread-local reference. */
 
     return ALC_TRUE;
@@ -2910,8 +2910,8 @@ try {
     auto ctx = context ? VerifyContext(context).get() : ContextRef{};
 
     /* context's reference count is already incremented */
-    auto old = ContextRef{ALCcontext::getThreadContext()};
-    ALCcontext::setThreadContext(ctx.release());
+    auto old = ContextRef{al::Context::getThreadContext()};
+    al::Context::setThreadContext(ctx.release());
 
     return ALC_TRUE;
 }
@@ -3090,7 +3090,7 @@ ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboole
     listlock.unlock();
     prevarray.reset();
 
-    std::ranges::for_each(orphanctxs, [](ALCcontext *context)
+    std::ranges::for_each(orphanctxs, [](al::Context *context)
     {
         WARN("Releasing orphaned context {}", voidp{context});
         context->deinit();

@@ -29,7 +29,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps PshifterEffectProps(genDefaultProps());
 
-void PshifterEffectHandler::SetParami(ALCcontext *context, PshifterProps &props, ALenum param, int val)
+void PshifterEffectHandler::SetParami(al::Context *context, PshifterProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -49,15 +49,15 @@ void PshifterEffectHandler::SetParami(ALCcontext *context, PshifterProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void PshifterEffectHandler::SetParamiv(ALCcontext *context, PshifterProps &props, ALenum param, const int *vals)
+void PshifterEffectHandler::SetParamiv(al::Context *context, PshifterProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void PshifterEffectHandler::SetParamf(ALCcontext *context, PshifterProps&, ALenum param, float)
+void PshifterEffectHandler::SetParamf(al::Context *context, PshifterProps&, ALenum param, float)
 { context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
-void PshifterEffectHandler::SetParamfv(ALCcontext *context, PshifterProps &props, ALenum param, const float *vals)
+void PshifterEffectHandler::SetParamfv(al::Context *context, PshifterProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void PshifterEffectHandler::GetParami(ALCcontext *context, const PshifterProps &props, ALenum param, int *val)
+void PshifterEffectHandler::GetParami(al::Context *context, const PshifterProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -68,12 +68,12 @@ void PshifterEffectHandler::GetParami(ALCcontext *context, const PshifterProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void PshifterEffectHandler::GetParamiv(ALCcontext *context, const PshifterProps &props, ALenum param, int *vals)
+void PshifterEffectHandler::GetParamiv(al::Context *context, const PshifterProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
-void PshifterEffectHandler::GetParamf(ALCcontext *context, const PshifterProps&, ALenum param, float*)
+void PshifterEffectHandler::GetParamf(al::Context *context, const PshifterProps&, ALenum param, float*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
-void PshifterEffectHandler::GetParamfv(ALCcontext *context, const PshifterProps &props, ALenum param, float *vals)
+void PshifterEffectHandler::GetParamfv(al::Context *context, const PshifterProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

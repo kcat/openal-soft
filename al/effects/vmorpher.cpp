@@ -140,7 +140,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps VmorpherEffectProps(genDefaultProps());
 
-void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props, ALenum param, int val)
+void VmorpherEffectHandler::SetParami(al::Context *context, VmorpherProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -186,9 +186,9 @@ void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::SetParamiv(ALCcontext *context, VmorpherProps &props, ALenum param, const int *vals)
+void VmorpherEffectHandler::SetParamiv(al::Context *context, VmorpherProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void VmorpherEffectHandler::SetParamf(ALCcontext *context, VmorpherProps &props, ALenum param, float val)
+void VmorpherEffectHandler::SetParamf(al::Context *context, VmorpherProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -202,10 +202,10 @@ void VmorpherEffectHandler::SetParamf(ALCcontext *context, VmorpherProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::SetParamfv(ALCcontext *context, VmorpherProps &props, ALenum param, const float *vals)
+void VmorpherEffectHandler::SetParamfv(al::Context *context, VmorpherProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void VmorpherEffectHandler::GetParami(ALCcontext *context, const VmorpherProps &props, ALenum param, int* val)
+void VmorpherEffectHandler::GetParami(al::Context *context, const VmorpherProps &props, ALenum param, int* val)
 {
     switch(param)
     {
@@ -219,9 +219,9 @@ void VmorpherEffectHandler::GetParami(ALCcontext *context, const VmorpherProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::GetParamiv(ALCcontext *context, const VmorpherProps &props, ALenum param, int *vals)
+void VmorpherEffectHandler::GetParamiv(al::Context *context, const VmorpherProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void VmorpherEffectHandler::GetParamf(ALCcontext *context, const VmorpherProps &props, ALenum param, float *val)
+void VmorpherEffectHandler::GetParamf(al::Context *context, const VmorpherProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -231,7 +231,7 @@ void VmorpherEffectHandler::GetParamf(ALCcontext *context, const VmorpherProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::GetParamfv(ALCcontext *context, const VmorpherProps &props, ALenum param, float *vals)
+void VmorpherEffectHandler::GetParamfv(al::Context *context, const VmorpherProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

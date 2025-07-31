@@ -19,7 +19,6 @@
 #include <utility>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alc/context.h"
@@ -186,7 +185,7 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
 }
 
 
-void alDebugMessageCallbackEXT(gsl::strict_not_null<ALCcontext*> context, ALDEBUGPROCEXT callback,
+void alDebugMessageCallbackEXT(gsl::strict_not_null<al::Context*> context, ALDEBUGPROCEXT callback,
     void *userParam) noexcept
 {
     auto debuglock = std::lock_guard{context->mDebugCbLock};
@@ -195,8 +194,8 @@ void alDebugMessageCallbackEXT(gsl::strict_not_null<ALCcontext*> context, ALDEBU
 }
 
 
-void alDebugMessageInsertEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source, ALenum type,
-    ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
+void alDebugMessageInsertEXT(gsl::strict_not_null<al::Context*> context, ALenum source,
+    ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 try {
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
         return;
@@ -235,7 +234,7 @@ catch(std::exception &e) {
 }
 
 
-void alDebugMessageControlEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source,
+void alDebugMessageControlEXT(gsl::strict_not_null<al::Context*> context, ALenum source,
     ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 try {
     if(count > 0)
@@ -337,7 +336,7 @@ catch(std::exception &e) {
 }
 
 
-void alPushDebugGroupEXT(gsl::strict_not_null<ALCcontext*> context, ALenum source, ALuint id,
+void alPushDebugGroupEXT(gsl::strict_not_null<al::Context*> context, ALenum source, ALuint id,
     ALsizei length, const ALchar *message) noexcept
 try {
     if(length < 0)
@@ -381,7 +380,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alPopDebugGroupEXT(gsl::strict_not_null<ALCcontext*> context) noexcept
+void alPopDebugGroupEXT(gsl::strict_not_null<al::Context*> context) noexcept
 try {
     auto debuglock = std::unique_lock{context->mDebugCbLock};
     if(context->mDebugGroups.size() <= 1)
@@ -404,7 +403,7 @@ catch(std::exception &e) {
 }
 
 
-auto alGetDebugMessageLogEXT(gsl::strict_not_null<ALCcontext*> context, ALuint count,
+auto alGetDebugMessageLogEXT(gsl::strict_not_null<al::Context*> context, ALuint count,
     ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
     ALsizei *lengths, ALchar *logBuf) noexcept -> ALuint
 try {
@@ -496,7 +495,7 @@ catch(std::exception &e) {
 }
 
 
-void alObjectLabelEXT(gsl::strict_not_null<ALCcontext*> context, ALenum identifier, ALuint name,
+void alObjectLabelEXT(gsl::strict_not_null<al::Context*> context, ALenum identifier, ALuint name,
     ALsizei length, const ALchar *label) noexcept
 try {
     if(!label && length != 0)
@@ -526,8 +525,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetObjectLabelEXT(gsl::strict_not_null<ALCcontext*> context, ALenum identifier, ALuint name,
-    ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
+void alGetObjectLabelEXT(gsl::strict_not_null<al::Context*> context, ALenum identifier,
+    ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
 try {
     if(bufSize < 0)
         context->throw_error(AL_INVALID_VALUE, "Negative label bufSize");
@@ -600,7 +599,7 @@ catch(std::exception &e) {
 } // namespace
 
 
-void ALCcontext::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
+void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
     DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
 {
     if(!mDebugEnabled.load(std::memory_order_relaxed)) [[unlikely]]

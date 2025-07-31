@@ -32,7 +32,7 @@
 
 namespace {
 
-auto alIsExtensionPresent(gsl::strict_not_null<ALCcontext*> context, const ALchar *extName)
+auto alIsExtensionPresent(gsl::strict_not_null<al::Context*> context, const ALchar *extName)
     noexcept -> ALboolean
 {
     if(!extName) [[unlikely]]

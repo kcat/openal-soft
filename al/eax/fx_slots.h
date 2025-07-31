@@ -1,7 +1,6 @@
 #ifndef EAX_FX_SLOTS_INCLUDED
 #define EAX_FX_SLOTS_INCLUDED
 
-
 #include <array>
 #include <string_view>
 
@@ -9,10 +8,14 @@
 #include "fx_slot_index.h"
 #include "gsl/gsl"
 
+namespace al {
+struct Context;
+} // namespace al
+
 
 class EaxFxSlots {
 public:
-    void initialize(gsl::strict_not_null<ALCcontext*> al_context);
+    void initialize(gsl::strict_not_null<al::Context*> al_context);
     void uninitialize() noexcept;
 
     void commit()

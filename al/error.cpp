@@ -42,13 +42,14 @@
 #include "alnumeric.h"
 #include "core/except.h"
 #include "core/logging.h"
+#include "direct_defs.h"
 #include "gsl/gsl"
 #include "strutils.hpp"
 
 
 namespace {
 
-auto alGetError(gsl::strict_not_null<ALCcontext*> context) noexcept -> ALenum
+auto alGetError(gsl::strict_not_null<al::Context*> context) noexcept -> ALenum
 {
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
@@ -59,7 +60,7 @@ auto alGetError(gsl::strict_not_null<ALCcontext*> context) noexcept -> ALenum
 } // namespace
 
 
-void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
+void al::Context::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
 {
     const auto message = fmt::vformat(fmt, std::move(args));
 
@@ -83,7 +84,7 @@ void ALCcontext::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt:
         message);
 }
 
-void ALCcontext::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
+void al::Context::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
     fmt::format_args args)
 {
     setErrorImpl(errorCode, fmt, std::move(args));
@@ -134,5 +135,5 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    return alGetError(gsl::make_not_null(context));
+    return alGetError(al::verify_context(context));
 }

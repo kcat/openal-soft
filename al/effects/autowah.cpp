@@ -33,12 +33,12 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps AutowahEffectProps(genDefaultProps());
 
-void AutowahEffectHandler::SetParami(ALCcontext *context, AutowahProps&, ALenum param, int)
+void AutowahEffectHandler::SetParami(al::Context *context, AutowahProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
-void AutowahEffectHandler::SetParamiv(ALCcontext *context, AutowahProps&, ALenum param, const int*)
+void AutowahEffectHandler::SetParamiv(al::Context *context, AutowahProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
 
-void AutowahEffectHandler::SetParamf(ALCcontext *context, AutowahProps &props, ALenum param, float val)
+void AutowahEffectHandler::SetParamf(al::Context *context, AutowahProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -70,15 +70,15 @@ void AutowahEffectHandler::SetParamf(ALCcontext *context, AutowahProps &props, A
     context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
         as_unsigned(param));
 }
-void AutowahEffectHandler::SetParamfv(ALCcontext *context, AutowahProps &props,  ALenum param, const float *vals)
+void AutowahEffectHandler::SetParamfv(al::Context *context, AutowahProps &props,  ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void AutowahEffectHandler::GetParami(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+void AutowahEffectHandler::GetParami(al::Context *context, const AutowahProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }
-void AutowahEffectHandler::GetParamiv(ALCcontext *context, const AutowahProps&, ALenum param, int*)
+void AutowahEffectHandler::GetParamiv(al::Context *context, const AutowahProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid autowah integer vector property {:#04x}", as_unsigned(param)); }
 
-void AutowahEffectHandler::GetParamf(ALCcontext *context, const AutowahProps &props, ALenum param, float *val)
+void AutowahEffectHandler::GetParamf(al::Context *context, const AutowahProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -91,7 +91,7 @@ void AutowahEffectHandler::GetParamf(ALCcontext *context, const AutowahProps &pr
     context->throw_error(AL_INVALID_ENUM, "Invalid autowah float property {:#04x}",
         as_unsigned(param));
 }
-void AutowahEffectHandler::GetParamfv(ALCcontext *context, const AutowahProps &props, ALenum param, float *vals)
+void AutowahEffectHandler::GetParamfv(al::Context *context, const AutowahProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 #if ALSOFT_EAX

@@ -21,7 +21,7 @@ public:
 } // namespace
 
 
-void EaxFxSlots::initialize(gsl::strict_not_null<ALCcontext*> al_context)
+void EaxFxSlots::initialize(gsl::strict_not_null<al::Context*> al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
 

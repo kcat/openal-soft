@@ -3,24 +3,27 @@
 
 #include <variant>
 
-#include "AL/alc.h"
 #include "AL/al.h"
 
 #include "core/effects/base.h"
 #include "opthelpers.h"
 
+namespace al {
+struct Context;
+} // namespace al
+
 #define DECL_HANDLER(N, T)                                                    \
 struct N {                                                                    \
     using prop_type = T;                                                      \
                                                                               \
-    static void SetParami(ALCcontext *context, prop_type &props, ALenum param, int val);           \
-    static void SetParamiv(ALCcontext *context, prop_type &props, ALenum param, const int *vals);  \
-    static void SetParamf(ALCcontext *context, prop_type &props, ALenum param, float val);         \
-    static void SetParamfv(ALCcontext *context, prop_type &props, ALenum param, const float *vals);\
-    static void GetParami(ALCcontext *context, const prop_type &props, ALenum param, int *val);    \
-    static void GetParamiv(ALCcontext *context, const prop_type &props, ALenum param, int *vals);  \
-    static void GetParamf(ALCcontext *context, const prop_type &props, ALenum param, float *val);  \
-    static void GetParamfv(ALCcontext *context, const prop_type &props, ALenum param, float *vals);\
+    static void SetParami(al::Context *context, prop_type &props, ALenum param, int val);           \
+    static void SetParamiv(al::Context *context, prop_type &props, ALenum param, const int *vals);  \
+    static void SetParamf(al::Context *context, prop_type &props, ALenum param, float val);         \
+    static void SetParamfv(al::Context *context, prop_type &props, ALenum param, const float *vals);\
+    static void GetParami(al::Context *context, const prop_type &props, ALenum param, int *val);    \
+    static void GetParamiv(al::Context *context, const prop_type &props, ALenum param, int *vals);  \
+    static void GetParamf(al::Context *context, const prop_type &props, ALenum param, float *val);  \
+    static void GetParamfv(al::Context *context, const prop_type &props, ALenum param, float *vals);\
 };
 DECL_HANDLER(NullEffectHandler, std::monostate)
 DECL_HANDLER(ReverbEffectHandler, ReverbProps)

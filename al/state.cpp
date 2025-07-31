@@ -190,7 +190,7 @@ struct PropertyCastType<ALboolean> {
 
 
 template<typename T>
-void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, T *values) noexcept
+void GetValue(gsl::strict_not_null<al::Context*> context, ALenum pname, T *values) noexcept
 {
     static constexpr auto cast_value = PropertyCastType<T>{};
 
@@ -301,7 +301,7 @@ void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, T *values
 }
 
 template<>
-void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, ALvoid **values) noexcept
+void GetValue(gsl::strict_not_null<al::Context*> context, ALenum pname, ALvoid **values) noexcept
 {
     if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -331,7 +331,7 @@ void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, ALvoid **
 }
 
 
-inline void UpdateProps(ALCcontext *context)
+inline void UpdateProps(al::Context *context)
 {
     if(!context->mDeferUpdates)
         UpdateContextProps(context);
@@ -340,7 +340,7 @@ inline void UpdateProps(ALCcontext *context)
 }
 
 
-void alEnable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
+void alEnable(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -364,7 +364,7 @@ void alEnable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noex
         as_unsigned(capability));
 }
 
-void alDisable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
+void alDisable(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -388,7 +388,7 @@ void alDisable(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noe
         as_unsigned(capability));
 }
 
-auto alIsEnabled(gsl::strict_not_null<ALCcontext*> context, ALenum capability) noexcept
+auto alIsEnabled(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
     -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -405,7 +405,8 @@ auto alIsEnabled(gsl::strict_not_null<ALCcontext*> context, ALenum capability) n
 }
 
 
-auto alGetString(gsl::strict_not_null<ALCcontext*> context, ALenum pname) noexcept -> const ALchar*
+auto alGetString(gsl::strict_not_null<al::Context*> context, ALenum pname) noexcept
+    -> gsl::czstring
 {
     switch(pname)
     {
@@ -436,7 +437,7 @@ auto alGetString(gsl::strict_not_null<ALCcontext*> context, ALenum pname) noexce
 }
 
 
-void alDopplerFactor(gsl::strict_not_null<ALCcontext*> context, ALfloat value) noexcept
+void alDopplerFactor(gsl::strict_not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -448,7 +449,7 @@ void alDopplerFactor(gsl::strict_not_null<ALCcontext*> context, ALfloat value) n
     }
 }
 
-void alSpeedOfSound(gsl::strict_not_null<ALCcontext*> context, ALfloat value) noexcept
+void alSpeedOfSound(gsl::strict_not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -460,7 +461,7 @@ void alSpeedOfSound(gsl::strict_not_null<ALCcontext*> context, ALfloat value) no
     }
 }
 
-void alDistanceModel(gsl::strict_not_null<ALCcontext*> context, ALenum value) noexcept
+void alDistanceModel(gsl::strict_not_null<al::Context*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -475,8 +476,8 @@ void alDistanceModel(gsl::strict_not_null<ALCcontext*> context, ALenum value) no
 }
 
 
-auto alGetStringiSOFT(gsl::strict_not_null<ALCcontext*> context, ALenum pname, ALsizei index)
-    noexcept -> const ALchar*
+auto alGetStringiSOFT(gsl::strict_not_null<al::Context*> context, ALenum pname, ALsizei index)
+    noexcept -> gsl::czstring
 {
     switch(pname)
     {
@@ -492,13 +493,13 @@ auto alGetStringiSOFT(gsl::strict_not_null<ALCcontext*> context, ALenum pname, A
 }
 
 
-void alDeferUpdatesSOFT(gsl::strict_not_null<ALCcontext*> context) noexcept
+void alDeferUpdatesSOFT(gsl::strict_not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void alProcessUpdatesSOFT(gsl::strict_not_null<ALCcontext*> context) noexcept
+void alProcessUpdatesSOFT(gsl::strict_not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();
@@ -534,7 +535,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
     auto value = R{};                                                         \
-    GetValue(gsl::make_not_null(context), pname, &value);                     \
+    GetValue(al::verify_context(context), pname, &value);                     \
     return value;                                                             \
 }                                                                             \
 DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
@@ -546,7 +547,7 @@ DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
-    GetValue(gsl::make_not_null(context), pname, values);                     \
+    GetValue(al::verify_context(context), pname, values);                     \
 }
 
 DECL_GETFUNC(AL_API, ALboolean, alGetBoolean,)
@@ -594,7 +595,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
 }
 
 
-void UpdateContextProps(ALCcontext *context)
+void UpdateContextProps(al::Context *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
     auto *props = context->mFreeContextProps.load(std::memory_order_acquire);

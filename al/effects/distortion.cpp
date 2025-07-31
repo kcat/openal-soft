@@ -32,12 +32,12 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps DistortionEffectProps(genDefaultProps());
 
-void DistortionEffectHandler::SetParami(ALCcontext *context, DistortionProps&, ALenum param, int)
+void DistortionEffectHandler::SetParami(al::Context *context, DistortionProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer property {:#04x}", as_unsigned(param)); }
-void DistortionEffectHandler::SetParamiv(ALCcontext *context, DistortionProps&, ALenum param, const int*)
+void DistortionEffectHandler::SetParamiv(al::Context *context, DistortionProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer-vector property {:#04x}", as_unsigned(param)); }
 
-void DistortionEffectHandler::SetParamf(ALCcontext *context, DistortionProps &props, ALenum param, float val)
+void DistortionEffectHandler::SetParamf(al::Context *context, DistortionProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -75,15 +75,15 @@ void DistortionEffectHandler::SetParamf(ALCcontext *context, DistortionProps &pr
     context->throw_error(AL_INVALID_ENUM, "Invalid distortion float property {:#04x}",
         as_unsigned(param));
 }
-void DistortionEffectHandler::SetParamfv(ALCcontext *context, DistortionProps &props, ALenum param, const float *vals)
+void DistortionEffectHandler::SetParamfv(al::Context *context, DistortionProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void DistortionEffectHandler::GetParami(ALCcontext *context, const DistortionProps&, ALenum param, int*)
+void DistortionEffectHandler::GetParami(al::Context *context, const DistortionProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer property {:#04x}", as_unsigned(param)); }
-void DistortionEffectHandler::GetParamiv(ALCcontext *context, const DistortionProps&, ALenum param, int*)
+void DistortionEffectHandler::GetParamiv(al::Context *context, const DistortionProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid distortion integer-vector property {:#04x}", as_unsigned(param)); }
 
-void DistortionEffectHandler::GetParamf(ALCcontext *context, const DistortionProps &props, ALenum param, float *val)
+void DistortionEffectHandler::GetParamf(al::Context *context, const DistortionProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -97,7 +97,7 @@ void DistortionEffectHandler::GetParamf(ALCcontext *context, const DistortionPro
     context->throw_error(AL_INVALID_ENUM, "Invalid distortion float property {:#04x}",
         as_unsigned(param));
 }
-void DistortionEffectHandler::GetParamfv(ALCcontext *context, const DistortionProps &props, ALenum param, float *vals)
+void DistortionEffectHandler::GetParamfv(al::Context *context, const DistortionProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

@@ -286,7 +286,7 @@ void GetValue(gsl::strict_not_null<ALCcontext*> context, ALenum pname, T *values
     case AL_EAX_RAM_FREE:
         if(eax_g_is_enabled)
         {
-            auto *device = std::to_address(context->mALDevice);
+            auto const device = al::get_not_null(context->mALDevice);
             auto devlock = std::lock_guard{device->BufferLock};
             *values = cast_value(device->eax_x_ram_free_size);
             return;

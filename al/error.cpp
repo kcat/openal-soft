@@ -48,7 +48,7 @@
 
 namespace {
 
-auto AL_APIENTRY alGetError(gsl::strict_not_null<ALCcontext*> context) noexcept -> ALenum
+auto alGetError(gsl::strict_not_null<ALCcontext*> context) noexcept -> ALenum
 {
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]

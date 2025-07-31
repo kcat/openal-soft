@@ -340,7 +340,7 @@ inline void UpdateProps(gsl::strict_not_null<ALeffectslot*> slot,
 }
 
 
-void AL_APIENTRY alGenAuxiliaryEffectSlots(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
+void alGenAuxiliaryEffectSlots(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
     ALuint *effectslots) noexcept
 try {
     if(n < 0)
@@ -390,7 +390,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteAuxiliaryEffectSlots(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
+void alDeleteAuxiliaryEffectSlots(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
     const ALuint *effectslots) noexcept
 try {
     if(n < 0) [[unlikely]]
@@ -439,8 +439,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsAuxiliaryEffectSlot(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot) noexcept -> ALboolean
+auto alIsAuxiliaryEffectSlot(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot) noexcept
+    -> ALboolean
 {
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
     if(LookupEffectSlot(std::nothrow, context, effectslot) != nullptr)
@@ -449,8 +449,8 @@ auto AL_APIENTRY alIsAuxiliaryEffectSlot(gsl::strict_not_null<ALCcontext*> conte
 }
 
 
-void AL_APIENTRY alAuxiliaryEffectSloti(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALint value) noexcept
+void alAuxiliaryEffectSloti(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALint value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
@@ -606,8 +606,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alAuxiliaryEffectSlotiv(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, const ALint *values) noexcept
+void alAuxiliaryEffectSlotiv(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, const ALint *values) noexcept
 try {
     switch(param)
     {
@@ -631,8 +631,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alAuxiliaryEffectSlotf(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALfloat value) noexcept
+void alAuxiliaryEffectSlotf(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALfloat value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
@@ -660,8 +660,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alAuxiliaryEffectSlotfv(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, const ALfloat *values) noexcept
+void alAuxiliaryEffectSlotfv(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, const ALfloat *values) noexcept
 try {
     switch(param)
     {
@@ -683,8 +683,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetAuxiliaryEffectSloti(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALint *value) noexcept
+void alGetAuxiliaryEffectSloti(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALint *value) noexcept
 try {
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
 
@@ -723,8 +723,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetAuxiliaryEffectSlotiv(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALint *values) noexcept
+void alGetAuxiliaryEffectSlotiv(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALint *values) noexcept
 try {
     switch(param)
     {
@@ -748,8 +748,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetAuxiliaryEffectSlotf(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALfloat *value) noexcept
+void alGetAuxiliaryEffectSlotf(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALfloat *value) noexcept
 try {
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
 
@@ -768,8 +768,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetAuxiliaryEffectSlotfv(gsl::strict_not_null<ALCcontext*> context,
-    ALuint effectslot, ALenum param, ALfloat *values) noexcept
+void alGetAuxiliaryEffectSlotfv(gsl::strict_not_null<ALCcontext*> context, ALuint effectslot,
+    ALenum param, ALfloat *values) noexcept
 try {
     switch(param)
     {

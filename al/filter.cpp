@@ -369,8 +369,7 @@ auto LookupFilter(gsl::strict_not_null<ALCcontext*> context, ALuint id)
 }
 
 
-void AL_APIENTRY alGenFilters(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    ALuint *filters) noexcept
+void alGenFilters(gsl::strict_not_null<ALCcontext*> context, ALsizei n, ALuint *filters) noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
@@ -392,8 +391,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteFilters(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *filters) noexcept
+void alDeleteFilters(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *filters)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
@@ -420,8 +419,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsFilter(gsl::strict_not_null<ALCcontext*> context, ALuint filter) noexcept
-    -> ALboolean
+auto alIsFilter(gsl::strict_not_null<ALCcontext*> context, ALuint filter) noexcept -> ALboolean
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -431,8 +429,8 @@ auto AL_APIENTRY alIsFilter(gsl::strict_not_null<ALCcontext*> context, ALuint fi
 }
 
 
-void AL_APIENTRY alFilteri(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
-    ALint value) noexcept
+void alFilteri(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param, ALint value)
+    noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -459,7 +457,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilteriv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void alFilteriv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
@@ -484,7 +482,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilterf(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void alFilterf(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
     ALfloat value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -502,7 +500,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alFilterfv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+void alFilterfv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -520,8 +518,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilteri(gsl::strict_not_null<ALCcontext*> context, ALuint filter,
-    ALenum param, ALint *value) noexcept
+void alGetFilteri(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+    ALint *value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -543,8 +541,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilteriv(gsl::strict_not_null<ALCcontext*> context, ALuint filter,
-    ALenum param, ALint *values) noexcept
+void alGetFilteriv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+    ALint *values) noexcept
 try {
     switch(param)
     {
@@ -568,8 +566,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilterf(gsl::strict_not_null<ALCcontext*> context, ALuint filter,
-    ALenum param, ALfloat *value) noexcept
+void alGetFilterf(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+    ALfloat *value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -586,8 +584,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetFilterfv(gsl::strict_not_null<ALCcontext*> context, ALuint filter,
-    ALenum param, ALfloat *values) noexcept
+void alGetFilterfv(gsl::strict_not_null<ALCcontext*> context, ALuint filter, ALenum param,
+    ALfloat *values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};

@@ -2710,8 +2710,7 @@ void StartSources(const gsl::strict_not_null<ALCcontext*> context,
 }
 
 
-void AL_APIENTRY alGenSources(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    ALuint *sources) noexcept
+void alGenSources(gsl::strict_not_null<ALCcontext*> context, ALsizei n, ALuint *sources) noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} sources", n);
@@ -2737,8 +2736,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alDeleteSources(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *sources) noexcept
+void alDeleteSources(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Deleting {} sources", n);
@@ -2764,8 +2763,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto AL_APIENTRY alIsSource(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
-    -> ALboolean
+auto alIsSource(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept -> ALboolean
 {
     auto srclock = std::lock_guard{context->mSourceLock};
     if(LookupSource(std::nothrow, context, source) != nullptr)
@@ -2774,7 +2772,7 @@ auto AL_APIENTRY alIsSource(gsl::strict_not_null<ALCcontext*> context, ALuint so
 }
 
 
-void AL_APIENTRY alSourcef(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alSourcef(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALfloat value) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -2788,7 +2786,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSource3f(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alSource3f(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALfloat value1, ALfloat value2, ALfloat value3) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -2803,7 +2801,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcefv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alSourcefv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -2823,8 +2821,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alSourcedSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALdouble value) noexcept
+void alSourcedSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALdouble value) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2837,8 +2835,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSource3dSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) noexcept
+void alSource3dSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALdouble value1, ALdouble value2, ALdouble value3) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2852,8 +2850,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcedvSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, const ALdouble *values) noexcept
+void alSourcedvSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    const ALdouble *values) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2872,8 +2870,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alSourcei(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
-    ALint value) noexcept
+void alSourcei(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param, ALint value)
+    noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2886,7 +2884,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSource3i(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alSource3i(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALint value1, ALint value2, ALint value3) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -2901,7 +2899,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourceiv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alSourceiv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     const ALint *values) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
@@ -2921,8 +2919,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alSourcei64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint64SOFT value) noexcept
+void alSourcei64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint64SOFT value) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2935,8 +2933,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSource3i64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
+void alSource3i64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2950,8 +2948,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcei64vSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, const ALint64SOFT *values) noexcept
+void alSourcei64vSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    const ALint64SOFT *values) noexcept
 try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -2970,8 +2968,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetSourcef(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALfloat *value) noexcept
+void alGetSourcef(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALfloat *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -2987,8 +2985,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSource3f(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
+void alGetSource3f(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALfloat *value1, ALfloat *value2, ALfloat *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3008,8 +3006,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSourcefv(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALfloat *values) noexcept
+void alGetSourcefv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALfloat *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3027,8 +3025,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetSourcedSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALdouble *value) noexcept
+void alGetSourcedSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALdouble *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3044,8 +3042,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSource3dSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
+void alGetSource3dSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALdouble *value1, ALdouble *value2, ALdouble *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3065,8 +3063,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSourcedvSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALdouble *values) noexcept
+void alGetSourcedvSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALdouble *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3084,7 +3082,7 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetSourcei(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+void alGetSourcei(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
     ALint *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
@@ -3101,8 +3099,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSource3i(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint *value1, ALint *value2, ALint *value3) noexcept
+void alGetSource3i(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint *value1, ALint *value2, ALint *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3122,8 +3120,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSourceiv(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint *values) noexcept
+void alGetSourceiv(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3141,8 +3139,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alGetSourcei64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint64SOFT *value) noexcept
+void alGetSourcei64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint64SOFT *value) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3158,8 +3156,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSource3i64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
+void alGetSource3i64SOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3179,8 +3177,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alGetSourcei64vSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
-    ALenum param, ALint64SOFT *values) noexcept
+void alGetSourcei64vSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source, ALenum param,
+    ALint64SOFT *values) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
@@ -3198,8 +3196,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alSourcePlayv(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *sources) noexcept
+void alSourcePlayv(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
@@ -3219,7 +3217,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcePlay(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
+void alSourcePlay(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
 try {
     auto srclock = std::lock_guard{context->mSourceLock};
     auto Source = LookupSource(context, source);
@@ -3231,7 +3229,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcePlayAtTimevSOFT(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
+void alSourcePlayAtTimevSOFT(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
     const ALuint *sources, ALint64SOFT start_time) noexcept
 try {
     if(n < 0)
@@ -3255,7 +3253,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcePlayAtTimeSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
+void alSourcePlayAtTimeSOFT(gsl::strict_not_null<ALCcontext*> context, ALuint source,
     ALint64SOFT start_time) noexcept
 try {
     if(start_time < 0)
@@ -3272,8 +3270,8 @@ catch(std::exception &e) {
 }
 
 
-void AL_APIENTRY alSourcePausev(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *sources) noexcept
+void alSourcePausev(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
@@ -3330,12 +3328,12 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourcePause(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
+void alSourcePause(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
 { alSourcePausev(context, 1, &source); }
 
 
-void AL_APIENTRY alSourceStopv(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *sources) noexcept
+void alSourceStopv(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
@@ -3379,12 +3377,12 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourceStop(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
+void alSourceStop(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
 { alSourceStopv(context, 1, &source); }
 
 
-void AL_APIENTRY alSourceRewindv(gsl::strict_not_null<ALCcontext*> context, ALsizei n,
-    const ALuint *sources) noexcept
+void alSourceRewindv(gsl::strict_not_null<ALCcontext*> context, ALsizei n, const ALuint *sources)
+    noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
@@ -3430,12 +3428,12 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourceRewind(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
+void alSourceRewind(gsl::strict_not_null<ALCcontext*> context, ALuint source) noexcept
 { alSourceRewindv(context, 1, &source); }
 
 
-void AL_APIENTRY alSourceQueueBuffers(gsl::strict_not_null<ALCcontext*> context, ALuint src,
-    ALsizei nb, const ALuint *buffers) noexcept
+void alSourceQueueBuffers(gsl::strict_not_null<ALCcontext*> context, ALuint src, ALsizei nb,
+    const ALuint *buffers) noexcept
 try {
     if(nb < 0)
         context->throw_error(AL_INVALID_VALUE, "Queueing {} buffers", nb);
@@ -3546,8 +3544,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void AL_APIENTRY alSourceUnqueueBuffers(gsl::strict_not_null<ALCcontext*> context, ALuint src,
-    ALsizei nb, ALuint *buffers) noexcept
+void alSourceUnqueueBuffers(gsl::strict_not_null<ALCcontext*> context, ALuint src, ALsizei nb,
+    ALuint *buffers) noexcept
 try {
     if(nb < 0)
         context->throw_error(AL_INVALID_VALUE, "Unqueueing {} buffers", nb);

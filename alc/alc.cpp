@@ -306,9 +306,6 @@ std::string alcCaptureDeviceList;
 std::string alcDefaultAllDevicesSpecifier;
 std::string alcCaptureDefaultDeviceSpecifier;
 
-/* One-time configuration init control */
-std::once_flag alc_config_once{};
-
 /* Flag to specify if alcSuspendContext/alcProcessContext should defer/process
  * updates.
  */
@@ -731,7 +728,10 @@ void alc_initconfig()
 #endif // ALSOFT_EAX
 }
 inline void InitConfig()
-{ std::call_once(alc_config_once, [] { alc_initconfig(); }); }
+{
+    static constinit auto init_once = std::once_flag{};
+    std::call_once(init_once, [] { alc_initconfig(); });
+}
 
 
 /************************************************

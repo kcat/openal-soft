@@ -793,15 +793,22 @@ void ProbeCaptureDeviceList()
 }
 
 
-auto SpanFromAttributeList(const ALCint *attribs) noexcept -> std::span<const ALCint>
+struct AttributePair { ALCint attribute; ALCint value; };
+static_assert(sizeof(AttributePair) == sizeof(int)*2);
+auto SpanFromAttributeList(const ALCint *attribs) noexcept -> std::span<const AttributePair>
 {
-    auto attrSpan = std::span<const ALCint>{};
-    if(attribs)
+    auto attrSpan = std::span<const AttributePair>{};
+    if(attribs && *attribs != 0)
     {
-        const ALCint *attrEnd{attribs};
+        /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
+        auto *attrEnd = attribs+2;
         while(*attrEnd != 0)
-            attrEnd += 2; /* NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-        attrSpan = {attribs, attrEnd};
+            attrEnd += 2;
+        /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+        attrSpan = {std::launder(reinterpret_cast<const AttributePair*>(attribs)),
+            reinterpret_cast<const AttributePair*>(attrEnd)};
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
     }
     return attrSpan;
 }
@@ -1072,7 +1079,7 @@ inline void UpdateClockBase(gsl::strict_not_null<al::Device*> device)
  * responsible for holding the list lock).
  */
 auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
-    const std::span<const int> attrList) -> ALCenum
+    const std::span<const AttributePair> attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
     {
@@ -1242,86 +1249,86 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
         auto opthrtf = std::optional<bool>{};
         auto freqAttr = int{};
 
-#define ATTRIBUTE(a) a: TRACE("{} = {}", #a, attrList[attrIdx + 1]);
-#define ATTRIBUTE_HEX(a) a: TRACE("{} = {:#x}", #a, as_unsigned(attrList[attrIdx + 1]));
-        for(auto attrIdx = 0_uz;attrIdx < attrList.size();attrIdx+=2)
+        for(const auto attrparam : attrList)
         {
-            switch(attrList[attrIdx])
+#define ATTRIBUTE(a) a: TRACE("{} = {}", #a, attrparam.value);
+#define ATTRIBUTE_HEX(a) a: TRACE("{} = {:#x}", #a, as_unsigned(attrparam.value));
+            switch(attrparam.attribute)
             {
             case ATTRIBUTE_HEX(ALC_FORMAT_CHANNELS_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    optchans = DevFmtChannelsFromEnum(attrList[attrIdx + 1]);
+                    optchans = DevFmtChannelsFromEnum(attrparam.value);
                 break;
 
             case ATTRIBUTE_HEX(ALC_FORMAT_TYPE_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    opttype = DevFmtTypeFromEnum(attrList[attrIdx + 1]);
+                    opttype = DevFmtTypeFromEnum(attrparam.value);
                 break;
 
             case ATTRIBUTE(ALC_FREQUENCY)
-                freqAttr = attrList[attrIdx + 1];
+                freqAttr = attrparam.value;
                 break;
 
             case ATTRIBUTE_HEX(ALC_AMBISONIC_LAYOUT_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    optlayout = DevAmbiLayoutFromEnum(attrList[attrIdx + 1]);
+                    optlayout = DevAmbiLayoutFromEnum(attrparam.value);
                 break;
 
             case ATTRIBUTE_HEX(ALC_AMBISONIC_SCALING_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    optscale = DevAmbiScalingFromEnum(attrList[attrIdx + 1]);
+                    optscale = DevAmbiScalingFromEnum(attrparam.value);
                 break;
 
             case ATTRIBUTE(ALC_AMBISONIC_ORDER_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    aorder = gsl::narrow_cast<uint>(attrList[attrIdx + 1]);
+                    aorder = gsl::narrow_cast<uint>(attrparam.value);
                 break;
 
             case ATTRIBUTE(ALC_MONO_SOURCES)
-                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                if(const auto val = attrparam.value; val >= 0)
                     numMono = gsl::narrow_cast<uint>(val);
                 else
                     numMono = 0;
                 break;
 
             case ATTRIBUTE(ALC_STEREO_SOURCES)
-                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                if(const auto val = attrparam.value; val >= 0)
                     numStereo = gsl::narrow_cast<uint>(val);
                 else
                     numStereo = 0;
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
-                if(const auto val = attrList[attrIdx + 1]; val >= 0)
+                if(const auto val = attrparam.value; val >= 0)
                     numSends = std::min(gsl::narrow_cast<uint>(val), uint{MaxSendCount});
                 else
                     numSends = 0;
                 break;
 
             case ATTRIBUTE(ALC_HRTF_SOFT)
-                if(attrList[attrIdx + 1] == ALC_FALSE)
+                if(attrparam.value == ALC_FALSE)
                     opthrtf = false;
-                else if(attrList[attrIdx + 1] == ALC_TRUE)
+                else if(attrparam.value == ALC_TRUE)
                     opthrtf = true;
-                else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
+                else if(attrparam.value == ALC_DONT_CARE_SOFT)
                     opthrtf = std::nullopt;
                 break;
 
             case ATTRIBUTE(ALC_HRTF_ID_SOFT)
-                hrtf_id = attrList[attrIdx + 1];
+                hrtf_id = attrparam.value;
                 break;
 
             case ATTRIBUTE(ALC_OUTPUT_LIMITER_SOFT)
-                if(attrList[attrIdx + 1] == ALC_FALSE)
+                if(attrparam.value == ALC_FALSE)
                     optlimit = false;
-                else if(attrList[attrIdx + 1] == ALC_TRUE)
+                else if(attrparam.value == ALC_TRUE)
                     optlimit = true;
-                else if(attrList[attrIdx + 1] == ALC_DONT_CARE_SOFT)
+                else if(attrparam.value == ALC_DONT_CARE_SOFT)
                     optlimit = std::nullopt;
                 break;
 
             case ATTRIBUTE_HEX(ALC_OUTPUT_MODE_SOFT)
-                outmode = attrList[attrIdx + 1];
+                outmode = attrparam.value;
                 break;
 
             case ATTRIBUTE_HEX(ALC_CONTEXT_FLAGS_EXT)
@@ -1337,13 +1344,13 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
                 break;
 
             default:
-                TRACE("{:#04x} = {} ({:#x})", as_unsigned(attrList[attrIdx]),
-                    attrList[attrIdx + 1], as_unsigned(attrList[attrIdx + 1]));
+                TRACE("{:#04x} = {} ({:#x})", as_unsigned(attrparam.attribute), attrparam.value,
+                    as_unsigned(attrparam.value));
                 break;
             }
-        }
 #undef ATTRIBUTE_HEX
 #undef ATTRIBUTE
+        }
 
         if(device->Type == DeviceType::Loopback)
         {
@@ -1877,7 +1884,7 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
  * status, if set.
  */
 auto ResetDeviceParams(gsl::strict_not_null<al::Device*> device,
-    const std::span<const int> attrList) -> bool
+    const std::span<const AttributePair> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
     if(!device->Connected.load(std::memory_order_relaxed))
@@ -2748,11 +2755,11 @@ try {
     }
 
     auto ctxflags = ContextFlagBitset{0};
-    for(size_t i{0};i < attrSpan.size();i+=2)
+    for(const auto attrparam : attrSpan)
     {
-        if(attrSpan[i] == ALC_CONTEXT_FLAGS_EXT)
+        if(attrparam.attribute == ALC_CONTEXT_FLAGS_EXT)
         {
-            ctxflags = as_unsigned(attrSpan[i+1]);
+            ctxflags = as_unsigned(attrparam.value);
             break;
         }
     }

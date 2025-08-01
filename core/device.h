@@ -390,13 +390,6 @@ struct DeviceBase {
     void handleDisconnect(fmt::format_string<Args...> fmt, Args&& ...args)
     { doDisconnect(fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
 
-    /**
-     * Returns the index for the given channel name (e.g. FrontCenter), or
-     * InvalidChannelIndex if it doesn't exist.
-     */
-    [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> std::uint8_t
-    { return RealOut.ChannelIndex[chan]; }
-
 private:
     uint renderSamples(const uint numSamples);
 

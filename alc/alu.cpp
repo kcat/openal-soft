@@ -1142,7 +1142,7 @@ void CalcDirectPanning(Voice *voice, DirectMode directmode,
     for(const auto c : std::views::iota(0_uz, chans.size()))
     {
         const auto pangain = ChannelPanGain(chans[c].channel);
-        if(auto idx = device->channelIdxByName(chans[c].channel); idx != InvalidChannelIndex)
+        if(auto idx = device->RealOut.ChannelIndex[chans[c].channel]; idx != InvalidChannelIndex)
             voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
         else if(directmode == DirectMode::RemixMismatch)
         {
@@ -1153,7 +1153,7 @@ void CalcDirectPanning(Voice *voice, DirectMode directmode,
 
             for(const auto &target : remap->targets)
             {
-                idx = device->channelIdxByName(target.channel);
+                idx = device->RealOut.ChannelIndex[target.channel];
                 if(idx != InvalidChannelIndex)
                     voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain
                         * target.mix;
@@ -1360,7 +1360,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    const auto idx = uint{device->channelIdxByName(chans[c].channel)};
+                    const auto idx = uint{device->RealOut.ChannelIndex[chans[c].channel]};
                     if(idx != InvalidChannelIndex)
                         voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
                 }
@@ -1432,7 +1432,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    const auto idx = size_t{device->channelIdxByName(chans[c].channel)};
+                    const auto idx = size_t{device->RealOut.ChannelIndex[chans[c].channel]};
                     if(idx != InvalidChannelIndex)
                         voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
                 }

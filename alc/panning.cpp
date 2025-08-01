@@ -760,7 +760,7 @@ auto InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
     auto chancoeffslf = std::vector<ChannelDec>{};
     for(const auto i : std::views::iota(0_uz, decoder.mChannels.size()))
     {
-        const auto idx = size_t{device->channelIdxByName(decoder.mChannels[i])};
+        const auto idx = size_t{device->RealOut.ChannelIndex[decoder.mChannels[i]]};
         if(idx == InvalidChannelIndex)
         {
             ERR("Failed to find {} channel in device",

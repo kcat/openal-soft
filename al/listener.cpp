@@ -180,10 +180,28 @@ catch(std::exception &e) {
 }
 
 
-void alListeneri(gsl::strict_not_null<al::Context*> context, ALenum param, ALint /*value*/)
+void alListeneri(gsl::strict_not_null<al::Context*> context, ALenum param, ALint value)
     noexcept
 try {
-    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
+    const auto proplock = std::lock_guard{context->mPropLock};
+    auto &listener = context->mListener;
+    switch(param)
+    {
+    case AL_GAIN:
+        if(value < 0)
+            context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
+        listener.Gain = gsl::narrow_cast<float>(value);
+        UpdateProps(context);
+        return;
+
+    case AL_METERS_PER_UNIT:
+        if(value < 1)
+            context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
+                value);
+        listener.mMetersPerUnit = gsl::narrow_cast<float>(value);
+        UpdateProps(context);
+        return;
+    }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
@@ -224,6 +242,11 @@ try {
     auto vals = std::span<const ALint>{};
     switch(param)
     {
+    case AL_GAIN:
+    case AL_METERS_PER_UNIT:
+        alListeneri(context, param, *values);
+        return;
+
     case AL_POSITION:
     case AL_VELOCITY:
         vals = {values, 3_uz};
@@ -350,8 +373,23 @@ catch(std::exception &e) {
 void alGetListeneri(gsl::strict_not_null<al::Context*> context, ALenum param, ALint *value)
     noexcept
 try {
-    if(!value) context->throw_error(AL_INVALID_VALUE, "NULL pointer");
-    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
+    /* The largest float value that can fit in an int. */
+    static constexpr auto float_int_max = 2147483520.0f;
+
+    if(!value)
+        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+
+    const auto proplock = std::lock_guard{context->mPropLock};
+    const auto &listener = context->mListener;
+    switch(param)
+    {
+    case AL_GAIN:
+        *value = gsl::narrow_cast<int>(std::min(listener.Gain, float_int_max));
+        return;
+    case AL_METERS_PER_UNIT:
+        *value = gsl::narrow_cast<int>(std::clamp(listener.mMetersPerUnit, 1.0f, float_int_max));
+        return;
+    }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
@@ -400,6 +438,11 @@ try {
 
     switch(param)
     {
+    case AL_GAIN:
+    case AL_METERS_PER_UNIT:
+        alGetListeneri(context, param, values);
+        return;
+
     case AL_POSITION:
     case AL_VELOCITY:
         const auto vals = std::span{values, 3_uz};

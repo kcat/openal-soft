@@ -2396,35 +2396,24 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            if(Source->Looping || Source->SourceType != AL_STREAMING)
+            auto played = 0;
+            /* Buffers on a looping source are in a perpetual state of PENDING,
+             * so don't report any as PROCESSED.
+             */
+            if(!Source->Looping && Source->SourceType == AL_STREAMING
+                && Source->state != AL_INITIAL)
             {
-                /* Buffers on a looping source are in a perpetual state of
-                 * PENDING, so don't report any as PROCESSED
-                 */
-                values[0] = 0;
-            }
-            else
-            {
-                auto played = 0;
-                if(Source->state != AL_INITIAL)
+                const auto Current = std::invoke([Source,Context]() -> const VoiceBufferItem*
                 {
-                    const auto Current = std::invoke([Source,Context]() -> const VoiceBufferItem*
-                    {
-                        if(Voice *voice{GetSourceVoice(Source, Context)})
-                            return voice->mCurrentBuffer.load(std::memory_order_relaxed);
-                        return nullptr;
-                    });
-                    std::ignore = std::ranges::find_if(Source->mQueue,
-                        [Current,&played](const ALbufferQueueItem &item) noexcept -> bool
-                    {
-                        if(&item == Current)
-                            return true;
-                        ++played;
-                        return false;
-                    });
-                }
-                values[0] = played;
+                    if(auto *voice = GetSourceVoice(Source, Context))
+                        return voice->mCurrentBuffer.load(std::memory_order_relaxed);
+                    return nullptr;
+                });
+                const auto qiter = std::ranges::find(Source->mQueue, Current,
+                    [](const ALbufferQueueItem &item) { return &item; });
+                played = gsl::narrow_cast<int>(std::distance(Source->mQueue.begin(), qiter));
             }
+            values[0] = played;
             return;
         }
         break;
@@ -3570,14 +3559,9 @@ try {
                 return voice->mCurrentBuffer.load(std::memory_order_relaxed);
             return nullptr;
         });
-        std::ignore = std::ranges::find_if(source->mQueue,
-           [Current,&processed](const ALbufferQueueItem &item) noexcept -> bool
-        {
-            if(&item == Current)
-                return true;
-            ++processed;
-            return false;
-        });
+        const auto qiter = std::ranges::find(source->mQueue, Current,
+            [](const ALbufferQueueItem &item) { return &item; });
+        processed = gsl::narrow_cast<size_t>(std::distance(source->mQueue.begin(), qiter));
     }
     if(processed < bids.size())
         context->throw_error(AL_INVALID_VALUE, "Unqueueing {} buffer{} (only {} processed)",

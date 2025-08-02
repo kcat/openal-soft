@@ -2163,8 +2163,7 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
                 break;
 
             CheckSize(1);
-            values[0] = gsl::narrow_cast<T>(Source->Radius);
-            return;
+            values[0] = Source->Radius;
         }
         else
         {
@@ -2177,10 +2176,14 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
                  * buffer queue.
                  */
                 values[1] = values[0];
-                return;
             }
-            break;
+            else
+            {
+                CheckSize(1);
+                values[0] = gsl::narrow_cast<T>(Source->Radius);
+            }
         }
+        return;
 
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);

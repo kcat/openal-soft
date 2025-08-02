@@ -2211,8 +2211,7 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
         if constexpr(std::is_floating_point_v<T>)
         {
             CheckSize(2);
-            values[0] = gsl::narrow_cast<T>(Source->StereoPan[0]);
-            values[1] = gsl::narrow_cast<T>(Source->StereoPan[1]);
+            std::ranges::copy(Source->StereoPan, values.begin());
             return;
         }
         break;
@@ -2290,7 +2289,7 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
         if constexpr(std::is_same_v<T,double>)
         {
             CheckSize(2);
-            nanoseconds srcclock{};
+            auto srcclock = nanoseconds{};
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
             values[1] = duration_cast<seconds_d>(srcclock).count();
             return;
@@ -2362,12 +2361,11 @@ NOINLINE void GetProperty(const gsl::strict_not_null<ALsource*> Source,
                 if(!Source->mQueue.empty())
                     BufferList = &Source->mQueue.front();
             }
-            else if(Voice *voice{GetSourceVoice(Source, Context)})
+            else if(auto *voice = GetSourceVoice(Source, Context))
             {
                 auto *Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-                const auto iter = std::ranges::find_if(Source->mQueue,
-                    [Current](const ALbufferQueueItem &item) noexcept -> bool
-                    { return &item == Current; });
+                const auto iter = std::ranges::find(Source->mQueue, Current,
+                    [](const ALbufferQueueItem &arg) { return &arg; });
                 BufferList = (iter != Source->mQueue.end()) ? &*iter : nullptr;
             }
             auto *buffer = BufferList ? BufferList->mBuffer.get() : nullptr;

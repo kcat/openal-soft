@@ -37,14 +37,14 @@ namespace al {
 
 #if HAS_BUILTIN(__builtin_add_overflow)
 template<std::integral T>
-constexpr auto add_sat(T a, T b) -> T
+constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 {
-    T c;
-    if(!__builtin_add_overflow(a, b, &c))
-        return c;
+    T res;
+    if(!__builtin_add_overflow(lhs, rhs, &res))
+        return res;
     if constexpr(std::is_signed_v<T>)
     {
-        if(b < 0)
+        if(rhs < 0)
             return std::numeric_limits<T>::min();
     }
     return std::numeric_limits<T>::max();
@@ -53,26 +53,26 @@ constexpr auto add_sat(T a, T b) -> T
 #else
 
 template<std::integral T>
-constexpr auto add_sat(T a, T b) -> T
+constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 {
     if constexpr(std::is_signed_v<T>)
     {
-        if(b < 0)
+        if(rhs < 0)
         {
-            if(a < std::numeric_limits<T>::min()-b)
+            if(lhs < std::numeric_limits<T>::min()-rhs)
                 return std::numeric_limits<T>::min();
-            return a + b;
+            return lhs + rhs;
         }
-        if(a > std::numeric_limits<T>::max()-b)
+        if(lhs > std::numeric_limits<T>::max()-rhs)
             return std::numeric_limits<T>::max();
-        return a + b;
+        return lhs + rhs;
     }
     else
     {
-        const auto c = a + b;
-        if(c < a)
+        const auto res = lhs + rhs;
+        if(res < lhs)
             return std::numeric_limits<T>::max();
-        return c;
+        return res;
     }
 }
 #endif

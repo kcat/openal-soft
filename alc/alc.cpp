@@ -2449,8 +2449,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
         device->enumerateHrtfs();
-        values[0] = gsl::narrow_cast<int>(std::min(device->mHrtfList.size(),
-            size_t{std::numeric_limits<int>::max()}));
+        values[0] = al::saturate_cast<int>(device->mHrtfList.size());
         return 1;
 
     case ALC_OUTPUT_LIMITER_SOFT:

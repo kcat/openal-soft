@@ -440,8 +440,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
         TRACE("RTTime max: {} (hard: {}, soft: {})", umaxtime, rlim.rlim_max, rlim.rlim_cur);
         if(rlim.rlim_max > umaxtime)
         {
-            rlim.rlim_max = gsl::narrow_cast<rlim_t>(std::min<ulonglong>(umaxtime,
-                std::numeric_limits<rlim_t>::max()));
+            rlim.rlim_max = al::saturate_cast<rlim_t>(umaxtime);
             rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
             if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
                 return errno;

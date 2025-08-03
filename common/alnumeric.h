@@ -77,6 +77,43 @@ constexpr auto add_sat(T a, T b) -> T
 }
 #endif
 
+template<std::integral R, std::integral T>
+constexpr auto saturate_cast(T val) noexcept -> R
+{
+    if constexpr(std::is_signed_v<R> == std::is_signed_v<T>)
+    {
+        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
+        {
+            if constexpr(std::is_signed_v<R>)
+            {
+                if(val < std::numeric_limits<R>::min())
+                    return std::numeric_limits<R>::min();
+            }
+            if(val > std::numeric_limits<R>::max())
+                return std::numeric_limits<R>::max();
+        }
+    }
+    else if constexpr(std::is_signed_v<R>)
+    {
+        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
+        {
+            if(val > T{std::numeric_limits<R>::max()})
+                return std::numeric_limits<R>::max();
+        }
+    }
+    else
+    {
+        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
+        {
+            if(val > T{std::numeric_limits<R>::max()})
+                return std::numeric_limits<R>::max();
+        }
+        if(val < 0)
+            return R{0};
+    }
+    return gsl::narrow_cast<R>(val);
+}
+
 } /* namespace al */
 
 template<std::integral T>

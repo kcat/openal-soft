@@ -204,8 +204,7 @@ using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
 constexpr auto RefTime2Samples(const ReferenceTime &val, DWORD srate) noexcept -> uint
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return gsl::narrow_cast<uint>(std::min<decltype(retval)>(retval,
-        std::numeric_limits<uint>::max()));
+    return al::saturate_cast<uint>(retval);
 }
 
 

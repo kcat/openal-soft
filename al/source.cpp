@@ -349,18 +349,13 @@ NOINLINE auto GetSourceOffset(gsl::strict_not_null<ALsource*> Source, ALenum nam
             return offset / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         }
         else
-        {
-            readPos /= BufferFmt->mSampleRate;
-            return gsl::narrow_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
-                std::numeric_limits<T>::max()));
-        }
+            return al::saturate_cast<T>(readPos / BufferFmt->mSampleRate);
 
     case AL_SAMPLE_OFFSET:
         if constexpr(std::is_floating_point_v<T>)
             return gsl::narrow_cast<T>(readPos) + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
         else
-            return gsl::narrow_cast<T>(std::clamp<int64_t>(readPos, std::numeric_limits<T>::min(),
-                std::numeric_limits<T>::max()));
+            return al::saturate_cast<T>(readPos);
 
     case AL_BYTE_OFFSET:
         /* Round down to the block boundary. */
@@ -410,14 +405,13 @@ NOINLINE auto GetSourceLength(gsl::strict_not_null<const ALsource*> source, ALen
         if constexpr(std::is_floating_point_v<T>)
             return gsl::narrow_cast<T>(length) / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         else
-            return gsl::narrow_cast<T>(std::min<uint64_t>(length/BufferFmt->mSampleRate,
-                std::numeric_limits<T>::max()));
+            return al::saturate_cast<T>(length / BufferFmt->mSampleRate);
 
     case AL_SAMPLE_LENGTH_SOFT:
         if constexpr(std::is_floating_point_v<T>)
             return gsl::narrow_cast<T>(length);
         else
-            return gsl::narrow_cast<T>(std::min<uint64_t>(length, std::numeric_limits<T>::max()));
+            return al::saturate_cast<T>(length);
 
     case AL_BYTE_LENGTH_SOFT:
         /* Round down to the block boundary. */
@@ -2541,7 +2535,7 @@ void StartSources(const gsl::strict_not_null<al::Context*> context,
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            for(const gsl::strict_not_null<ALsource*> source : srchandles)
+            for(const gsl::strict_not_null<ALsource*> &source : srchandles)
             {
                 /* TODO: Send state change event? */
                 source->Offset = 0.0;

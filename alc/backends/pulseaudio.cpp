@@ -1395,7 +1395,7 @@ auto PulseCapture::availableSamples() -> uint
     }
 
     /* Avoid uint overflow, and avoid decreasing the readable count. */
-    readable = std::min<size_t>(readable, std::numeric_limits<uint>::max());
+    readable = al::saturate_cast<uint>(readable);
     mLastReadable = std::max(mLastReadable, gsl::narrow_cast<uint>(readable));
     return mLastReadable / gsl::narrow_cast<uint>(pa_frame_size(&mSpec));
 }

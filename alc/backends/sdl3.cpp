@@ -29,6 +29,7 @@
 #include <string_view>
 #include <utility>
 
+#include "alnumeric.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
@@ -252,8 +253,7 @@ auto Sdl3Backend::reset() -> bool
         }
     }
     if(mDevice->Flags.test(ChannelsRequest) || want.channels < 1)
-        want.channels = gsl::narrow_cast<int>(std::min<uint>(mDevice->channelsFromFmt(),
-            std::numeric_limits<int>::max()));
+        want.channels = al::saturate_cast<int>(mDevice->channelsFromFmt());
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
     if(!mStream)

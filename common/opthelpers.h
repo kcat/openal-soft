@@ -69,11 +69,11 @@ constexpr std::underlying_type_t<T> to_underlying(T e) noexcept
 { return static_cast<std::underlying_type_t<T>>(e); }
 
 /**
- * Gets a not_null<T*> from a strict_not_null<SmartPtr<T>>, hopefully avoiding
- * the extraneous null check from not_null's constructor.
+ * Gets a not_null<T*> from a not_null<SmartPtr<T>>, hopefully avoiding ths
+ * extraneous null check from not_null's constructor.
  */
 template<typename T>
-constexpr auto get_not_null(const gsl::strict_not_null<T> &val) noexcept
+constexpr auto get_not_null(const gsl::not_null<T> &val) noexcept
 {
     auto *tmp = std::to_address(val);
     ASSUME(tmp != nullptr);

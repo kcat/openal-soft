@@ -7,8 +7,7 @@
 #include "exception.h"
 
 
-namespace
-{
+namespace {
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotsException : public EaxException {
@@ -21,7 +20,7 @@ public:
 } // namespace
 
 
-void EaxFxSlots::initialize(gsl::strict_not_null<al::Context*> al_context)
+void EaxFxSlots::initialize(gsl::not_null<al::Context*> al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
 
@@ -35,20 +34,18 @@ void EaxFxSlots::initialize(gsl::strict_not_null<al::Context*> al_context)
 
 void EaxFxSlots::uninitialize() noexcept
 {
-    for (auto& fx_slot : fx_slots_)
-    {
+    for(auto &fx_slot : fx_slots_)
         fx_slot = nullptr;
-    }
 }
 
-const ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index) const
+const ALeffectslot &EaxFxSlots::get(EaxFxSlotIndex index) const
 {
     if(!index.has_value())
         fail("Empty index.");
     return *fx_slots_[index.value()];
 }
 
-ALeffectslot& EaxFxSlots::get(EaxFxSlotIndex index)
+ALeffectslot &EaxFxSlots::get(EaxFxSlotIndex index)
 {
     if(!index.has_value())
         fail("Empty index.");

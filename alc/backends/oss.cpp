@@ -236,8 +236,7 @@ constexpr auto log2i(uint x) -> uint
 
 
 struct OSSPlayback final : public BackendBase {
-    explicit OSSPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit OSSPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OSSPlayback() override;
 
     void mixerProc();
@@ -442,8 +441,7 @@ void OSSPlayback::stop()
 
 
 struct OSScapture final : public BackendBase {
-    explicit OSScapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit OSScapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
     void recordProc();
@@ -674,7 +672,7 @@ auto OSSBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto OSSBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+auto OSSBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
     -> BackendPtr
 {
     if(type == BackendType::Playback)

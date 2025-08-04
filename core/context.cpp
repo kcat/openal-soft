@@ -22,7 +22,7 @@
 static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "atomic<bitset> isn't lock-free");
 #endif
 
-ContextBase::ContextBase(gsl::strict_not_null<DeviceBase*> device) : mDevice{device}
+ContextBase::ContextBase(gsl::not_null<DeviceBase*> device) : mDevice{device}
 { Expects(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()
@@ -129,7 +129,7 @@ void ContextBase::allocEffectSlotProps()
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
-auto ContextBase::getEffectSlot() -> gsl::strict_not_null<EffectSlot*>
+auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlot*>
 {
     for(auto &clusterptr : mEffectSlotClusters)
     {

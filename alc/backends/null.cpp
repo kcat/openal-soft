@@ -45,8 +45,7 @@ using namespace std::string_view_literals;
 
 
 struct NullBackend final : public BackendBase {
-    explicit NullBackend(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit NullBackend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
 
     int mixerProc();
 
@@ -162,7 +161,7 @@ auto NullBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return {};
 }
 
-auto NullBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+auto NullBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
     -> BackendPtr
 {
     if(type == BackendType::Playback)

@@ -46,8 +46,7 @@ using namespace std::string_view_literals;
 { return "Default Device"sv; }
 
 struct Sdl2Backend final : public BackendBase {
-    explicit Sdl2Backend(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit Sdl2Backend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;
@@ -265,7 +264,7 @@ auto SDL2BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto SDL2BackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+auto SDL2BackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
     -> BackendPtr
 {
     if(type == BackendType::Playback)

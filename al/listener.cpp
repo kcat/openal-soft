@@ -43,7 +43,7 @@ using uint = unsigned int;
 
 namespace {
 
-inline void UpdateProps(gsl::strict_not_null<al::Context*> context)
+inline void UpdateProps(gsl::not_null<al::Context*> context)
 {
     if(!context->mDeferUpdates)
     {
@@ -53,7 +53,7 @@ inline void UpdateProps(gsl::strict_not_null<al::Context*> context)
     context->mPropsDirty = true;
 }
 
-inline void CommitAndUpdateProps(gsl::strict_not_null<al::Context*> context)
+inline void CommitAndUpdateProps(gsl::not_null<al::Context*> context)
 {
     if(!context->mDeferUpdates)
     {
@@ -72,7 +72,7 @@ inline void CommitAndUpdateProps(gsl::strict_not_null<al::Context*> context)
 }
 
 
-void alListenerf(gsl::strict_not_null<al::Context*> context, ALenum param, ALfloat value) noexcept
+void alListenerf(gsl::not_null<al::Context*> context, ALenum param, ALfloat value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     auto &listener = context->mListener;
@@ -102,7 +102,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3f(gsl::strict_not_null<al::Context*> context, ALenum param, ALfloat value1,
+void alListener3f(gsl::not_null<al::Context*> context, ALenum param, ALfloat value1,
     ALfloat value2, ALfloat value3) noexcept
 try {
     auto &listener = context->mListener;
@@ -136,7 +136,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListenerfv(gsl::strict_not_null<al::Context*> context, ALenum param, const ALfloat *values)
+void alListenerfv(gsl::not_null<al::Context*> context, ALenum param, const ALfloat *values)
     noexcept
 try {
     if(!values)
@@ -180,8 +180,7 @@ catch(std::exception &e) {
 }
 
 
-void alListeneri(gsl::strict_not_null<al::Context*> context, ALenum param, ALint value)
-    noexcept
+void alListeneri(gsl::not_null<al::Context*> context, ALenum param, ALint value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     auto &listener = context->mListener;
@@ -211,8 +210,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3i(gsl::strict_not_null<al::Context*> context, ALenum param, ALint value1,
-    ALint value2, ALint value3) noexcept
+void alListener3i(gsl::not_null<al::Context*> context, ALenum param, ALint value1, ALint value2,
+    ALint value3) noexcept
 try {
     switch(param)
     {
@@ -233,8 +232,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListeneriv(gsl::strict_not_null<al::Context*> context, ALenum param, const ALint *values)
-    noexcept
+void alListeneriv(gsl::not_null<al::Context*> context, ALenum param, const ALint *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -276,8 +274,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetListenerf(gsl::strict_not_null<al::Context*> context, ALenum param, ALfloat *value)
-    noexcept
+void alGetListenerf(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value) noexcept
 try {
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -298,7 +295,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3f(gsl::strict_not_null<al::Context*> context, ALenum param, ALfloat *value1,
+void alGetListener3f(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value1,
     ALfloat *value2, ALfloat *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
@@ -329,8 +326,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListenerfv(gsl::strict_not_null<al::Context*> context, ALenum param, ALfloat *values)
-    noexcept
+void alGetListenerfv(gsl::not_null<al::Context*> context, ALenum param, ALfloat *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -370,8 +366,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetListeneri(gsl::strict_not_null<al::Context*> context, ALenum param, ALint *value)
-    noexcept
+void alGetListeneri(gsl::not_null<al::Context*> context, ALenum param, ALint *value) noexcept
 try {
     /* The largest float value that can fit in an int. */
     static constexpr auto float_int_max = 2147483520.0f;
@@ -399,7 +394,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3i(gsl::strict_not_null<al::Context*> context, ALenum param, ALint *value1,
+void alGetListener3i(gsl::not_null<al::Context*> context, ALenum param, ALint *value1,
     ALint *value2, ALint *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
@@ -430,8 +425,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListeneriv(gsl::strict_not_null<al::Context*> context, ALenum param, ALint *values)
-    noexcept
+void alGetListeneriv(gsl::not_null<al::Context*> context, ALenum param, ALint *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");

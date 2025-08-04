@@ -422,8 +422,7 @@ auto verify_state(snd_pcm_t *handle) -> int
 
 
 struct AlsaPlayback final : public BackendBase {
-    explicit AlsaPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit AlsaPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~AlsaPlayback() override;
 
     void mixerProc();
@@ -843,8 +842,7 @@ auto AlsaPlayback::getClockLatency() -> ClockLatency
 
 
 struct AlsaCapture final : public BackendBase {
-    explicit AlsaCapture(gsl::strict_not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+    explicit AlsaCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
     void open(std::string_view name) override;
@@ -1217,7 +1215,7 @@ auto AlsaBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto AlsaBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
+auto AlsaBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
     -> BackendPtr
 {
     if(type == BackendType::Playback)

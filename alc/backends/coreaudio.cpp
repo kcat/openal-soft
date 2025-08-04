@@ -354,8 +354,7 @@ static constexpr char ca_device[] = "CoreAudio Default";
 
 
 struct CoreAudioPlayback final : public BackendBase {
-    explicit CoreAudioPlayback(gsl::strict_not_null<DeviceBase*> device) noexcept
-        : BackendBase{device}
+    explicit CoreAudioPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device}
     { }
     ~CoreAudioPlayback() override;
 
@@ -671,9 +670,7 @@ void CoreAudioPlayback::stop()
 
 
 struct CoreAudioCapture final : public BackendBase {
-    explicit CoreAudioCapture(gsl::strict_not_null<DeviceBase*> device) noexcept
-        : BackendBase{device}
-    { }
+    explicit CoreAudioCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~CoreAudioCapture() override;
 
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -1077,8 +1074,8 @@ auto CoreAudioBackendFactory::enumerate(BackendType type) -> std::vector<std::st
     return outnames;
 }
 
-auto CoreAudioBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device,
-    BackendType type) -> BackendPtr
+auto CoreAudioBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new CoreAudioPlayback{device}};

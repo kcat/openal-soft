@@ -142,8 +142,8 @@ constexpr auto GetEventType(ALenum etype) noexcept -> std::optional<AsyncEnableB
 }
 
 
-void alEventControlSOFT(gsl::strict_not_null<al::Context*> context, ALsizei count,
-    const ALenum *types, ALboolean enable) noexcept
+void alEventControlSOFT(gsl::not_null<al::Context*> context, ALsizei count, const ALenum *types,
+    ALboolean enable) noexcept
 try {
     if(count < 0)
         context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
@@ -192,7 +192,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEventCallbackSOFT(gsl::strict_not_null<al::Context*> context, ALEVENTPROCSOFT callback,
+void alEventCallbackSOFT(gsl::not_null<al::Context*> context, ALEVENTPROCSOFT callback,
     void *userParam) noexcept
 try {
     auto eventlock = std::lock_guard{context->mEventCbLock};

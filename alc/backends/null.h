@@ -11,8 +11,7 @@ public:
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
-    auto createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type) -> BackendPtr
-        final;
+    auto createBackend(gsl::not_null<DeviceBase*> device, BackendType type) -> BackendPtr final;
 
     static auto getFactory() -> BackendFactory&;
 };

@@ -7,7 +7,7 @@
 
 namespace al {
 
-inline auto verify_context(ALCcontext *context) -> gsl::strict_not_null<al::Context*>
+inline auto verify_context(ALCcontext *context) -> gsl::not_null<al::Context*>
 {
     /* TODO: A debug/non-optimized build should essentially do
      * al::get_not_null(VerifyContext(context)) to ensure the ALCcontext handle
@@ -32,7 +32,7 @@ constexpr void DefaultVal() noexcept { }
 #define DECL_FUNC(R, Name)                                                    \
 auto AL_APIENTRY Name() noexcept -> R                                         \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()));                           \
 }                                                                             \
@@ -44,7 +44,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context) noexcept -> R  \
 #define DECL_FUNC1(R, Name, T1,n1)                                            \
 auto AL_APIENTRY Name(T1 n1) noexcept -> R                                    \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()), n1);                       \
 }                                                                             \
@@ -57,7 +57,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1) noexcept\
 #define DECL_FUNC2(R, Name, T1,n1, T2,n2)                                     \
 auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                             \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()), n1, n2);                   \
 }                                                                             \
@@ -70,7 +70,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2)  \
 #define DECL_FUNC3(R, Name, T1,n1, T2,n2, T3,n3)                              \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                      \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()), n1, n2, n3);               \
 }                                                                             \
@@ -83,7 +83,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
 #define DECL_FUNC4(R, Name, T1,n1, T2,n2, T3,n3, T4,n4)                       \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R               \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()), n1, n2, n3, n4);           \
 }                                                                             \
@@ -96,7 +96,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
 #define DECL_FUNC5(R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)                \
 auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R        \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5);       \
 }                                                                             \
@@ -110,7 +110,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
 #define DECL_FUNCEXT(R, Name,Ext)                                             \
 auto AL_APIENTRY Name##Ext() noexcept -> R                                    \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()));                      \
 }                                                                             \
@@ -123,7 +123,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context) noexcept  \
 #define DECL_FUNCEXT1(R, Name,Ext, T1,n1)                                     \
 auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                               \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1);                  \
 }                                                                             \
@@ -136,7 +136,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1)    \
 #define DECL_FUNCEXT2(R, Name,Ext, T1,n1, T2,n2)                              \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                        \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2);              \
 }                                                                             \
@@ -149,7 +149,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
 #define DECL_FUNCEXT3(R, Name,Ext, T1,n1, T2,n2, T3,n3)                       \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3) noexcept -> R                 \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3);          \
 }                                                                             \
@@ -162,7 +162,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
 #define DECL_FUNCEXT4(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4)                \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4);      \
 }                                                                             \
@@ -175,7 +175,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
 #define DECL_FUNCEXT5(R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)         \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5);  \
 }                                                                             \
@@ -189,7 +189,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept \
     -> R                                                                      \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,   \
         n6);                                                                  \
@@ -205,7 +205,7 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
 auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6, T7 n7,   \
     T8 n8) noexcept -> R                                                      \
 {                                                                             \
-    auto context = GetContextRef();                                           \
+    auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
     return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,   \
         n6, n7, n8);                                                          \

@@ -37,13 +37,13 @@ struct BackendBase {
 
     virtual auto getClockLatency() -> ClockLatency;
 
-    gsl::strict_not_null<DeviceBase*> const mDevice;
+    gsl::not_null<DeviceBase*> const mDevice;
     std::string mDeviceName;
 
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;
     BackendBase(BackendBase&&) = delete;
-    explicit BackendBase(gsl::strict_not_null<DeviceBase*> device) noexcept : mDevice{device} { }
+    explicit BackendBase(gsl::not_null<DeviceBase*> device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
     void operator=(const BackendBase&) = delete;
@@ -92,8 +92,8 @@ struct BackendFactory {
 
     virtual auto enumerate(BackendType type) -> std::vector<std::string> = 0;
 
-    virtual auto createBackend(gsl::strict_not_null<DeviceBase*> device, BackendType type)
-        -> BackendPtr = 0;
+    virtual auto createBackend(gsl::not_null<DeviceBase*> device, BackendType type) -> BackendPtr
+        = 0;
 };
 
 namespace al {

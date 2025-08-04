@@ -62,9 +62,7 @@ std::string solaris_driver{"/dev/audio"};
 
 
 struct SolarisBackend final : public BackendBase {
-    explicit SolarisBackend(gsl::strict_not_null<DeviceBase*> device) noexcept
-        : BackendBase{device}
-    { }
+    explicit SolarisBackend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~SolarisBackend() override;
 
     int mixerProc();
@@ -294,8 +292,8 @@ auto SolarisBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     return {};
 }
 
-auto SolarisBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device,
-    BackendType type) -> BackendPtr
+auto SolarisBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SolarisBackend{device}};

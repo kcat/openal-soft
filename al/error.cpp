@@ -49,7 +49,7 @@
 
 namespace {
 
-auto alGetError(gsl::strict_not_null<al::Context*> context) noexcept -> ALenum
+auto alGetError(gsl::not_null<al::Context*> context) noexcept -> ALenum
 {
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]

@@ -70,12 +70,12 @@ struct ALeffectslot {
 
     std::atomic<ALuint> mRef{0u};
 
-    gsl::strict_not_null<EffectSlot*> mSlot;
+    gsl::not_null<EffectSlot*> mSlot;
 
     /* Self ID */
     ALuint id{};
 
-    explicit ALeffectslot(gsl::strict_not_null<al::Context*> context);
+    explicit ALeffectslot(gsl::not_null<al::Context*> context);
     ALeffectslot(const ALeffectslot&) = delete;
     ALeffectslot& operator=(const ALeffectslot&) = delete;
     ~ALeffectslot();
@@ -89,11 +89,10 @@ struct ALeffectslot {
     }
 
     auto initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
-        gsl::strict_not_null<al::Context*> context) -> void;
-    void updateProps(gsl::strict_not_null<al::Context*> context) const;
+        gsl::not_null<al::Context*> context) -> void;
+    void updateProps(gsl::not_null<al::Context*> context) const;
 
-    static void SetName(gsl::strict_not_null<al::Context*> context, ALuint id,
-        std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
 
 
 #if ALSOFT_EAX
@@ -251,7 +250,7 @@ private:
         }
     };
 
-    gsl::strict_not_null<al::Context*> const mEaxALContext;
+    gsl::not_null<al::Context*> const mEaxALContext;
     EaxFxSlotIndexValue mEaxFXSlotIndex{};
     int mEaxVersion{}; // Current EAX version.
     std::bitset<eax_dirty_bit_count> mEaxDf; // Dirty flags for the current EAX version.
@@ -364,14 +363,14 @@ public:
 #endif // ALSOFT_EAX
 };
 
-void UpdateAllEffectSlotProps(gsl::strict_not_null<al::Context*> context);
+void UpdateAllEffectSlotProps(gsl::not_null<al::Context*> context);
 
 #if ALSOFT_EAX
 using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDeleter>;
 
-auto eax_create_al_effect_slot(gsl::strict_not_null<al::Context*> context) -> EaxAlEffectSlotUPtr;
-void eax_delete_al_effect_slot(gsl::strict_not_null<al::Context*> context,
-    gsl::strict_not_null<ALeffectslot*> effect_slot);
+auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffectSlotUPtr;
+void eax_delete_al_effect_slot(gsl::not_null<al::Context*> context,
+    gsl::not_null<ALeffectslot*> effect_slot);
 #endif // ALSOFT_EAX
 
 struct EffectSlotSubList {

@@ -15,7 +15,7 @@ struct Context;
 
 class EaxFxSlots {
 public:
-    void initialize(gsl::strict_not_null<al::Context*> al_context);
+    void initialize(gsl::not_null<al::Context*> al_context);
     void uninitialize() noexcept;
 
     void commit()

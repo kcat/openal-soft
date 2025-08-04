@@ -386,8 +386,8 @@ using DeviceRef = al::intrusive_ptr<al::Device>;
 /************************************************
  * Device lists
  ************************************************/
-auto DeviceList = std::vector<gsl::strict_not_null<al::Device*>>{};
-auto ContextList = std::vector<gsl::strict_not_null<al::Context*>>{};
+auto DeviceList = std::vector<gsl::not_null<al::Device*>>{};
+auto ContextList = std::vector<gsl::not_null<al::Context*>>{};
 
 auto ListLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction? */
 
@@ -1028,7 +1028,7 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(gsl::strict_not_null<const al::Device*> device, const float threshold)
+auto CreateDeviceLimiter(gsl::not_null<const al::Device*> device, const float threshold)
     -> std::unique_ptr<Compressor>
 {
     static constexpr float LookAheadTime{0.001f};
@@ -1054,7 +1054,7 @@ auto CreateDeviceLimiter(gsl::strict_not_null<const al::Device*> device, const f
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-inline void UpdateClockBase(gsl::strict_not_null<al::Device*> device)
+inline void UpdateClockBase(gsl::not_null<al::Device*> device)
 {
     using std::chrono::duration_cast;
 
@@ -1078,7 +1078,7 @@ inline void UpdateClockBase(gsl::strict_not_null<al::Device*> device)
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
+auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     const std::span<const AttributePair> attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
@@ -1883,7 +1883,7 @@ auto UpdateDeviceParams(gsl::strict_not_null<al::Device*> device,
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-auto ResetDeviceParams(gsl::strict_not_null<al::Device*> device,
+auto ResetDeviceParams(gsl::not_null<al::Device*> device,
     const std::span<const AttributePair> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
@@ -1933,14 +1933,14 @@ auto ResetDeviceParams(gsl::strict_not_null<al::Device*> device,
  * Checks if the given device is a valid handle, returning a new reference to
  * it or setting the global error state and throwing an exception.
  */
-auto VerifyDevice(ALCdevice *device) -> gsl::strict_not_null<DeviceRef>
+auto VerifyDevice(ALCdevice *device) -> gsl::not_null<DeviceRef>
 {
     auto listlock = std::lock_guard{ListLock};
     const auto iter = std::ranges::lower_bound(DeviceList, device);
     if(iter != DeviceList.end() && *iter == device)
     {
         (*iter)->inc_ref();
-        return gsl::make_strict_not_null(DeviceRef{*iter});
+        return gsl::make_not_null(DeviceRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_DEVICE);
     throw al::base_exception{fmt::format("Invalid device handle {}", voidp{device})};
@@ -1951,14 +1951,14 @@ auto VerifyDevice(ALCdevice *device) -> gsl::strict_not_null<DeviceRef>
  * Checks if the given context is a valid handle, returning a new reference to
  * it or setting the global error state and throwing an exception.
  */
-auto VerifyContext(ALCcontext *context) -> gsl::strict_not_null<ContextRef>
+auto VerifyContext(ALCcontext *context) -> gsl::not_null<ContextRef>
 {
     auto listlock = std::lock_guard{ListLock};
     const auto iter = std::ranges::lower_bound(ContextList, context);
     if(iter != ContextList.end() && *iter == context)
     {
         (*iter)->inc_ref();
-        return gsl::make_strict_not_null(ContextRef{*iter});
+        return gsl::make_not_null(ContextRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
     throw al::base_exception{fmt::format("Invalid context handle {}", voidp{context})};
@@ -2811,7 +2811,8 @@ try {
 
     {
         listlock.lock();
-        auto iter = std::ranges::lower_bound(ContextList, context.get());
+        auto iter = std::ranges::lower_bound(ContextList, context.get(), std::less{},
+            [](gsl::not_null<al::Context*> &ctx) { return std::to_address(ctx); });
         ContextList.emplace(iter, context.get());
         listlock.unlock();
     }
@@ -3041,7 +3042,8 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> A
 
     {
         auto listlock = std::lock_guard{ListLock};
-        auto iter = std::ranges::lower_bound(DeviceList, device.get());
+        auto iter = std::ranges::lower_bound(DeviceList, device.get(), std::less{},
+            [](gsl::not_null<al::Device*> &dev) { return std::to_address(dev); });
         DeviceList.emplace(iter, device.get());
     }
 
@@ -3189,7 +3191,8 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuin
 
     {
         auto listlock = std::lock_guard{ListLock};
-        const auto iter = std::ranges::lower_bound(DeviceList, device.get());
+        const auto iter = std::ranges::lower_bound(DeviceList, device.get(), std::less{},
+            [](gsl::not_null<al::Device*> &dev) { return std::to_address(dev); });
         DeviceList.emplace(iter, device.get());
     }
     device->mDeviceState = DeviceState::Configured;
@@ -3375,7 +3378,8 @@ ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) n
 
     {
         auto listlock = std::lock_guard{ListLock};
-        const auto iter = std::ranges::lower_bound(DeviceList, device.get());
+        const auto iter = std::ranges::lower_bound(DeviceList, device.get(), std::less{},
+            [](gsl::not_null<al::Device*> &dev) { return std::to_address(dev); });
         DeviceList.emplace(iter, device.get());
     }
 

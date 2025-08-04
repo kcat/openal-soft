@@ -122,7 +122,7 @@ thread_local al::Context::ThreadCtx al::Context::sThreadContext;
 ALeffect al::Context::sDefaultEffect;
 
 
-al::Context::Context(const gsl::strict_not_null<al::intrusive_ptr<al::Device>> &device,
+al::Context::Context(const gsl::not_null<al::intrusive_ptr<al::Device>> &device,
     ContextFlagBitset flags)
     : ContextBase{al::get_not_null(device)}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
@@ -919,7 +919,7 @@ void al::Context::eaxCommit()
 
 namespace {
 
-auto EAXSet(gsl::strict_not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXSet(gsl::not_null<al::Context*> context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
@@ -931,7 +931,7 @@ catch(...) {
     return AL_INVALID_OPERATION;
 }
 
-auto EAXGet(gsl::strict_not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXGet(gsl::not_null<al::Context*> context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};

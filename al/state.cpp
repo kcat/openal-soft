@@ -190,7 +190,7 @@ struct PropertyCastType<ALboolean> {
 
 
 template<typename T>
-void GetValue(gsl::strict_not_null<al::Context*> context, ALenum pname, T *values) noexcept
+void GetValue(gsl::not_null<al::Context*> context, ALenum pname, T *values) noexcept
 {
     static constexpr auto cast_value = PropertyCastType<T>{};
 
@@ -301,7 +301,7 @@ void GetValue(gsl::strict_not_null<al::Context*> context, ALenum pname, T *value
 }
 
 template<>
-void GetValue(gsl::strict_not_null<al::Context*> context, ALenum pname, ALvoid **values) noexcept
+void GetValue(gsl::not_null<al::Context*> context, ALenum pname, ALvoid **values) noexcept
 {
     if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
@@ -340,7 +340,7 @@ inline void UpdateProps(al::Context *context)
 }
 
 
-void alEnable(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
+void alEnable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -364,7 +364,7 @@ void alEnable(gsl::strict_not_null<al::Context*> context, ALenum capability) noe
         as_unsigned(capability));
 }
 
-void alDisable(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
+void alDisable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -388,8 +388,7 @@ void alDisable(gsl::strict_not_null<al::Context*> context, ALenum capability) no
         as_unsigned(capability));
 }
 
-auto alIsEnabled(gsl::strict_not_null<al::Context*> context, ALenum capability) noexcept
-    -> ALboolean
+auto alIsEnabled(gsl::not_null<al::Context*> context, ALenum capability) noexcept -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
     switch(capability)
@@ -405,8 +404,7 @@ auto alIsEnabled(gsl::strict_not_null<al::Context*> context, ALenum capability) 
 }
 
 
-auto alGetString(gsl::strict_not_null<al::Context*> context, ALenum pname) noexcept
-    -> gsl::czstring
+auto alGetString(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> gsl::czstring
 {
     switch(pname)
     {
@@ -437,7 +435,7 @@ auto alGetString(gsl::strict_not_null<al::Context*> context, ALenum pname) noexc
 }
 
 
-void alDopplerFactor(gsl::strict_not_null<al::Context*> context, ALfloat value) noexcept
+void alDopplerFactor(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -449,7 +447,7 @@ void alDopplerFactor(gsl::strict_not_null<al::Context*> context, ALfloat value) 
     }
 }
 
-void alSpeedOfSound(gsl::strict_not_null<al::Context*> context, ALfloat value) noexcept
+void alSpeedOfSound(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -461,7 +459,7 @@ void alSpeedOfSound(gsl::strict_not_null<al::Context*> context, ALfloat value) n
     }
 }
 
-void alDistanceModel(gsl::strict_not_null<al::Context*> context, ALenum value) noexcept
+void alDistanceModel(gsl::not_null<al::Context*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -476,8 +474,8 @@ void alDistanceModel(gsl::strict_not_null<al::Context*> context, ALenum value) n
 }
 
 
-auto alGetStringiSOFT(gsl::strict_not_null<al::Context*> context, ALenum pname, ALsizei index)
-    noexcept -> gsl::czstring
+auto alGetStringiSOFT(gsl::not_null<al::Context*> context, ALenum pname, ALsizei index) noexcept
+    -> gsl::czstring
 {
     switch(pname)
     {
@@ -493,13 +491,13 @@ auto alGetStringiSOFT(gsl::strict_not_null<al::Context*> context, ALenum pname, 
 }
 
 
-void alDeferUpdatesSOFT(gsl::strict_not_null<al::Context*> context) noexcept
+void alDeferUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void alProcessUpdatesSOFT(gsl::strict_not_null<al::Context*> context) noexcept
+void alProcessUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();

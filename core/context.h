@@ -83,7 +83,7 @@ struct ContextParams {
 };
 
 struct ContextBase {
-    gsl::strict_not_null<DeviceBase*> const mDevice;
+    gsl::not_null<DeviceBase*> const mDevice;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
@@ -161,7 +161,7 @@ struct ContextBase {
     std::vector<VoicePropsCluster> mVoicePropClusters;
 
 
-    auto getEffectSlot() LIFETIMEBOUND -> gsl::strict_not_null<EffectSlot*>;
+    auto getEffectSlot() LIFETIMEBOUND -> gsl::not_null<EffectSlot*>;
 
     using EffectSlotCluster = std::unique_ptr<std::array<EffectSlot,4>>;
     std::vector<EffectSlotCluster> mEffectSlotClusters;
@@ -176,7 +176,7 @@ struct ContextBase {
     std::vector<ContextPropsCluster> mContextPropClusters;
 
 
-    explicit ContextBase(gsl::strict_not_null<DeviceBase*> device LIFETIMEBOUND);
+    explicit ContextBase(gsl::not_null<DeviceBase*> device LIFETIMEBOUND);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
     virtual ~ContextBase();

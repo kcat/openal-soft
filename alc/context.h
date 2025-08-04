@@ -83,7 +83,7 @@ namespace al {
 struct Device;
 
 struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBase {
-    const gsl::strict_not_null<al::intrusive_ptr<al::Device>> mALDevice;
+    const gsl::not_null<al::intrusive_ptr<al::Device>> mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
@@ -132,8 +132,7 @@ struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBas
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    Context(const gsl::strict_not_null<al::intrusive_ptr<Device>> &device,
-        ContextFlagBitset flags);
+    Context(const gsl::not_null<al::intrusive_ptr<Device>> &device, ContextFlagBitset flags);
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
     ~Context() final;

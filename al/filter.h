@@ -25,15 +25,15 @@ inline constexpr float HighPassFreqRef{250.0f};
 
 template<typename T>
 struct FilterTable {
-    static void setParami(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<ALfilter*>, ALenum, int);
-    static void setParamiv(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<ALfilter*>, ALenum, const int*);
-    static void setParamf(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<ALfilter*>, ALenum, float);
-    static void setParamfv(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<ALfilter*>, ALenum, const float*);
+    static void setParami(gsl::not_null<al::Context*>, gsl::not_null<ALfilter*>, ALenum, int);
+    static void setParamiv(gsl::not_null<al::Context*>, gsl::not_null<ALfilter*>, ALenum, const int*);
+    static void setParamf(gsl::not_null<al::Context*>, gsl::not_null<ALfilter*>, ALenum, float);
+    static void setParamfv(gsl::not_null<al::Context*>, gsl::not_null<ALfilter*>, ALenum, const float*);
 
-    static void getParami(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<const ALfilter*>, ALenum, int*);
-    static void getParamiv(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<const ALfilter*>, ALenum, int*);
-    static void getParamf(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<const ALfilter*>, ALenum, float*);
-    static void getParamfv(gsl::strict_not_null<al::Context*>, gsl::strict_not_null<const ALfilter*>, ALenum, float*);
+    static void getParami(gsl::not_null<al::Context*>, gsl::not_null<const ALfilter*>, ALenum, int*);
+    static void getParamiv(gsl::not_null<al::Context*>, gsl::not_null<const ALfilter*>, ALenum, int*);
+    static void getParamf(gsl::not_null<al::Context*>, gsl::not_null<const ALfilter*>, ALenum, float*);
+    static void getParamfv(gsl::not_null<al::Context*>, gsl::not_null<const ALfilter*>, ALenum, float*);
 
 private:
     FilterTable() = default;
@@ -62,8 +62,7 @@ struct ALfilter {
     /* Self ID */
     ALuint id{0};
 
-    static void SetName(gsl::strict_not_null<al::Context*> context, ALuint id,
-        std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

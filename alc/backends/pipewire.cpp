@@ -1415,9 +1415,7 @@ class PipeWirePlayback final : public BackendBase {
     std::vector<void*> mChannelPtrs;
 
 public:
-    explicit PipeWirePlayback(gsl::strict_not_null<DeviceBase*> device) noexcept
-        : BackendBase{device}
-    { }
+    explicit PipeWirePlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~PipeWirePlayback() final
     {
         /* Stop the mainloop so the stream can be properly destroyed. */
@@ -1915,9 +1913,7 @@ class PipeWireCapture final : public BackendBase {
     RingBufferPtr<std::byte> mRing;
 
 public:
-    explicit PipeWireCapture(gsl::strict_not_null<DeviceBase*> device) noexcept
-        : BackendBase{device}
-    { }
+    explicit PipeWireCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~PipeWireCapture() final { if(mLoop) mLoop.stop(); }
 };
 
@@ -2253,8 +2249,8 @@ auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::str
 }
 
 
-auto PipeWireBackendFactory::createBackend(gsl::strict_not_null<DeviceBase*> device,
-    BackendType type) -> BackendPtr
+auto PipeWireBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PipeWirePlayback{device}};

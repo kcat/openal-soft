@@ -369,8 +369,6 @@ void UpdateAllEffectSlotProps(gsl::not_null<al::Context*> context);
 using EaxAlEffectSlotUPtr = std::unique_ptr<ALeffectslot, ALeffectslot::EaxDeleter>;
 
 auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffectSlotUPtr;
-void eax_delete_al_effect_slot(gsl::not_null<al::Context*> context,
-    gsl::not_null<ALeffectslot*> effect_slot);
 #endif // ALSOFT_EAX
 
 struct EffectSlotSubList {

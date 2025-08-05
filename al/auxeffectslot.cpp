@@ -1428,7 +1428,20 @@ void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
 
 void ALeffectslot::EaxDeleter::operator()(gsl::not_null<ALeffectslot*> effect_slot)
 {
-    eax_delete_al_effect_slot(effect_slot->mEaxALContext, effect_slot);
+#define EAX_PREFIX "[EAX_DELETE_EFFECT_SLOT] "
+
+    auto const context = al::get_not_null(effect_slot->mEaxALContext);
+    auto slotlock = std::lock_guard{context->mEffectSlotLock};
+    if(effect_slot->mRef.load(std::memory_order_relaxed) != 0)
+    {
+        ERR(EAX_PREFIX "Deleting in-use effect slot {}.", effect_slot->id);
+        return;
+    }
+
+    RemoveActiveEffectSlots({&effect_slot, 1}, context);
+    FreeEffectSlot(context, effect_slot);
+
+#undef EAX_PREFIX
 }
 
 auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffectSlotUPtr
@@ -1451,24 +1464,6 @@ auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffe
     }
 
     return EaxAlEffectSlotUPtr{AllocEffectSlot(context)};
-
-#undef EAX_PREFIX
-}
-
-void eax_delete_al_effect_slot(gsl::not_null<al::Context*> context,
-    gsl::not_null<ALeffectslot*> effect_slot)
-{
-#define EAX_PREFIX "[EAX_DELETE_EFFECT_SLOT] "
-
-    auto slotlock = std::lock_guard{context->mEffectSlotLock};
-    if(effect_slot->mRef.load(std::memory_order_relaxed) != 0)
-    {
-        ERR(EAX_PREFIX "Deleting in-use effect slot {}.", effect_slot->id);
-        return;
-    }
-
-    RemoveActiveEffectSlots({&effect_slot, 1}, context);
-    FreeEffectSlot(context, effect_slot);
 
 #undef EAX_PREFIX
 }

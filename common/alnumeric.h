@@ -80,34 +80,18 @@ constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 template<std::integral R, std::integral T>
 constexpr auto saturate_cast(T val) noexcept -> R
 {
-    if constexpr(std::is_signed_v<R> == std::is_signed_v<T>)
+    if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
     {
-        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
+        if constexpr(std::is_signed_v<R> && std::is_signed_v<T>)
         {
-            if constexpr(std::is_signed_v<R>)
-            {
-                if(val < std::numeric_limits<R>::min())
-                    return std::numeric_limits<R>::min();
-            }
-            if(val > std::numeric_limits<R>::max())
-                return std::numeric_limits<R>::max();
+            if(val < std::numeric_limits<R>::min())
+                return std::numeric_limits<R>::min();
         }
+        if(val > T{std::numeric_limits<R>::max()})
+            return std::numeric_limits<R>::max();
     }
-    else if constexpr(std::is_signed_v<R>)
+    if constexpr(std::is_unsigned_v<R> && std::is_signed_v<T>)
     {
-        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
-        {
-            if(val > T{std::numeric_limits<R>::max()})
-                return std::numeric_limits<R>::max();
-        }
-    }
-    else
-    {
-        if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
-        {
-            if(val > T{std::numeric_limits<R>::max()})
-                return std::numeric_limits<R>::max();
-        }
         if(val < 0)
             return R{0};
     }

@@ -78,6 +78,7 @@
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
+#include "pragmadefs.h"
 
 
 using uint = unsigned int;
@@ -1471,7 +1472,10 @@ struct alignas(V4sfAlignment) PFFFT_Setup {
     pffft_transform_t transform{};
 
     float *twiddle{}; /* N/4 elements */
+    DIAGNOSTIC_PUSH
+    std_pragma("GCC diagnostic ignored \"-Wignored-attributes\"")
     std::span<v4sf> e; /* N/4*3 elements */
+    DIAGNOSTIC_POP
 };
 
 auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) -> PFFFTSetupPtr

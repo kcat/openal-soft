@@ -69,7 +69,7 @@ constexpr auto add_sat(T lhs, T rhs) noexcept -> T
     }
     else
     {
-        const auto res = lhs + rhs;
+        const auto res = static_cast<T>(lhs + rhs);
         if(res < lhs)
             return std::numeric_limits<T>::max();
         return res;

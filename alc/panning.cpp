@@ -1251,19 +1251,21 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         auto postproc = InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
         {
-            const auto spkr_count = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
-                [](const float curvalue, const float dist) noexcept -> float
-            { return curvalue + ((dist > 0.0f) ? 1.0f : 0.0f); });
-
+            auto dist_scale = 0.0f;
             const auto accum_dist = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
-                [](const float curvalue, const float dist) noexcept -> float
-            { return curvalue + ((dist > 0.0f) ? dist : 0.0f); });
+                [&dist_scale](const float curvalue, const float dist) noexcept -> float
+            {
+                if(!(dist > 0.0f))
+                    return curvalue;
+                dist_scale += 1.0f;
+                return std::lerp(curvalue, dist, 1.0f/dist_scale);
+            });
 
-            const auto avg_dist = (accum_dist > 0.0f && spkr_count > 0) ? accum_dist/spkr_count :
+            const auto avg_dist = (accum_dist > 0.0f) ? accum_dist :
                 device->configValue<float>("decoder", "speaker-dist").value_or(1.0f);
             InitNearFieldCtrl(device, avg_dist, decoder.mOrder, decoder.m3DMode);
 
-            if(spkr_count > 0)
+            if(accum_dist > 0.0f)
                 InitDistanceComp(device, decoder.mChannels, speakerdists);
         }
         if(postproc.stablizer)

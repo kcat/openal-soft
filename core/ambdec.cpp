@@ -102,6 +102,9 @@ auto AmbDecConf::load(const std::string_view fname) noexcept
                 istr >> spkr.Azimuth;
                 istr >> spkr.Elevation;
                 istr >> spkr.Connection;
+                if(!(spkr.Distance >= 0.0f && std::isfinite(spkr.Distance)))
+                    return make_error(linenum, "Invalid speaker {} distance: {}", speaker_pos,
+                        spkr.Distance);
             }
             else
                 return make_error(linenum, "Unexpected speakers command: {}", command);

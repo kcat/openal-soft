@@ -3589,13 +3589,6 @@ try {
     auto devname = std::string_view{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
-        if(devname.length() >= size_t{std::numeric_limits<int>::max()})
-        {
-            ERR("Device name too long ({} >= {})", devname.length(),
-                std::numeric_limits<int>::max());
-            dev->setError(ALC_INVALID_VALUE);
-            return ALC_FALSE;
-        }
         if(al::case_compare(devname, GetDefaultName()) == 0)
             devname = {};
         else

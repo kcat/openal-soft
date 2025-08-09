@@ -534,7 +534,7 @@ void UhjDecoderIIR::decode(const std::span<std::span<float>> samples, const bool
  *
  * W = 0.6098637*S + 0.6896511*j*w*D
  * X = 0.8624776*S - 0.7626955*j*w*D
- * Y = 1.6822415*w*D + 0.2156194*j*S
+ * Y = 1.6822415*w*D - 0.2156194*j*S
  *
  * where j is a +90 degree phase shift. w is a variable control for the
  * resulting stereo width, with the range 0 <= w <= 0.7.
@@ -612,9 +612,9 @@ void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, cons
             mSHistory.begin());
     PShifter<N>.process(youtput, mTemp);
 
-    /* Y = 1.6822415*w*D + 0.2156194*j*S */
+    /* Y = 1.6822415*w*D - 0.2156194*j*S */
     std::ranges::transform(mD, youtput, youtput.begin(), [](const float d, const float js) noexcept
-    { return 1.6822415f*d + 0.2156194f*js; });
+    { return 1.6822415f*d - 0.2156194f*js; });
 }
 
 void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, const bool updateState)
@@ -687,9 +687,9 @@ void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, cons
     /* Apply filter1 to D and store in mTemp. */
     process(mFilter1D, Filter1Coeff, std::span{mD}.first(samplesToDo), updateState, mTemp);
 
-    /* Y = 1.6822415*w*D + 0.2156194*j*S */
+    /* Y = 1.6822415*w*D - 0.2156194*j*S */
     std::ranges::transform(mTemp, youtput, youtput.begin(), [](float d, float js) noexcept
-    { return 1.6822415f*d + 0.2156194f*js; });
+    { return 1.6822415f*d - 0.2156194f*js; });
 
     mFirstRun = false;
 }

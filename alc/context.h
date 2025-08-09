@@ -81,8 +81,10 @@ struct ALCcontext { };
 
 namespace al {
 struct Device;
+struct Context;
 
-struct Context final : public ALCcontext, intrusive_ref<Context>, ContextBase {
+struct ContextDeleter { void operator()(gsl::owner<Context*> context) noexcept; };
+struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>, ContextBase {
     const gsl::not_null<intrusive_ptr<Device>> mALDevice;
 
     bool mPropsDirty{true};
@@ -131,8 +133,6 @@ struct Context final : public ALCcontext, intrusive_ref<Context>, ContextBase {
 
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
-
-    ~Context() final;
 
     /**
      * Removes the context from being current on the running thread or
@@ -195,6 +195,9 @@ struct Context final : public ALCcontext, intrusive_ref<Context>, ContextBase {
     static std::atomic<bool> sGlobalContextLock;
     static std::atomic<Context*> sGlobalContext;
 
+protected:
+    ~Context();
+
 private:
     Context(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags);
 
@@ -223,6 +226,8 @@ private:
         /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
+
+    friend ContextDeleter;
 
 public:
     static Context *getThreadContext() noexcept { return sLocalContext; }

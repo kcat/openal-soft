@@ -4,13 +4,15 @@
 #include <atomic>
 #include <concepts>
 #include <cstddef>
+#include <memory>
 #include <utility>
 
+#include "gsl/gsl"
 
 namespace al {
 
-template<typename T>
-class intrusive_ref {
+template<typename T, typename D=std::default_delete<T>>
+class intrusive_ref : protected D {
     std::atomic<unsigned int> mRef{1u};
 
     intrusive_ref() = default;
@@ -24,7 +26,7 @@ public:
     {
         auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
         if(ref == 0) [[unlikely]]
-            delete static_cast<T*>(this);
+            D::operator()(static_cast<gsl::owner<T*>>(this));
         return ref;
     }
 

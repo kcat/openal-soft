@@ -74,7 +74,6 @@
 #include "al/source.h"
 #include "alc/events.h"
 #include "alconfig.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "alu.h"
@@ -796,7 +795,8 @@ void ProbeCaptureDeviceList()
 
 struct AttributePair { ALCint attribute; ALCint value; };
 static_assert(sizeof(AttributePair) == sizeof(int)*2);
-auto SpanFromAttributeList(const ALCint *attribs) noexcept -> std::span<const AttributePair>
+auto SpanFromAttributeList(const ALCint *attribs LIFETIMEBOUND) noexcept
+    -> std::span<const AttributePair>
 {
     auto attrSpan = std::span<const AttributePair>{};
     if(attribs && *attribs != 0)
@@ -1731,7 +1731,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     auto mixer_mode = FPUCtl{};
     std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
     {
-        auto const context = gsl::make_not_null(dynamic_cast<al::Context*>(ctxbase));
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
+        auto const context = gsl::make_not_null(static_cast<al::Context*>(ctxbase));
 
         auto proplock = std::unique_lock{context->mPropLock};
         auto slotlock = std::unique_lock{context->mEffectSlotLock};
@@ -1896,8 +1897,8 @@ auto ResetDeviceParams(gsl::not_null<al::Device*> device,
         std::ranges::for_each(*device->mContexts.load(std::memory_order_acquire),
             [](ContextBase *ctxbase)
         {
-            auto *ctx = dynamic_cast<al::Context*>(ctxbase);
-            Ensures(ctx != nullptr);
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
+            auto const ctx = gsl::make_not_null(static_cast<al::Context*>(ctxbase));
             if(!ctx->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
                 return;
 
@@ -3437,15 +3438,18 @@ catch(al::base_exception&) {
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer,
     ALCsizei samples) noexcept
 {
-    auto *dev = dynamic_cast<al::Device*>(device);
-    if(!dev) [[unlikely]]
-        al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    else if(dev->Type != DeviceType::Loopback) [[unlikely]]
-        dev->setError(ALC_INVALID_DEVICE);
-    else if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
-        dev->setError(ALC_INVALID_VALUE);
-    else
-        dev->renderSamples(buffer, gsl::narrow_cast<uint>(samples), dev->channelsFromFmt());
+    if(!device) [[unlikely]]
+        return al::Device::SetGlobalError(ALC_INVALID_DEVICE);
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-static-cast-downcast)
+     * Needs to be real-time safe, so can't do full validation.
+     */
+    auto const dev = gsl::make_not_null(static_cast<al::Device*>(device));
+    /* NOLINTEND(cppcoreguidelines-pro-type-static-cast-downcast) */
+    if(dev->Type != DeviceType::Loopback) [[unlikely]]
+        return dev->setError(ALC_INVALID_DEVICE);
+    if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
+        return dev->setError(ALC_INVALID_VALUE);
+    dev->renderSamples(buffer, gsl::narrow_cast<uint>(samples), dev->channelsFromFmt());
 }
 
 

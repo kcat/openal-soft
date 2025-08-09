@@ -124,6 +124,9 @@ thread_local Context::ThreadCtx Context::sThreadContext;
 ALeffect Context::sDefaultEffect;
 
 
+void ContextDeleter::operator()(gsl::owner<Context*> context) noexcept
+{ delete context; }
+
 auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
     -> intrusive_ptr<Context>
 {

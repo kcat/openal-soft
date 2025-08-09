@@ -175,11 +175,12 @@ struct ContextBase {
     using ContextPropsCluster = std::unique_ptr<std::array<ContextProps,2>>;
     std::vector<ContextPropsCluster> mContextPropClusters;
 
-
-    explicit ContextBase(gsl::not_null<DeviceBase*> device LIFETIMEBOUND);
     ContextBase(const ContextBase&) = delete;
     ContextBase& operator=(const ContextBase&) = delete;
-    virtual ~ContextBase();
+
+protected:
+    explicit ContextBase(gsl::not_null<DeviceBase*> device LIFETIMEBOUND);
+    ~ContextBase();
 };
 
 #endif /* CORE_CONTEXT_H */

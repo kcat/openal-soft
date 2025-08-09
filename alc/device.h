@@ -32,17 +32,13 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice {
-    ALCdevice(const ALCdevice&) = delete;
-    auto operator=(const ALCdevice&) -> ALCdevice& = delete;
-    virtual ~ALCdevice() = default;
-protected:
-    ALCdevice() = default;
-};
+struct ALCdevice { };
 
 namespace al {
+struct Device;
 
-struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBase {
+struct DeviceDeleter { void operator()(gsl::owner<Device*> device) noexcept; };
+struct Device final : public ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
      * being changed. It's also used to serialize calls to the backend.
@@ -105,8 +101,6 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     std::string mVersionOverride;
     std::string mRendererOverride;
 
-    ~Device() final;
-
     void enumerateHrtfs();
 
     bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
@@ -125,10 +119,15 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     /* Flag to trap ALC device errors */
     static inline bool sTrapALCError{false};
 
+protected:
+    ~Device();
+
 private:
     explicit Device(DeviceType type);
 
     static void SetError(Device *device, ALCenum errorCode);
+
+    friend DeviceDeleter;
 };
 
 template<> inline

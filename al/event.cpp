@@ -223,6 +223,9 @@ void StartEventThrd(al::Context *ctx)
 
 void StopEventThrd(al::Context *ctx)
 {
+    if(!ctx->mEventThread.joinable())
+        return;
+
     auto *ring = ctx->mAsyncEvents.get();
     auto evt_span = ring->getWriteVector()[0];
     if(evt_span.empty())
@@ -235,12 +238,9 @@ void StopEventThrd(al::Context *ctx)
     std::ignore = InitAsyncEvent<AsyncKillThread>(evt_span[0]);
     ring->writeAdvance(1);
 
-    if(ctx->mEventThread.joinable())
-    {
-        ctx->mEventsPending.store(true, std::memory_order_release);
-        ctx->mEventsPending.notify_all();
-        ctx->mEventThread.join();
-    }
+    ctx->mEventsPending.store(true, std::memory_order_release);
+    ctx->mEventsPending.notify_all();
+    ctx->mEventThread.join();
 }
 
 AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei,count, const ALenum*,types, ALboolean,enable)

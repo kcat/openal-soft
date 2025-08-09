@@ -82,15 +82,15 @@ struct ALCcontext { };
 namespace al {
 struct Device;
 
-struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBase {
-    const gsl::not_null<al::intrusive_ptr<al::Device>> mALDevice;
+struct Context final : public ALCcontext, intrusive_ref<Context>, ContextBase {
+    const gsl::not_null<intrusive_ptr<Device>> mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
 
     std::mutex mPropLock;
 
-    al::tss<ALenum> mLastThreadError{AL_NO_ERROR};
+    tss<ALenum> mLastThreadError{AL_NO_ERROR};
 
     const ContextFlagBitset mContextFlags;
     std::atomic<bool> mDebugEnabled{false};
@@ -132,16 +132,11 @@ struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBas
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    Context(const gsl::not_null<al::intrusive_ptr<Device>> &device, ContextFlagBitset flags);
-    Context(const Context&) = delete;
-    Context& operator=(const Context&) = delete;
     ~Context() final;
 
-    void init();
     /**
-     * Removes the context from its device and removes it from being current on
-     * the running thread or globally. Stops device playback if this was the
-     * last context on its device.
+     * Removes the context from being current on the running thread or
+     * globally, and stops the event thread.
      */
     void deinit();
 
@@ -193,13 +188,20 @@ struct Context final : public ALCcontext, al::intrusive_ref<Context>, ContextBas
         sendDebugMessage(debuglock, source, type, id, severity, message);
     }
 
+    static auto Create(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
+        -> intrusive_ptr<Context>;
+
     /* Process-wide current context */
     static std::atomic<bool> sGlobalContextLock;
-    static std::atomic<al::Context*> sGlobalContext;
+    static std::atomic<Context*> sGlobalContext;
 
 private:
+    Context(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags);
+
+    void init();
+
     /* Thread-local current context. */
-    static inline thread_local al::Context *sLocalContext{};
+    static inline thread_local Context *sLocalContext{};
 
     /* Thread-local context handling. This handles attempting to release the
      * context which may have been left current when the thread is destroyed.
@@ -217,14 +219,14 @@ private:
          * clear sLocalContext (which isn't a member variable to make read
          * access efficient).
          */
-        void set(al::Context *ctx) const noexcept { sLocalContext = ctx; }
+        void set(Context *ctx) const noexcept { sLocalContext = ctx; }
         /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
 
 public:
-    static al::Context *getThreadContext() noexcept { return sLocalContext; }
-    static void setThreadContext(al::Context *context) noexcept { sThreadContext.set(context); }
+    static Context *getThreadContext() noexcept { return sLocalContext; }
+    static void setThreadContext(Context *context) noexcept { sThreadContext.set(context); }
 
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;

@@ -105,7 +105,6 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     std::string mVersionOverride;
     std::string mRendererOverride;
 
-    explicit Device(DeviceType type);
     ~Device() final;
 
     void enumerateHrtfs();
@@ -116,6 +115,8 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     template<typename T>
     auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
 
+    static auto Create(DeviceType type) -> al::intrusive_ptr<al::Device>;
+
     /** Stores the latest ALC device error. */
     static void SetGlobalError(ALCenum errorCode) { SetError(nullptr, errorCode); }
     void setError(ALCenum errorCode) { SetError(this, errorCode); }
@@ -125,6 +126,8 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     static inline bool sTrapALCError{false};
 
 private:
+    explicit Device(DeviceType type);
+
     static void SetError(Device *device, ALCenum errorCode);
 };
 

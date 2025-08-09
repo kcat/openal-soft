@@ -35,6 +35,12 @@ using voidp = void*;
 
 namespace al {
 
+auto Device::Create(DeviceType type) -> al::intrusive_ptr<al::Device>
+{
+    return al::intrusive_ptr{new Device{type}};
+}
+
+
 Device::Device(DeviceType type) : DeviceBase{type}
 { }
 

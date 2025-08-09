@@ -52,6 +52,7 @@
 #include <numbers>
 #include <optional>
 #include <ranges>
+#include <source_location>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -2763,13 +2764,7 @@ try {
         }
     }
 
-    auto context = ContextRef{new(std::nothrow) al::Context{dev, ctxflags}};
-    if(!context)
-    {
-        dev->setError(ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
-    context->init();
+    auto context = al::Context::Create(dev, ctxflags);
 
     if(auto volopt = dev->configValue<float>({}, "volume-adjust"))
     {
@@ -2831,7 +2826,16 @@ try {
     TRACE("Created context {}", voidp{context.get()});
     return context.release();
 }
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating context");
+    VerifyDevice(device)->setError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
 catch(al::base_exception&) {
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return nullptr;
 }
 
@@ -2937,7 +2941,7 @@ catch(al::base_exception&) {
 
 
 ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> ALCdevice*
-{
+try {
     InitConfig();
 
     if(!PlaybackFactory)
@@ -2983,13 +2987,7 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> A
 #endif // ALSOFT_EAX
         uint{DefaultSendCount};
 
-    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Playback}};
-    if(!device)
-    {
-        WARN("Failed to create playback device handle");
-        al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    auto device = al::Device::Create(DeviceType::Playback);
 
     /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
@@ -3049,6 +3047,15 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> A
 
     TRACE("Created device {}, \"{}\"", voidp{device.get()}, device->mDeviceName);
     return device.release();
+}
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating playback device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
+    return nullptr;
 }
 
 ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboolean
@@ -3113,7 +3120,7 @@ ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboole
  ************************************************/
 ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency,
     ALCenum format, ALCsizei samples) noexcept -> ALCdevice*
-{
+try {
     InitConfig();
 
     if(!CaptureFactory)
@@ -3145,13 +3152,7 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuin
     else
         TRACE("Opening default capture device");
 
-    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Capture}};
-    if(!device)
-    {
-        WARN("Failed to create capture device handle");
-        al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    auto device = al::Device::Create(DeviceType::Capture);
 
     auto decompfmt = DecomposeDevFormat(format);
     if(!decompfmt)
@@ -3199,6 +3200,15 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuin
 
     TRACE("Created capture device {}, \"{}\"", voidp{device.get()}, device->mDeviceName);
     return device.release();
+}
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating capture device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
+    return nullptr;
 }
 
 ALC_API auto ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept -> ALCboolean
@@ -3323,7 +3333,7 @@ catch(al::base_exception&) {
 /** Open a loopback device, for manual rendering. */
 ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) noexcept
     -> ALCdevice*
-{
+try {
     InitConfig();
 
     /* Make sure the device name, if specified, is us. */
@@ -3339,13 +3349,7 @@ ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) n
 #endif // ALSOFT_EAX
         uint{DefaultSendCount};
 
-    auto device = DeviceRef{new(std::nothrow) al::Device{DeviceType::Loopback}};
-    if(!device)
-    {
-        WARN("Failed to create loopback device handle");
-        al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
+    auto device = al::Device::Create(DeviceType::Loopback);
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
@@ -3385,6 +3389,15 @@ ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) n
 
     TRACE("Created loopback device {}", voidp{device.get()});
     return device.release();
+}
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating loopback device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
+    return nullptr;
 }
 
 /**
@@ -3678,7 +3691,16 @@ try {
     ResetDeviceParams(al::get_not_null(dev), SpanFromAttributeList(attribs));
     return ALC_TRUE;
 }
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while reopening device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return ALC_FALSE;
+}
 catch(al::base_exception&) {
+    return ALC_FALSE;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return ALC_FALSE;
 }
 

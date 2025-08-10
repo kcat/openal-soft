@@ -817,6 +817,7 @@ set(ALC_OBJS
 if(ALSOFT_EAX)
     set(OPENAL_OBJS
         ${OPENAL_OBJS}
+        al/eax.cpp
         al/eax/api.cpp
         al/eax/api.h
         al/eax/call.cpp

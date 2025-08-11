@@ -36,7 +36,7 @@ consteval auto operator "" _zu(unsigned long long n) noexcept { return gsl::narr
 namespace al {
 
 #if HAS_BUILTIN(__builtin_add_overflow)
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 {
     T res;
@@ -52,7 +52,7 @@ constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 
 #else
 
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 {
     if constexpr(std::is_signed_v<T>)
@@ -77,7 +77,7 @@ constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 }
 #endif
 
-template<std::integral R, std::integral T>
+template<std::integral R, std::integral T> [[nodiscard]]
 constexpr auto saturate_cast(T val) noexcept -> R
 {
     if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
@@ -100,14 +100,14 @@ constexpr auto saturate_cast(T val) noexcept -> R
 
 } /* namespace al */
 
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto as_unsigned(T value) noexcept
 {
     using UT = std::make_unsigned_t<T>;
     return static_cast<UT>(value);
 }
 
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto as_signed(T value) noexcept
 {
     using ST = std::make_signed_t<T>;
@@ -115,6 +115,7 @@ constexpr auto as_signed(T value) noexcept
 }
 
 
+[[nodiscard]]
 constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
 {
     using namespace std::string_view_literals;
@@ -125,11 +126,13 @@ constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
 }
 
 
+[[nodiscard]]
 constexpr auto lerpf(float val1, float val2, float mu) noexcept -> float
 { return val1 + (val2-val1)*mu; }
 
 
 /** Find the next power-of-2 for non-power-of-2 numbers. */
+[[nodiscard]]
 constexpr auto NextPowerOf2(uint32_t value) noexcept -> uint32_t
 {
     if(value > 0)
@@ -148,7 +151,7 @@ constexpr auto NextPowerOf2(uint32_t value) noexcept -> uint32_t
  * If the value is not already a multiple of r, round toward zero to the next
  * multiple.
  */
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto RoundToZero(T value, std::type_identity_t<T> r) noexcept -> T
 { return value - (value%r); }
 
@@ -156,7 +159,7 @@ constexpr auto RoundToZero(T value, std::type_identity_t<T> r) noexcept -> T
  * If the value is not already a multiple of r, round away from zero to the
  * next multiple.
  */
-template<std::integral T>
+template<std::integral T> [[nodiscard]]
 constexpr auto RoundFromZero(T value, std::type_identity_t<T> r) noexcept -> T
 {
     if(value >= 0)
@@ -171,6 +174,7 @@ constexpr auto RoundFromZero(T value, std::type_identity_t<T> r) noexcept -> T
  * change it on its own threads. On some systems, a truncating conversion may
  * always be the fastest method.
  */
+[[nodiscard]]
 inline int fastf2i(float f) noexcept
 {
 #if HAVE_SSE_INTRINSICS
@@ -195,10 +199,12 @@ inline int fastf2i(float f) noexcept
     return gsl::narrow_cast<int>(f);
 #endif
 }
+[[nodiscard]]
 inline unsigned int fastf2u(float f) noexcept
 { return gsl::narrow_cast<unsigned int>(fastf2i(f)); }
 
 /** Converts float-to-int using standard behavior (truncation). */
+[[nodiscard]]
 inline int float2int(float f) noexcept
 {
 #if HAVE_SSE_INTRINSICS
@@ -226,10 +232,12 @@ inline int float2int(float f) noexcept
     return gsl::narrow_cast<int>(f);
 #endif
 }
+[[nodiscard]]
 inline unsigned int float2uint(float f) noexcept
 { return gsl::narrow_cast<unsigned int>(float2int(f)); }
 
 /** Converts double-to-int using standard behavior (truncation). */
+[[nodiscard]]
 inline int double2int(double d) noexcept
 {
 #if HAVE_SSE_INTRINSICS
@@ -263,6 +271,7 @@ inline int double2int(double d) noexcept
  * rounding mode. This is essentially an inlined version of rintf, although
  * makes fewer promises (e.g. -0 or -0.25 rounded to 0 may result in +0).
  */
+[[nodiscard]]
 inline float fast_roundf(float f) noexcept
 {
 #if (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
@@ -320,6 +329,7 @@ inline float fast_roundf(float f) noexcept
 
 
 // Converts level (mB) to gain.
+[[nodiscard]]
 inline float level_mb_to_gain(float x)
 {
     if(x <= -10'000.0f)
@@ -328,6 +338,7 @@ inline float level_mb_to_gain(float x)
 }
 
 // Converts gain to level (mB).
+[[nodiscard]]
 inline float gain_to_level_mb(float x)
 {
     if(x <= 1e-05f)

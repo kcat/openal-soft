@@ -766,7 +766,7 @@ try {
     });
 
     auto renderFile = std::filebuf{};
-    auto renderStart = std::streamsize{};
+    auto renderStart = int64_t{};
     auto leadIn = 0_z;
     auto leadOut = 0_z;
     auto renderbuf = std::vector<char>{};
@@ -834,9 +834,9 @@ try {
             std::ignore = alcGetError(device);
 
             leadIn = latency * RenderSampleRate / 1'000'000'000
-                * gsl::narrow_cast<ALCint64SOFT>(framesize);
+                * gsl::narrow_cast<int>(framesize);
             leadOut = (latency*RenderSampleRate + 999'999'999) / 1'000'000'000
-                * gsl::narrow_cast<ALCint64SOFT>(framesize);
+                * gsl::narrow_cast<int>(framesize);
         }
 
         auto outname = fs::path(al::char_as_u8(fname)).stem();
@@ -1132,7 +1132,7 @@ try {
 
     if(renderStart > 0)
     {
-        auto renderEnd = std::streamsize{renderFile.pubseekoff(0, std::ios_base::cur)};
+        auto renderEnd = int64_t{renderFile.pubseekoff(0, std::ios_base::cur)};
         if(renderEnd > 0)
         {
             const auto dataLen = renderEnd - renderStart;

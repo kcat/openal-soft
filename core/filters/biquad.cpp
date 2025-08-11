@@ -32,7 +32,7 @@ static_assert(std::popcount(gsl::narrow<unsigned>(SamplesPerStep)) == 1,
     "SamplesPerStep must be a power of 2");
 
 /* Sets dst to the given value, returns true if it's meaningfully different. */
-[[nodiscard]] constexpr
+[[nodiscard]]
 auto check_set(float &dst, const float value) noexcept -> bool
 {
     const auto is_diff = !(std::abs(value - dst) <= 0.015625f/* 1/64 */);

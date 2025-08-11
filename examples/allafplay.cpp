@@ -142,10 +142,45 @@ auto alGetAuxiliaryEffectSlotiv = LPALGETAUXILIARYEFFECTSLOTIV{};
 auto alGetAuxiliaryEffectSlotf = LPALGETAUXILIARYEFFECTSLOTF{};
 auto alGetAuxiliaryEffectSlotfv = LPALGETAUXILIARYEFFECTSLOTFV{};
 
+auto alcRenderSamplesSOFT = LPALCRENDERSAMPLESSOFT{};
+
 
 auto MuteFilterID = ALuint{};
 auto LowFrequencyEffectID = ALuint{};
 auto LfeSlotID = ALuint{};
+
+auto RenderChannels = ALCenum{};
+auto RenderOutMode = ALCenum{};
+auto RenderSamples = ALCenum{};
+auto RenderSampleRate = ALCsizei{};
+
+using ubyte = unsigned char;
+using ushort = unsigned short;
+using uint = unsigned int;
+
+void fwrite16be(ushort val, std::filebuf &f)
+{
+    const auto data = std::array{static_cast<char>((val>>8)&0xff), static_cast<char>(val&0xff)};
+    f.sputn(data.data(), std::ssize(data));
+}
+
+void fwrite32be(uint val, std::filebuf &f)
+{
+    const auto data = std::array{static_cast<char>((val>>24)&0xff),
+        static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
+        static_cast<char>(val&0xff)};
+    f.sputn(data.data(), std::ssize(data));
+}
+
+void fwrite64be(uint64_t val, std::filebuf &f)
+{
+    const auto data = std::array{static_cast<char>((val>>56)&0xff),
+        static_cast<char>((val>>48)&0xff), static_cast<char>((val>>40)&0xff),
+        static_cast<char>((val>>32)&0xff), static_cast<char>((val>>24)&0xff),
+        static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
+        static_cast<char>(val&0xff)};
+    f.sputn(data.data(), std::ssize(data));
+}
 
 
 using namespace std::string_view_literals;
@@ -730,6 +765,158 @@ try {
             throw std::runtime_error{fmt::format("OpenAL error: {}", alGetString(err))};
     });
 
+    auto renderFile = std::filebuf{};
+    auto renderStart = std::streamsize{};
+    auto leadIn = 0_z;
+    auto leadOut = 0_z;
+    auto renderbuf = std::vector<char>{};
+    if(alcRenderSamplesSOFT)
+    {
+        auto *device = alcGetContextsDevice(alcGetCurrentContext());
+
+        auto chancount = uint{};
+        switch(RenderChannels)
+        {
+        case ALC_MONO_SOFT: chancount = 1; break;
+        case ALC_STEREO_SOFT: chancount = 2; break;
+        case ALC_QUAD_SOFT: chancount = 4; break;
+        case ALC_SURROUND_5_1_SOFT: chancount = 6; break;
+        case ALC_SURROUND_6_1_SOFT: chancount = 7; break;
+        case ALC_SURROUND_7_1_SOFT: chancount = 8; break;
+        default:
+            throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
+                RenderChannels)};
+        }
+
+        auto samplesize = uint{};
+        switch(RenderSamples)
+        {
+        case ALC_UNSIGNED_BYTE_SOFT: samplesize = 1; break;
+        case ALC_BYTE_SOFT: samplesize = 1; break;
+        case ALC_UNSIGNED_SHORT_SOFT: samplesize = 2; break;
+        case ALC_SHORT_SOFT: samplesize = 2; break;
+        case ALC_UNSIGNED_INT_SOFT: samplesize = 4; break;
+        case ALC_INT_SOFT: samplesize = 4; break;
+        case ALC_FLOAT_SOFT: samplesize = 4; break;
+        default:
+            throw std::runtime_error{fmt::format("Unexpected sample type enum: {:#x}",
+                RenderSamples)};
+        }
+        const auto framesize = size_t{chancount} * samplesize;
+        renderbuf.resize(framesize * FramesPerPos);
+
+        if(RenderSampleRate != gsl::narrow_cast<int>(laf->mSampleRate))
+        {
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            const auto alcResetDeviceSOFT = reinterpret_cast<LPALCRESETDEVICESOFT>(
+                alcGetProcAddress(nullptr, "alcResetDeviceSOFT"));
+
+            const auto attribs = std::to_array<ALCint>({
+                ALC_FREQUENCY, gsl::narrow<int>(laf->mSampleRate),
+                ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
+                ALC_FORMAT_TYPE_SOFT, RenderSamples,
+                ALC_OUTPUT_MODE_SOFT, RenderOutMode,
+                0});
+            if(!alcResetDeviceSOFT(device, attribs.data()))
+                throw std::runtime_error{fmt::format(
+                    "Failed to reset loopback device for {}hz rendering", RenderSampleRate)};
+            RenderSampleRate = gsl::narrow_cast<int>(laf->mSampleRate);
+        }
+
+        if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
+        {
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            const auto alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
+                alcGetProcAddress(nullptr, "alcGetInteger64vSOFT"));
+
+            auto latency = ALCint64SOFT{};
+            alcGetInteger64vSOFT(device, ALC_DEVICE_LATENCY_SOFT, 1, &latency);
+            std::ignore = alcGetError(device);
+
+            leadIn = latency * RenderSampleRate / 1'000'000'000
+                * gsl::narrow_cast<ALCint64SOFT>(framesize);
+            leadOut = (latency*RenderSampleRate + 999'999'999) / 1'000'000'000
+                * gsl::narrow_cast<ALCint64SOFT>(framesize);
+        }
+
+        auto outname = fs::path(al::char_as_u8(fname)).stem();
+        outname += u8".caf";
+        if(fs::exists(outname))
+            throw std::runtime_error{fmt::format("Output file {} exists", outname)};
+
+        renderFile.open(outname, std::ios_base::binary | std::ios_base::out);
+        if(!renderFile.is_open())
+            throw std::runtime_error{fmt::format("Failed to create {}", outname)};
+
+        renderFile.sputn("caff", 4);
+        fwrite16be(1, renderFile);
+        fwrite16be(0, renderFile);
+
+        renderFile.sputn("desc", 4);
+        fwrite64be(32, renderFile);
+        fwrite64be(std::bit_cast<uint64_t>(gsl::narrow_cast<double>(RenderSampleRate)),renderFile);
+        renderFile.sputn("lpcm", 4);
+
+        const auto flags = std::invoke([]
+        {
+            switch(RenderSamples)
+            {
+            case ALC_UNSIGNED_BYTE_SOFT:
+            case ALC_BYTE_SOFT:
+                break;
+            case ALC_UNSIGNED_SHORT_SOFT:
+            case ALC_SHORT_SOFT:
+            case ALC_UNSIGNED_INT_SOFT:
+            case ALC_INT_SOFT:
+                if constexpr(std::endian::native == std::endian::little)
+                    return 2u; /* kCAFLinearPCMFormatFlagIsLittleEndian */
+                else
+                    break;
+            case ALC_FLOAT_SOFT:
+                if constexpr(std::endian::native == std::endian::little)
+                    return 3u; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
+                else
+                    return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
+            }
+            return 0u;
+        });
+        fwrite32be(flags, renderFile);
+        fwrite32be(samplesize*chancount, renderFile);
+        fwrite32be(1, renderFile);
+        fwrite32be(chancount, renderFile);
+        fwrite32be(samplesize*8, renderFile);
+
+        const auto chanmask = std::invoke([]
+        {
+            switch(RenderChannels)
+            {
+            case ALC_MONO_SOFT: return 0x4u;
+            case ALC_STEREO_SOFT: return 0x1u | 0x2u;
+            case ALC_QUAD_SOFT: return 0x1u | 0x2u | 0x10u | 0x20u;
+            case ALC_SURROUND_5_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x200u | 0x400u;
+            case ALC_SURROUND_6_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x100u | 0x200u | 0x400u;
+            case ALC_SURROUND_7_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x10u | 0x20u | 0x200u | 0x400u;
+            default:
+                throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
+                    RenderChannels)};
+            }
+        });
+        if(chanmask)
+        {
+            renderFile.sputn("chan", 4);
+            fwrite64be(12, renderFile);
+            fwrite32be(0x10000, renderFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
+            fwrite32be(chanmask, renderFile);
+            fwrite32be(0, renderFile);
+        }
+
+        renderFile.sputn("data", 4);
+        fwrite64be(as_unsigned(-1_z), renderFile); /* filled in at stop */
+        renderStart = renderFile.pubseekoff(0, std::ios_base::cur);
+
+        fmt::println("Rendering to {}...", outname);
+    }
+
     while(!laf->isAtEnd())
     {
         auto state = ALenum{};
@@ -797,6 +984,21 @@ try {
                     std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
                     laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
                 }
+            }
+            else if(alcRenderSamplesSOFT)
+            {
+                alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
+                    renderbuf.data(), FramesPerPos);
+                if(leadIn >= std::ssize(renderbuf))
+                    leadIn -= std::ssize(renderbuf);
+                else if(leadIn > 0)
+                {
+                    renderFile.sputn(std::to_address(renderbuf.begin()+leadIn),
+                        std::ssize(renderbuf)-leadIn);
+                    leadIn = 0;
+                }
+                else
+                    renderFile.sputn(renderbuf.data(), std::ssize(renderbuf));
             }
             else
                 std::this_thread::sleep_for(std::chrono::milliseconds{10});
@@ -898,9 +1100,46 @@ try {
             }
             alcProcessContext(alcGetCurrentContext());
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds{10});
+        if(alcRenderSamplesSOFT)
+        {
+            alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
+                renderbuf.data(), FramesPerPos);
+            if(leadIn > std::ssize(renderbuf))
+                leadIn -= std::ssize(renderbuf);
+            else if(leadIn > 0)
+            {
+                renderFile.sputn(std::to_address(renderbuf.begin()+leadIn),
+                    std::ssize(renderbuf)-leadIn);
+                leadIn = 0;
+            }
+            else
+                renderFile.sputn(renderbuf.data(), std::ssize(renderbuf));
+        }
+        else
+            std::this_thread::sleep_for(std::chrono::milliseconds{10});
         alGetSourcei(laf->mChannels.back().mSource, AL_SAMPLE_OFFSET, &offset);
         alGetSourcei(laf->mChannels.back().mSource, AL_SOURCE_STATE, &state);
+    }
+
+    while(leadOut > 0)
+    {
+        alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
+            renderbuf.data(), FramesPerPos);
+        const auto todo = std::min(std::ssize(renderbuf), leadOut);
+        renderFile.sputn(renderbuf.data(), todo);
+        leadOut -= todo;
+    }
+
+    if(renderStart > 0)
+    {
+        auto renderEnd = std::streamsize{renderFile.pubseekoff(0, std::ios_base::cur)};
+        if(renderEnd > 0)
+        {
+            const auto dataLen = renderEnd - renderStart;
+            if(renderFile.pubseekpos(renderStart-8) > 0)
+                fwrite64be(gsl::narrow_cast<uint64_t>(dataLen), renderFile);
+        }
+        renderFile.pubseekoff(0, std::ios_base::end);
     }
 }
 catch(std::exception& e) {
@@ -912,12 +1151,127 @@ auto main(std::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <name>] <filenames...>\n", args[0]);
+        fmt::println(stderr,
+            "Usage: {} [-device <name> | -render <channels,samples>] <filenames...>\n"
+            "\n"
+            "  -render    Renders samples to an output file instead of real-time playback.\n"
+            "             Outputs a CAF file with the same name as the input, but with the\n"
+            "             \"caf\" extension.\n"
+            "             Available channels: stereo, hrtf, uhj, quad, surround51,\n"
+            "                                 surround61, surround71\n"
+            "             Available samples: s16, f32",
+            args[0]);
         return 1;
     }
     args = args.subspan(1);
 
-    const auto almgr = InitAL(args);
+    auto almgr = InitAL(args);
+
+    if(args.size() >= 2 && args[0] == "-render")
+    {
+        auto params = std::vector<std::string>{};
+        std::ranges::transform(args[1] | std::views::split(','), std::back_inserter(params),
+            [](auto prange) { return std::string(prange.begin(), prange.end()); });
+        if(params.size() != 2)
+        {
+            fmt::println(stderr, "Invalid -render argument: {}", args[1]);
+            return 1;
+        }
+        args = args.subspan(2);
+
+        RenderOutMode = 0;
+        if(al::case_compare(params[0], "stereo") == 0)
+        {
+            RenderChannels = ALC_STEREO_SOFT;
+            RenderOutMode = ALC_STEREO_BASIC_SOFT;
+        }
+        else if(al::case_compare(params[0], "hrtf") == 0)
+        {
+            RenderChannels = ALC_STEREO_SOFT;
+            RenderOutMode = ALC_STEREO_HRTF_SOFT;
+        }
+        else if(al::case_compare(params[0], "uhj") == 0)
+        {
+            RenderChannels = ALC_STEREO_SOFT;
+            RenderOutMode = ALC_STEREO_UHJ_SOFT;
+        }
+        else if(al::case_compare(params[0], "quad") == 0)
+            RenderChannels = ALC_QUAD_SOFT;
+        else if(al::case_compare(params[0], "surround51") == 0)
+            RenderChannels = ALC_SURROUND_5_1_SOFT;
+        else if(al::case_compare(params[0], "surround61") == 0)
+            RenderChannels = ALC_SURROUND_6_1_SOFT;
+        else if(al::case_compare(params[0], "surround71") == 0)
+            RenderChannels = ALC_SURROUND_7_1_SOFT;
+        else
+        {
+            fmt::println(stderr, "Unsupported channel configuration: {}", params[0]);
+            return 1;
+        }
+
+        if(al::case_compare(params[1], "f32") == 0)
+            RenderSamples = ALC_FLOAT_SOFT;
+        else if(al::case_compare(params[1], "s16") == 0)
+            RenderSamples = ALC_SHORT_SOFT;
+        else
+        {
+            fmt::println(stderr, "Unsupported sample type: {}", params[1]);
+            return 1;
+        }
+
+        RenderSampleRate = 48000;
+
+        ALCdevice *loopbackDev{};
+        ALCcontext *loopbackCtx{};
+        if(!alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
+        {
+            fmt::println(stderr, "Loopback rendering not supported");
+            return 1;
+        }
+
+        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+        const auto alcLoopbackOpenDevice = reinterpret_cast<LPALCLOOPBACKOPENDEVICESOFT>(
+            alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT"));
+        const auto alcIsRenderFormatSupported = reinterpret_cast<LPALCISRENDERFORMATSUPPORTEDSOFT>(
+            alcGetProcAddress(nullptr, "alcIsRenderFormatSupportedSOFT"));
+        alcRenderSamplesSOFT = reinterpret_cast<LPALCRENDERSAMPLESSOFT>(
+            alcGetProcAddress(nullptr, "alcRenderSamplesSOFT"));
+        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
+
+        loopbackDev = alcLoopbackOpenDevice(nullptr);
+        if(!loopbackDev)
+        {
+            fmt::println(stderr, "Failed to open loopback device: {:x}", alcGetError(nullptr));
+            return 1;
+        }
+
+        if(!alcIsRenderFormatSupported(loopbackDev, RenderSampleRate, RenderChannels, RenderSamples))
+        {
+            fmt::println(stderr, "Format {},{} not supported", params[0], params[1]);
+            return 1;
+        }
+
+        const auto attribs = std::to_array<ALCint>({
+            ALC_FREQUENCY, RenderSampleRate,
+            ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
+            ALC_FORMAT_TYPE_SOFT, RenderSamples,
+            ALC_OUTPUT_MODE_SOFT, RenderOutMode,
+            0});
+        loopbackCtx = alcCreateContext(loopbackDev, attribs.data());
+        if(!loopbackCtx || alcMakeContextCurrent(loopbackCtx) == ALC_FALSE)
+        {
+            if(loopbackCtx)
+                alcDestroyContext(loopbackCtx);
+            alcCloseDevice(loopbackDev);
+            fmt::println(stderr, "Failed to create loopback device context: {:x}",
+                alcGetError(loopbackDev));
+            return 1;
+        }
+
+        almgr.close();
+        almgr.device = loopbackDev;
+        almgr.context = loopbackCtx;
+    }
 
     /* Automate effect cleanup at end of scope (before almgr destructs). */
     const auto _ = gsl::finally([]

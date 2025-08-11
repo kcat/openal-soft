@@ -54,11 +54,6 @@
  *
  * Some remaining issues:
  *
- * - There are bursts of static on some channels. This doesn't appear to be a
- *   parsing error since the bursts last less than the chunk size, and it never
- *   loses sync with the remaining chunks. Might be an encoding error with the
- *   files tested.
- *
  * - Positions are specified in left-handed coordinates, despite the LAF
  *   documentation saying it's right-handed. Might be an encoding error with
  *   the files tested, or might be a misunderstanding about which is which. How

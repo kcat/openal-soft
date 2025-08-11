@@ -47,8 +47,8 @@ protected:
     float mZ1{0.0f}, mZ2{0.0f};
     Coefficients mCoeffs;
 
-    static void SetParams(BiquadType type, float f0norm, float gain, float rcpQ,
-        Coefficients &coeffs);
+    static auto SetParams(BiquadType type, float f0norm, float gain, float rcpQ,
+        Coefficients &coeffs) -> bool;
 
     /**
      * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using

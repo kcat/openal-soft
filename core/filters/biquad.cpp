@@ -31,11 +31,20 @@ constexpr auto SamplesPerStepMask = SamplesPerStep-1;
 static_assert(std::popcount(gsl::narrow<unsigned>(SamplesPerStep)) == 1,
     "SamplesPerStep must be a power of 2");
 
+/* Sets dst to the given value, returns true if it's meaningfully different. */
+[[nodiscard]] constexpr
+auto check_set(float &dst, const float value) noexcept -> bool
+{
+    const auto is_diff = !(std::abs(value - dst) <= 0.015625f/* 1/64 */);
+    dst = value;
+    return is_diff;
+}
+
 } // namespace
 
 
-void BiquadFilter::SetParams(BiquadType type, float f0norm, float gain, float rcpQ,
-    Coefficients &coeffs)
+auto BiquadFilter::SetParams(BiquadType type, float f0norm, float gain, float rcpQ,
+    Coefficients &coeffs) -> bool
 {
     /* HACK: Limit gain to -100dB. This shouldn't ever happen, all callers
      * already clamp to minimum of 0.001, or have a limited range of values
@@ -109,17 +118,25 @@ void BiquadFilter::SetParams(BiquadType type, float f0norm, float gain, float rc
         break;
     }
 
-    coeffs.mB0 = b[0] / a[0];
-    coeffs.mB1 = b[1] / a[0];
-    coeffs.mB2 = b[2] / a[0];
-    coeffs.mA1 = a[1] / a[0];
-    coeffs.mA2 = a[2] / a[0];
+    auto is_diff = check_set(coeffs.mB0, b[0] / a[0]);
+    is_diff |= check_set(coeffs.mB1, b[1] / a[0]);
+    is_diff |= check_set(coeffs.mB2, b[2] / a[0]);
+    is_diff |= check_set(coeffs.mA1, a[1] / a[0]);
+    is_diff |= check_set(coeffs.mA2, a[2] / a[0]);
+    return is_diff;
 }
 
 void BiquadInterpFilter::setParams(BiquadType type, float f0norm, float gain, float rcpQ)
 {
-    SetParams(type, f0norm, gain, rcpQ, mTargetCoeffs);
-    if(mCounter >= 0)
+    if(!SetParams(type, f0norm, gain, rcpQ, mTargetCoeffs))
+    {
+        if(mCounter <= 0)
+        {
+            mCounter = 0;
+            mCoeffs = mTargetCoeffs;
+        }
+    }
+    else if(mCounter >= 0)
         mCounter = InterpSteps*SamplesPerStep;
     else
     {
@@ -130,8 +147,20 @@ void BiquadInterpFilter::setParams(BiquadType type, float f0norm, float gain, fl
 
 void BiquadInterpFilter::copyParamsFrom(const BiquadInterpFilter &other) noexcept
 {
-    mTargetCoeffs = other.mTargetCoeffs;
-    if(mCounter >= 0)
+    auto is_diff = check_set(mTargetCoeffs.mB0, other.mTargetCoeffs.mB0);
+    is_diff |= check_set(mTargetCoeffs.mB1, other.mTargetCoeffs.mB1);
+    is_diff |= check_set(mTargetCoeffs.mB2, other.mTargetCoeffs.mB2);
+    is_diff |= check_set(mTargetCoeffs.mA1, other.mTargetCoeffs.mA1);
+    is_diff |= check_set(mTargetCoeffs.mA2, other.mTargetCoeffs.mA2);
+    if(!is_diff)
+    {
+        if(mCounter <= 0)
+        {
+            mCounter = 0;
+            mCoeffs = mTargetCoeffs;
+        }
+    }
+    else if(mCounter >= 0)
         mCounter = InterpSteps*SamplesPerStep;
     else
     {

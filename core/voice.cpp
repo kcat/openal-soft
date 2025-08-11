@@ -245,7 +245,7 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 }
 
 
-auto DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
+auto DoFilters(BiquadInterpFilter &lpfilter, BiquadInterpFilter &hpfilter,
     const std::span<float,BufferLineSize> dst, const std::span<const float> src, int type)
     -> std::span<const float>
 {
@@ -266,7 +266,7 @@ auto DoFilters(BiquadFilter &lpfilter, BiquadFilter &hpfilter,
         return dst.first(src.size());
 
     case AF_BandPass:
-        DualBiquad{lpfilter, hpfilter}.process(src, dst);
+        DualBiquadInterp{lpfilter, hpfilter}.process(src, dst);
         return dst.first(src.size());
     }
     return src;

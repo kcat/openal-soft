@@ -59,8 +59,8 @@ enum {
 
 
 struct DirectParams {
-    BiquadFilter LowPass;
-    BiquadFilter HighPass;
+    BiquadInterpFilter LowPass;
+    BiquadInterpFilter HighPass;
 
     NfcFilter NFCtrlFilter;
 
@@ -79,8 +79,8 @@ struct DirectParams {
 };
 
 struct SendParams {
-    BiquadFilter LowPass;
-    BiquadFilter HighPass;
+    BiquadInterpFilter LowPass;
+    BiquadInterpFilter HighPass;
 
     struct GainParams {
         std::array<float,MaxAmbiChannels> Current{};

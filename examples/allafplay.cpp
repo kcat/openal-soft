@@ -862,7 +862,7 @@ try {
 
         auto outname = fs::path(al::char_as_u8(fname)).stem();
         outname += u8".caf";
-        if(fs::exists(outname))
+        if(fs::exists(outname) && !fs::is_fifo(outname))
             throw std::runtime_error{fmt::format("Output file {} exists", outname)};
 
         renderFile.open(outname, std::ios_base::binary | std::ios_base::out);

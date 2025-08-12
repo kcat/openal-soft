@@ -409,17 +409,28 @@ auto LafStream::readChunk() -> uint32_t
      * enabled track. The last chunk may be shorter if there isn't enough time
      * remaining for a full second.
      */
-    const auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
+    auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
 
-    const auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
+    auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
         * mNumEnabled);
-    if(mInFile.sgetn(mSampleChunk.data(), toread) != toread)
-        throw std::runtime_error{"Failed to read sample chunk"};
+    if(const auto got = mInFile.sgetn(mSampleChunk.data(), toread); got != toread)
+    {
+        /* Only error when expecting more samples. A sample count of ~0_u64
+         * essentially indicates unbounded input, which will end when it has
+         * nothing more to give.
+         */
+        if(mSampleCount < ~0_u64)
+            throw std::runtime_error{"Failed to read sample chunk"};
+        numsamples = al::saturate_cast<uint64_t>(got) / BytesFromQuality(mQuality) / mNumEnabled;
+        mSampleCount = mCurrentSample + numsamples;
+        toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
+            * mNumEnabled);
+    }
 
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
     mCurrentSample += numsamples;
-    return static_cast<uint32_t>(numsamples);
+    return gsl::narrow<uint32_t>(numsamples);
 }
 
 auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::span<std::byte>
@@ -441,7 +452,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
 
         const auto step = size_t{mNumEnabled};
         Expects(idx < step);
-        return std::visit([=,src=std::span{mSampleChunk}](auto &dst)
+        return std::visit([count,idx,step,src=std::span{mSampleChunk}](auto &dst)
         {
             using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
             auto inptr = src.begin();
@@ -668,8 +679,11 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint64_t{as_unsigned(input[6])}<<48u) | (uint64_t{as_unsigned(input[7])}<<56u);
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
-    fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
-        static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate));
+    if(laf->mSampleCount < ~0_u64)
+        fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
+            static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate));
+    else
+        fmt::println("Length: unbounded");
 
     /* Position vectors get split across the PCM chunks if the sample rate
      * isn't a multiple of 48. Each PCM chunk is exactly one second (the sample

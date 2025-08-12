@@ -1179,7 +1179,7 @@ auto main(std::span<std::string_view> args) -> int
             "  -render    Renders samples to an output file instead of real-time playback.\n"
             "             Outputs a CAF file with the same name as the input, but with the\n"
             "             \"caf\" extension.\n"
-            "             Available channels: stereo, hrtf, uhj, quad, surround51,\n"
+            "             Available channels: mono, stereo, hrtf, uhj, quad, surround51,\n"
             "                                 surround61, surround71, ambi1, ambi2, ambi3,\n"
             "                                 ambi4\n"
             "             Available samples: s16, f32",
@@ -1202,9 +1202,11 @@ auto main(std::span<std::string_view> args) -> int
         }
         args = args.subspan(2);
 
-        RenderOutMode = 0;
+        RenderOutMode = ALC_ANY_SOFT;
         RenderAmbiOrder = 0;
-        if(al::case_compare(params[0], "stereo") == 0)
+        if(al::case_compare(params[0], "mono") == 0)
+            RenderChannels = ALC_MONO_SOFT;
+        else if(al::case_compare(params[0], "stereo") == 0)
         {
             RenderChannels = ALC_STEREO_SOFT;
             RenderOutMode = ALC_STEREO_BASIC_SOFT;

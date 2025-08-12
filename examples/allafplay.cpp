@@ -74,6 +74,7 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -85,6 +86,10 @@
 #include <thread>
 #include <variant>
 #include <vector>
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -395,7 +400,8 @@ struct LafStream {
 auto LafStream::readChunk() -> uint32_t
 {
     auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
-    mInFile.sgetn(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u));
+    auto &infile = mInFile.is_open() ? mInFile : *std::cin.rdbuf();
+    infile.sgetn(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u));
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = gsl::narrow<unsigned>(std::accumulate(mEnabledTracks.cbegin(),
@@ -414,7 +420,7 @@ auto LafStream::readChunk() -> uint32_t
 
     auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
         * mNumEnabled);
-    if(const auto got = mInFile.sgetn(mSampleChunk.data(), toread); got != toread)
+    if(const auto got = infile.sgetn(mSampleChunk.data(), toread); got != toread)
     {
         /* Only error when expecting more samples. A sample count of ~0_u64
          * essentially indicates unbounded input, which will end when it has
@@ -519,17 +525,33 @@ void LafStream::convertPositions(const std::span<float> dst) const
 auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 {
     auto laf = std::make_unique<LafStream>();
-    if(!laf->mInFile.open(fname, std::ios_base::binary | std::ios_base::in))
-        throw std::runtime_error{"Could not open file"};
+    auto &infile = std::invoke([&fname,&laf]() -> std::streambuf&
+    {
+        if(fname == "-")
+        {
+#ifdef _WIN32
+            /* Set stdin to binary mode, so cin's rdbuf will read the file
+             * correctly.
+             */
+            if(_setmode(_fileno(stdin), _O_BINARY) == -1)
+                throw std::runtime_error{"Failed to set stdin to binary mode"};
+#endif
+            return *std::cin.rdbuf();
+        }
+
+        if(!laf->mInFile.open(fname, std::ios_base::binary | std::ios_base::in))
+            throw std::runtime_error{"Could not open file"};
+        return laf->mInFile;
+    });
 
     auto marker = std::array<char,9>{};
-    if(laf->mInFile.sgetn(marker.data(), marker.size()) != marker.size())
+    if(infile.sgetn(marker.data(), marker.size()) != marker.size())
         throw std::runtime_error{"Failed to read file marker"};
     if(std::string_view{marker.data(), marker.size()} != "LIMITLESS"sv)
         throw std::runtime_error{"Not an LAF file"};
 
     auto header = std::array<char,10>{};
-    if(laf->mInFile.sgetn(header.data(), header.size()) != header.size())
+    if(infile.sgetn(header.data(), header.size()) != header.size())
         throw std::runtime_error{"Failed to read header"};
     while(std::string_view{header.data(), 4} != "HEAD"sv)
     {
@@ -555,7 +577,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             hiter = std::ranges::copy_n(header.end()-1, 1, hiter).out;
 
         const auto toread = std::distance(hiter, header.end());
-        if(laf->mInFile.sgetn(std::to_address(hiter), toread) != toread)
+        if(infile.sgetn(std::to_address(hiter), toread) != toread)
             throw std::runtime_error{"Failed to read header"};
     }
 
@@ -581,7 +603,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
     });
 
-    fmt::println("Filename: {}", fname.string());
+    fmt::println("Filename: {}", al::u8_as_char(fname.u8string()));
     fmt::println(" quality: {}", GetQualityName(laf->mQuality));
     fmt::println(" mode: {}", GetModeName(laf->mMode));
     fmt::println(" track count: {}", laf->mNumTracks);
@@ -593,7 +615,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     auto chandata = std::vector<char>(laf->mNumTracks*9_uz);
     auto headersize = std::ssize(chandata);
-    if(laf->mInFile.sgetn(chandata.data(), headersize) != headersize)
+    if(infile.sgetn(chandata.data(), headersize) != headersize)
         throw std::runtime_error{"Failed to read channel header data"};
 
     if(laf->mMode == Mode::Channels)
@@ -664,7 +686,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         MyAssert(((laf->mChannels.size()-1)>>4) == laf->mPosTracks.size()-1);
 
     auto footer = std::array<char,12>{};
-    if(laf->mInFile.sgetn(footer.data(), footer.size()) != footer.size())
+    if(infile.sgetn(footer.data(), footer.size()) != footer.size())
         throw std::runtime_error{"Failed to read sample header data"};
 
     laf->mSampleRate = std::invoke([input=std::span{footer}.first<4>()]

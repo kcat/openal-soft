@@ -153,6 +153,7 @@ auto RenderChannels = ALCenum{};
 auto RenderOutMode = ALCenum{};
 auto RenderSamples = ALCenum{};
 auto RenderSampleRate = ALCsizei{};
+auto RenderAmbiOrder = ALCint{};
 
 using ubyte = unsigned char;
 using ushort = unsigned short;
@@ -797,6 +798,9 @@ try {
         case ALC_SURROUND_5_1_SOFT: chancount = 6; break;
         case ALC_SURROUND_6_1_SOFT: chancount = 7; break;
         case ALC_SURROUND_7_1_SOFT: chancount = 8; break;
+        case ALC_BFORMAT3D_SOFT:
+            chancount = gsl::narrow<uint>((RenderAmbiOrder+1)*(RenderAmbiOrder+1));
+            break;
         default:
             throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
                 RenderChannels)};
@@ -830,6 +834,9 @@ try {
                 ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
                 ALC_FORMAT_TYPE_SOFT, RenderSamples,
                 ALC_OUTPUT_MODE_SOFT, RenderOutMode,
+                ALC_AMBISONIC_LAYOUT_SOFT, ALC_ACN_SOFT,
+                ALC_AMBISONIC_SCALING_SOFT, ALC_SN3D_SOFT,
+                ALC_AMBISONIC_ORDER_SOFT, RenderAmbiOrder,
                 0});
             if(!alcResetDeviceSOFT(device, attribs.data()))
                 throw std::runtime_error{fmt::format(
@@ -910,6 +917,7 @@ try {
             case ALC_SURROUND_5_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x200u | 0x400u;
             case ALC_SURROUND_6_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x100u | 0x200u | 0x400u;
             case ALC_SURROUND_7_1_SOFT: return 0x1u | 0x2u | 0x4u | 0x8u | 0x10u | 0x20u | 0x200u | 0x400u;
+            case ALC_BFORMAT3D_SOFT: return 0u;
             default:
                 throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
                     RenderChannels)};
@@ -1172,7 +1180,8 @@ auto main(std::span<std::string_view> args) -> int
             "             Outputs a CAF file with the same name as the input, but with the\n"
             "             \"caf\" extension.\n"
             "             Available channels: stereo, hrtf, uhj, quad, surround51,\n"
-            "                                 surround61, surround71\n"
+            "                                 surround61, surround71, ambi1, ambi2, ambi3,\n"
+            "                                 ambi4\n"
             "             Available samples: s16, f32",
             args[0]);
         return 1;
@@ -1194,6 +1203,7 @@ auto main(std::span<std::string_view> args) -> int
         args = args.subspan(2);
 
         RenderOutMode = 0;
+        RenderAmbiOrder = 0;
         if(al::case_compare(params[0], "stereo") == 0)
         {
             RenderChannels = ALC_STEREO_SOFT;
@@ -1217,6 +1227,26 @@ auto main(std::span<std::string_view> args) -> int
             RenderChannels = ALC_SURROUND_6_1_SOFT;
         else if(al::case_compare(params[0], "surround71") == 0)
             RenderChannels = ALC_SURROUND_7_1_SOFT;
+        else if(al::case_compare(params[0], "ambi1") == 0)
+        {
+            RenderChannels = ALC_BFORMAT3D_SOFT;
+            RenderAmbiOrder = 1;
+        }
+        else if(al::case_compare(params[0], "ambi2") == 0)
+        {
+            RenderChannels = ALC_BFORMAT3D_SOFT;
+            RenderAmbiOrder = 2;
+        }
+        else if(al::case_compare(params[0], "ambi3") == 0)
+        {
+            RenderChannels = ALC_BFORMAT3D_SOFT;
+            RenderAmbiOrder = 3;
+        }
+        else if(al::case_compare(params[0], "ambi4") == 0)
+        {
+            RenderChannels = ALC_BFORMAT3D_SOFT;
+            RenderAmbiOrder = 4;
+        }
         else
         {
             fmt::println(stderr, "Unsupported channel configuration: {}", params[0]);
@@ -1264,12 +1294,27 @@ auto main(std::span<std::string_view> args) -> int
             fmt::println(stderr, "Format {},{} not supported", params[0], params[1]);
             return 1;
         }
+        if(RenderAmbiOrder > 0)
+        {
+            auto maxorder = ALCint{};
+            if(alcIsExtensionPresent(loopbackDev, "ALC_SOFT_loopback_bformat"))
+                alcGetIntegerv(loopbackDev, ALC_MAX_AMBISONIC_ORDER_SOFT, 1, &maxorder);
+            if(RenderAmbiOrder > maxorder)
+            {
+                fmt::println(stderr, "Unsupported ambisonic order: {} (max: {})", RenderAmbiOrder,
+                    maxorder);
+                return 1;
+            }
+        }
 
         const auto attribs = std::to_array<ALCint>({
             ALC_FREQUENCY, RenderSampleRate,
             ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
             ALC_FORMAT_TYPE_SOFT, RenderSamples,
             ALC_OUTPUT_MODE_SOFT, RenderOutMode,
+            ALC_AMBISONIC_LAYOUT_SOFT, ALC_ACN_SOFT,
+            ALC_AMBISONIC_SCALING_SOFT, ALC_SN3D_SOFT,
+            ALC_AMBISONIC_ORDER_SOFT, RenderAmbiOrder,
             0});
         loopbackCtx = alcCreateContext(loopbackDev, attribs.data());
         if(!loopbackCtx || alcMakeContextCurrent(loopbackCtx) == ALC_FALSE)

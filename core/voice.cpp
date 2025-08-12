@@ -246,29 +246,16 @@ void SendSourceStoppedEvent(ContextBase *context, uint id)
 
 
 auto DoFilters(BiquadInterpFilter &lpfilter, BiquadInterpFilter &hpfilter,
-    const std::span<float,BufferLineSize> dst, const std::span<const float> src, int type)
+    const std::span<float,BufferLineSize> dst, const std::span<const float> src, bool active)
     -> std::span<const float>
 {
-    switch(type)
+    if(active)
     {
-    case AF_None:
-        lpfilter.clear();
-        hpfilter.clear();
-        break;
-
-    case AF_LowPass:
-        lpfilter.process(src, dst);
-        hpfilter.clear();
-        return dst.first(src.size());
-    case AF_HighPass:
-        lpfilter.clear();
-        hpfilter.process(src, dst);
-        return dst.first(src.size());
-
-    case AF_BandPass:
         DualBiquadInterp{lpfilter, hpfilter}.process(src, dst);
         return dst.first(src.size());
     }
+    lpfilter.clear();
+    hpfilter.clear();
     return src;
 }
 
@@ -1052,7 +1039,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
         {
             auto &parms = chandata->mDryParams;
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf, samplespan,
-                mDirect.FilterType);
+                mDirect.FilterActive);
 
             if(mFlags.test(VoiceHasHrtf))
             {
@@ -1080,7 +1067,7 @@ void Voice::mix(const State vstate, ContextBase *Context, const nanoseconds devi
 
             SendParams &parms = chandata->mWetParams[send];
             const auto samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf, samplespan,
-                mSend[send].FilterType);
+                mSend[send].FilterActive);
 
             const auto TargetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
                 : std::span{SilentTarget}.first<MaxAmbiChannels>();

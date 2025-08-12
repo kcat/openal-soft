@@ -50,14 +50,6 @@ enum class DirectMode : unsigned char {
 inline constexpr uint MaxPitch{10};
 
 
-enum {
-    AF_None = 0,
-    AF_LowPass = 1,
-    AF_HighPass = 2,
-    AF_BandPass = AF_LowPass | AF_HighPass
-};
-
-
 struct DirectParams {
     BiquadInterpFilter LowPass;
     BiquadInterpFilter HighPass;
@@ -244,7 +236,7 @@ struct Voice {
     uint mCallbackBlockOffset{0u};
 
     struct TargetData {
-        int FilterType{};
+        bool FilterActive{};
         std::span<FloatBufferLine> Buffer;
     };
     TargetData mDirect;

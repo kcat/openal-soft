@@ -1610,9 +1610,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         const auto hfNorm = props.Direct.HFReference * inv_samplerate;
         const auto lfNorm = props.Direct.LFReference * inv_samplerate;
 
-        voice->mDirect.FilterType = AF_None;
-        if(drygain.HF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
-        if(drygain.LF != 1.0f) voice->mDirect.FilterType |= AF_HighPass;
+        voice->mDirect.FilterActive = false;
+        if(drygain.HF != 1.0f || drygain.LF != 1.0f)
+            voice->mDirect.FilterActive = true;
 
         auto &lowpass = voice->mChans[0].mDryParams.LowPass;
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
@@ -1629,9 +1629,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         const auto hfNorm = props.Send[i].HFReference * inv_samplerate;
         const auto lfNorm = props.Send[i].LFReference * inv_samplerate;
 
-        voice->mSend[i].FilterType = AF_None;
-        if(wetgain[i].HF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
-        if(wetgain[i].LF != 1.0f) voice->mSend[i].FilterType |= AF_HighPass;
+        voice->mSend[i].FilterActive = false;
+        if(wetgain[i].HF != 1.0f || wetgain[i].LF != 1.0f)
+            voice->mSend[i].FilterActive = true;
 
         auto &lowpass = voice->mChans[0].mWetParams[i].LowPass;
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;

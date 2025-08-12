@@ -911,7 +911,7 @@ try {
         }
 
         renderFile.sputn("data", 4);
-        fwrite64be(as_unsigned(-1_z), renderFile); /* filled in at stop */
+        fwrite64be(~0_u64, renderFile); /* filled in at stop */
         renderStart = renderFile.pubseekoff(0, std::ios_base::cur);
 
         fmt::println("Rendering to {}...", outname);

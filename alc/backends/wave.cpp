@@ -451,7 +451,7 @@ bool WaveBackend::reset()
 
         /* Audio Data chunk */
         fputs("data", mFile.get());
-        fwrite64be(as_unsigned(-1_z), mFile.get()); /* filled in at stop */
+        fwrite64be(~0_u64, mFile.get()); /* filled in at stop */
     }
 
     if(ferror(mFile.get()))

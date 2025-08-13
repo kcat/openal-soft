@@ -380,7 +380,9 @@ bool WaveBackend::reset()
             (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 1, 16, mFile.get());
 
         fputs("data", mFile.get());
-        fwrite32le(0xFFFFFFFF, mFile.get()); // 'data' header len; filled in at stop
+        fwrite32le(~0u, mFile.get()); // 'data' header len; filled in at stop
+
+        mDataStart = ftell(mFile.get());
     }
     else
     {
@@ -452,6 +454,10 @@ bool WaveBackend::reset()
         /* Audio Data chunk */
         fputs("data", mFile.get());
         fwrite64be(~0_u64, mFile.get()); /* filled in at stop */
+
+        mDataStart = ftell(mFile.get());
+        /* 32-bit uint, mEditCount */
+        fwrite32be(0, mFile.get());
     }
 
     if(ferror(mFile.get()))
@@ -459,7 +465,6 @@ bool WaveBackend::reset()
         ERR("Error writing header: {}", std::generic_category().message(errno));
         return false;
     }
-    mDataStart = ftell(mFile.get());
 
     setDefaultWFXChannelOrder();
 

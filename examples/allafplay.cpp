@@ -164,28 +164,28 @@ using ubyte = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
 
-void fwrite16be(ushort val, std::filebuf &f)
+void fwrite16be(ushort val, std::ostream &f)
 {
     const auto data = std::array{static_cast<char>((val>>8)&0xff), static_cast<char>(val&0xff)};
-    f.sputn(data.data(), std::ssize(data));
+    f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32be(uint val, std::filebuf &f)
+void fwrite32be(uint val, std::ostream &f)
 {
     const auto data = std::array{static_cast<char>((val>>24)&0xff),
         static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
         static_cast<char>(val&0xff)};
-    f.sputn(data.data(), std::ssize(data));
+    f.write(data.data(), std::ssize(data));
 }
 
-void fwrite64be(uint64_t val, std::filebuf &f)
+void fwrite64be(uint64_t val, std::ostream &f)
 {
     const auto data = std::array{static_cast<char>((val>>56)&0xff),
         static_cast<char>((val>>48)&0xff), static_cast<char>((val>>40)&0xff),
         static_cast<char>((val>>32)&0xff), static_cast<char>((val>>24)&0xff),
         static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
         static_cast<char>(val&0xff)};
-    f.sputn(data.data(), std::ssize(data));
+    f.write(data.data(), std::ssize(data));
 }
 
 
@@ -802,7 +802,7 @@ try {
             throw std::runtime_error{fmt::format("OpenAL error: {}", alGetString(err))};
     });
 
-    auto renderFile = std::filebuf{};
+    auto renderFile = std::ofstream{};
     auto renderStart = int64_t{};
     auto leadIn = 0_z;
     auto leadOut = 0_z;
@@ -811,37 +811,40 @@ try {
     {
         auto *device = alcGetContextsDevice(alcGetCurrentContext());
 
-        auto chancount = uint{};
-        switch(RenderChannels)
+        const auto chancount = std::invoke([]() -> uint
         {
-        case ALC_MONO_SOFT: chancount = 1; break;
-        case ALC_STEREO_SOFT: chancount = 2; break;
-        case ALC_QUAD_SOFT: chancount = 4; break;
-        case ALC_SURROUND_5_1_SOFT: chancount = 6; break;
-        case ALC_SURROUND_6_1_SOFT: chancount = 7; break;
-        case ALC_SURROUND_7_1_SOFT: chancount = 8; break;
-        case ALC_BFORMAT3D_SOFT:
-            chancount = gsl::narrow<uint>((RenderAmbiOrder+1)*(RenderAmbiOrder+1));
-            break;
-        default:
-            throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
-                RenderChannels)};
-        }
+            switch(RenderChannels)
+            {
+            case ALC_MONO_SOFT: return 1u;
+            case ALC_STEREO_SOFT: return 2u;
+            case ALC_QUAD_SOFT: return 4u;
+            case ALC_SURROUND_5_1_SOFT: return 6u;
+            case ALC_SURROUND_6_1_SOFT: return 7u;
+            case ALC_SURROUND_7_1_SOFT: return 8u;
+            case ALC_BFORMAT3D_SOFT:
+                return gsl::narrow<uint>((RenderAmbiOrder+1)*(RenderAmbiOrder+1));
+            default:
+                throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
+                    RenderChannels)};
+            }
+        });
 
-        auto samplesize = uint{};
-        switch(RenderSamples)
+        const auto samplesize = std::invoke([]() -> uint
         {
-        case ALC_UNSIGNED_BYTE_SOFT: samplesize = 1; break;
-        case ALC_BYTE_SOFT: samplesize = 1; break;
-        case ALC_UNSIGNED_SHORT_SOFT: samplesize = 2; break;
-        case ALC_SHORT_SOFT: samplesize = 2; break;
-        case ALC_UNSIGNED_INT_SOFT: samplesize = 4; break;
-        case ALC_INT_SOFT: samplesize = 4; break;
-        case ALC_FLOAT_SOFT: samplesize = 4; break;
-        default:
-            throw std::runtime_error{fmt::format("Unexpected sample type enum: {:#x}",
-                RenderSamples)};
-        }
+            switch(RenderSamples)
+            {
+            case ALC_UNSIGNED_BYTE_SOFT: return 1u;
+            case ALC_BYTE_SOFT: return 1u;
+            case ALC_UNSIGNED_SHORT_SOFT: return 2u;
+            case ALC_SHORT_SOFT: return 2u;
+            case ALC_UNSIGNED_INT_SOFT: return 4u;
+            case ALC_INT_SOFT: return 4u;
+            case ALC_FLOAT_SOFT: return 4u;
+            default:
+                throw std::runtime_error{fmt::format("Unexpected sample type enum: {:#x}",
+                    RenderSamples)};
+            }
+        });
         const auto framesize = size_t{chancount} * samplesize;
         renderbuf.resize(framesize * FramesPerPos);
 
@@ -891,14 +894,14 @@ try {
         if(!renderFile.is_open())
             throw std::runtime_error{fmt::format("Failed to create {}", outname)};
 
-        renderFile.sputn("caff", 4);
+        renderFile.write("caff", 4);
         fwrite16be(1, renderFile);
         fwrite16be(0, renderFile);
 
-        renderFile.sputn("desc", 4);
+        renderFile.write("desc", 4);
         fwrite64be(32, renderFile);
         fwrite64be(std::bit_cast<uint64_t>(gsl::narrow_cast<double>(RenderSampleRate)),renderFile);
-        renderFile.sputn("lpcm", 4);
+        renderFile.write("lpcm", 4);
 
         const auto flags = std::invoke([]
         {
@@ -947,16 +950,18 @@ try {
         });
         if(chanmask)
         {
-            renderFile.sputn("chan", 4);
+            renderFile.write("chan", 4);
             fwrite64be(12, renderFile);
             fwrite32be(0x10000, renderFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
             fwrite32be(chanmask, renderFile);
             fwrite32be(0, renderFile);
         }
 
-        renderFile.sputn("data", 4);
+        renderFile.write("data", 4);
         fwrite64be(~0_u64, renderFile); /* filled in at stop */
-        renderStart = renderFile.pubseekoff(0, std::ios_base::cur);
+
+        renderStart = renderFile.tellp();
+        fwrite32be(0, renderFile);
 
         fmt::println("Rendering to {}...", outname);
     }
@@ -1037,12 +1042,12 @@ try {
                     leadIn -= std::ssize(renderbuf);
                 else if(leadIn > 0)
                 {
-                    renderFile.sputn(std::to_address(renderbuf.begin()+leadIn),
+                    renderFile.write(std::to_address(renderbuf.begin()+leadIn),
                         std::ssize(renderbuf)-leadIn);
                     leadIn = 0;
                 }
                 else
-                    renderFile.sputn(renderbuf.data(), std::ssize(renderbuf));
+                    renderFile.write(renderbuf.data(), std::ssize(renderbuf));
             }
             else
                 std::this_thread::sleep_for(std::chrono::milliseconds{10});
@@ -1152,12 +1157,12 @@ try {
                 leadIn -= std::ssize(renderbuf);
             else if(leadIn > 0)
             {
-                renderFile.sputn(std::to_address(renderbuf.begin()+leadIn),
+                renderFile.write(std::to_address(renderbuf.begin()+leadIn),
                     std::ssize(renderbuf)-leadIn);
                 leadIn = 0;
             }
             else
-                renderFile.sputn(renderbuf.data(), std::ssize(renderbuf));
+                renderFile.write(renderbuf.data(), std::ssize(renderbuf));
         }
         else
             std::this_thread::sleep_for(std::chrono::milliseconds{10});
@@ -1170,20 +1175,22 @@ try {
         alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
             renderbuf.data(), FramesPerPos);
         const auto todo = std::min(std::ssize(renderbuf), leadOut);
-        renderFile.sputn(renderbuf.data(), todo);
+        renderFile.write(renderbuf.data(), todo);
         leadOut -= todo;
     }
 
     if(renderStart > 0)
     {
-        auto renderEnd = int64_t{renderFile.pubseekoff(0, std::ios_base::cur)};
-        if(renderEnd > 0)
+        auto renderEnd = int64_t{renderFile.tellp()};
+        if(renderEnd > renderStart)
         {
             const auto dataLen = renderEnd - renderStart;
-            if(renderFile.pubseekpos(renderStart-8) > 0)
+            if(renderFile.seekp(renderStart-8, std::ios_base::beg))
+            {
                 fwrite64be(gsl::narrow_cast<uint64_t>(dataLen), renderFile);
+                renderFile.seekp(0, std::ios_base::end);
+            }
         }
-        renderFile.pubseekoff(0, std::ios_base::end);
     }
 }
 catch(std::exception& e) {

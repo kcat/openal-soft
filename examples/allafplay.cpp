@@ -51,21 +51,6 @@
  *   separated with audio tracks in between, or from being the first tracks
  *   followed by the audio tracks. It's not known if this is intended to be
  *   allowed, but it's not supported. Object position tracks must be last.
- *
- * Some remaining issues:
- *
- * - Positions are specified in left-handed coordinates, despite the LAF
- *   documentation saying it's right-handed. Might be an encoding error with
- *   the files tested, or might be a misunderstanding about which is which. How
- *   to proceed may depend on how wide-spread this issue ends up being, but for
- *   now, they're treated as left-handed here.
- *
- * - The LAF documentation doesn't specify the range or direction for the
- *   channels' X and Y axis rotation in Channels mode. Presumably X rotation
- *   (elevation) goes from -pi/2...+pi/2 and Y rotation (azimuth) goes from
- *   either -pi...+pi or 0...pi*2, but the direction of movement isn't
- *   specified. Currently positive azimuth moves from center rightward and
- *   positive elevation moves from head-level upward.
  */
 
 #include <algorithm>
@@ -77,6 +62,7 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <numbers>
 #include <numeric>
 #include <ranges>
 #include <source_location>
@@ -769,12 +755,31 @@ try {
         alSourcef(channel.mSource, AL_ROLLOFF_FACTOR, 0.0f);
         alSourcei(channel.mSource, AL_SOURCE_RELATIVE, AL_TRUE);
 
-        /* FIXME: Is the Y rotation/azimuth clockwise or counter-clockwise?
-         * Does +azimuth move a front sound right or left?
-         */
-        const auto x = std::sin(channel.mAzimuth) * std::cos(channel.mElevation);
-        const auto y = std::sin(channel.mElevation);
-        const auto z = -std::cos(channel.mAzimuth) * std::cos(channel.mElevation);
+        /* Convert degrees to radians, wrapping between -pi...+pi. */
+        auto azi = channel.mAzimuth / 180.0f;
+        /* At this magnitude, the result is always 0. */
+        if(!(std::abs(azi) < 16777216.0f))
+            azi = 0.0f;
+        else
+        {
+            const auto tmp = gsl::narrow_cast<int>(azi);
+            azi -= gsl::narrow_cast<float>(tmp + (tmp%2));
+            azi *= std::numbers::pi_v<float>;
+        }
+
+        auto elev = channel.mElevation / 180.0f;
+        if(!(std::abs(elev) < 16777216.0f))
+            elev = 0.0f;
+        else
+        {
+            const auto tmp = gsl::narrow_cast<int>(elev);
+            elev -= gsl::narrow_cast<float>(tmp + (tmp%2));
+            elev *= std::numbers::pi_v<float>;
+        }
+
+        const auto x = std::sin(azi) * std::cos(elev);
+        const auto y = std::sin(elev);
+        const auto z = -std::cos(azi) * std::cos(elev);
         alSource3f(channel.mSource, AL_POSITION, x, y, z);
 
         if(channel.mIsLfe)
@@ -999,9 +1004,7 @@ try {
                     const auto y = laf->mPosTracks[trackidx][posoffset*3 + 1];
                     const auto z = laf->mPosTracks[trackidx][posoffset*3 + 2];
 
-                    /* Contrary to the docs, the position is left-handed and
-                     * needs to be converted to right-handed.
-                     */
+                    /* Convert left-handed coords to right-handed. */
                     alSource3f(laf->mChannels[i].mSource, AL_POSITION, x, y, -z);
                 }
                 alcProcessContext(alcGetCurrentContext());

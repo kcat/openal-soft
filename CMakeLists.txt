@@ -64,6 +64,7 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckCSourceCompiles)
 include(CheckCXXSourceCompiles)
+include(CheckCXXSymbolExists)
 include(CheckLinkerFlag)
 include(CheckStructHasMember)
 include(CMakePackageConfigHelpers)
@@ -137,6 +138,75 @@ if(WIN32 AND MINGW AND CMAKE_SIZEOF_VOID_P MATCHES "4")
     # alignment being misaligned. This switch overrides that to assume only
     # 8-byte alignment from the default operator new.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new=8")
+endif()
+
+# Setting ALSOFT_STL_HARDENING=None disables/minimizes STL hardening, doing
+# only checks required by the standard (or can't be disabled at all). Should
+# really only be used where maximum performance is critical and the extra
+# safety can be sacrificed.
+#
+# ALSOFT_STL_HARDENING=Default enables some STL hardening, checking for more
+# significant issues that can also be done "fast", that's easier to optimize
+# away when unneeded and/or not become a bottleneck. This is generally
+# considered fine for production use, hence being the default here.
+#
+# ALSOFT_STL_HARDENING=Debug enables even more STL hardening, which has a much
+# higher runtime cost for less benefit. It's not intended for production use.
+set(ALSOFT_STL_HARDENING "Default" CACHE STRING
+    "Specifies the level of C++ STL hardening. None, Default, Debug")
+
+set(HARDENING_LEVEL "None")
+check_cxx_symbol_exists(__GLIBCXX__ "version" HAVE_LIBSTDCXX)
+check_cxx_symbol_exists(_LIBCPP_VERSION "version" HAVE_LIBCXX)
+check_cxx_symbol_exists(_MSVC_STL_UPDATE "version" HAVE_MSSTL)
+if(HAVE_LIBSTDCXX)
+    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+        add_compile_definitions("_GLIBCXX_DEBUG=1")
+        set(HARDENING_LEVEL "Debug")
+    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+        # TODO: Not sure how to fully disable STL hardening with libstdc++,
+        # aside from not defining anything and using the compiler's default.
+        # _GLIBCXX_NO_ASSERTIONS can explicitly disable the hardening
+        # assertions, but not all STL debugging functionality.
+        add_compile_definitions("_GLIBCXX_NO_ASSERTIONS=1")
+        set(HARDENING_LEVEL "None")
+    else()
+        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
+            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+        endif()
+        add_compile_definitions("_GLIBCXX_ASSERTIONS=1")
+        set(HARDENING_LEVEL "Default")
+    endif()
+elseif(HAVE_LIBCXX)
+    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
+        set(HARDENING_LEVEL "Debug")
+    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")
+        set(HARDENING_LEVEL "None")
+    else()
+        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
+            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+        endif()
+        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")
+        set(HARDENING_LEVEL "Default")
+    endif()
+elseif(HAVE_HAVE_MSSTL)
+    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+        # TODO: Is there anything more reasonable for heavier debugging (non-
+        # production use) checks, where performance is not so important?
+        add_compile_definitions("_MSVC_STL_HARDENING=1")
+        set(HARDENING_LEVEL "Default")
+    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+        add_compile_definitions("_MSVC_STL_HARDENING=0")
+        set(HARDENING_LEVEL "None")
+    else()
+        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
+            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+        endif()
+        add_compile_definitions("_MSVC_STL_HARDENING=1")
+        set(HARDENING_LEVEL "Default")
+    endif()
 endif()
 
 add_subdirectory(fmt-11.1.4 EXCLUDE_FROM_ALL)
@@ -1576,6 +1646,9 @@ if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC"
         )
     endif()
 endif()
+
+message(STATUS "")
+message(STATUS "STL hardening level: ${HARDENING_LEVEL}")
 
 if(HAS_ROUTER)
     message(STATUS "")

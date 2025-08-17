@@ -407,18 +407,10 @@ void alc_initconfig()
 
 #ifdef _WIN32
     if(const auto logfile = al::getenv(L"ALSOFT_LOGFILE"))
-    {
-        auto logf = gsl::owner<FILE*>{_wfopen(logfile->c_str(), L"wt")};
-        if(logf) gLogFile = logf;
-        else ERR("Failed to open log file '{}'", wstr_to_utf8(*logfile));
-    }
+        al_open_logfile(*logfile);
 #else
     if(const auto logfile = al::getenv("ALSOFT_LOGFILE"))
-    {
-        auto logf = gsl::owner<FILE*>{fopen(logfile->c_str(), "wt")};
-        if(logf) gLogFile = logf;
-        else ERR("Failed to open log file '{}'", *logfile);
-    }
+        al_open_logfile(al::char_as_u8(*logfile));
 #endif
 
     TRACE("Initializing library v{}-{} {}", ALSOFT_VERSION,

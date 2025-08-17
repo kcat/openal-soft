@@ -7,6 +7,8 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -14,6 +16,7 @@
 #include <utility>
 
 #include "alstring.h"
+#include "fmt/std.h"
 #include "strutils.hpp"
 
 
@@ -43,6 +46,9 @@ enum class LogState : uint8_t {
 auto LogCallbackMutex = std::mutex{};
 auto gLogState = LogState::FirstRun;
 
+auto gLogFile = std::ofstream{}; /* NOLINT(cert-err58-cpp) */
+
+
 auto gLogCallback = LogCallbackFunc{};
 void *gLogCallbackPtr{};
 
@@ -59,6 +65,13 @@ constexpr auto GetLevelCode(const LogLevel level) noexcept -> std::optional<char
 }
 
 } // namespace
+
+void al_open_logfile(const fs::path &fname)
+{
+    gLogFile.open(fname);
+    if(!gLogFile.is_open())
+        ERR("Failed to open log file '{}'", fname);
+}
 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr)
 {
@@ -90,9 +103,9 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
 
     if(gLogLevel >= level)
     {
-        auto *logfile = gLogFile ? gLogFile : stderr;
+        auto &logfile = gLogFile ? gLogFile : std::cerr;
         fmt::println(logfile, "{}{}", prefix, msg);
-        fflush(logfile);
+        logfile.flush();
     }
 #if defined(_WIN32) && !defined(NDEBUG)
     /* OutputDebugStringW has no 'level' property to distinguish between

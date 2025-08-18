@@ -10,12 +10,12 @@
 #include <cmath>
 #include <condition_variable>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <functional>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <numbers>
@@ -36,8 +36,8 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
-#include "fmt/core.h"
 #include "fmt/format.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
@@ -291,11 +291,11 @@ public:
         if(!packet)
         {
             if(!ret) return AVErrorEOF;
-            fmt::println(stderr, "Failed to send flush packet: {}", ret);
+            fmt::println(std::cerr, "Failed to send flush packet: {}", ret);
             return ret;
         }
         if(ret < 0)
-            fmt::println(stderr, "Failed to send packet: {}", ret);
+            fmt::println(std::cerr, "Failed to send packet: {}", ret);
         return ret;
     }
 
@@ -715,7 +715,7 @@ auto AudioState::decodeFrame() -> int
         while(const auto ret = mQueue.receiveFrame(mCodecCtx.get(), mDecodedFrame.get()))
         {
             if(ret == AVErrorEOF) return 0;
-            fmt::println(stderr, "Failed to receive frame: {}", ret);
+            fmt::println(std::cerr, "Failed to receive frame: {}", ret);
         }
     } while(mDecodedFrame->nb_samples <= 0);
 
@@ -1195,7 +1195,7 @@ void AudioState::handler()
     mDecodedFrame.reset(av_frame_alloc());
     if(!mDecodedFrame)
     {
-        fmt::println(stderr, "Failed to allocate audio frame");
+        fmt::println(std::cerr, "Failed to allocate audio frame");
         return;
     }
 
@@ -1210,7 +1210,7 @@ void AudioState::handler()
         if(err != 0)
         {
             auto errstr = std::array<char,AV_ERROR_MAX_STRING_SIZE>{};
-            fmt::println(stderr, "Failed to allocate SwrContext: {}",
+            fmt::println(std::cerr, "Failed to allocate SwrContext: {}",
                 av_make_error_string(errstr.data(), errstr.size(), err));
             return;
         }
@@ -1245,7 +1245,7 @@ void AudioState::handler()
         if(err != 0)
         {
             auto errstr = std::array<char,AV_ERROR_MAX_STRING_SIZE>{};
-            fmt::println(stderr, "Failed to allocate SwrContext: {}",
+            fmt::println(std::cerr, "Failed to allocate SwrContext: {}",
                 av_make_error_string(errstr.data(), errstr.size(), err));
             return;
         }
@@ -1253,7 +1253,7 @@ void AudioState::handler()
     if(const auto err = swr_init(mSwresCtx.get()))
     {
         auto errstr = std::array<char,AV_ERROR_MAX_STRING_SIZE>{};
-        fmt::println(stderr, "Failed to initialize audio converter: {}",
+        fmt::println(std::cerr, "Failed to initialize audio converter: {}",
             av_make_error_string(errstr.data(), errstr.size(), err));
         return;
     }
@@ -1277,7 +1277,7 @@ void AudioState::handler()
     auto gain = PlaybackGain;
     if(gain > maxgain)
     {
-        fmt::println(stderr, "Limiting requested gain {:+}dB ({}) to max {:+}dB ({})",
+        fmt::println(std::cerr, "Limiting requested gain {:+}dB ({}) to max {:+}dB ({})",
             std::round(std::log10(gain)*2000.0f) / 100.0f, gain,
             std::round(std::log10(maxgain)*2000.0f) / 100.0f, maxgain);
         gain = maxgain;
@@ -1329,7 +1329,7 @@ void AudioState::handler()
         alSourcei(mSource, AL_BUFFER, as_signed(mBuffers[0]));
         if(alGetError() != AL_NO_ERROR)
         {
-            fmt::println(stderr, "Failed to set buffer callback");
+            fmt::println(std::cerr, "Failed to set buffer callback");
             alSourcei(mSource, AL_BUFFER, 0);
         }
         else
@@ -1460,7 +1460,8 @@ void AudioState::handler()
                 break;
         }
         if(const auto err = alGetError())
-            fmt::println(stderr, "Got AL error: {:#x} ({})", as_unsigned(err), alGetString(err));
+            fmt::println(std::cerr, "Got AL error: {:#x} ({})", as_unsigned(err),
+                alGetString(err));
 
         mSrcCond.wait_for(srclock, sleep_time);
     }
@@ -1677,7 +1678,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
                 mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)
-                    fmt::println(stderr, "Failed to create texture!");
+                    fmt::println(std::cerr, "Failed to create texture!");
                 mWidth = frame->width;
                 mHeight = frame->height;
                 mSDLFormat = fmtiter->sdlformat;
@@ -1686,7 +1687,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
             else
             {
                 /* If there's no matching format, convert to RGB24. */
-                fmt::println(stderr, "Could not find SDL texture format for pix_fmt {0:#x} ({0})",
+                fmt::println(std::cerr, "Could not find SDL format for pix_fmt {0:#x} ({0})",
                     as_unsigned(frame->format));
 
                 auto props = SDLProps{};
@@ -1697,7 +1698,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
                 mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)
-                    fmt::println(stderr, "Failed to create texture!");
+                    fmt::println(std::cerr, "Failed to create texture!");
                 mWidth = frame->width;
                 mHeight = frame->height;
                 mSDLFormat = SDL_PIXELFORMAT_RGB24;
@@ -1753,7 +1754,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 auto pixels = voidp{};
                 auto pitch = int{};
                 if(!SDL_LockTexture(mImage, nullptr, &pixels, &pitch))
-                    fmt::println(stderr, "Failed to lock texture: {}", SDL_GetError());
+                    fmt::println(std::cerr, "Failed to lock texture: {}", SDL_GetError());
                 else
                 {
                     /* Formats passing through mSwscaleCtx are converted to
@@ -1833,7 +1834,7 @@ void VideoState::handler()
             while(const auto ret = mQueue.receiveFrame(mCodecCtx.get(), frame))
             {
                 if(ret == AVErrorEOF) return nullptr;
-                fmt::println(stderr, "Failed to receive frame: {}", ret);
+                fmt::println(std::cerr, "Failed to receive frame: {}", ret);
             }
             return frame;
         }, vp->mFrame.get());
@@ -1884,7 +1885,7 @@ bool MovieState::prepare()
     auto intcb = AVIOInterruptCB{decode_interrupt_cb, this};
     if(avio_open2(al::out_ptr(mIOContext), mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr) < 0)
     {
-        fmt::println(stderr, "Failed to open {}", mFilename);
+        fmt::println(std::cerr, "Failed to open {}", mFilename);
         return false;
     }
 
@@ -1896,14 +1897,14 @@ bool MovieState::prepare()
     mFormatCtx->interrupt_callback = intcb;
     if(avformat_open_input(al::inout_ptr(mFormatCtx), mFilename.c_str(), nullptr, nullptr) < 0)
     {
-        fmt::println(stderr, "Failed to open {}", mFilename);
+        fmt::println(std::cerr, "Failed to open {}", mFilename);
         return false;
     }
 
     /* Retrieve stream information */
     if(avformat_find_stream_info(mFormatCtx.get(), nullptr) < 0)
     {
-        fmt::println(stderr, "{}: failed to find stream info", mFilename);
+        fmt::println(std::cerr, "{}: failed to find stream info", mFilename);
         return false;
     }
 
@@ -1960,7 +1961,7 @@ auto MovieState::streamComponentOpen(AVStream *stream) -> bool
     const auto *codec = avcodec_find_decoder(avctx->codec_id);
     if(!codec || avcodec_open2(avctx.get(), codec, nullptr) < 0)
     {
-        fmt::println(stderr, "Unsupported codec: {} ({:#x})", avcodec_get_name(avctx->codec_id),
+        fmt::println(std::cerr, "Unsupported codec: {} ({:#x})", avcodec_get_name(avctx->codec_id),
             al::to_underlying(avctx->codec_id));
         return false;
     }
@@ -2011,7 +2012,7 @@ void MovieState::parse_handler()
 
     if(video_index < 0 && audio_index < 0)
     {
-        fmt::println(stderr, "{}: could not open codecs", mFilename);
+        fmt::println(std::cerr, "{}: could not open codecs", mFilename);
         mQuit = true;
     }
 
@@ -2096,8 +2097,8 @@ auto main(std::span<std::string_view> args) -> int
 
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <device name>] [options] <files...>", args[0]);
-        fmt::println(stderr, "\n  Options:\n"
+        fmt::println(std::cerr, "Usage: {} [-device <device name>] [options] <files...>", args[0]);
+        fmt::println(std::cerr, "\n  Options:\n"
             "    -gain <g>     Set audio playback gain (prepend +/- or append \"dB\" to \n"
             "                  indicate decibels, otherwise it's linear amplitude)\n"
             "    -novideo      Disable video playback\n"
@@ -2112,7 +2113,7 @@ auto main(std::span<std::string_view> args) -> int
 
     if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
-        fmt::println(stderr, "Could not initialize SDL - {}", SDL_GetError());
+        fmt::println(std::cerr, "Could not initialize SDL - {}", SDL_GetError());
         return 1;
     }
 
@@ -2120,7 +2121,7 @@ auto main(std::span<std::string_view> args) -> int
     auto *screen = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
     if(!screen)
     {
-        fmt::println(stderr, "SDL: could not set video mode - exiting");
+        fmt::println(std::cerr, "SDL: could not set video mode - exiting");
         return 1;
     }
     SDL_SetWindowSurfaceVSync(screen, 1);
@@ -2129,7 +2130,7 @@ auto main(std::span<std::string_view> args) -> int
     auto *renderer = SDL_CreateRenderer(screen, nullptr);
     if(!renderer)
     {
-        fmt::println(stderr, "SDL: could not create renderer - exiting");
+        fmt::println(std::cerr, "SDL: could not create renderer - exiting");
         return 1;
     }
 
@@ -2181,13 +2182,13 @@ auto main(std::span<std::string_view> args) -> int
                 DirectOutMode = AL_DROP_UNMATCHED_SOFT;
             }
             else
-                fmt::println(stderr, "AL_SOFT_direct_channels not supported for direct output");
+                fmt::println(std::cerr, "AL_SOFT_direct_channels not supported for direct output");
             continue;
         }
         if(argval == "-wide")
         {
             if(!alIsExtensionPresent("AL_EXT_STEREO_ANGLES"))
-                fmt::println(stderr, "AL_EXT_STEREO_ANGLES not supported for wide stereo");
+                fmt::println(std::cerr, "AL_EXT_STEREO_ANGLES not supported for wide stereo");
             else
             {
                 fmt::println("Found AL_EXT_STEREO_ANGLES");
@@ -2198,7 +2199,7 @@ auto main(std::span<std::string_view> args) -> int
         if(argval == "-uhj")
         {
             if(!alIsExtensionPresent("AL_SOFT_UHJ"))
-                fmt::println(stderr, "AL_SOFT_UHJ not supported for UHJ decoding");
+                fmt::println(std::cerr, "AL_SOFT_UHJ not supported for UHJ decoding");
             else
             {
                 fmt::println("Found AL_SOFT_UHJ");
@@ -2209,7 +2210,7 @@ auto main(std::span<std::string_view> args) -> int
         if(argval == "-superstereo")
         {
             if(!alIsExtensionPresent("AL_SOFT_UHJ"))
-                fmt::println(stderr, "AL_SOFT_UHJ not supported for Super Stereo decoding");
+                fmt::println(std::cerr, "AL_SOFT_UHJ not supported for Super Stereo decoding");
             else
             {
                 fmt::println("Found AL_SOFT_UHJ (Super Stereo)");
@@ -2225,7 +2226,7 @@ auto main(std::span<std::string_view> args) -> int
         if(argval == "-gain")
         {
             if(curarg+1 == args_end)
-                fmt::println(stderr, "Missing argument for -gain");
+                fmt::println(std::cerr, "Missing argument for -gain");
             else
             {
                 const auto optarg = *++curarg;
@@ -2235,7 +2236,7 @@ auto main(std::span<std::string_view> args) -> int
                 {
                     try { return std::stof(std::string{optarg}, &endpos); }
                     catch(std::exception &e) {
-                        fmt::println(stderr, "Exception reading gain value: {}", e.what());
+                        fmt::println(std::cerr, "Exception reading gain value: {}", e.what());
                     }
                     return std::numeric_limits<float>::quiet_NaN();
                 });
@@ -2244,14 +2245,14 @@ auto main(std::span<std::string_view> args) -> int
                 {
                     if(!std::isfinite(gainval) || (endpos != optarg.size()
                             && al::case_compare(optarg.substr(endpos), "db") != 0))
-                        fmt::println(stderr, "Invalid dB gain value: {}", optarg);
+                        fmt::println(std::cerr, "Invalid dB gain value: {}", optarg);
                     else
                         PlaybackGain = std::pow(10.0f, gainval/20.0f);
                 }
                 else
                 {
                     if(endpos != optarg.size() || !(gainval >= 0.0f) || !std::isfinite(gainval))
-                        fmt::println(stderr, "Invalid linear gain value: {}", optarg);
+                        fmt::println(std::cerr, "Invalid linear gain value: {}", optarg);
                     else
                         PlaybackGain = gainval;
                 }
@@ -2272,7 +2273,7 @@ auto main(std::span<std::string_view> args) -> int
     });
     if(curarg == args.end())
     {
-        fmt::println(stderr, "Could not start a video");
+        fmt::println(std::cerr, "Could not start a video");
         return 1;
     }
     ++curarg;
@@ -2293,7 +2294,7 @@ auto main(std::span<std::string_view> args) -> int
         {
             const auto end_time = duration_cast<seconds>(movState->getDuration());
             fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
-            fflush(stdout);
+            std::cout.flush();
             last_time = cur_time;
         }
 
@@ -2381,7 +2382,7 @@ auto main(std::span<std::string_view> args) -> int
         movState->mVideo.updateVideo(screen, renderer, force_redraw);
     }
 
-    fmt::println(stderr, "SDL_WaitEvent error - {}", SDL_GetError());
+    fmt::println(std::cerr, "SDL_WaitEvent error - {}", SDL_GetError());
     return 1;
 }
 

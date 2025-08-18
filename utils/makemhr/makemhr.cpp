@@ -70,7 +70,6 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -90,7 +89,8 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "loaddef.h"
 #include "loadsofa.h"
@@ -267,7 +267,7 @@ auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::st
     /* NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) */
     if(!ostream.write(out.data(), std::ssize(out)) || ostream.bad())
     {
-        fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
+        fmt::println(std::cerr, "\nError: Bad write to file '{}'.", filename);
         return 0;
     }
     return 1;
@@ -284,7 +284,7 @@ auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
 
     if(!ostream.write(out.data(), gsl::narrow<std::streamsize>(bytes)) || ostream.bad())
     {
-        fmt::println(stderr, "\nError: Bad write to file '{}'.", filename);
+        fmt::println(std::cerr, "\nError: Bad write to file '{}'.", filename);
         return 0;
     }
     return 1;
@@ -300,7 +300,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
     auto ostream = fs::ofstream{fs::path(al::char_as_u8(filename)), std::ios::binary};
     if(!ostream.is_open())
     {
-        fmt::println(stderr, "\nError: Could not open MHR file '{}'.", filename);
+        fmt::println(std::cerr, "\nError: Could not open MHR file '{}'.", filename);
         return false;
     }
     if(!WriteAscii(GetMHRMarker(), ostream, filename))
@@ -909,7 +909,7 @@ void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
         size_t pcdone{count * 100 / reconstructor.mIrs.size()};
 
         fmt::print("\r{:3}% done ({} of {})", pcdone, count, reconstructor.mIrs.size());
-        fflush(stdout);
+        std::cout.flush();
     } while(count < reconstructor.mIrs.size());
     fmt::println("");
 
@@ -1154,7 +1154,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
         auto input = std::make_unique<fs::ifstream>(fs::path(al::char_as_u8(inName)));
         if(!input->is_open())
         {
-            fmt::println(stderr, "Error: Could not open input file '{}'", inName);
+            fmt::println(std::cerr, "Error: Could not open input file '{}'", inName);
             return false;
         }
 
@@ -1162,7 +1162,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
         input->read(startbytes.data(), startbytes.size());
         if(input->gcount() != startbytes.size() || !input->good())
         {
-            fmt::println(stderr, "Error: Could not read input file '{}'", inName);
+            fmt::println(std::cerr, "Error: Could not read input file '{}'", inName);
             return false;
         }
 
@@ -1229,7 +1229,7 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
     return StoreMhr(&hData, expName);
 }
 
-void PrintHelp(const std::string_view argv0, FILE *ofile)
+void PrintHelp(const std::string_view argv0, std::ostream &ofile)
 {
     fmt::println(ofile, "Usage:  {} [<option>...]\n", argv0);
     fmt::println(ofile, "Options:");
@@ -1260,7 +1260,7 @@ auto main(std::span<std::string_view> args) -> int
     if(args.size() < 2)
     {
         fmt::println("HRTF Processing and Composition Utility\n");
-        PrintHelp(args[0], stdout);
+        PrintHelp(args[0], std::cout);
         exit(EXIT_SUCCESS);
     }
 
@@ -1301,7 +1301,7 @@ auto main(std::span<std::string_view> args) -> int
 
             if(args[0][0] != '-' || args[0].size() == 1)
             {
-                fmt::println(stderr, "Invalid argument: {}", args[0]);
+                fmt::println(std::cerr, "Invalid argument: {}", args[0]);
                 return -1;
             }
             ++argplace;
@@ -1311,13 +1311,13 @@ auto main(std::span<std::string_view> args) -> int
         const auto listidx = optlist.find(nextopt);
         if(listidx >= optlist.size())
         {
-            fmt::println(stderr, "Unknown argument: -{:c}", nextopt);
+            fmt::println(std::cerr, "Unknown argument: -{:c}", nextopt);
             return -1;
         }
         const auto needsarg = listidx+1 < optlist.size() && optlist[listidx+1] == ':';
         if(needsarg && (argplace+1 < args[0].size() || args.size() < 2))
         {
-            fmt::println(stderr, "Missing parameter for argument: -{:c}", nextopt);
+            fmt::println(std::cerr, "Missing parameter for argument: -{:c}", nextopt);
             return -1;
         }
         if(++argplace == args[0].size())
@@ -1340,7 +1340,7 @@ auto main(std::span<std::string_view> args) -> int
             outRate = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || outRate < MIN_RATE || outRate > MAX_RATE)
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
                     optarg, opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
@@ -1359,7 +1359,7 @@ auto main(std::span<std::string_view> args) -> int
             numThreads = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || numThreads > 64)
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
                     optarg, opt, 0, 64);
                 exit(EXIT_FAILURE);
@@ -1373,7 +1373,7 @@ auto main(std::span<std::string_view> args) -> int
             if(endpos != optarg.size() || (fftSize&(fftSize-1)) || fftSize < MinFftSize
                 || fftSize > MaxFftSize)
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected a power-of-two between {} to {}.",
                     optarg, opt, MinFftSize, MaxFftSize);
                 exit(EXIT_FAILURE);
@@ -1387,7 +1387,7 @@ auto main(std::span<std::string_view> args) -> int
                 equalize = false;
             else
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected on or off.",
                     optarg, opt);
                 exit(EXIT_FAILURE);
@@ -1401,7 +1401,7 @@ auto main(std::span<std::string_view> args) -> int
                 surface = false;
             else
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected on or off.",
                     optarg, opt);
                 exit(EXIT_FAILURE);
@@ -1416,7 +1416,7 @@ auto main(std::span<std::string_view> args) -> int
                 limit = std::stod(std::string{optarg}, &endpos);
                 if(endpos != optarg.size() || limit < MinLimit || limit > MaxLimit)
                 {
-                    fmt::println(stderr,
+                    fmt::println(std::cerr,
                         "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {:.0f} to {:.0f}.",
                         optarg, opt, MinLimit, MaxLimit);
                     exit(EXIT_FAILURE);
@@ -1428,7 +1428,7 @@ auto main(std::span<std::string_view> args) -> int
             truncSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || truncSize < MinTruncSize || truncSize > MaxTruncSize)
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {} to {}.",
                     optarg, opt, MinTruncSize, MaxTruncSize);
                 exit(EXIT_FAILURE);
@@ -1442,7 +1442,7 @@ auto main(std::span<std::string_view> args) -> int
                 model = HM_Sphere;
             else
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected dataset or sphere.",
                     optarg, opt);
                 exit(EXIT_FAILURE);
@@ -1453,7 +1453,7 @@ auto main(std::span<std::string_view> args) -> int
             radius = std::stod(std::string{optarg}, &endpos);
             if(endpos != optarg.size() || radius < MinCustomRadius || radius > MaxCustomRadius)
             {
-                fmt::println(stderr,
+                fmt::println(std::cerr,
                     "\nError: Got unexpected value \"{}\" for option -{:c}, expected between {:.2f} to {:.2f}.",
                     optarg, opt, MinCustomRadius, MaxCustomRadius);
                 exit(EXIT_FAILURE);
@@ -1469,11 +1469,11 @@ auto main(std::span<std::string_view> args) -> int
             break;
 
         case 'h':
-            PrintHelp(arg0, stdout);
+            PrintHelp(arg0, std::cout);
             exit(EXIT_SUCCESS);
 
         default: /* '?' */
-            PrintHelp(arg0, stderr);
+            PrintHelp(arg0, std::cerr);
             exit(EXIT_FAILURE);
         }
     }

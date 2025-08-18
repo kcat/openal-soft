@@ -28,10 +28,10 @@
 #include <cctype>
 #include <cmath>
 #include <cstdarg>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -43,11 +43,11 @@
 #include <vector>
 
 #include "albit.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
@@ -227,8 +227,8 @@ void TrErrorAt(const TokenReaderT *tr, uint line, uint column, fmt::format_strin
 {
     if(tr->mName.empty())
         return;
-    fmt::print(stderr, "\nError ({}:{}:{}): ", tr->mName, line, column);
-    fmt::println(stderr, fmt, std::forward<Args>(args)...);
+    fmt::print(std::cerr, "\nError ({}:{}:{}): ", tr->mName, line, column);
+    fmt::println(std::cerr, fmt, std::forward<Args>(args)...);
 }
 
 // Used to display an error at the current line/column.
@@ -577,7 +577,7 @@ auto ReadBin4(std::istream &istream, const std::string_view filename, const std:
     istream.read(in.data(), static_cast<int>(bytes));
     if(istream.gcount() != static_cast<int>(bytes))
     {
-        fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
+        fmt::println(std::cerr, "\nError: Bad read from file '{}'.", filename);
         return false;
     }
 
@@ -607,7 +607,7 @@ auto ReadBin8(std::istream &istream, const std::string_view filename, const std:
     istream.read(in.data(), in.size());
     if(istream.gcount() != in.size())
     {
-        fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
+        fmt::println(std::cerr, "\nError: Bad read from file '{}'.", filename);
         return false;
     }
 
@@ -681,7 +681,7 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, const std::string_view filename, const 
         if(!TrReadFloat(tr, -std::numeric_limits<double>::infinity(),
             std::numeric_limits<double>::infinity(), out))
         {
-            fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
+            fmt::println(std::cerr, "\nError: Bad read from file '{}'.", filename);
             return false;
         }
     }
@@ -690,7 +690,7 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, const std::string_view filename, const 
         auto v = int{};
         if(!TrReadInt(tr, -(1<<(bits-1)), (1<<(bits-1))-1, &v))
         {
-            fmt::println(stderr, "\nError: Bad read from file '{}'.", filename);
+            fmt::println(std::cerr, "\nError: Bad read from file '{}'.", filename);
             return false;
         }
         *out = v / static_cast<double>((1<<(bits-1))-1);
@@ -757,17 +757,17 @@ auto ReadWaveFormat(std::istream &istream, const std::endian order, const uint h
     }
     if(format != WAVE_FORMAT_PCM && format != WAVE_FORMAT_IEEE_FLOAT)
     {
-        fmt::println(stderr, "\nError: Unsupported WAVE format in file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Unsupported WAVE format in file '{}'.", src->mPath);
         return false;
     }
     if(src->mChannel >= channels)
     {
-        fmt::println(stderr, "\nError: Missing source channel in WAVE file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Missing source channel in WAVE file '{}'.", src->mPath);
         return false;
     }
     if(rate != hrirRate)
     {
-        fmt::println(stderr, "\nError: Mismatched source sample rate in WAVE file '{}'.",
+        fmt::println(std::cerr, "\nError: Mismatched source sample rate in WAVE file '{}'.",
             src->mPath);
         return false;
     }
@@ -775,13 +775,13 @@ auto ReadWaveFormat(std::istream &istream, const std::endian order, const uint h
     {
         if(size < 2 || size > 4)
         {
-            fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
+            fmt::println(std::cerr, "\nError: Unsupported sample size in WAVE file '{}'.",
                 src->mPath);
             return false;
         }
         if(bits < 16 || bits > (8*size))
         {
-            fmt::println(stderr, "\nError: Bad significant bits in WAVE file '{}'.",
+            fmt::println(std::cerr, "\nError: Bad significant bits in WAVE file '{}'.",
                 src->mPath);
             return false;
         }
@@ -791,7 +791,7 @@ auto ReadWaveFormat(std::istream &istream, const std::endian order, const uint h
     {
         if(size != 4 && size != 8)
         {
-            fmt::println(stderr, "\nError: Unsupported sample size in WAVE file '{}'.",
+            fmt::println(std::cerr, "\nError: Unsupported sample size in WAVE file '{}'.",
                 src->mPath);
             return false;
         }
@@ -843,7 +843,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
             const auto block = src->mSize * src->mSkip;
             if(chunkSize / block < (src->mOffset + hrir.size()))
             {
-                fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath);
+                fmt::println(std::cerr, "\nError: Bad read from file '{}'.", src->mPath);
                 return false;
             }
             using off_type = std::istream::off_type;
@@ -920,7 +920,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
     }
     if(offset < hrir.size())
     {
-        fmt::println(stderr, "\nError: Bad read from file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Bad read from file '{}'.", src->mPath);
         return false;
     }
     return true;
@@ -989,7 +989,7 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
         order = std::endian::big;
     else
     {
-        fmt::println(stderr, "\nError: No RIFF/RIFX chunk in file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: No RIFF/RIFX chunk in file '{}'.", src->mPath);
         return false;
     }
 
@@ -997,7 +997,7 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
         return false;
     if(fourCC != FOURCC_WAVE)
     {
-        fmt::println(stderr, "\nError: Not a RIFF/RIFX WAVE file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Not a RIFF/RIFX WAVE file '{}'.", src->mPath);
         return false;
     }
     if(!ReadWaveFormat(istream, order, hrirRate, src))
@@ -1037,7 +1037,7 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     auto sofa = SofaEasyPtr{new(std::nothrow) MYSOFA_EASY{}};
     if(!sofa)
     {
-        fmt::println(stderr, "\nError:  Out of memory.");
+        fmt::println(std::cerr, "\nError:  Out of memory.");
         return nullptr;
     }
     sofa->lookup = nullptr;
@@ -1047,30 +1047,30 @@ auto LoadSofaFile(SourceRefT *src, const uint hrirRate, const uint n) -> MYSOFA_
     sofa->hrtf = mysofa_load(src->mPath.c_str(), &err);
     if(!sofa->hrtf)
     {
-        fmt::println(stderr, "\nError: Could not load source file '{}': {} ({}).", src->mPath,
+        fmt::println(std::cerr, "\nError: Could not load source file '{}': {} ({}).", src->mPath,
             SofaErrorStr(err), err);
         return nullptr;
     }
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofa->hrtf);
     if(err != MYSOFA_OK)
-        fmt::println(stderr, "\nWarning: Supposedly malformed source file '{}': {} ({}).",
+        fmt::println(std::cerr, "\nWarning: Supposedly malformed source file '{}': {} ({}).",
             src->mPath, SofaErrorStr(err), err);
     if((src->mOffset + n) > sofa->hrtf->N)
     {
-        fmt::println(stderr, "\nError: Not enough samples in SOFA file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Not enough samples in SOFA file '{}'.", src->mPath);
         return nullptr;
     }
     if(src->mChannel >= sofa->hrtf->R)
     {
-        fmt::println(stderr, "\nError: Missing source receiver in SOFA file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Missing source receiver in SOFA file '{}'.", src->mPath);
         return nullptr;
     }
     mysofa_tocartesian(sofa->hrtf);
     sofa->lookup = mysofa_lookup_init(sofa->hrtf);
     if(sofa->lookup == nullptr)
     {
-        fmt::println(stderr, "\nError:  Out of memory.");
+        fmt::println(std::cerr, "\nError:  Out of memory.");
         return nullptr;
     }
     gSofaCache.emplace_back(SofaCacheEntry{std::string{srcname}, hrirRate, std::move(sofa)});
@@ -1107,7 +1107,7 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const std::span<double
     auto nearest = mysofa_lookup(sofa->lookup, target.data());
     if(nearest < 0)
     {
-        fmt::println(stderr, "\nError: Lookup failed in source file '{}'.", src->mPath);
+        fmt::println(std::cerr, "\nError: Lookup failed in source file '{}'.", src->mPath);
         return false;
     }
 
@@ -1116,14 +1116,14 @@ auto LoadSofaSource(SourceRefT *src, const uint hrirRate, const std::span<double
     if(std::abs(coords[0] - target[0]) > 0.001 || std::abs(coords[1] - target[1]) > 0.001
         || std::abs(coords[2] - target[2]) > 0.001)
     {
-        fmt::println(stderr,
+        fmt::println(std::cerr,
             "\nError: No impulse response at coordinates ({:.3f}r, {:.1f}ev, {:.1f}az) in file '{}'.",
             src->mRadius, src->mElevation, src->mAzimuth, src->mPath);
         target[0] = coords[0];
         target[1] = coords[1];
         target[2] = coords[2];
         mysofa_c2s(target.data());
-        fmt::println(stderr, "       Nearest candidate at ({:.3f}r, {:.1f}ev, {:.1f}az).",
+        fmt::println(std::cerr, "       Nearest candidate at ({:.3f}r, {:.1f}ev, {:.1f}az).",
             target[2], target[1], target[0]);
         return false;
     }
@@ -1145,7 +1145,7 @@ auto LoadSource(SourceRefT *src, const uint hrirRate, const std::span<double> hr
             istream.open(fs::path(al::char_as_u8(src->mPath)), std::ios::binary);
         if(!istream.good())
         {
-            fmt::println(stderr, "\nError: Could not open source file '{}'.", src->mPath);
+            fmt::println(std::cerr, "\nError: Could not open source file '{}'.", src->mPath);
             return false;
         }
     }
@@ -1406,7 +1406,7 @@ auto ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize,
     const auto azs = std::span{azCounts}.first<MAX_FD_COUNT>();
     if(!PrepareHrirData(std::span{distances}.first(fdCount), evCounts, azs, hData))
     {
-        fmt::println(stderr, "Error:  Out of memory.");
+        fmt::println(std::cerr, "Error:  Out of memory.");
         exit(-1);
     }
     return true;
@@ -1729,7 +1729,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> b
         : hData->mIrPoints};
 
     fmt::print("Loading sources...");
-    fflush(stdout);
+    std::cout.flush();
     auto count = 0;
     while(TrIsOperator(tr, "["))
     {
@@ -1790,7 +1790,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> b
             for(uint si{0};si < sofa->hrtf->M;++si)
             {
                 fmt::print("\rLoading sources... {} of {}", si+1, sofa->hrtf->M);
-                fflush(stdout);
+                std::cout.flush();
 
                 std::array aer{srcPosValues[3_uz*si], srcPosValues[3_uz*si + 1],
                     srcPosValues[3_uz*si + 2]};
@@ -1885,7 +1885,7 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> b
             // before loading them.
             ++count;
             fmt::print("\rLoading sources... {} file{}", count, (count==1)?"":"s");
-            fflush(stdout);
+            std::cout.flush();
 
             if(!LoadSource(&src, hData->mIrRate, std::span{hrir}.first(hData->mIrPoints)))
                 return false;

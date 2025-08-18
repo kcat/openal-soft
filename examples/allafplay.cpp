@@ -1197,7 +1197,7 @@ try {
     }
 }
 catch(std::exception& e) {
-    fmt::println(stderr, "Error playing {}:\n  {}", fname, e.what());
+    fmt::println(std::cerr, "Error playing {}:\n  {}", fname, e.what());
 }
 
 auto main(std::span<std::string_view> args) -> int
@@ -1205,7 +1205,7 @@ auto main(std::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fmt::println(stderr,
+        fmt::println(std::cerr,
             "Usage: {} [-device <name> | -render <channels,samples>] <filenames...>\n"
             "\n"
             "  -render    Renders samples to an output file instead of real-time playback.\n"
@@ -1229,7 +1229,7 @@ auto main(std::span<std::string_view> args) -> int
             [](auto prange) { return std::string(prange.begin(), prange.end()); });
         if(params.size() != 2)
         {
-            fmt::println(stderr, "Invalid -render argument: {}", args[1]);
+            fmt::println(std::cerr, "Invalid -render argument: {}", args[1]);
             return 1;
         }
         args = args.subspan(2);
@@ -1283,7 +1283,7 @@ auto main(std::span<std::string_view> args) -> int
         }
         else
         {
-            fmt::println(stderr, "Unsupported channel configuration: {}", params[0]);
+            fmt::println(std::cerr, "Unsupported channel configuration: {}", params[0]);
             return 1;
         }
 
@@ -1293,7 +1293,7 @@ auto main(std::span<std::string_view> args) -> int
             RenderSamples = ALC_SHORT_SOFT;
         else
         {
-            fmt::println(stderr, "Unsupported sample type: {}", params[1]);
+            fmt::println(std::cerr, "Unsupported sample type: {}", params[1]);
             return 1;
         }
 
@@ -1303,7 +1303,7 @@ auto main(std::span<std::string_view> args) -> int
         ALCcontext *loopbackCtx{};
         if(!alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
         {
-            fmt::println(stderr, "Loopback rendering not supported");
+            fmt::println(std::cerr, "Loopback rendering not supported");
             return 1;
         }
 
@@ -1319,13 +1319,13 @@ auto main(std::span<std::string_view> args) -> int
         loopbackDev = alcLoopbackOpenDevice(nullptr);
         if(!loopbackDev)
         {
-            fmt::println(stderr, "Failed to open loopback device: {:x}", alcGetError(nullptr));
+            fmt::println(std::cerr, "Failed to open loopback device: {:x}", alcGetError(nullptr));
             return 1;
         }
 
         if(!alcIsRenderFormatSupported(loopbackDev, RenderSampleRate, RenderChannels, RenderSamples))
         {
-            fmt::println(stderr, "Format {},{} not supported", params[0], params[1]);
+            fmt::println(std::cerr, "Format {},{} not supported", params[0], params[1]);
             return 1;
         }
         if(RenderAmbiOrder > 0)
@@ -1335,8 +1335,8 @@ auto main(std::span<std::string_view> args) -> int
                 alcGetIntegerv(loopbackDev, ALC_MAX_AMBISONIC_ORDER_SOFT, 1, &maxorder);
             if(RenderAmbiOrder > maxorder)
             {
-                fmt::println(stderr, "Unsupported ambisonic order: {} (max: {})", RenderAmbiOrder,
-                    maxorder);
+                fmt::println(std::cerr, "Unsupported ambisonic order: {} (max: {})",
+                    RenderAmbiOrder, maxorder);
                 return 1;
             }
         }
@@ -1356,7 +1356,7 @@ auto main(std::span<std::string_view> args) -> int
             if(loopbackCtx)
                 alcDestroyContext(loopbackCtx);
             alcCloseDevice(loopbackDev);
-            fmt::println(stderr, "Failed to create loopback device context: {:x}",
+            fmt::println(std::cerr, "Failed to create loopback device context: {:x}",
                 alcGetError(loopbackDev));
             return 1;
         }
@@ -1380,11 +1380,13 @@ auto main(std::span<std::string_view> args) -> int
     if(alcIsExtensionPresent(almgr.device, "ALC_EXT_EFX")
         && alcIsExtensionPresent(almgr.device, "ALC_EXT_DEDICATED"))
     {
-#define LOAD_PROC(x) do {                                                     \
-        x = reinterpret_cast<decltype(x)>(alGetProcAddress(#x));              \
-        if(!x) fmt::println(stderr, "Failed to find function '{}'", #x##sv);  \
-    } while(0)
-        /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+        static constexpr auto load_proc = []<typename T>(T &func, gsl::czstring funcname)
+        {
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<T>(alGetProcAddress(funcname));
+            if(!func) fmt::println(std::cerr, "Failed to find function '{}'", funcname);
+        };
+#define LOAD_PROC(x) load_proc(x, #x)
         LOAD_PROC(alGenFilters);
         LOAD_PROC(alDeleteFilters);
         LOAD_PROC(alIsFilter);
@@ -1418,7 +1420,6 @@ auto main(std::span<std::string_view> args) -> int
         LOAD_PROC(alGetAuxiliaryEffectSlotfv);
         LOAD_PROC(alGetAuxiliaryEffectSloti);
         LOAD_PROC(alGetAuxiliaryEffectSlotiv);
-        /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
 
         alGenFilters(1, &MuteFilterID);

@@ -28,11 +28,10 @@
 #include <array>
 #include <bit>
 #include <cerrno>
-#include <complex>
 #include <cstddef>
-#include <cstdio>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <numbers>
 #include <ranges>
@@ -43,7 +42,8 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "phase_shifter.h"
@@ -382,12 +382,12 @@ auto main(std::span<std::string_view> args) -> int
         auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fmt::println(stderr, "Failed to open {}", arg);
+            fmt::println(std::cerr, "Failed to open {}", arg);
             return;
         }
         if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
         {
-            fmt::println(stderr, "{} is already B-Format", arg);
+            fmt::println(std::cerr, "{} is already B-Format", arg);
             return;
         }
 
@@ -398,7 +398,7 @@ auto main(std::span<std::string_view> args) -> int
             outchans = gsl::narrow_cast<uint>(ininfo.channels);
         else
         {
-            fmt::println(stderr, "{} is not a 2-, 3-, or 4-channel file", arg);
+            fmt::println(std::cerr, "{} is not a 2-, 3-, or 4-channel file", arg);
             return;
         }
         fmt::println("Converting {} from {}-channel UHJ{}...", arg, ininfo.channels,
@@ -417,7 +417,7 @@ auto main(std::span<std::string_view> args) -> int
         auto outfile = FilePtr{fopen(outname.c_str(), "wb")};
         if(!outfile)
         {
-            fmt::println(stderr, "Failed to create {}", outname);
+            fmt::println(std::cerr, "Failed to create {}", outname);
             return;
         }
 
@@ -455,7 +455,7 @@ auto main(std::span<std::string_view> args) -> int
         fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
         if(ferror(outfile.get()))
         {
-            fmt::println(stderr, "Error writing wave file header: {} ({})",
+            fmt::println(std::cerr, "Error writing wave file header: {} ({})",
                 std::generic_category().message(errno), errno);
             return;
         }
@@ -511,7 +511,7 @@ auto main(std::span<std::string_view> args) -> int
             const auto wrote = fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get());
             if(wrote < got)
             {
-                fmt::println(stderr, "Error writing wave data: {} ({})",
+                fmt::println(std::cerr, "Error writing wave data: {} ({})",
                     std::generic_category().message(errno), errno);
                 break;
             }
@@ -530,9 +530,9 @@ auto main(std::span<std::string_view> args) -> int
         ++num_decoded;
     });
     if(num_decoded == 0)
-        fmt::println(stderr, "Failed to decode any input files");
+        fmt::println(std::cerr, "Failed to decode any input files");
     else if(num_decoded < num_files)
-        fmt::println(stderr, "Decoded {} of {} files", num_decoded, num_files);
+        fmt::println(std::cerr, "Decoded {} of {} files", num_decoded, num_files);
     else
         fmt::println("Decoded {} file{}", num_decoded, (num_decoded==1)?"":"s");
     return 0;

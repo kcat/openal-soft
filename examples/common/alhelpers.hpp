@@ -3,14 +3,15 @@
 
 #include "AL/alc.h"
 
-#include <cstdio>
+#include <iostream>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 
 
@@ -54,21 +55,21 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
     {
         hdl.device = alcOpenDevice(std::string{args[1]}.c_str());
         if(!hdl.device)
-            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
+            fmt::println(std::cerr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);
     }
     if(!hdl.device)
         hdl.device = alcOpenDevice(nullptr);
     if(!hdl.device)
     {
-        fmt::println(stderr, "Could not open a device");
+        fmt::println(std::cerr, "Could not open a device");
         throw std::runtime_error{"Failed to open a device"};
     }
 
     hdl.context = alcCreateContext(hdl.device, attribs);
     if(!hdl.context || alcMakeContextCurrent(hdl.context) == ALC_FALSE)
     {
-        fmt::println(stderr, "Could not set a context");
+        fmt::println(std::cerr, "Could not set a context");
         throw std::runtime_error{"Failed to initialize an OpenAL context"};
     }
 

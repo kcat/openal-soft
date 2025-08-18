@@ -30,9 +30,9 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -52,7 +52,8 @@
 #include "alnumeric.h"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 
 #include "win_main_utf8.h"
 
@@ -127,7 +128,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     mSndfile = sf_open(filename.c_str(), SFM_READ, &mSfInfo);
     if(!mSndfile)
     {
-        fmt::println(stderr, "Could not open audio in {}: {}", filename,
+        fmt::println(std::cerr, "Could not open audio in {}: {}", filename,
             sf_strerror(mSndfile));
         return false;
     }
@@ -270,7 +271,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     }
     if(!mFormat)
     {
-        fmt::println(stderr, "Unsupported channel count: {}", mSfInfo.channels);
+        fmt::println(std::cerr, "Unsupported channel count: {}", mSfInfo.channels);
         sf_close(mSndfile);
         mSndfile = nullptr;
 
@@ -386,7 +387,7 @@ auto StreamPlayer::prepare() -> bool
     alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
     if(const auto err = alGetError())
     {
-        fmt::println(stderr, "Failed to set callback: {} ({:#x})", alGetString(err),
+        fmt::println(std::cerr, "Failed to set callback: {} ({:#x})", alGetString(err),
             as_unsigned(err));
         return false;
     }
@@ -420,7 +421,7 @@ auto StreamPlayer::update() -> bool
     }
     else
         fmt::println("Starting...");
-    fflush(stdout);
+    std::cout.flush();
 
     while(!sf_error(mSndfile))
     {
@@ -515,7 +516,7 @@ auto main(std::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <name>] <filenames...>", args[0]);
+        fmt::println(std::cerr, "Usage: {} [-device <name>] <filenames...>", args[0]);
         return 1;
     }
 
@@ -524,7 +525,7 @@ auto main(std::span<std::string_view> args) -> int
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
-        fmt::println(stderr, "AL_SOFT_callback_buffer extension not available");
+        fmt::println(std::cerr, "AL_SOFT_callback_buffer extension not available");
         return 1;
     }
 
@@ -548,7 +549,7 @@ auto main(std::span<std::string_view> args) -> int
 
         fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
             player->mSfInfo.samplerate);
-        fflush(stdout);
+        std::cout.flush();
 
         if(!player->prepare())
         {
@@ -558,7 +559,7 @@ auto main(std::span<std::string_view> args) -> int
 
         while(player->update())
             std::this_thread::sleep_for(nanoseconds{seconds{1}} / refresh);
-        putc('\n', stdout);
+        fmt::println("");
 
         /* All done with this file. Close it and go to the next */
         player->close();

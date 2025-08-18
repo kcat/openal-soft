@@ -5,7 +5,7 @@
 #include <winnt.h>
 
 #include <atomic>
-#include <cstdio>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -16,8 +16,8 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "almalloc.h"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 
 
 constexpr auto MakeALCVer(int major, int minor) noexcept -> int { return (major<<8) | minor; }
@@ -187,31 +187,31 @@ enum class eLogLevel {
     Warn  = 2,
     Trace = 3,
 };
-extern eLogLevel LogLevel;
-extern gsl::owner<std::FILE*> LogFile;
+inline eLogLevel LogLevel{eLogLevel::Error};
+inline std::ofstream LogFile;
 
 #define TRACE(...) do {                                     \
     if(LogLevel >= eLogLevel::Trace)                        \
     {                                                       \
-        std::FILE *file{LogFile ? LogFile : stderr};        \
+        auto &file = LogFile ? LogFile : std::cerr;         \
         fmt::println(file, "AL Router (II): " __VA_ARGS__); \
-        fflush(file);                                       \
+        file.flush();                                       \
     }                                                       \
 } while(0)
 #define WARN(...) do {                                      \
     if(LogLevel >= eLogLevel::Warn)                         \
     {                                                       \
-        std::FILE *file{LogFile ? LogFile : stderr};        \
+        auto &file = LogFile ? LogFile : std::cerr;         \
         fmt::println(file, "AL Router (WW): " __VA_ARGS__); \
-        fflush(file);                                       \
+        file.flush();                                       \
     }                                                       \
 } while(0)
 #define ERR(...) do {                                       \
     if(LogLevel >= eLogLevel::Error)                        \
     {                                                       \
-        std::FILE *file{LogFile ? LogFile : stderr};        \
+        auto &file = LogFile ? LogFile : std::cerr;         \
         fmt::println(file, "AL Router (EE): " __VA_ARGS__); \
-        fflush(file);                                       \
+        file.flush();                                       \
     }                                                       \
 } while(0)
 

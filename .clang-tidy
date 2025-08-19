@@ -138,7 +138,6 @@
                     misc-throw-by-value-catch-by-reference,
                     misc-uniqueptr-reset-release,
                     misc-use-anonymous-namespace,
-                    misc-use-internal-linkage,
                     modernize-avoid-*,
                     modernize-concat-nested-namespaces,
                     modernize-deprecated-*,

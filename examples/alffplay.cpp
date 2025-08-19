@@ -2107,6 +2107,7 @@ auto main(std::span<std::string_view> args) -> int
             "    -uhj          Decode as UHJ (stereo = UHJ2, 3.0 = UHJ3, quad = UHJ4)");
         return 1;
     }
+    args = args.subspan(1);
 
     /* Initialize networking protocols */
     avformat_network_init();
@@ -2139,8 +2140,8 @@ auto main(std::span<std::string_view> args) -> int
     SDL_RenderPresent(renderer);
 
     /* Open an audio device */
-    args = args.subspan(1);
     auto almgr = InitAL(args);
+    almgr.printName();
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     if(alIsExtensionPresent("AL_SOFT_source_latency"))

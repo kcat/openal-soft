@@ -47,6 +47,16 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
                 alcCloseDevice(device);
             device = nullptr;
         }
+
+        auto printName() -> void
+        {
+            auto *name = gsl::czstring{};
+            if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
+                name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+            if(!name || alcGetError(device) != ALC_NO_ERROR)
+                name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+            fmt::println("Opened \"{}\"", name);
+        }
     };
     auto hdl = Handle{};
 
@@ -72,13 +82,6 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
         fmt::println(std::cerr, "Could not set a context");
         throw std::runtime_error{"Failed to initialize an OpenAL context"};
     }
-
-    auto *name = gsl::czstring{};
-    if(alcIsExtensionPresent(hdl.device, "ALC_ENUMERATE_ALL_EXT"))
-        name = alcGetString(hdl.device, ALC_ALL_DEVICES_SPECIFIER);
-    if(!name || alcGetError(hdl.device) != ALC_NO_ERROR)
-        name = alcGetString(hdl.device, ALC_DEVICE_SPECIFIER);
-    fmt::println("Opened \"{}\"", name);
 
     return hdl;
 }

@@ -519,9 +519,10 @@ auto main(std::span<std::string_view> args) -> int
         fmt::println(std::cerr, "Usage: {} [-device <name>] <filenames...>", args[0]);
         return 1;
     }
-
     args = args.subspan(1);
+
     auto almgr = InitAL(args);
+    almgr.printName();
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {

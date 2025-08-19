@@ -1221,6 +1221,7 @@ auto main(std::span<std::string_view> args) -> int
     args = args.subspan(1);
 
     auto almgr = InitAL(args);
+    almgr.printName();
 
     if(args.size() >= 2 && args[0] == "-render")
     {

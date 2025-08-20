@@ -140,6 +140,22 @@ namespace {
 template<typename T> [[nodiscard]] constexpr
 auto as_const_ptr(T *ptr) noexcept -> std::add_const_t<T>* { return ptr; }
 
+struct SpaHook : spa_hook {
+    SpaHook() : spa_hook{} { }
+    ~SpaHook() { spa_hook_remove(this); }
+
+    void remove()
+    {
+        spa_hook_remove(this);
+        static_cast<spa_hook&>(*this) = {};
+    }
+
+    SpaHook(const SpaHook&) = delete;
+    SpaHook(SpaHook&&) = delete;
+    auto operator=(const SpaHook&) -> SpaHook& = delete;
+    auto operator=(SpaHook&&) -> SpaHook& = delete;
+};
+
 struct PodDynamicBuilder {
 private:
     std::vector<std::byte> mStorage;
@@ -425,6 +441,7 @@ constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) no
 constexpr pw_stream_flags& operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept
 { lhs = lhs | rhs; return lhs; }
 
+
 class ThreadMainloop {
     pw_thread_loop *mLoop{};
 
@@ -488,13 +505,64 @@ using MainloopLockGuard = std::lock_guard<ThreadMainloop>;
  * devices provided by the server.
  */
 
+enum class NodeType : unsigned char {
+    Sink, Source, Duplex
+};
+
+auto AsString(NodeType type) noexcept -> std::string_view
+{
+    switch(type)
+    {
+    case NodeType::Sink: return "sink"sv;
+    case NodeType::Source: return "source"sv;
+    case NodeType::Duplex: return "duplex"sv;
+    }
+    return "<unknown>"sv;
+}
+
+/* Enumerated devices. This is updated asynchronously as the app runs, and the
+ * gEventHandler thread loop must be locked when accessing the list.
+ */
+constexpr auto InvalidChannelConfig = gsl::narrow<DevFmtChannels>(255);
+struct DeviceNode {
+    uint32_t mId{};
+
+    uint64_t mSerial{};
+    std::string mName;
+    std::string mDevName;
+
+    NodeType mType{};
+    bool mIsHeadphones{};
+    bool mIs51Rear{};
+
+    uint mSampleRate{};
+    DevFmtChannels mChannels{InvalidChannelConfig};
+
+    void parseSampleRate(const spa_pod *value, bool force_update) noexcept;
+    void parsePositions(const spa_pod *value, bool force_update) noexcept;
+    void parseChannelCount(const spa_pod *value, bool force_update) noexcept;
+
+    void callEvent(alc::EventType type, std::string_view message) const
+    {
+        /* Source nodes aren't recognized for playback, only Sink and Duplex
+         * nodes are. All node types are recognized for capture.
+         */
+        if(mType != NodeType::Source)
+            alc::Event(type, alc::DeviceType::Playback, message);
+        alc::Event(type, alc::DeviceType::Capture, message);
+    }
+};
+auto DefaultSinkDevice = std::string{};
+auto DefaultSourceDevice = std::string{};
+
+
 /* A generic PipeWire node proxy object used to track changes to sink and
  * source nodes.
  */
 struct NodeProxy {
     uint32_t mId{};
     PwNodePtr mNode;
-    spa_hook mListener{};
+    SpaHook mListener;
 
     NodeProxy(uint32_t id, PwNodePtr&& node) : mId{id}, mNode{std::move(node)}
     {
@@ -513,11 +581,9 @@ struct NodeProxy {
         /* Track changes to the enumerable and current formats (indicates the
          * default and active format, which is what we're interested in).
          */
-        auto fmtids = std::array<uint32_t,2>{SPA_PARAM_EnumFormat, SPA_PARAM_Format};
+        auto fmtids = std::to_array<uint32_t>({SPA_PARAM_EnumFormat, SPA_PARAM_Format});
         ppw_node_subscribe_params(mNode.get(), fmtids.data(), fmtids.size());
     }
-    ~NodeProxy()
-    { spa_hook_remove(&mListener); }
 
     static void infoCallback(void *object, const pw_node_info *info) noexcept;
     void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) const noexcept;
@@ -527,7 +593,7 @@ struct NodeProxy {
 struct MetadataProxy {
     uint32_t mId{};
     PwMetadataPtr mMetadata;
-    spa_hook mListener{};
+    SpaHook mListener;
 
     MetadataProxy(uint32_t id, PwMetadataPtr&& mdata) : mId{id}, mMetadata{std::move(mdata)}
     {
@@ -540,8 +606,6 @@ struct MetadataProxy {
         });
         ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
     }
-    ~MetadataProxy()
-    { spa_hook_remove(&mListener); }
 
     static auto propertyCallback(void *object, uint32_t id, const char *key, const char *type,
         const char *value) noexcept -> int;
@@ -556,8 +620,8 @@ struct EventManager {
     PwContextPtr mContext;
     PwCorePtr mCore;
     PwRegistryPtr mRegistry;
-    spa_hook mRegistryListener{};
-    spa_hook mCoreListener{};
+    SpaHook mRegistryListener;
+    SpaHook mCoreListener;
 
     /* A list of proxy objects watching for events about changes to objects in
      * the registry.
@@ -574,6 +638,12 @@ struct EventManager {
     std::atomic<bool> mInitDone{false};
     std::atomic<bool> mHasAudio{false};
     int mInitSeq{};
+
+    static auto AddDevice(uint32_t id) -> DeviceNode&;
+    static auto FindDevice(uint32_t id) -> DeviceNode*;
+    static auto FindDevice(std::string_view devname) -> DeviceNode*;
+    static void RemoveDevice(uint32_t id);
+    static auto GetDeviceList() noexcept { return std::span{sList}; }
 
     ~EventManager() { if(mLoop) mLoop.stop(); }
 
@@ -633,59 +703,17 @@ struct EventManager {
     void removeCallback(uint32_t id) noexcept;
 
     void coreCallback(uint32_t id, int seq) noexcept;
+
+private:
+    static inline auto sList = std::vector<DeviceNode>{};
 };
 using EventWatcherUniqueLock = std::unique_lock<EventManager>;
 using EventWatcherLockGuard = std::lock_guard<EventManager>;
 
-auto gEventHandler = EventManager{};
+auto gEventHandler = EventManager{}; /* NOLINT(cert-err58-cpp) */
 
-/* Enumerated devices. This is updated asynchronously as the app runs, and the
- * gEventHandler thread loop must be locked when accessing the list.
- */
-enum class NodeType : unsigned char {
-    Sink, Source, Duplex
-};
-constexpr auto InvalidChannelConfig = gsl::narrow<DevFmtChannels>(255);
-struct DeviceNode {
-    uint32_t mId{};
 
-    uint64_t mSerial{};
-    std::string mName;
-    std::string mDevName;
-
-    NodeType mType{};
-    bool mIsHeadphones{};
-    bool mIs51Rear{};
-
-    uint mSampleRate{};
-    DevFmtChannels mChannels{InvalidChannelConfig};
-
-    static std::vector<DeviceNode> sList;
-    static DeviceNode &Add(uint32_t id);
-    static DeviceNode *Find(uint32_t id);
-    static DeviceNode *FindByDevName(std::string_view devname);
-    static void Remove(uint32_t id);
-    static auto GetList() noexcept { return std::span{sList}; }
-
-    void parseSampleRate(const spa_pod *value, bool force_update) noexcept;
-    void parsePositions(const spa_pod *value, bool force_update) noexcept;
-    void parseChannelCount(const spa_pod *value, bool force_update) noexcept;
-
-    void callEvent(alc::EventType type, std::string_view message) const
-    {
-        /* Source nodes aren't recognized for playback, only Sink and Duplex
-         * nodes are. All node types are recognized for capture.
-         */
-        if(mType != NodeType::Source)
-            alc::Event(type, alc::DeviceType::Playback, message);
-        alc::Event(type, alc::DeviceType::Capture, message);
-    }
-};
-std::vector<DeviceNode> DeviceNode::sList;
-auto DefaultSinkDevice = std::string{};
-auto DefaultSourceDevice = std::string{};
-
-auto DeviceNode::Add(uint32_t id) -> DeviceNode&
+auto EventManager::AddDevice(uint32_t id) -> DeviceNode&
 {
     /* If the node is already in the list, return the existing entry. */
     const auto match = std::ranges::lower_bound(sList, id, std::less{}, &DeviceNode::mId);
@@ -697,21 +725,21 @@ auto DeviceNode::Add(uint32_t id) -> DeviceNode&
     return n;
 }
 
-auto DeviceNode::Find(uint32_t id) -> DeviceNode*
+auto EventManager::FindDevice(uint32_t id) -> DeviceNode*
 {
     const auto match = std::ranges::find(sList, id, &DeviceNode::mId);
     if(match != sList.end()) return std::to_address(match);
     return nullptr;
 }
 
-auto DeviceNode::FindByDevName(std::string_view devname) -> DeviceNode*
+auto EventManager::FindDevice(std::string_view devname) -> DeviceNode*
 {
     const auto match = std::ranges::find(sList, devname, &DeviceNode::mDevName);
     if(match != sList.end()) return std::to_address(match);
     return nullptr;
 }
 
-void DeviceNode::Remove(uint32_t id)
+void EventManager::RemoveDevice(uint32_t id)
 {
     const auto end = std::ranges::remove_if(sList, [id](DeviceNode &n) noexcept -> bool
     {
@@ -723,18 +751,6 @@ void DeviceNode::Remove(uint32_t id)
         return true;
     });
     sList.erase(end.begin(), end.end());
-}
-
-
-auto AsString(NodeType type) noexcept -> std::string_view
-{
-    switch(type)
-    {
-    case NodeType::Sink: return "sink"sv;
-    case NodeType::Source: return "source"sv;
-    case NodeType::Duplex: return "duplex"sv;
-    }
-    return "<unknown>"sv;
 }
 
 
@@ -967,7 +983,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         else
         {
             TRACE("Dropping device node {} which became type \"{}\"", info->id, media_class);
-            DeviceNode::Remove(info->id);
+            EventManager::RemoveDevice(info->id);
             return;
         }
 
@@ -1003,7 +1019,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
         TRACE("  \"{}\" = ID {}", name, serial_id);
 
-        auto &node = DeviceNode::Add(info->id);
+        auto &node = EventManager::AddDevice(info->id);
         node.mSerial = serial_id;
         /* This method is called both to notify about a new sink/source node,
          * and update properties for the node. It's unclear what properties can
@@ -1048,7 +1064,7 @@ void NodeProxy::paramCallback(int, uint32_t id, uint32_t, uint32_t, const spa_po
 {
     if(id == SPA_PARAM_EnumFormat || id == SPA_PARAM_Format)
     {
-        auto *node = DeviceNode::Find(mId);
+        auto *node = EventManager::FindDevice(mId);
         if(!node) [[unlikely]] return;
 
         TRACE("Device ID {} {} format{}:", node->mSerial,
@@ -1130,7 +1146,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
             {
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    auto entry = DeviceNode::FindByDevName(*propValue);
+                    auto *entry = EventManager::FindDevice(*propValue);
                     const auto message = fmt::format("Default playback device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
@@ -1142,7 +1158,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
             {
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    auto entry = DeviceNode::FindByDevName(*propValue);
+                    auto *entry = EventManager::FindDevice(*propValue);
                     const auto message = fmt::format("Default capture device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
@@ -1185,13 +1201,6 @@ auto EventManager::init() -> bool
         return false;
     }
 
-    mRegistry = PwRegistryPtr{pw_core_get_registry(mCore.get(), PW_VERSION_REGISTRY, 0)};
-    if(!mRegistry)
-    {
-        ERR("Failed to get PipeWire event registry (errno: {})", errno);
-        return false;
-    }
-
     static constexpr auto coreEvents = std::invoke([]() -> pw_core_events
     {
         auto ret = pw_core_events{};
@@ -1200,6 +1209,15 @@ auto EventManager::init() -> bool
         { static_cast<EventManager*>(object)->coreCallback(id, seq); };
         return ret;
     });
+    ppw_core_add_listener(mCore.get(), &mCoreListener, &coreEvents, this);
+
+    mRegistry = PwRegistryPtr{pw_core_get_registry(mCore.get(), PW_VERSION_REGISTRY, 0)};
+    if(!mRegistry)
+    {
+        ERR("Failed to get PipeWire event registry (errno: {})", errno);
+        return false;
+    }
+
     static constexpr auto registryEvents = std::invoke([]() -> pw_registry_events
     {
         auto ret = pw_registry_events{};
@@ -1211,8 +1229,6 @@ auto EventManager::init() -> bool
         { static_cast<EventManager*>(object)->removeCallback(id); };
         return ret;
     });
-
-    ppw_core_add_listener(mCore.get(), &mCoreListener, &coreEvents, this);
     ppw_registry_add_listener(mRegistry.get(), &mRegistryListener, &registryEvents, this);
 
     /* Set an initial sequence ID for initialization, to trigger after the
@@ -1231,13 +1247,19 @@ auto EventManager::init() -> bool
 
 void EventManager::kill()
 {
-    if(mLoop) mLoop.stop();
+    if(!mLoop)
+        return;
+    mLoop.stop();
 
     mDefaultMetadata.reset();
     mNodeList.clear();
 
+    mRegistryListener.remove();
     mRegistry = nullptr;
+
+    mCoreListener.remove();
     mCore = nullptr;
+
     mContext = nullptr;
     mLoop = nullptr;
 }
@@ -1317,7 +1339,7 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
 
 void EventManager::removeCallback(uint32_t id) noexcept
 {
-    DeviceNode::Remove(id);
+    RemoveDevice(id);
 
     auto node_end = std::ranges::remove_if(mNodeList, [id](NodeProxy &node) noexcept
     { return node.mId == id; }, &std::unique_ptr<NodeProxy>::operator*);
@@ -1334,7 +1356,7 @@ void EventManager::coreCallback(uint32_t id, int seq) noexcept
         /* Initialization done. Remove this callback and signal anyone that may
          * be waiting.
          */
-        spa_hook_remove(&mCoreListener);
+        mCoreListener.remove();
 
         mInitDone.store(true);
         mLoop.signal(false);
@@ -1410,7 +1432,7 @@ class PipeWirePlayback final : public BackendBase {
     PwContextPtr mContext;
     PwCorePtr mCore;
     PwStreamPtr mStream;
-    spa_hook mStreamListener{};
+    SpaHook mStreamListener;
     spa_io_rate_match *mRateMatch{};
     std::vector<void*> mChannelPtrs;
 
@@ -1495,7 +1517,7 @@ void PipeWirePlayback::open(std::string_view name)
     if(name.empty())
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
 
         auto match = devlist.end();
         if(!DefaultSinkDevice.empty())
@@ -1515,7 +1537,7 @@ void PipeWirePlayback::open(std::string_view name)
     else
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
 
         auto match = std::ranges::find_if(devlist, [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Source && (n.mName == name || n.mDevName == name); });
@@ -1571,9 +1593,9 @@ auto PipeWirePlayback::reset() -> bool
     if(mStream)
     {
         auto looplock = MainloopLockGuard{mLoop};
+        mStreamListener.remove();
         mStream = nullptr;
     }
-    mStreamListener = {};
     mRateMatch = nullptr;
     mTimeBase = mDevice->getClockTime();
 
@@ -1585,7 +1607,7 @@ auto PipeWirePlayback::reset() -> bool
     if(mTargetId != PwIdAny)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
 
         const auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
         if(match != devlist.end())
@@ -1908,7 +1930,7 @@ class PipeWireCapture final : public BackendBase {
     PwContextPtr mContext;
     PwCorePtr mCore;
     PwStreamPtr mStream;
-    spa_hook mStreamListener{};
+    SpaHook mStreamListener;
 
     RingBufferPtr<std::byte> mRing;
 
@@ -1947,7 +1969,7 @@ void PipeWireCapture::open(std::string_view name)
     if(name.empty())
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
 
         auto match = devlist.end();
         if(!DefaultSourceDevice.empty())
@@ -1972,7 +1994,7 @@ void PipeWireCapture::open(std::string_view name)
     else
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
         const auto prefix = GetMonitorPrefix();
         const auto suffix = GetMonitorSuffix();
 
@@ -2042,7 +2064,7 @@ void PipeWireCapture::open(std::string_view name)
     if(mTargetId != PwIdAny)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
-        auto&& devlist = DeviceNode::GetList();
+        auto&& devlist = EventManager::GetDeviceList();
 
         auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
         if(match != devlist.end())
@@ -2207,7 +2229,7 @@ auto PipeWireBackendFactory::enumerate(BackendType type) -> std::vector<std::str
 
     gEventHandler.waitForInit();
     const auto evtlock = EventWatcherLockGuard{gEventHandler};
-    auto&& devlist = DeviceNode::GetList();
+    auto&& devlist = EventManager::GetDeviceList();
 
     auto defmatch = devlist.begin();
     switch(type)

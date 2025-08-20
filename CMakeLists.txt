@@ -71,7 +71,6 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 find_package(PkgConfig)
-find_package(SDL3 QUIET)
 
 option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
 
@@ -82,6 +81,7 @@ option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 option(ALSOFT_EXAMPLES  "Build example programs"  ON)
 option(ALSOFT_EXAMPLES_FFMPEG "Use ffmpeg for examples if found" ON)
+option(ALSOFT_EXAMPLES_SDL3 "Use SDL3 for examples if found" ON)
 option(ALSOFT_SNDFILE "Use libsndfile for examples and utilities if found" ON)
 option(ALSOFT_TESTS "Build test programs"  OFF)
 
@@ -1263,6 +1263,12 @@ if(ALSOFT_REQUIRE_PORTAUDIO AND NOT HAVE_PORTAUDIO)
     message(FATAL_ERROR "Failed to enable required PortAudio backend")
 endif()
 
+if (ALSOFT_BACKEND_SDL3 OR ALSOFT_EXAMPLES_SDL3)
+    find_package(SDL3 QUIET)
+else()
+    set(SDL3_FOUND FALSE)
+endif()
+
 # Check for SDL2 or SDL3 backend
 # Off by default, since it adds a runtime dependency. Additionally, both SDL2
 # and SDL3 can't be enabled simultaneously.
@@ -1946,7 +1952,7 @@ if(ALSOFT_EXAMPLES)
     endif()
 
     # Can't safely use SDL3 and SDL2 together
-    if(SDL3_FOUND AND NOT HAVE_SDL2)
+    if(ALSOFT_EXAMPLES_SDL3 AND SDL3_FOUND AND NOT HAVE_SDL2)
         message(STATUS "Building SDL3 example programs")
 
         add_executable(alloopback examples/alloopback.c)

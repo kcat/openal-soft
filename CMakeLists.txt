@@ -81,6 +81,7 @@ option(ALSOFT_UTILS "Build utility programs"  ON)
 option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 option(ALSOFT_EXAMPLES  "Build example programs"  ON)
+option(ALSOFT_SNDFILE "Use libsndfile for examples and utilities if found" ON)
 option(ALSOFT_TESTS "Build test programs"  OFF)
 
 option(ALSOFT_INSTALL "Install main library" ON)
@@ -1384,7 +1385,11 @@ if(ALSOFT_UTILS)
     endif()
 endif()
 if(ALSOFT_UTILS OR ALSOFT_EXAMPLES)
-    find_package(SndFile)
+    if(ALSOFT_SNDFILE)
+        find_package(SndFile)
+    else()
+        set(SNDFILE_FOUND FALSE)
+    endif()
 endif()
 if(ALSOFT_EXAMPLES AND SDL3_FOUND)
     find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
@@ -1750,7 +1755,7 @@ if(ALSOFT_UTILS)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
 
-    if(SNDFILE_FOUND)
+    if(ALSOFT_SNDFILE AND SNDFILE_FOUND)
         add_executable(uhjdecoder utils/uhjdecoder.cpp)
         target_compile_definitions(uhjdecoder PRIVATE ${CPP_DEFS})
         target_include_directories(uhjdecoder
@@ -1874,7 +1879,7 @@ if(ALSOFT_EXAMPLES)
 
     message(STATUS "Building example programs")
 
-    if(SNDFILE_FOUND)
+    if(ALSOFT_SNDFILE AND SNDFILE_FOUND)
         add_executable(alplay examples/alplay.c)
         target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
             ${UNICODE_FLAG})

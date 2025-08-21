@@ -137,7 +137,7 @@ if(WIN32 AND MINGW AND CMAKE_SIZEOF_VOID_P MATCHES "4")
     # guarantees 8-byte alignment, leading to structs that need 16-byte
     # alignment being misaligned. This switch overrides that to assume only
     # 8-byte alignment from the default operator new.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new=8")
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-faligned-new=8>")
 endif()
 
 # Setting ALSOFT_STL_HARDENING=None disables/minimizes STL hardening, doing

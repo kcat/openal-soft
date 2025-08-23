@@ -146,31 +146,30 @@ auto RenderSamples = ALCenum{};
 auto RenderSampleRate = ALCsizei{};
 auto RenderAmbiOrder = ALCint{};
 
-using ubyte = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
 
-void fwrite16be(ushort val, std::ostream &f)
+void fwrite16be(const ushort value, std::ostream &f)
 {
-    const auto data = std::array{static_cast<char>((val>>8)&0xff), static_cast<char>(val&0xff)};
+    auto data = std::bit_cast<std::array<char,2>>(value);
+    if constexpr(std::endian::native != std::endian::big)
+        std::ranges::reverse(data);
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32be(uint val, std::ostream &f)
+void fwrite32be(const uint value, std::ostream &f)
 {
-    const auto data = std::array{static_cast<char>((val>>24)&0xff),
-        static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
-        static_cast<char>(val&0xff)};
+    auto data = std::bit_cast<std::array<char,4>>(value);
+    if constexpr(std::endian::native != std::endian::big)
+        std::ranges::reverse(data);
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite64be(uint64_t val, std::ostream &f)
+void fwrite64be(const uint64_t value, std::ostream &f)
 {
-    const auto data = std::array{static_cast<char>((val>>56)&0xff),
-        static_cast<char>((val>>48)&0xff), static_cast<char>((val>>40)&0xff),
-        static_cast<char>((val>>32)&0xff), static_cast<char>((val>>24)&0xff),
-        static_cast<char>((val>>16)&0xff), static_cast<char>((val>>8)&0xff),
-        static_cast<char>(val&0xff)};
+    auto data = std::bit_cast<std::array<char,8>>(value);
+    if constexpr(std::endian::native != std::endian::big)
+        std::ranges::reverse(data);
     f.write(data.data(), std::ssize(data));
 }
 

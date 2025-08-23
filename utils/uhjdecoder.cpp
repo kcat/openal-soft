@@ -67,25 +67,23 @@ using ubyte = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
 
-using byte4 = std::array<std::byte,4>;
-
 
 constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<ubyte>({
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 }));
 
-void fwrite16le(ushort val, std::ostream &f)
+void fwrite16le(const ushort value, std::ostream &f)
 {
-    auto data = std::bit_cast<std::array<char,2>>(val);
+    auto data = std::bit_cast<std::array<char,2>>(value);
     if constexpr(std::endian::native == std::endian::big)
         std::ranges::reverse(data);
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32le(uint val, std::ostream &f)
+void fwrite32le(const uint value, std::ostream &f)
 {
-    auto data = std::bit_cast<std::array<char,4>>(val);
+    auto data = std::bit_cast<std::array<char,4>>(value);
     if constexpr(std::endian::native == std::endian::big)
         std::ranges::reverse(data);
     f.write(data.data(), std::ssize(data));

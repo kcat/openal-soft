@@ -83,10 +83,7 @@ LPALGETSOURCEFDIRECT alGetSourcefDirect{};
 LPALSOURCEPLAYDIRECT alSourcePlayDirect{};
 
 
-struct SndFileDeleter {
-    void operator()(SNDFILE *sndfile) { sf_close(sndfile); }
-};
-using SndFilePtr = std::unique_ptr<SNDFILE,SndFileDeleter>;
+using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
  * returns the new buffer ID.

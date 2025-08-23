@@ -84,7 +84,7 @@ constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept
 { return allocator<T,N>::Alignment != allocator<U,M>::Alignment; }
 
 
-template<typename SP, typename PT, typename ...Args>
+template<typename SP, typename PT, typename...>
 class out_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 
@@ -120,7 +120,7 @@ auto out_ptr(SP &res, Args&& ...args)
 }
 
 
-template<typename SP, typename PT, typename ...Args>
+template<typename SP, typename PT, typename...>
 class inout_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 

@@ -48,7 +48,7 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
             device = nullptr;
         }
 
-        auto printName() -> void
+        auto printName() const -> void
         {
             auto *name = gsl::czstring{};
             if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))

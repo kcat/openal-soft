@@ -459,7 +459,7 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
 
-        const auto DataStart = outfile.tellp();
+        const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
         auto inmem = std::vector<float>(size_t{BufferLineSize}
@@ -517,12 +517,12 @@ auto main(std::span<std::string_view> args) -> int
             }
         }
 
-        if(const auto DataEnd = outfile.tellp(); DataEnd > DataStart)
+        if(const auto DataEnd = std::streamoff{outfile.tellp()}; DataEnd > DataStart)
         {
             const auto dataLen = DataEnd - DataStart;
             if(outfile.seekp(4))
-                fwrite32le(gsl::narrow<uint>(DataEnd)-8, outfile); // 'WAVE' header len
-            if(outfile.seekp(gsl::narrow<int>(DataStart)-4))
+                fwrite32le(gsl::narrow<uint>(DataEnd-8), outfile); // 'WAVE' header len
+            if(outfile.seekp(DataStart-4))
                 fwrite32le(gsl::narrow<uint>(dataLen), outfile); // 'data' header len
         }
         outfile.flush();

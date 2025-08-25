@@ -807,7 +807,7 @@ try {
     });
 
     auto renderFile = std::ofstream{};
-    auto renderStart = int64_t{};
+    auto renderStart = std::streamoff{};
     auto leadIn = 0_z;
     auto leadOut = 0_z;
     auto renderbuf = std::vector<char>{};
@@ -1183,13 +1183,13 @@ try {
 
     if(renderStart > 0)
     {
-        auto renderEnd = int64_t{renderFile.tellp()};
+        const auto renderEnd = std::streamoff{renderFile.tellp()};
         if(renderEnd > renderStart)
         {
             const auto dataLen = renderEnd - renderStart;
-            if(renderFile.seekp(renderStart-8, std::ios_base::beg))
+            if(renderFile.seekp(renderStart-8))
             {
-                fwrite64be(gsl::narrow_cast<uint64_t>(dataLen), renderFile);
+                fwrite64be(gsl::narrow<uint64_t>(dataLen), renderFile);
                 renderFile.seekp(0, std::ios_base::end);
             }
         }

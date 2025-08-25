@@ -140,7 +140,7 @@ struct WaveBackend final : public BackendBase {
     void stop() override;
 
     std::ofstream mFile;
-    std::ofstream::pos_type mDataStart{-1};
+    std::streamoff mDataStart{-1};
 
     std::vector<char> mBuffer;
     bool mCAFOutput{};
@@ -473,20 +473,20 @@ void WaveBackend::stop()
 
     if(mDataStart > 0)
     {
-        const auto size = mFile.tellp();
+        const auto size = std::streamoff{mFile.tellp()};
         if(size > mDataStart)
         {
             const auto dataLen = size - mDataStart;
             if(!mCAFOutput)
             {
                 if(mFile.seekp(4)) // 'WAVE' header len
-                    fwrite32le(gsl::narrow_cast<uint>(size)-8u, mFile);
-                if(mFile.seekp(mDataStart-std::ofstream::off_type{4})) // 'data' header len
+                    fwrite32le(gsl::narrow_cast<uint>(size-8), mFile);
+                if(mFile.seekp(mDataStart-4)) // 'data' header len
                     fwrite32le(gsl::narrow_cast<uint>(dataLen), mFile);
             }
             else
             {
-                if(mFile.seekp(mDataStart-std::ofstream::off_type{8})) // 'data' header len
+                if(mFile.seekp(mDataStart-8)) // 'data' header len
                     fwrite64be(gsl::narrow_cast<uint64_t>(dataLen), mFile);
             }
             mFile.seekp(0, std::ios_base::end);

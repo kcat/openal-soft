@@ -1,0 +1,935 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <types>
+        <type category="define">#define <name>OPENAL</name></type>
+        <type category="define">#define <name>ALAPI</name>                                    AL_API</type>
+        <type category="define">#define <name>ALAPIENTRY</name>                               AL_APIENTRY</type>
+        <type category="define">#define <name>AL_INVALID</name>                               (-1)</type>
+        <type category="define">#define <name>AL_ILLEGAL_ENUM</name>                          AL_INVALID_ENUM</type>
+        <type category="define">#define <name>AL_ILLEGAL_COMMAND</name>                       AL_INVALID_OPERATION</type>
+
+        <type category="basetype" comment="8-bit boolean">typedef char <name>ALboolean</name>;</type>
+        <!-- NOTE: ALchar doesn't exist in AL_VERSION_1_0, but there's no good way to vary the signatures between the features. -->
+        <type category="basetype" comment="character">typedef char <name>ALchar</name>;</type>
+        <type category="basetype" comment="signed 8-bit integer">typedef signed char <name>ALbyte</name>;</type>
+        <type category="basetype" comment="unsigned 8-bit integer">typedef unsigned char <name>ALubyte</name>;</type>
+        <type category="basetype" comment="signed 16-bit integer">typedef short <name>ALshort</name>;</type>
+        <type category="basetype" comment="unsigned 16-bit integer">typedef unsigned short <name>ALushort</name>;</type>
+        <type category="basetype" comment="signed 32-bit integer">typedef int <name>ALint</name>;</type>
+        <type category="basetype" comment="unsigned 32-bit integer">typedef unsigned int <name>ALuint</name>;</type>
+        <type category="basetype" comment="non-negative 32-bit integer size">typedef int <name>ALsizei</name>;</type>
+        <type category="basetype" comment="32-bit enumeration value">typedef int <name>ALenum</name>;</type>
+        <type category="basetype" comment="32-bit IEEE-754 floating-point">typedef float <name>ALfloat</name>;</type>
+        <type category="basetype" comment="64-bit IEEE-754 floating-point">typedef double <name>ALdouble</name>;</type>
+        <type category="basetype" comment="void type (opaque pointers only)">typedef void <name>ALvoid</name>;</type>
+    </types>
+
+    <enums namespace="AL" group="SpecialNumbers">
+        <enum value="0" name="AL_NONE" group="DistanceModel" comment="No distance model or no buffer"/>
+        <enum value="0" name="AL_FALSE" group="Boolean" comment="Boolean False."/>
+        <enum value="1" name="AL_TRUE" group="Boolean" comment="Boolean True."/>
+    </enums>
+
+    <!-- TODO version guards-->
+    <!-- TODO Enumeration values begin at column 50. Do not use tabs. -->
+
+    <enums namespace="AL">
+        <enum value="0x202" name="AL_SOURCE_RELATIVE" group="SourcePName,SourceBoolean" comment="Relative source.">
+            <property on="source" type="ALboolean" group="Boolean" default="AL_FALSE"/>
+            <comment>Specifies if the source uses relative coordinates.</comment>
+        </enum>
+        <enum value="0x1001" name="AL_CONE_INNER_ANGLE" group="SourcePName,SourceInteger,SourceFloat" comment="Inner cone angle, in degrees.">
+            <property on="source" type="ALint,ALfloat" range="0..=360" default="360"/>
+            <comment>
+                The angle covered by the inner cone, the area within which the source will
+                not be attenuated by direction.
+            </comment>
+        </enum>
+        <enum value="0x1002" name="AL_CONE_OUTER_ANGLE" group="SourcePName,SourceInteger,SourceFloat" comment="Inner cone angle, in degrees.">
+            <property on="source" type="ALint,ALfloat" range="0..=360" default="360"/>
+            <comment>
+                The angle covered by the outer cone, the area outside of which the source
+                will be fully attenuated by direction.
+            </comment>
+        </enum>
+        <enum value="0x1003" name="AL_PITCH" group="SourcePName,SourceFloat" comment="Source pitch.">
+            <property on="source" type="ALfloat" range="0.5..=2.0" default="1.0"/>
+            <comment>A multiplier for the sample rate of the source's buffer.</comment>
+        </enum>
+        <enum value="0x1004" name="AL_POSITION" group="SourcePName,ListenerPName,SourceArray,ListenerArray" comment="Source or listener position.">
+            <property on="source,listener" type="ALfloat[3],ALint[3]" default="0,0,0"/>
+            <comment>
+                The source or listener location in three dimensional space.
+
+                OpenAL uses a right handed coordinate system, like OpenGL, where with a
+                default view, X points right (thumb), Y points up (index finger), and Z
+                points towards the viewer/camera (middle finger).
+
+                To change from or to a left handed coordinate system, negate the Z
+                component.
+            </comment>
+        </enum>
+        <enum value="0x1005" name="AL_DIRECTION" group="SourcePName,ListenerPName,SourceArray,ListenerArray" comment="Source direction.">
+            <property on="source,listener" type="ALfloat[3],ALint[3]" default="0,0,0"/>
+            <comment>
+                Specifies the current direction in local space. A zero-length vector
+                specifies an omni-directional source (cone is ignored).
+
+                To change from or to a left handed coordinate system, negate the Z
+                component.
+            </comment>
+        </enum>
+        <enum value="0x1006" name="AL_VELOCITY" group="SourcePName,ListenerPName,SourceArray,ListenerArray" comment="Source or listener velocity.">
+            <property on="source,listener" type="ALfloat[3],ALint[3]" default="0,0,0"/>
+            <comment>
+                Specifies the current velocity, relative to the position.
+
+                To change from or to a left handed coordinate system, negate the Z
+                component.
+            </comment>
+        </enum>
+        <enum value="0x1007" name="AL_LOOPING" group="SourcePName,SourceBoolean" comment="Source looping.">
+            <property on="source" type="ALboolean" group="Boolean" default="AL_FALSE"/>
+            <comment>Specifies whether source playback loops.</comment>
+        </enum>
+        <enum value="0x1009" name="AL_BUFFER" group="SourcePName,SourceInteger" comment="Source buffer.">
+            <property on="source" type="ALuint" class="buffer" default="AL_NONE"/>
+            <comment>Specifies the buffer to provide sound samples for a source.</comment>
+        </enum>
+        <enum value="0x100A" name="AL_GAIN" group="SourcePName,SourceFloat" comment="Source or listener gain.">
+            <property on="source,listener" type="ALfloat" range="0.0.."/>
+            <comment>
+                For sources, an initial linear gain value (before attenuation is applied).
+                For the listener, an output linear gain adjustment.
+
+                A value of 1.0 means unattenuated. Each division by 2 equals an attenuation
+                of about -6dB. Each multiplication by 2 equals an amplification of about
+                +6dB.
+            </comment>
+        </enum>
+        <enum value="0x100D" name="AL_MIN_GAIN" group="SourcePName,SourceFloat" comment="Minimum source gain.">
+            <property on="source" type="ALfloat" range="0.0..=1.0"/>
+            <comment>
+                The minimum gain allowed for a source, after distance and cone attenuation
+                are applied (if applicable).
+            </comment>
+        </enum>
+        <enum value="0x100E" name="AL_MAX_GAIN" group="SourcePName,SourceFloat" comment="Maximum source gain.">
+            <property on="source" type="ALfloat" range="0.0..=1.0"/>
+            <comment>
+                The maximum gain allowed for a source, after distance and cone attenuation
+                are applied (if applicable).
+            </comment>
+        </enum>
+        <enum value="0x100F" name="AL_ORIENTATION" group="ListenerPName,ListenerArray" comment="Listener orientation.">
+            <property on="listener" type="ALfloat[6]" default="0.0,0.0,-1.0,0.0,1.0,0.0"/>
+            <comment>
+                Effectively two three dimensional vectors. The first vector is the front (or
+                "at") and the second is the top (or "up"). Both vectors are relative to the
+                listener position.
+
+                To change from or to a left handed coordinate system, negate the Z
+                component of both vectors.
+            </comment>
+        </enum>
+        <enum value="0x1010" name="AL_SOURCE_STATE" group="SourcePName,SourceInteger" comment="Source state (query only).">
+            <property on="source" type="ALenum" group="SourceState"/>
+        </enum>
+        <enum value="0x1011" name="AL_INITIAL" group="SourceState"/>
+        <enum value="0x1012" name="AL_PLAYING" group="SourceState"/>
+        <enum value="0x1013" name="AL_PAUSED" group="SourceState"/>
+        <enum value="0x1014" name="AL_STOPPED" group="SourceState"/>
+        <enum value="0x1015" name="AL_BUFFERS_QUEUED" group="SourcePName,SourceInteger" comment="Source Buffer Queue size (query only).">
+            <property on="source" type="ALint"/>
+            <comment>
+                The number of buffers queued using alSourceQueueBuffers, minus the buffers
+                removed with alSourceUnqueueBuffers.
+            </comment>
+        </enum>
+        <enum value="0x1016" name="AL_BUFFERS_PROCESSED" group="SourcePName,SourceInteger" comment="Source Buffer Queue processed count (query only).">
+            <property on="source" type="ALint"/>
+            <comment>
+                The number of queued buffers that have been fully processed, and can be
+                removed with alSourceUnqueueBuffers.
+
+                Looping sources will never fully process buffers because they will be set to
+                play again for when the source loops.
+            </comment>
+        </enum>
+        <enum value="0x1020" name="AL_REFERENCE_DISTANCE" group="SourcePName,SourceFloat" comment="Source reference distance.">
+            <property on="source" type="ALfloat" range="0.0.." default="1.0"/>
+            <comment>
+                The distance in units that no distance attenuation occurs.
+
+                At 0.0, no distance attenuation occurs with non-linear attenuation models.
+            </comment>
+        </enum>
+        <enum value="0x1021" name="AL_ROLLOFF_FACTOR" group="SourcePName,SourceFloat" comment="Source rolloff factor.">
+            <property on="source" type="ALfloat" range="0.0.." default="1.0"/>
+            <comment>
+                Multiplier to exaggerate or diminish distance attenuation.
+
+                At 0.0, no distance attenuation ever occurs.
+            </comment>
+        </enum>
+        <enum value="0x1022" name="AL_CONE_OUTER_GAIN" group="ListenerPName,ListenerFloat" comment="Outer cone gain.">
+            <property on="listener" type="ALfloat" range="0.0..=1.0" default="0.0"/>
+            <comment>
+                The gain attenuation applied when the listener is outside of the source's
+                outer cone angle.
+            </comment>
+        </enum>
+        <enum value="0x1023" name="AL_MAX_DISTANCE" group="SourcePName,SourceFloat" comment="Source maximum distance.">
+            <property on="source" type="ALfloat" range="0.0.." default="FLT_MAX"/>
+            <comment>
+                The distance above which the source is not attenuated any further with a
+                clamped distance model, or where attenuation reaches 0.0 gain for linear
+                distance models with a default rolloff factor.
+            </comment>
+        </enum>
+        <enum value="0x1024" name="AL_SEC_OFFSET" group="SourcePName,SourceInteger" comment="Source buffer offset, in seconds.">
+            <property on="source"/>
+        </enum>
+        <enum value="0x1025" name="AL_SAMPLE_OFFSET" group="SourcePName,SourceInteger" comment="Source buffer offset, in sample frames.">
+            <property on="source"/>
+        </enum>
+        <enum value="0x1026" name="AL_BYTE_OFFSET" group="SourcePName,SourceInteger" comment="Source buffer offset, in bytes.">
+            <property on="source"/>
+        </enum>
+        <enum value="0x1027" name="AL_SOURCE_TYPE" group="SourcePName,SourceInteger" comment="Source type (query only).">
+            <property on="source" type="ALenum" group="SourceType"/>
+            <comment>
+                A Source is Static if a Buffer has been attached using AL_BUFFER.
+                
+                A Source is Streaming if one or more Buffers have been attached using
+                alSourceQueueBuffers.
+                
+                A Source is Undetermined when it has the NULL buffer attached using
+                AL_BUFFER.
+            </comment>
+        </enum>
+        <enum value="0x1028" name="AL_STATIC" group="SourceType"/>
+        <enum value="0x1029" name="AL_STREAMING" group="SourceType"/>
+        <enum value="0x1030" name="AL_UNDETERMINED" group="SourceType"/>
+
+        <enum value="0x1100" name="AL_FORMAT_MONO8" group="Format" comment="Unsigned 8-bit mono buffer format."/>
+        <enum value="0x1101" name="AL_FORMAT_MONO16" group="Format" comment="Signed 16-bit mono buffer format."/>
+        <enum value="0x1102" name="AL_FORMAT_STEREO8" group="Format" comment="Unsigned 8-bit stereo buffer format."/>
+        <enum value="0x1103" name="AL_FORMAT_STEREO16" group="Format" comment="Signed 16-bit stereo buffer format."/>
+
+        <enum value="0x2001" name="AL_FREQUENCY" group="BufferPName,BufferInteger" comment="Buffer frequency/sample rate (query only).">
+            <property on="buffer"/>
+        </enum>
+        <enum value="0x2002" name="AL_BITS" group="BufferPName,BufferInteger" comment="Buffer bits per sample (query only).">
+            <property on="buffer"/>
+        </enum>
+        <enum value="0x2003" name="AL_CHANNELS" group="BufferPName,BufferInteger" comment="Buffer channel count (query only).">
+            <property on="buffer"/>
+        </enum>
+        <enum value="0x2004" name="AL_SIZE" group="BufferPName,BufferInteger" comment="Buffer data size in bytes (query only).">
+            <property on="buffer"/>
+        </enum>
+
+        <enum value="0x2010" name="AL_UNUSED" group="BufferState"/>
+        <enum value="0x2011" name="AL_PENDING" group="BufferState"/>
+        <enum value="0x2012" name="AL_PROCESSED" group="BufferState"/>
+
+        <enum value="0" name="AL_NO_ERROR" group="ErrorCode" comment="No error."/>
+        <enum value="0xA001" name="AL_INVALID_NAME" group="ErrorCode" comment="Invalid name (ID) passed to an AL call."/>
+        <enum value="0xA002" name="AL_INVALID_ENUM" group="ErrorCode" comment="Invalid enumeration passed to AL call."/>
+        <enum value="0xA003" name="AL_INVALID_VALUE" group="ErrorCode" comment="Invalid value passed to AL call."/>
+        <enum value="0xA004" name="AL_INVALID_OPERATION" group="ErrorCode" comment="Illegal AL call."/>
+        <enum value="0xA005" name="AL_OUT_OF_MEMORY" group="ErrorCode" comment="Not enough memory to execute the AL call."/>
+
+        <enum value="0xB001" name="AL_VENDOR" group="GetPName,ContextString" comment="Context string: Vendor name.">
+            <property on="context"/>
+        </enum>
+        <enum value="0xB002" name="AL_VERSION" group="GetPName,ContextString" comment="Context string: Version.">
+            <property on="context"/>
+        </enum>
+        <enum value="0xB003" name="AL_RENDERER" group="GetPName,ContextString" comment="Context string: Renderer name.">
+            <property on="context"/>
+        </enum>
+        <enum value="0xB004" name="AL_EXTENSIONS" group="GetPName,ContextString" comment="Context string: Space-separated extension list.">
+            <property on="context"/>
+        </enum>
+
+        <enum value="0xC000" name="AL_DOPPLER_FACTOR" group="GetPName,ContextFloat" comment="Doppler scale.">
+            <property on="context" type="ALfloat" range="0.0.." default="1.0"/>
+            <comment>Scale for source and listener velocities.</comment>
+        </enum>
+        <enum value="0xC001" name="AL_DOPPLER_VELOCITY" group="GetPName,ContextFloat" comment="Doppler velocity (deprecated).">
+            <property on="context" type="ALfloat"/>
+            <comment>A multiplier applied to the Speed of Sound.</comment>
+        </enum>
+        <enum value="0xC003" name="AL_SPEED_OF_SOUND" group="GetPName,ContextFloat" comment="Speed of Sound, in units per second.">
+            <property on="context" type="ALfloat" range="0.0001.." default="343.3"/>
+            <comment>
+                The speed at which sound waves are assumed to travel, when calculating the
+                doppler effect from source and listener velocities.
+            </comment>
+        </enum>
+        <enum value="0xD000" name="AL_DISTANCE_MODEL" group="GetPName,ContextFloat" comment="Distance attenuation model.">
+            <property on="context" type="ALenum" group="DistanceModel" default="AL_INVERSE_DISTANCE_CLAMPED"/>
+            <comment>
+                The model by which sources attenuate with distance.
+    
+                None     - No distance attenuation.
+                Inverse  - Doubling the distance halves the source gain.
+                Linear   - Linear gain scaling between the reference and max distances.
+                Exponent - Exponential gain dropoff.
+                
+                Clamped variations work like the non-clamped counterparts, except the
+                distance calculated is clamped between the reference and max distances.
+            </comment>
+        </enum>
+
+        <enum value="0xD001" name="AL_INVERSE_DISTANCE" group="DistanceModel"/>
+        <enum value="0xD002" name="AL_INVERSE_DISTANCE_CLAMPED" group="DistanceModel"/>
+        <enum value="0xD003" name="AL_LINEAR_DISTANCE" group="DistanceModel"/>
+        <enum value="0xD004" name="AL_LINEAR_DISTANCE_CLAMPED" group="DistanceModel"/>
+        <enum value="0xD005" name="AL_EXPONENT_DISTANCE" group="DistanceModel"/>
+        <enum value="0xD006" name="AL_EXPONENT_DISTANCE_CLAMPED" group="DistanceModel"/>
+    </enums>
+
+    <commands namespace="AL">
+        <command except="no">
+            <proto>void <name>alEnable</name></proto>
+            <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alDisable</name></proto>
+            <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
+        </command>
+        <command except="no">
+            <proto>ALboolean <name>alIsEnabled</name></proto>
+            <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alDopplerFactor</name></proto>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alDopplerVelocity</name></proto>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSpeedOfSound</name></proto>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alDistanceModel</name></proto>
+            <param group="DistanceModel"><ptype>ALenum</ptype> <name>distanceModel</name></param>
+        </command>
+        <command except="no">
+            <proto>const <ptype>ALchar</ptype>* <name>alGetString</name></proto>
+            <param group="ContextString"><ptype>ALenum</ptype> <name>param</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBooleanv</name></proto>
+            <param group="ContextArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALboolean</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetIntegerv</name></proto>
+            <param group="ContextArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetFloatv</name></proto>
+            <param group="ContextArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetDoublev</name></proto>
+            <param group="ContextArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALdouble</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto><ptype>ALboolean</ptype> <name>alGetBoolean</name></proto>
+            <param group="ContextBoolean"><ptype>ALenum</ptype> <name>param</name></param>
+        </command>
+        <command except="no">
+            <proto><ptype>ALint</ptype> <name>alGetInteger</name></proto>
+            <param group="ContextInteger"><ptype>ALenum</ptype> <name>param</name></param>
+        </command>
+        <command except="no">
+            <proto><ptype>ALfloat</ptype> <name>alGetFloat</name></proto>
+            <param group="ContextFloat"><ptype>ALenum</ptype> <name>param</name></param>
+        </command>
+        <command except="no">
+            <proto><ptype>ALdouble</ptype> <name>alGetDouble</name></proto>
+            <param group="ContextDouble"><ptype>ALenum</ptype> <name>param</name></param>
+        </command>
+        <command except="no">
+            <comment>
+                Obtain the first error generated in the AL context since the last call to
+                this function.
+            </comment>
+            <proto group="ErrorCode"><ptype>ALenum</ptype> <name>alGetError</name></proto>
+        </command>
+        <command except="no" comment="Query for the presence of an extension on the AL context.">
+            <proto><ptype>ALboolean</ptype> <name>alIsExtensionPresent</name></proto>
+            <param>const <ptype>ALchar</ptype> *<name>extname</name></param>
+        </command>
+        <command except="no">
+            <comment>
+                Retrieve the address of a function. The returned function may be context-
+                specific.
+            </comment>
+            <proto>void* <name>alGetProcAddress</name></proto>
+            <param>const <ptype>ALchar</ptype> *<name>fname</name></param>
+        </command>
+        <command except="no">
+            <comment>Retrieve the value of an enum. The returned value may be context-specific.</comment>
+            <proto><ptype>ALenum</ptype> <name>alGetEnumValue</name></proto>
+            <param>const <ptype>ALchar</ptype> *<name>ename</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListenerf</name></proto>
+            <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListener3f</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value1</name></param>
+            <param><ptype>ALfloat</ptype> <name>value2</name></param>
+            <param><ptype>ALfloat</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListenerfv</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListeneri</name></proto>
+            <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListener3i</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value1</name></param>
+            <param><ptype>ALint</ptype> <name>value2</name></param>
+            <param><ptype>ALint</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alListeneriv</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListenerf</name></proto>
+            <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListener3f</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value1</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value2</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListenerfv</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListeneri</name></proto>
+            <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListener3i</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value1</name></param>
+            <param><ptype>ALint</ptype> *<name>value2</name></param>
+            <param><ptype>ALint</ptype> *<name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetListeneriv</name></proto>
+            <param group="ListenerArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no" comment="Create source objects.">
+            <proto>void <name>alGenSources</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source"><ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" comment="Delete source objects.">
+            <proto>void <name>alDeleteSources</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" command="Verify an ID is for a valid source.">
+            <proto><ptype>ALboolean</ptype> <name>alIsSource</name></proto>
+            <param><ptype>ALuint</ptype> <name>source</name></param>
+        </command>
+
+        <command except="no">
+            <proto>void <name>alSourcef</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSource3f</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value1</name></param>
+            <param><ptype>ALfloat</ptype> <name>value2</name></param>
+            <param><ptype>ALfloat</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSourcefv</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSourcei</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSource3i</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value1</name></param>
+            <param><ptype>ALint</ptype> <name>value2</name></param>
+            <param><ptype>ALint</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alSourceiv</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSourcef</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSourcefv</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSourcei</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSourceiv</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSource3i</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value1</name></param>
+            <param><ptype>ALint</ptype> *<name>value2</name></param>
+            <param><ptype>ALint</ptype> *<name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetSource3f</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param group="SourceArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value1</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value2</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value3</name></param>
+        </command>
+        <command except="no" comment="Play, restart, or resume a source, setting its state to AL_PLAYING.">
+            <proto>void <name>alSourcePlay</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+        </command>
+        <command except="no" comment="Stop a source, setting its state to AL_STOPPED if playing or paused.">
+            <proto>void <name>alSourceStop</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+        </command>
+        <command except="no" comment="Rewind a source, setting its state to AL_INITIAL.">
+            <proto>void <name>alSourceRewind</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+        </command>
+        <command except="no" comment="Pause a source, setting its state to AL_PAUSED if playing.">
+            <proto>void <name>alSourcePause</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+        </command>
+        <command except="no" comment="Play, restart, or resume a list of sources atomically.">
+            <proto>void <name>alSourcePlayv</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" comment="Stop a list of sources atomically.">
+            <proto>void <name>alSourceStopv</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" comment="Rewind a list of sources atomically.">
+            <proto>void <name>alSourceRewindv</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" comment="Pause a list of sources atomically.">
+            <proto>void <name>alSourcePausev</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
+        </command>
+        <command except="no" comment="Queue buffers onto a source">
+            <proto>void <name>alSourceQueueBuffers</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param><ptype>ALsizei</ptype> <name>nb</name></param>
+            <param class="buffer">const <ptype>ALuint</ptype> *<name>buffers</name></param>
+        </command>
+        <command except="no" comment="Unqueue processed buffers from a source">
+            <proto>void <name>alSourceUnqueueBuffers</name></proto>
+            <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
+            <param><ptype>ALsizei</ptype> <name>nb</name></param>
+            <param class="buffer"><ptype>ALuint</ptype> *<name>buffers</name></param>
+        </command>
+        <command except="no" comment="Create buffer objects">
+            <proto>void <name>alGenBuffers</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param class="buffer"><ptype>ALuint</ptype> *<name>buffers</name></param>
+        </command>
+        <command except="no" comment="Delete buffer objects">
+            <proto>void <name>alDeleteBuffers</name></proto>
+            <param><ptype>ALsizei</ptype> <name>n</name></param>
+            <param class="buffer">const <ptype>ALuint</ptype> *<name>buffers</name></param>
+        </command>
+        <command except="no" comment="Verify an ID is a valid buffer (including the NULL buffer)">
+            <proto><ptype>ALboolean</ptype> <name>alIsBuffer</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+        </command>
+        <command except="no">
+            <comment>
+                Copies data into the buffer, interpreting it using the specified format and
+                samplerate.
+            </comment>
+            <proto>void <name>alBufferData</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
+            <param len="size">const <ptype>ALvoid</ptype> *<name>data</name></param>
+            <param><ptype>ALsizei</ptype> <name>size</name></param>
+            <param><ptype>ALsizei</ptype> <name>samplerate</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBufferf</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBuffer3f</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> <name>value1</name></param>
+            <param><ptype>ALfloat</ptype> <name>value2</name></param>
+            <param><ptype>ALfloat</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBufferfv</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBufferi</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBuffer3i</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> <name>value1</name></param>
+            <param><ptype>ALint</ptype> <name>value2</name></param>
+            <param><ptype>ALint</ptype> <name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alBufferiv</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param>const <ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBufferf</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBufferfv</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBufferi</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBufferiv</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>values</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBuffer3i</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALint</ptype> *<name>value1</name></param>
+            <param><ptype>ALint</ptype> *<name>value2</name></param>
+            <param><ptype>ALint</ptype> *<name>value3</name></param>
+        </command>
+        <command except="no">
+            <proto>void <name>alGetBuffer3f</name></proto>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
+            <param group="BufferArray"><ptype>ALenum</ptype> <name>param</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value1</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value2</name></param>
+            <param><ptype>ALfloat</ptype> *<name>value3</name></param>
+        </command>
+    </commands>
+
+    <feature api="al" name="AL_VERSION_1_0" number="1.0">
+        <require comment="Deprecated macros.">
+            <type name="OPENAL"/>
+            <type name="ALAPI"/>
+            <type name="ALAPIENTRY"/>
+            <type name="AL_INVALID"/>
+            <type name="AL_ILLEGAL_ENUM"/>
+            <type name="AL_ILLEGAL_COMMAND"/>
+        </require>
+        <require>
+            <type name="ALboolean"/>
+            <type name="ALchar"/>
+            <type name="ALbyte"/>
+            <type name="ALubyte"/>
+            <type name="ALshort"/>
+            <type name="ALushort"/>
+            <type name="ALint"/>
+            <type name="ALuint"/>
+            <type name="ALsizei"/>
+            <type name="ALenum"/>
+            <type name="ALfloat"/>
+            <type name="ALdouble"/>
+            <type name="ALvoid"/>
+        </require>
+        <require>
+            <enum name="AL_NONE"/>
+            <enum name="AL_FALSE"/>
+            <enum name="AL_TRUE"/>
+            <enum name="AL_SOURCE_RELATIVE"/>
+            <enum name="AL_CONE_INNER_ANGLE"/>
+            <enum name="AL_CONE_OUTER_ANGLE"/>
+            <enum name="AL_PITCH"/>
+            <enum name="AL_POSITION"/>
+            <enum name="AL_DIRECTION"/>
+            <enum name="AL_VELOCITY"/>
+            <enum name="AL_LOOPING"/>
+            <enum name="AL_BUFFER"/>
+            <enum name="AL_GAIN"/>
+            <enum name="AL_MIN_GAIN"/>
+            <enum name="AL_MAX_GAIN"/>
+            <enum name="AL_ORIENTATION"/>
+            <enum name="AL_SOURCE_STATE"/>
+        </require>
+        <require comment="Source state values.">
+            <enum name="AL_INITIAL"/>
+            <enum name="AL_PLAYING"/>
+            <enum name="AL_PAUSED"/>
+            <enum name="AL_STOPPED"/>
+        </require>
+        <require>
+            <enum name="AL_BUFFERS_QUEUED"/>
+            <enum name="AL_BUFFERS_PROCESSED"/>
+            <enum name="AL_REFERENCE_DISTANCE"/>
+            <enum name="AL_ROLLOFF_FACTOR"/>
+            <enum name="AL_CONE_OUTER_GAIN"/>
+            <enum name="AL_MAX_DISTANCE"/>
+            <enum name="AL_FORMAT_MONO8"/>
+            <enum name="AL_FORMAT_MONO16"/>
+            <enum name="AL_FORMAT_STEREO8"/>
+            <enum name="AL_FORMAT_STEREO16"/>
+            <enum name="AL_FREQUENCY"/>
+            <enum name="AL_SIZE"/>
+        </require>
+        <require comment="Buffer state. Not for public use.">
+            <enum name="AL_UNUSED"/>
+            <enum name="AL_PENDING"/>
+            <enum name="AL_PROCESSED"/>
+        </require>
+        <require>
+            <enum name="AL_NO_ERROR"/>
+            <enum name="AL_INVALID_NAME"/>
+            <enum name="AL_INVALID_ENUM"/>
+            <enum name="AL_INVALID_VALUE"/>
+            <enum name="AL_INVALID_OPERATION"/>
+            <enum name="AL_OUT_OF_MEMORY"/>
+            <enum name="AL_VENDOR"/>
+            <enum name="AL_VERSION"/>
+            <enum name="AL_RENDERER"/>
+            <enum name="AL_EXTENSIONS"/>
+            <enum name="AL_DOPPLER_FACTOR"/>
+            <enum name="AL_DOPPLER_VELOCITY"/>
+            <enum name="AL_DISTANCE_MODEL"/>
+        </require>
+        <require comment="Distance model values.">
+            <enum name="AL_INVERSE_DISTANCE"/>
+            <enum name="AL_INVERSE_DISTANCE_CLAMPED"/>
+        </require>
+        <require comment="Renderer State management.">
+            <command name="alEnable"/>
+            <command name="alDisable"/>
+            <command name="alIsEnabled"/>
+        </require>
+        <require comment="Context state setting.">
+            <command name="alDopplerFactor"/>
+            <command name="alDopplerVelocity"/>
+            <command name="alDistanceModel"/>
+        </require>
+        <require comment="Context state retrieval.">
+            <command name="alGetString"/>
+            <command name="alGetBooleanv"/>
+            <command name="alGetIntegerv"/>
+            <command name="alGetFloatv"/>
+            <command name="alGetDoublev"/>
+            <command name="alGetBoolean"/>
+            <command name="alGetInteger"/>
+            <command name="alGetFloat"/>
+            <command name="alGetDouble"/>
+        </require>
+        <require>
+            <command name="alGetError"/>
+            <command name="alIsExtensionPresent"/>
+            <command name="alGetProcAddress"/>
+            <command name="alGetEnumValue"/>
+        </require>
+        <require comment="Set listener parameters.">
+            <command name="alListenerf"/>
+            <command name="alListener3f"/>
+            <command name="alListenerfv"/>
+            <command name="alListeneri"/>
+            <command name="alListener3i"/>
+            <command name="alListeneriv"/>
+        </require>
+        <require comment="Get listener parameters.">
+            <command name="alGetListenerf"/>
+            <command name="alGetListener3f"/>
+            <command name="alGetListenerfv"/>
+            <command name="alGetListeneri"/>
+            <command name="alGetListener3i"/>
+            <command name="alGetListeneriv"/>
+        </require>
+        <require>
+            <command name="alGenSources"/>
+            <command name="alDeleteSources"/>
+            <command name="alIsSource"/>
+        </require>
+        <require comment="Set source parameters.">
+            <command name="alSourcef"/>
+            <command name="alSource3f"/>
+            <command name="alSourcefv"/>
+            <command name="alSourcei"/>
+            <command name="alSource3i"/>
+            <command name="alSourceiv"/>
+        </require>
+        <require comment="Get source parameters.">
+            <command name="alGetSourcef"/>
+            <command name="alGetSource3f"/>
+            <command name="alGetSourcefv"/>
+            <command name="alGetSourcei"/>
+            <command name="alGetSource3i"/>
+            <command name="alGetSourceiv"/>
+        </require>
+        <require>
+            <command name="alSourcePlay"/>
+            <command name="alSourceStop"/>
+            <command name="alSourceRewind"/>
+            <command name="alSourcePause"/>
+        </require>
+        <require>
+            <command name="alSourcePlayv"/>
+            <command name="alSourceStopv"/>
+            <command name="alSourceRewindv"/>
+            <command name="alSourcePausev"/>
+        </require>
+        <require>
+            <command name="alSourceQueueBuffers"/>
+            <command name="alSourceUnqueueBuffers"/>
+        </require>
+        <require>
+            <command name="alGenBuffers"/>
+            <command name="alDeleteBuffers"/>
+            <command name="alIsBuffer"/>
+            <command name="alBufferData"/>
+        </require>
+        <require comment="Set buffer parameters.">
+            <command name="alBufferf"/>
+            <command name="alBuffer3f"/>
+            <command name="alBufferfv"/>
+            <command name="alBufferi"/>
+            <command name="alBuffer3i"/>
+            <command name="alBufferiv"/>
+        </require>
+        <require comment="Get buffer parameters.">
+            <command name="alGetBufferf"/>
+            <command name="alGetBuffer3f"/>
+            <command name="alGetBufferfv"/>
+            <command name="alGetBufferi"/>
+            <command name="alGetBuffer3i"/>
+            <command name="alGetBufferiv"/>
+        </require>
+    </feature>
+    <feature api="al" name="AL_VERSION_1_1" number="1.1">
+        <!-- AL_EXT_OFFSET -->
+        <require>
+            <enum name="AL_SEC_OFFSET"/>
+            <enum name="AL_SAMPLE_OFFSET"/>
+            <enum name="AL_BYTE_OFFSET"/>
+        </require>
+        <!-- New attributes as of 1.1 - Section 4.3.2 -->
+        <require>
+            <enum name="AL_SOURCE_TYPE"/>
+        </require>
+        <require comment="Source type values.">
+            <enum name="AL_STATIC"/>
+            <enum name="AL_STREAMING"/>
+            <enum name="AL_UNDETERMINED"/>
+        </require>
+        <!-- New attributes as of 1.1 - Section 5.3.1 -->
+        <require>
+            <enum name="AL_BITS"/>
+            <enum name="AL_CHANNELS"/>
+        </require>
+        <!-- New model as of 1.1 - Section 3.5.2 -->
+        <require>
+            <enum name="AL_SPEED_OF_SOUND"/>
+            <command name="alSpeedOfSound"/>
+        </require>
+        <!-- AL_EXT_LINEAR_DISTANCE -->
+        <require>
+            <enum name="AL_LINEAR_DISTANCE"/>
+            <enum name="AL_LINEAR_DISTANCE_CLAMPED"/>
+        </require>
+        <!-- AL_EXT_EXPONENT_DISTANCE -->
+        <require>
+            <enum name="AL_EXPONENT_DISTANCE"/>
+            <enum name="AL_EXPONENT_DISTANCE_CLAMPED"/>
+        </require>
+    </feature>
+
+</registry>

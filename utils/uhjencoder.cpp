@@ -38,9 +38,12 @@
 #include <vector>
 
 #include "alnumeric.h"
+#include "alstring.h"
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/ranges.h"
+#include "fmt/std.h"
 #include "gsl/gsl"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -294,14 +297,7 @@ auto main(std::span<std::string_view> args) -> int
         }
         ++num_files;
 
-        auto outname = std::string{arg};
-        const auto lastslash = outname.rfind('/');
-        if(lastslash != std::string::npos)
-            outname.erase(0, lastslash+1);
-        const auto extpos = outname.rfind('.');
-        if(extpos != std::string::npos)
-            outname.resize(extpos);
-        outname += ".uhj.flac";
+        auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".uhj.flac");
 
         auto ininfo = SF_INFO{};
         auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
@@ -311,15 +307,15 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
         fmt::println("Converting {} to {}...", arg, outname);
+        const auto inchannels = gsl::narrow<uint>(ininfo.channels);
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.
          */
         auto spkrs = std::span<const SpeakerPos>{};
-        auto chanmap = std::vector<int>(gsl::narrow_cast<uint>(ininfo.channels),
-            SF_CHANNEL_MAP_INVALID);
+        auto chanmap = std::vector<int>(inchannels, SF_CHANNEL_MAP_INVALID);
         if(sf_command(infile.get(), SFC_GET_CHANNEL_MAP_INFO, chanmap.data(),
-            gsl::narrow_cast<int>(std::span{chanmap}.size_bytes())) == SF_TRUE)
+            gsl::narrow<int>(std::span{chanmap}.size_bytes())) == SF_TRUE)
         {
             static constexpr auto monomap = std::array{SF_CHANNEL_MAP_CENTER};
             static constexpr auto stereomap = std::array{SF_CHANNEL_MAP_LEFT,SF_CHANNEL_MAP_RIGHT};
@@ -383,42 +379,44 @@ auto main(std::span<std::string_view> args) -> int
         else if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr,
             0) == SF_AMBISONIC_B_FORMAT)
         {
-            if(ininfo.channels == 4)
+            switch(inchannels)
             {
+            case 4:
                 fmt::println(std::cerr, " ... detected FuMa 3D B-Format");
                 chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
                 chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
                 chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
                 chanmap[3] = SF_CHANNEL_MAP_AMBISONIC_B_Z;
-            }
-            else if(ininfo.channels == 3)
-            {
+                break;
+
+            case 3:
                 fmt::println(std::cerr, " ... detected FuMa 2D B-Format");
                 chanmap[0] = SF_CHANNEL_MAP_AMBISONIC_B_W;
                 chanmap[1] = SF_CHANNEL_MAP_AMBISONIC_B_X;
                 chanmap[2] = SF_CHANNEL_MAP_AMBISONIC_B_Y;
-            }
-            else
-            {
-                fmt::println(std::cerr, " ... unhandled {}-channel B-Format", ininfo.channels);
+                break;
+
+            default:
+                fmt::println(std::cerr, " ... unhandled {}-channel B-Format", inchannels);
                 return;
             }
         }
-        else if(ininfo.channels == 1)
+        else switch(inchannels)
         {
+        case 1:
             fmt::println(std::cerr, " ... assuming front-center");
             spkrs = MonoMap;
             chanmap[0] = SF_CHANNEL_MAP_CENTER;
-        }
-        else if(ininfo.channels == 2)
-        {
+            break;
+
+        case 2:
             fmt::println(std::cerr, " ... assuming WFX order stereo");
             spkrs = StereoMap;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
             chanmap[1] = SF_CHANNEL_MAP_RIGHT;
-        }
-        else if(ininfo.channels == 6)
-        {
+            break;
+
+        case 6:
             fmt::println(std::cerr, " ... assuming WFX order 5.1");
             spkrs = X51Map;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
@@ -427,9 +425,9 @@ auto main(std::span<std::string_view> args) -> int
             chanmap[3] = SF_CHANNEL_MAP_LFE;
             chanmap[4] = SF_CHANNEL_MAP_SIDE_LEFT;
             chanmap[5] = SF_CHANNEL_MAP_SIDE_RIGHT;
-        }
-        else if(ininfo.channels == 8)
-        {
+            break;
+
+        case 8:
             fmt::println(std::cerr, " ... assuming WFX order 7.1");
             spkrs = X71Map;
             chanmap[0] = SF_CHANNEL_MAP_LEFT;
@@ -440,20 +438,20 @@ auto main(std::span<std::string_view> args) -> int
             chanmap[5] = SF_CHANNEL_MAP_REAR_RIGHT;
             chanmap[6] = SF_CHANNEL_MAP_SIDE_LEFT;
             chanmap[7] = SF_CHANNEL_MAP_SIDE_RIGHT;
-        }
-        else
-        {
-            fmt::println(std::cerr, " ... unmapped {}-channel audio not supported",
-                ininfo.channels);
+            break;
+
+        default:
+            fmt::println(std::cerr, " ... unmapped {}-channel audio not supported", inchannels);
             return;
         }
 
         auto outinfo = SF_INFO{};
         outinfo.frames = ininfo.frames;
         outinfo.samplerate = ininfo.samplerate;
-        outinfo.channels = gsl::narrow_cast<int>(uhjchans);
+        outinfo.channels = gsl::narrow<int>(uhjchans);
         outinfo.format = SF_FORMAT_PCM_24 | SF_FORMAT_FLAC;
-        auto outfile = SndFilePtr{sf_open(outname.c_str(), SFM_WRITE, &outinfo)};
+        auto outfile = SndFilePtr{sf_open(
+            reinterpret_cast<const char*>(outname.u8string().c_str()), SFM_WRITE, &outinfo)};
         if(!outfile)
         {
             fmt::println(std::cerr, " ... failed to create {}", outname);
@@ -465,11 +463,9 @@ auto main(std::span<std::string_view> args) -> int
         auto ambmem = std::span{splbuf}.subspan<0,4>();
         auto encmem = std::span{splbuf}.subspan<4,4>();
         auto srcmem = std::span{splbuf[8]};
-        auto membuf = al::vector<float,16>((gsl::narrow_cast<uint>(ininfo.channels)
-            +size_t{uhjchans}) * BufferLineSize);
+        auto membuf = al::vector<float,16>((size_t{inchannels}+uhjchans) * BufferLineSize);
         auto outmem = std::span{membuf}.first(size_t{BufferLineSize}*uhjchans);
-        auto inmem = std::span{membuf}.last(size_t{BufferLineSize}
-            * gsl::narrow_cast<uint>(ininfo.channels));
+        auto inmem = std::span{membuf}.last(size_t{BufferLineSize} * inchannels);
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -479,33 +475,32 @@ auto main(std::span<std::string_view> args) -> int
         auto total_wrote = 0_uz;
         auto clipped_samples = 0_uz;
         auto LeadIn = size_t{UhjEncoder::sFilterDelay};
-        auto LeadOut = sf_count_t{UhjEncoder::sFilterDelay};
+        auto LeadOut = size_t{UhjEncoder::sFilterDelay};
         while(LeadIn > 0 || LeadOut > 0)
         {
-            auto sgot = sf_readf_float(infile.get(), inmem.data(), BufferLineSize);
-            if(sgot < BufferLineSize)
+            auto got = al::saturate_cast<size_t>(sf_readf_float(infile.get(), inmem.data(),
+                BufferLineSize));
+            if(got < BufferLineSize)
             {
-                sgot = std::max(sgot, sf_count_t{0});
-                const auto remaining = std::min(BufferLineSize - sgot, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels), 0.0f);
-                sgot += remaining;
+                const auto remaining = std::min(BufferLineSize - got, LeadOut);
+                std::ranges::fill(inmem | std::views::drop(got*inchannels), 0.0f);
+                got += remaining;
                 LeadOut -= remaining;
             }
 
             std::ranges::fill(ambmem | std::views::join, 0.0f);
 
-            auto got = gsl::narrow_cast<size_t>(sgot);
             if(spkrs.empty())
             {
                 /* B-Format is already in the correct order. It just needs a
                  * +3dB boost.
                  */
                 static constexpr auto scale = std::numbers::sqrt2_v<float>;
-                const auto chans = size_t{std::min(gsl::narrow_cast<uint>(ininfo.channels), 4u)};
+                const auto chans = size_t{std::min(inchannels, 4u)};
                 for(const auto c : std::views::iota(0_uz, chans))
                 {
                     for(const auto i : std::views::iota(0_uz, got))
-                        ambmem[c][i] = inmem[i*gsl::narrow_cast<uint>(ininfo.channels) + c]*scale;
+                        ambmem[c][i] = inmem[i*inchannels + c]*scale;
                 }
             }
             else for(const auto idx : std::views::iota(0_uz, chanmap.size()))
@@ -523,7 +518,7 @@ auto main(std::span<std::string_view> args) -> int
                 }
 
                 for(const auto i : std::views::iota(0_uz, got))
-                    srcmem[i] = inmem[i*gsl::narrow_cast<uint>(ininfo.channels) + idx];
+                    srcmem[i] = inmem[i*inchannels + idx];
 
                 static constexpr auto Deg2Rad = std::numbers::pi / 180.0;
                 const auto coeffs = GenCoeffs(
@@ -533,7 +528,7 @@ auto main(std::span<std::string_view> args) -> int
                 std::ignore = std::ranges::mismatch(ambmem, coeffs,
                     [srcmem,got](const FloatBufferSpan output, const float gain)
                 {
-                    std::ranges::transform(srcmem | std::views::take(got), output, output.begin(),
+                    std::ranges::transform(srcmem.first(got), output, output.begin(),
                         [gain](const float s, const float o) noexcept { return s*gain + o; });
                     return true;
                 });
@@ -560,12 +555,12 @@ auto main(std::span<std::string_view> args) -> int
             LeadIn = 0;
 
             const auto wrote = sf_writef_float(outfile.get(), outmem.data(),
-                gsl::narrow_cast<sf_count_t>(got));
+                gsl::narrow<sf_count_t>(got));
             if(wrote < 0)
                 fmt::println(std::cerr, " ... failed to write samples: {}",
                     sf_error(outfile.get()));
             else
-                total_wrote += gsl::narrow_cast<size_t>(wrote);
+                total_wrote += gsl::narrow<size_t>(wrote);
         }
         fmt::println(" ... wrote {} samples ({} total, {} clipped).", total_wrote, ininfo.frames,
             clipped_samples);

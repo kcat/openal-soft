@@ -47,6 +47,7 @@
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
+#include "fmt/std.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "phase_shifter.h"
@@ -392,30 +393,22 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
 
+        const auto inchannels = gsl::narrow<uint>(ininfo.channels);
         auto outchans = uint{};
-        if(ininfo.channels == 2)
+        if(inchannels == 2)
             outchans = 3;
-        else if(ininfo.channels == 3 || ininfo.channels == 4)
-            outchans = gsl::narrow_cast<uint>(ininfo.channels);
+        else if(inchannels == 3 || inchannels == 4)
+            outchans = inchannels;
         else
         {
             fmt::println(std::cerr, "{} is not a 2-, 3-, or 4-channel file", arg);
             return;
         }
-        fmt::println("Converting {} from {}-channel UHJ{}...", arg, ininfo.channels,
-            (ininfo.channels == 2) ? use_general ? " (general)" : " (alternative)" : "");
+        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels,
+            (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
-        const auto fnamepart = arg.find_last_of('/')+1;
-        const auto lastdot = std::invoke([arg,fnamepart]
-        {
-            const auto ret = std::min(arg.find_last_of('.'), arg.size());
-            if(ret < fnamepart) return arg.size();
-            return ret;
-        });
-        auto outname = std::string{arg.substr(fnamepart, lastdot-fnamepart)};
-        outname += ".amb";
-
-        auto outfile = std::ofstream{fs::path(al::char_as_u8(outname)), std::ios_base::binary};
+        auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
+        auto outfile = std::ofstream{outname, std::ios_base::binary};
         if(!outfile.is_open())
         {
             fmt::println(std::cerr, "Failed to create {}", outname);
@@ -462,8 +455,7 @@ auto main(std::span<std::string_view> args) -> int
         const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(size_t{BufferLineSize}
-            * gsl::narrow_cast<uint>(ininfo.channels));
+        auto inmem = std::vector<float>(size_t{BufferLineSize} * inchannels);
         auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
         auto outmem = std::vector<char>(size_t{BufferLineSize}*outchans*sizeof(float));
 
@@ -473,22 +465,21 @@ auto main(std::span<std::string_view> args) -> int
          * to ensure none of the original input is lost.
          */
         auto LeadIn = size_t{UhjDecoder::sFilterDelay};
-        auto LeadOut = sf_count_t{UhjDecoder::sFilterDelay};
+        auto LeadOut = size_t{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
-            auto sgot = sf_readf_float(infile.get(), inmem.data(), BufferLineSize);
-            if(sgot < BufferLineSize)
+            auto got = al::saturate_cast<size_t>(sf_readf_float(infile.get(), inmem.data(),
+                BufferLineSize));
+            if(got < BufferLineSize)
             {
-                sgot = std::max(sgot, sf_count_t{0});
-                const auto remaining = std::min(BufferLineSize - sgot, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels), 0.0f);
-                sgot += remaining;
+                const auto remaining = std::min(BufferLineSize - got, LeadOut);
+                std::ranges::fill(inmem | std::views::drop(got*inchannels), 0.0f);
+                got += remaining;
                 LeadOut -= remaining;
             }
 
-            auto got = gsl::narrow_cast<size_t>(sgot);
-            if(ininfo.channels > 2 || use_general)
-                decoder->decode(inmem, gsl::narrow_cast<uint>(ininfo.channels), decmem, got);
+            if(inchannels > 2 || use_general)
+                decoder->decode(inmem, inchannels, decmem, got);
             else
                 decoder->decode2(inmem, decmem, got);
             if(LeadIn >= got)

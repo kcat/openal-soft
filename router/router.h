@@ -188,7 +188,7 @@ enum class eLogLevel {
     Trace = 3,
 };
 inline eLogLevel LogLevel{eLogLevel::Error};
-inline std::ofstream LogFile;
+inline std::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
 
 #define TRACE(...) do {                                     \
     if(LogLevel >= eLogLevel::Trace)                        \

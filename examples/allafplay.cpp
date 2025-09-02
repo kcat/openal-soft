@@ -77,9 +77,8 @@
 #include <fcntl.h>
 #endif
 
-#include "AL/alc.h"
-#include "AL/al.h"
-#include "AL/alext.h"
+import openal;
+import openal.ext;
 
 #include "alnumeric.h"
 #include "alstring.h"

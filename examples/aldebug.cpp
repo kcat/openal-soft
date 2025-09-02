@@ -35,9 +35,8 @@
 #include <string_view>
 #include <vector>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
+import openal;
+import openal.ext;
 
 #include "alnumeric.h"
 #include "fmt/base.h"

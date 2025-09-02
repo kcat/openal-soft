@@ -191,7 +191,7 @@ elseif(HAVE_LIBCXX)
         add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")
         set(HARDENING_LEVEL "Default")
     endif()
-elseif(HAVE_HAVE_MSSTL)
+elseif(HAVE_MSSTL)
     if(ALSOFT_STL_HARDENING STREQUAL "Debug")
         # TODO: Is there anything more reasonable for heavier debugging (non-
         # production use) checks, where performance is not so important?

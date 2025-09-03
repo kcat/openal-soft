@@ -296,20 +296,6 @@ set(LIB_VERSION_NUM ${LIB_MAJOR_VERSION},${LIB_MINOR_VERSION},${LIB_REVISION},0)
 set(EXPORT_DECL "")
 
 
-# Some systems erroneously require the __STDC_FORMAT_MACROS macro to be defined
-# to get the fixed-width integer type formatter macros.
-check_cxx_source_compiles("#include <cinttypes>
-#include <cstdio>
-int main()
-{
-    int64_t i64{};
-    std::printf(\"%\" PRId64, i64);
-}"
-HAVE_STDC_FORMAT_MACROS)
-if(NOT HAVE_STDC_FORMAT_MACROS)
-    set(CPP_DEFS ${CPP_DEFS} __STDC_FORMAT_MACROS)
-endif()
-
 # Some systems may need libatomic for atomic functions to work
 set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)

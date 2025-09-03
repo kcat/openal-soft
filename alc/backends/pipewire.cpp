@@ -1676,9 +1676,9 @@ auto PipeWirePlayback::reset() -> bool
         mDevice->mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_setf(props, PW_KEY_TARGET_OBJECT, "%" PRIu64, mTargetId);
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
 #else
-    pw_properties_setf(props, PW_KEY_NODE_TARGET, "%" PRIu64, mTargetId);
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
 #endif
 
     auto plock = MainloopUniqueLock{mLoop};
@@ -2100,9 +2100,9 @@ void PipeWireCapture::open(std::string_view name)
         mDevice->mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_setf(props, PW_KEY_TARGET_OBJECT, "%" PRIu64, mTargetId);
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
 #else
-    pw_properties_setf(props, PW_KEY_NODE_TARGET, "%" PRIu64, mTargetId);
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
 #endif
 
     MainloopUniqueLock plock{mLoop};

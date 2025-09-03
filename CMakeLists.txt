@@ -1470,8 +1470,7 @@ if(USE_CXXMODULES)
         modules/alext.cppm)
 
     add_library(openal.modules STATIC EXCLUDE_FROM_ALL )
-    target_sources(openal.modules PUBLIC
-        FILE_SET cxx_modules TYPE CXX_MODULES FILES
+    target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES
         ${MODULES_OBJS})
     target_include_directories(openal.modules PRIVATE ${OpenAL_SOURCE_DIR}/include)
     target_compile_definitions(openal.modules PRIVATE ${CPP_DEFS})
@@ -1729,9 +1728,6 @@ if(ALSOFT_INSTALL)
     configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL)
     install(TARGETS OpenAL EXPORT OpenAL
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
     export(TARGETS OpenAL
@@ -1748,8 +1744,7 @@ if(ALSOFT_INSTALL)
     install(FILES "${OpenAL_BINARY_DIR}/OpenALConfig.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL")
     if(TARGET soft_oal)
-        install(TARGETS soft_oal
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(TARGETS soft_oal)
     endif()
     message(STATUS "Installing library and headers")
 else()

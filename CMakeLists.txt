@@ -1451,8 +1451,8 @@ configure_file(
 
 set(MODULES_OBJS )
 if(USE_CXXMODULES)
-    set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/openal.cppm modules/efx.cppm
-        modules/alext.cppm)
+    set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
+        modules/alext.cppm modules/openal.cppm)
 
     add_library(openal.modules STATIC EXCLUDE_FROM_ALL )
     target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES

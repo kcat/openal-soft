@@ -78,7 +78,6 @@
 #endif
 
 import openal;
-import openal.ext;
 
 #include "alnumeric.h"
 #include "alstring.h"

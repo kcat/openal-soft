@@ -1,9 +1,8 @@
-/* The base OpenAL module simply provides both the ALC and AL modules. It's
- * intended to provide just the core/standard functionality, without any
- * extensions.
+/* The base OpenAL module provides the std and ext modules. It's intended to
+ * provide standard and all known extension interfaces.
  */
 
 export module openal;
 
-export import openal.alc;
-export import openal.al;
+export import openal.std;
+export import openal.ext;

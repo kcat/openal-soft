@@ -28,7 +28,7 @@ module;
 
 export module openal.efx;
 
-import openal;
+import openal.std;
 
 export extern "C" {
 

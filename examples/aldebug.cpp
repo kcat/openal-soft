@@ -36,7 +36,6 @@
 #include <vector>
 
 import openal;
-import openal.ext;
 
 #include "alnumeric.h"
 #include "fmt/base.h"

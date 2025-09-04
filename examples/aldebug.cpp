@@ -49,15 +49,11 @@ namespace {
 
 using namespace std::string_view_literals;
 
-struct DeviceCloser {
-    void operator()(ALCdevice *device) const noexcept { alcCloseDevice(device); }
-};
-using DevicePtr = std::unique_ptr<ALCdevice,DeviceCloser>;
+using DevicePtr = std::unique_ptr<ALCdevice, decltype([](ALCdevice *device)
+    { alcCloseDevice(device); })>;
 
-struct ContextDestroyer {
-    void operator()(ALCcontext *context) const noexcept { alcDestroyContext(context); }
-};
-using ContextPtr = std::unique_ptr<ALCcontext,ContextDestroyer>;
+using ContextPtr = std::unique_ptr<ALCcontext, decltype([](ALCcontext *context)
+    { alcDestroyContext(context); })>;
 
 
 constexpr auto GetDebugSourceName(ALenum source) noexcept -> std::string_view

@@ -289,12 +289,6 @@ if(NOT LIBTYPE)
     set(LIBTYPE SHARED)
 endif()
 
-set(LIB_MAJOR_VERSION ${OpenAL_VERSION_MAJOR})
-set(LIB_MINOR_VERSION ${OpenAL_VERSION_MINOR})
-set(LIB_REVISION ${OpenAL_VERSION_PATCH})
-set(LIB_VERSION ${OpenAL_VERSION})
-set(LIB_VERSION_NUM ${OpenAL_VERSION_MAJOR},${OpenAL_VERSION_MINOR},${OpenAL_VERSION_PATCH},0)
-
 set(EXPORT_DECL "")
 
 
@@ -1322,6 +1316,8 @@ endif()
 set(BACKENDS  "${BACKENDS} Null")
 
 
+# Get the known version info to create version.h
+set(LIB_VERSION_NUM ${OpenAL_VERSION_MAJOR},${OpenAL_VERSION_MINOR},${OpenAL_VERSION_PATCH},0)
 find_package(Git)
 if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     set(GIT_DIR "${OpenAL_SOURCE_DIR}/.git")
@@ -1338,9 +1334,10 @@ if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.g
     # Get the current working branch and its latest abbreviated commit hash
     add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt"
         BYPRODUCTS "${OpenAL_BINARY_DIR}/version.h"
-        COMMAND ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE} -D LIB_VERSION=${LIB_VERSION}
-            -D LIB_VERSION_NUM=${LIB_VERSION_NUM} -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
-            -D DST=${OpenAL_BINARY_DIR}/version.h -P ${OpenAL_SOURCE_DIR}/version.cmake
+        COMMAND ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+            -D LIB_VERSION=${OpenAL_VERSION} -D LIB_VERSION_NUM=${LIB_VERSION_NUM}
+            -D SRC=${OpenAL_SOURCE_DIR}/version.h.in -D DST=${OpenAL_BINARY_DIR}/version.h
+            -P ${OpenAL_SOURCE_DIR}/version.cmake
         COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/version_witness.txt"
         WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
         MAIN_DEPENDENCY "${OpenAL_SOURCE_DIR}/version.h.in"
@@ -1415,7 +1412,7 @@ set(exec_prefix "\${prefix}")
 set(libdir "${CMAKE_INSTALL_FULL_LIBDIR}")
 set(bindir "${CMAKE_INSTALL_FULL_BINDIR}")
 set(includedir "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
-set(PACKAGE_VERSION "${LIB_VERSION}")
+set(PACKAGE_VERSION "${OpenAL_VERSION}")
 set(PKG_CONFIG_CFLAGS )
 set(PKG_CONFIG_PRIVATE_LIBS )
 if(LIBTYPE STREQUAL "STATIC")
@@ -1611,7 +1608,7 @@ else()
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_NAME "${IMPL_TARGET}"
             MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
-            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${LIB_VERSION}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${OpenAL_VERSION}"
             MACOSX_FRAMEWORK_BUNDLE_VERSION "${BUNDLE_VERSION}"
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"

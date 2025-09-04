@@ -948,8 +948,8 @@ set(HAVE_OSS        0)
 set(HAVE_PIPEWIRE   0)
 set(HAVE_SOLARIS    0)
 set(HAVE_SNDIO      0)
-set(HAVE_DSOUND     0)
 set(HAVE_WASAPI     0)
+set(HAVE_DSOUND     0)
 set(HAVE_WINMM      0)
 set(HAVE_PORTAUDIO  0)
 set(HAVE_PULSEAUDIO 0)
@@ -1093,21 +1093,23 @@ endif()
 
 # Check Windows-only backends
 if(WIN32)
-    if (NOT ALSOFT_UWP)
-        # Check MMSystem backend
-        option(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
-        option(ALSOFT_REQUIRE_WINMM "Require Windows Multimedia backend" OFF)
-        if(ALSOFT_BACKEND_WINMM)
-            set(HAVE_WINMM 1)
-            set(BACKENDS "${BACKENDS} WinMM,")
-            set(ALC_OBJS ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
-            # There doesn't seem to be good way to search for winmm.lib for MSVC.
-            # find_library doesn't find it without being told to look in a specific
-            # place in the WindowsSDK, but it links anyway. If there ends up being
-            # Windows targets without this, another means to detect it is needed.
-            set(EXTRA_LIBS winmm ${EXTRA_LIBS})
-        endif()
+    # Check for WASAPI backend
+    option(ALSOFT_BACKEND_WASAPI "Enable WASAPI backend" ON)
+    option(ALSOFT_REQUIRE_WASAPI "Require WASAPI backend" OFF)
+    if(ALSOFT_BACKEND_WASAPI)
+        check_include_file(mmdeviceapi.h HAVE_MMDEVICEAPI_H)
+        if(HAVE_MMDEVICEAPI_H)
+            set(HAVE_WASAPI 1)
+            set(BACKENDS  "${BACKENDS} WASAPI,")
+            set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
 
+            if(NOT ALSOFT_UWP)
+                set(EXTRA_LIBS avrt ${EXTRA_LIBS})
+            endif()
+        endif()
+    endif()
+
+    if (NOT ALSOFT_UWP)
         # Check DSound backend
         option(ALSOFT_BACKEND_DSOUND "Enable DirectSound backend" ON)
         option(ALSOFT_REQUIRE_DSOUND "Require DirectSound backend" OFF)
@@ -1128,32 +1130,30 @@ if(WIN32)
                 endif()
             endif()
         endif()
-    endif()
 
-    # Check for WASAPI backend
-    option(ALSOFT_BACKEND_WASAPI "Enable WASAPI backend" ON)
-    option(ALSOFT_REQUIRE_WASAPI "Require WASAPI backend" OFF)
-    if(ALSOFT_BACKEND_WASAPI)
-        check_include_file(mmdeviceapi.h HAVE_MMDEVICEAPI_H)
-        if(HAVE_MMDEVICEAPI_H)
-            set(HAVE_WASAPI 1)
-            set(BACKENDS  "${BACKENDS} WASAPI,")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
-
-            if(NOT ALSOFT_UWP)
-                set(EXTRA_LIBS avrt ${EXTRA_LIBS})
-            endif()
+        # Check MMSystem backend
+        option(ALSOFT_BACKEND_WINMM "Enable Windows Multimedia backend" ON)
+        option(ALSOFT_REQUIRE_WINMM "Require Windows Multimedia backend" OFF)
+        if(ALSOFT_BACKEND_WINMM)
+            set(HAVE_WINMM 1)
+            set(BACKENDS "${BACKENDS} WinMM,")
+            set(ALC_OBJS ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
+            # There doesn't seem to be good way to search for winmm.lib for MSVC.
+            # find_library doesn't find it without being told to look in a specific
+            # place in the WindowsSDK, but it links anyway. If there ends up being
+            # Windows targets without this, another means to detect it is needed.
+            set(EXTRA_LIBS winmm ${EXTRA_LIBS})
         endif()
     endif()
 endif()
-if(ALSOFT_REQUIRE_WINMM AND NOT HAVE_WINMM)
-    message(FATAL_ERROR "Failed to enable required WinMM backend")
+if(ALSOFT_REQUIRE_WASAPI AND NOT HAVE_WASAPI)
+    message(FATAL_ERROR "Failed to enable required WASAPI backend")
 endif()
 if(ALSOFT_REQUIRE_DSOUND AND NOT HAVE_DSOUND)
     message(FATAL_ERROR "Failed to enable required DSound backend")
 endif()
-if(ALSOFT_REQUIRE_WASAPI AND NOT HAVE_WASAPI)
-    message(FATAL_ERROR "Failed to enable required WASAPI backend")
+if(ALSOFT_REQUIRE_WINMM AND NOT HAVE_WINMM)
+    message(FATAL_ERROR "Failed to enable required WinMM backend")
 endif()
 
 # Check JACK backend

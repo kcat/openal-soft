@@ -54,8 +54,8 @@
  * or prvalues, which may have subtle implications. An unnamed enum would be
  * better here, since the enumerators associate a value with a name and don't
  * become referenceable objects in memory, except that gives the name a new
- * type (e.g. typeid(AL_NONE) != typeid(int)) which could create problems for
- * type deduction.
+ * type (e.g. typeid(AL_NO_ERROR) != typeid(int)) which could create problems
+ * for type deduction.
  *
  * Note that defining AL_LIBTYPE_STATIC, AL_DISABLE_NOEXCEPT, and/or
  * AL_NO_PROTOTYPES does still influence the function and function pointer type

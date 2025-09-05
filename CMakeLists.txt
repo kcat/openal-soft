@@ -1454,7 +1454,7 @@ if(USE_CXXMODULES)
     set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
         modules/alext.cppm modules/openal.cppm)
 
-    add_library(openal.modules STATIC EXCLUDE_FROM_ALL )
+    add_library(openal.modules OBJECT EXCLUDE_FROM_ALL)
     target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES
         ${MODULES_OBJS})
     target_include_directories(openal.modules PRIVATE ${OpenAL_SOURCE_DIR}/include)

@@ -29,7 +29,8 @@ class Header:
     preamble: typing.Optional[str] = None
 
 
-PLATFORM_PREAMBLE = """
+PLATFORM_PREAMBLE = """#ifdef __cplusplus
+extern "C" {{
 
 #ifdef _MSVC_LANG
 #define {prefix}_CPLUSPLUS _MSVC_LANG
@@ -89,7 +90,14 @@ CONFIGURATION = [
         "al",
         False,
         preamble=PLATFORM_PREAMBLE.format(prefix="AL"),
-    )
+    ),
+    Header(
+        "../../include/AL/alc.h",
+        "../xml/al.xml",
+        "alc",
+        False,
+        preamble=PLATFORM_PREAMBLE.format(prefix="ALC"),
+    ),
 ]
 
 STANDARD_TEMPLATE = """#ifndef {guard}
@@ -102,12 +110,10 @@ STANDARD_TEMPLATE = """#ifndef {guard}
  */
 
 /* NOLINTBEGIN */
-{preamble}#ifdef __cplusplus
-extern "C" {{
-#endif
+{preamble}
 {content}
 #ifdef __cplusplus
-}}  /* extern "C" */
+}} /* extern "C" */
 #endif
 /* NOLINTEND */
 
@@ -139,21 +145,34 @@ class ApiSet:
         yield f"#ifndef {self.name}"
         yield f"#define {self.name} 1"
         for pass_name in ("non-command", "command-function", "command-pfn"):
-            if pass_name == "command-function":
-                yield "#ifndef AL_NO_PROTOYPES"
-            elif pass_name == "command-pfn":
-                yield "/* Pointer-to-function types, useful for storing dynamically loaded AL entry"
-                yield " * points."
-                yield " */"
+            written_preamble = False
             for requirement in self.require:
                 should_write_comment = (
                     requirement.comment is not None and pass_name != "command-pfn"
                 )
                 written_comment = False
-                for api in requirement.apis:
-                    api = registry.apis[api]
+                for api_name in requirement.apis:
+                    # We pop on the last pass to take account of promotions
+                    api = (
+                        registry.apis.get(api_name)
+                        if pass_name != "command-pfn"
+                        else registry.apis.pop(api_name, None)
+                    )
+                    if api is None:
+                        print(
+                            f"Skipping {api_name} for {self.name} as it is unavailable (has it been promoted?)"
+                        )
+                        continue
                     if pass_name.startswith("command-") != isinstance(api, Command):
                         continue
+                    if not written_preamble:
+                        if pass_name == "command-function":
+                            yield "#ifndef AL_NO_PROTOYPES"
+                        elif pass_name == "command-pfn" and self.is_feature:
+                            yield "/* Pointer-to-function types, useful for storing dynamically loaded AL entry"
+                            yield " * points."
+                            yield " */"
+                        written_preamble = True
                     if not written_comment and should_write_comment:
                         yield f"/* {requirement.comment} */"
                         written_comment = True
@@ -165,7 +184,7 @@ class ApiSet:
                         yield ""
                 if requirement.comment is not None and written_comment:
                     yield ""
-            if pass_name == "command-function":
+            if pass_name == "command-function" and written_preamble:
                 yield "#endif /* AL_NO_PROTOTYPES */"
                 yield ""
         yield "#endif"
@@ -379,11 +398,11 @@ class Registry:
                 ],
             )
 
-        for k, v in self.apis.items():
-            if isinstance(v, Command):
-                print(f'"{k}" = "{v.function}" "{v.pfn}"')
-                continue
-            print(f'"{k}" = "{v}"')
+        #for k, v in self.apis.items():
+        #    if isinstance(v, Command):
+        #        print(f'"{k}" = "{v.function}" "{v.pfn}"')
+        #        continue
+        #    print(f'"{k}" = "{v}"')
 
     def create_header(
         self, sets: typing.Iterable[str], output_file: str, preamble: str = ""
@@ -402,7 +421,7 @@ class Registry:
 
 def main():
     print("Reading registries...")
-    registries = {}
+    registries: typing.Dict[str, Registry] = {}
     for registry in set(x.registry_file for x in CONFIGURATION):
         # Read XML relative to this file
         registry_xml = xml.etree.ElementTree.parse(
@@ -419,6 +438,7 @@ def main():
                 for k, v in registries[header.registry_file].sets.items()
                 if not v.is_feature == header.is_extension_header
                 and (header.exclude is None or k not in header.exclude)
+                and header.api in v.api
             ]
         print(f"Generating {header.header_file}...")
         registries[header.registry_file].create_header(

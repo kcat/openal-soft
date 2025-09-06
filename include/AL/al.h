@@ -4,11 +4,12 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-08-26 20:27:33.515963+00:00
+ * Last regenerated: 2025-09-06 17:57:54.188885+00:00
  */
 
 /* NOLINTBEGIN */
-
+#ifdef __cplusplus
+extern "C" {
 
 #ifdef _MSVC_LANG
 #define AL_CPLUSPLUS _MSVC_LANG
@@ -58,9 +59,7 @@
  #define AL_APIENTRY
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #ifndef AL_VERSION_1_0
 #define AL_VERSION_1_0 1
 /* Deprecated macros. */
@@ -734,7 +733,7 @@ AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT;
 typedef void          (AL_APIENTRY *LPALSPEEDOFSOUND)(ALfloat value) AL_API_NOEXCEPT17;
 #endif
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif
 /* NOLINTEND */
 

@@ -79,9 +79,6 @@ endfunction()
 
 project(ALSOFT_FMT CXX)
 
-# Options that control generation of various targets.
-option(ALSOFT_FMT_MODULE "Build a module instead of a traditional library." OFF)
-
 # Get version from base.h
 file(READ include/fmt/base.h base_h)
 if (NOT base_h MATCHES "FMT_VERSION ([0-9]+)([0-9][0-9])([0-9][0-9])")
@@ -121,6 +118,7 @@ add_headers(FMT_HEADERS args.h base.h chrono.h color.h compile.h core.h format.h
                         xchar.h)
 set(FMT_SOURCES src/format.cc)
 
+set(ALSOFT_FMT_MODULE OFF)
 add_module_library(alsoft.fmt src/fmt.cc FALLBACK
                    ${FMT_SOURCES} ${FMT_HEADERS} README.md ChangeLog.md
                    IF ALSOFT_FMT_MODULE)

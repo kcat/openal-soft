@@ -236,7 +236,7 @@ if(ALSOFT_ENABLE_MODULES)
 endif()
 
 
-add_subdirectory(fmt-11.1.4 EXCLUDE_FROM_ALL)
+add_subdirectory(fmt-11.2.0 EXCLUDE_FROM_ALL)
 
 
 set(CPP_DEFS ) # C pre-processor, not C++
@@ -1473,9 +1473,8 @@ target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
 set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
 if(HAVE_CXXMODULES)
-    set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/fmt.cppm alsoft-modules/gsl.cppm)
-    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES
-        alsoft-modules/fmt.cppm alsoft-modules/gsl.cppm)
+    set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/gsl.cppm)
+    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES alsoft-modules/gsl.cppm)
 endif()
 
 

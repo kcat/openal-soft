@@ -83,11 +83,13 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alsoft.fmt;
 import alsoft.gsl;
 import openal;
 
@@ -97,9 +99,6 @@ import openal;
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "fmt/std.h"
 #include "gsl/gsl"
 #endif
 

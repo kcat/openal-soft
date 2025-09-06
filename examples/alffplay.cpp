@@ -34,6 +34,8 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 
@@ -66,7 +68,6 @@ struct SwsContext;
 #include "SDL3/SDL_video.h"
 
 #if HAVE_CXXMODULES
-import alsoft.fmt;
 import alsoft.gsl;
 import openal;
 
@@ -83,8 +84,6 @@ import openal;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

@@ -50,16 +50,6 @@
 
 #include "mysofa.h"
 
-#if HAVE_CXXMODULES
-import alsoft.fmt;
-
-#else
-
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#endif
-
-
 namespace {
 
 using namespace std::string_view_literals;

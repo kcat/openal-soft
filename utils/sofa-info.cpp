@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "alnumeric.h"
-
+#include "fmt/base.h"
 #include "sofa-support.h"
 
 #include "mysofa.h"
@@ -40,12 +40,10 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alsoft.fmt;
 import alsoft.gsl;
 
 #else
 
-#include "fmt/base.h"
 #include "gsl/gsl"
 #endif
 

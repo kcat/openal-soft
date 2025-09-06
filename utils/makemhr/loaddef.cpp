@@ -48,6 +48,8 @@
 #include "albit.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -55,13 +57,10 @@
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
-import alsoft.fmt;
 import alsoft.gsl;
 
 #else
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

@@ -32,7 +32,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <numbers>
@@ -45,7 +44,9 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "gsl/gsl"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
 #include "opthelpers.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -55,14 +56,10 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alsoft.fmt;
 import alsoft.gsl;
 
 #else
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "fmt/std.h"
 #include "gsl/gsl"
 #endif
 

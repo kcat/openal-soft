@@ -1,7 +1,7 @@
 #ifndef ALHELPERS_HPP
 #define ALHELPERS_HPP
 
-#include "AL/alc.h"
+#include "config.h"
 
 #include <iostream>
 #include <span>
@@ -12,7 +12,17 @@
 
 #include "fmt/base.h"
 #include "fmt/ostream.h"
+
+#if HAVE_CXXMODULES
+import alsoft.gsl;
+import openal.alc;
+
+#else
+
+#include "AL/alc.h"
+
 #include "gsl/gsl"
+#endif
 
 
 [[nodiscard]]

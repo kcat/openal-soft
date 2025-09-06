@@ -21,6 +21,8 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include "config.h"
+
 #include <cstdio>
 #include <memory>
 #include <ranges>
@@ -30,14 +32,22 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/core.h"
-#include "gsl/gsl"
 
 #include "sofa-support.h"
 
 #include "mysofa.h"
 
 #include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+
+#else
+
+#include "fmt/base.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

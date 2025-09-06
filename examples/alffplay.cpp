@@ -2,6 +2,8 @@
  * An example showing how to play a stream sync'd to video, using ffmpeg.
  */
 
+#include "config.h"
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -28,17 +30,10 @@
 #include <utility>
 #include <vector>
 
-#include "AL/alc.h"
-#include "AL/al.h"
-#include "AL/alext.h"
-
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
-#include "fmt/format.h"
-#include "fmt/ostream.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 
@@ -69,6 +64,30 @@ struct SwsContext;
 #include "SDL3/SDL_main.h"
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+import openal;
+
+/* AL_APIENTRY is needed, but not exported from the module. */
+#ifdef _WIN32
+ #define AL_APIENTRY __cdecl
+#else
+ #define AL_APIENTRY
+#endif
+
+#else
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "gsl/gsl"
+#endif
+
 
 namespace {
 

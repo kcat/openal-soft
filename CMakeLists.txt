@@ -1461,6 +1461,9 @@ if(HAVE_CXXMODULES)
     target_compile_options(openal.modules PRIVATE ${C_FLAGS})
     set_target_properties(openal.modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         POSITION_INDEPENDENT_CODE TRUE)
+    set(MODULES_TARGET openal.modules)
+else()
+    set(MODULES_TARGET )
 endif()
 
 add_library(alsoft.common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
@@ -1883,20 +1886,14 @@ if(ALSOFT_EXAMPLES)
 
     add_executable(aldebug examples/aldebug.cpp)
     target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-        ${UNICODE_FLAG} alsoft::fmt)
+        ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(aldebug PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    if(TARGET openal.modules)
-        target_link_libraries(aldebug PRIVATE openal.modules)
-    endif()
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldebug.cpp")
 
     add_executable(allafplay examples/allafplay.cpp)
     target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-        ${UNICODE_FLAG} alsoft::fmt)
+        ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(allafplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    if(TARGET openal.modules)
-        target_link_libraries(allafplay PRIVATE openal.modules)
-    endif()
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/allafplay.cpp")
 
     if(ALSOFT_INSTALL_EXAMPLES)
@@ -1944,13 +1941,13 @@ if(ALSOFT_EXAMPLES)
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
-            alsoft.excommon ${UNICODE_FLAG} alsoft::fmt)
+            alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(alstreamcb PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alstreamcb.cpp")
 
         add_executable(aldirect examples/aldirect.cpp)
         target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
-            alsoft.excommon ${UNICODE_FLAG} alsoft::fmt)
+            alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(aldirect PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldirect.cpp")
 
@@ -2011,7 +2008,7 @@ if(ALSOFT_EXAMPLES)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
                 PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft.common
-                alsoft.excommon alsoft::fmt)
+                alsoft.excommon alsoft::fmt ${MODULES_TARGET})
             set_target_properties(alffplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
             list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alffplay.cpp")
 

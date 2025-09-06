@@ -24,6 +24,7 @@
 
 /* This file contains a streaming audio player using a callback buffer. */
 
+#include "config.h"
 
 #include <algorithm>
 #include <atomic>
@@ -45,17 +46,25 @@
 
 #include "sndfile.h"
 
+#include "alnumeric.h"
+#include "common/alhelpers.h"
+#include "common/alhelpers.hpp"
+
+#include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import openal;
+
+#else
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alnumeric.h"
-#include "common/alhelpers.h"
-#include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
-
-#include "win_main_utf8.h"
+#endif
 
 
 namespace {

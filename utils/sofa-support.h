@@ -1,7 +1,6 @@
 #ifndef UTILS_SOFA_SUPPORT_H
 #define UTILS_SOFA_SUPPORT_H
 
-#include <cstddef>
 #include <memory>
 #include <span>
 #include <vector>

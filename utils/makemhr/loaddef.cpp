@@ -21,6 +21,8 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include "config.h"
+
 #include "loaddef.h"
 
 #include <algorithm>
@@ -46,14 +48,22 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "gsl/gsl"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
 
 #include "mysofa.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+
+#else
+
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

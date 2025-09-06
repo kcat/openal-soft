@@ -26,6 +26,8 @@
  * extension.
  */
 
+#include "config.h"
+
 #include <algorithm>
 #include <cstddef>
 #include <limits>
@@ -33,6 +35,7 @@
 #include <memory>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -40,16 +43,24 @@
 
 #include "sndfile.h"
 
+#include "common/alhelpers.h"
+#include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+import openal;
+
+#else
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "common/alhelpers.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
-
-#include "win_main_utf8.h"
+#endif
 
 namespace {
 
@@ -401,8 +412,7 @@ auto main(std::span<std::string_view> args) -> int
         LOAD_PROC(alcGetProcAddress);
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
-        device = p_alcOpenDevice(devname.c_str());
-        Ensures(device != nullptr);
+        device = gsl::make_not_null(p_alcOpenDevice(devname.c_str()));
     }
 
     /* Load the Direct API functions we're using. */
@@ -451,7 +461,8 @@ auto main(std::span<std::string_view> args) -> int
     auto source = ALuint{0u};
     alGenSourcesDirect(context, 1, &source);
     alSourceiDirect(context, source, AL_BUFFER, static_cast<ALint>(buffer));
-    Expects(alGetErrorDirect(context)==AL_NO_ERROR && "Failed to setup sound source");
+    if(alGetErrorDirect(context) != AL_NO_ERROR)
+        throw std::runtime_error{"Failed to setup sound source"};
 
     /* Play the sound until it finishes. */
     alSourcePlayDirect(context, source);

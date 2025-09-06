@@ -40,11 +40,6 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "fmt/ranges.h"
-#include "fmt/std.h"
-#include "gsl/gsl"
 #include "phase_shifter.h"
 #include "vector.h"
 
@@ -52,6 +47,18 @@
 
 #include "win_main_utf8.h"
 
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+
+#else
+
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/ranges.h"
+#include "fmt/std.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

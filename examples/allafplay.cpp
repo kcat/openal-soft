@@ -53,6 +53,8 @@
  *   allowed, but it's not supported. Object position tracks must be last.
  */
 
+#include "config.h"
+
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -77,18 +79,29 @@
 #include <fcntl.h>
 #endif
 
-import openal;
-
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
-#include "fmt/core.h"
-#include "fmt/ranges.h"
-#include "fmt/std.h"
-#include "gsl/gsl"
 
 #include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+import openal;
+
+#else
+
+#include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

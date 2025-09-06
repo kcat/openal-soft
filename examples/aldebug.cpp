@@ -24,6 +24,8 @@
 
 /* This file contains an example for using the debug extension. */
 
+#include "config.h"
+
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -35,14 +37,26 @@
 #include <string_view>
 #include <vector>
 
-import openal;
-
 #include "alnumeric.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "gsl/gsl"
 
 #include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import alsoft.fmt;
+import alsoft.gsl;
+import openal;
+
+#else
+
+#include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

@@ -218,15 +218,15 @@ endif()
 # ourselves (which is far less inclusive and more pessimistic than what it can
 # actually do, especially as CMake continues to update and improve).
 option(ALSOFT_ENABLE_MODULES "Enable use of C++20 modules when supported" ON)
-set(USE_CXXMODULES FALSE)
+set(HAVE_CXXMODULES FALSE)
 if(ALSOFT_ENABLE_MODULES)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28 AND (CMAKE_GENERATOR STREQUAL "Ninja"
             OR CMAKE_GENERATOR STREQUAL "Visual Studio 17 2022"))
         if((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.0)
-            OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.0)
+            OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0)
             OR (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.34))
             message(STATUS "C++20 modules enabled using ${CMAKE_CXX_COMPILER_ID} compiler v${CMAKE_CXX_COMPILER_VERSION} (CMake ${CMAKE_VERSION}, ${CMAKE_GENERATOR} generator)")
-            set(USE_CXXMODULES TRUE)
+            set(HAVE_CXXMODULES TRUE)
         else()
             message(NOTICE "C++20 modules not supported with ${CMAKE_CXX_COMPILER_ID} compiler v${CMAKE_CXX_COMPILER_VERSION}")
         endif()
@@ -1450,13 +1450,12 @@ configure_file(
 
 
 set(MODULES_OBJS )
-if(USE_CXXMODULES)
+if(HAVE_CXXMODULES)
     set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
         modules/alext.cppm modules/openal.cppm)
 
     add_library(openal.modules OBJECT EXCLUDE_FROM_ALL)
-    target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES
-        ${MODULES_OBJS})
+    target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES ${MODULES_OBJS})
     target_include_directories(openal.modules PRIVATE ${OpenAL_SOURCE_DIR}/include)
     target_compile_definitions(openal.modules PRIVATE ${CPP_DEFS})
     target_compile_options(openal.modules PRIVATE ${C_FLAGS})
@@ -1472,6 +1471,11 @@ target_compile_options(alsoft.common PRIVATE ${C_FLAGS})
 target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
 set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
+if(HAVE_CXXMODULES)
+    set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/fmt.cppm alsoft-modules/gsl.cppm)
+    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES
+        alsoft-modules/fmt.cppm alsoft-modules/gsl.cppm)
+endif()
 
 
 unset(HAS_ROUTER)
@@ -1877,26 +1881,26 @@ if(ALSOFT_EXAMPLES)
     set_target_properties(alrecord PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alrecord.c")
 
-    if(ALSOFT_INSTALL_EXAMPLES)
-        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord)
-    endif()
-
+    add_executable(aldebug examples/aldebug.cpp)
+    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
+        ${UNICODE_FLAG} alsoft::fmt)
+    set_target_properties(aldebug PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     if(TARGET openal.modules)
-        add_executable(aldebug examples/aldebug.cpp)
-        target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-            openal.modules ${UNICODE_FLAG} alsoft::fmt)
-        set_target_properties(aldebug PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldebug.cpp")
+        target_link_libraries(aldebug PRIVATE openal.modules)
+    endif()
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldebug.cpp")
 
-        add_executable(allafplay examples/allafplay.cpp)
-        target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
-            openal.modules ${UNICODE_FLAG} alsoft::fmt)
-        set_target_properties(allafplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/allafplay.cpp")
+    add_executable(allafplay examples/allafplay.cpp)
+    target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
+        ${UNICODE_FLAG} alsoft::fmt)
+    set_target_properties(allafplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
+    if(TARGET openal.modules)
+        target_link_libraries(allafplay PRIVATE openal.modules)
+    endif()
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/allafplay.cpp")
 
-        if(ALSOFT_INSTALL_EXAMPLES)
-            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} aldebug allafplay)
-        endif()
+    if(ALSOFT_INSTALL_EXAMPLES)
+        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord aldebug allafplay)
     endif()
 
     message(STATUS "Building example programs")

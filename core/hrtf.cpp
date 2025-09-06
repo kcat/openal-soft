@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -28,7 +29,6 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "ambidefs.h"
-#include "filesystem.h"
 #include "filters/splitter.h"
 #include "fmt/core.h"
 #include "gsl/gsl"
@@ -517,7 +517,7 @@ try {
     else
     {
         TRACE("Loading {}...", fname);
-        auto fstr = std::make_unique<fs::ifstream>(fs::path(al::char_as_u8(fname)),
+        auto fstr = std::make_unique<std::ifstream>(std::filesystem::path(al::char_as_u8(fname)),
             std::ios::binary);
         if(!fstr->is_open())
         {

@@ -2,8 +2,8 @@
 #define CORE_LOGGING_H
 
 #include <cstdint>
+#include <filesystem>
 
-#include "filesystem.h"
 #include "fmt/core.h"
 #include "opthelpers.h"
 
@@ -22,7 +22,7 @@ using LogCallbackFunc = auto(*)(void *userptr, char level, const char *message, 
 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr);
 
-void al_open_logfile(const fs::path &fname);
+void al_open_logfile(const std::filesystem::path &fname);
 void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args args);
 
 template<typename ...Args>

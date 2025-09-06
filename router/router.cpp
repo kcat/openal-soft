@@ -17,7 +17,6 @@
 #include "AL/alc.h"
 
 #include "alstring.h"
-#include "filesystem.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -421,7 +420,7 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
     case DLL_PROCESS_ATTACH:
         if(auto logfname = al::getenv(L"ALROUTER_LOGFILE"))
         {
-            LogFile.open(fs::path(*logfname));
+            LogFile.open(std::filesystem::path(*logfname));
             if(!LogFile.is_open())
                 ERR("Could not open log file: {}", wstr_to_utf8(*logfname));
         }

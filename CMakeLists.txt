@@ -674,8 +674,6 @@ set(COMMON_OBJS
     common/dynload.cpp
     common/dynload.h
     common/expected.hpp
-    common/filesystem.cpp
-    common/filesystem.h
     common/flexarray.h
     common/intrusive_ptr.h
     common/opthelpers.h

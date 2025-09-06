@@ -35,6 +35,7 @@
 #include <bit>
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <limits>
@@ -49,7 +50,6 @@
 #include "alstring.h"
 #include "core/helpers.h"
 #include "core/logging.h"
-#include "filesystem.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "strutils.hpp"
@@ -375,7 +375,7 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
 #ifdef _WIN32
 void ReadALConfig()
 {
-    auto path = fs::path{};
+    auto path = std::filesystem::path{};
 
 #if !defined(_GAMING_XBOX)
     {
@@ -393,22 +393,22 @@ void ReadALConfig()
         auto buffer = std::wstring_view{bufstore};
         {
 #endif
-            path = fs::path{buffer};
+            path = std::filesystem::path{buffer};
             path /= L"alsoft.ini";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(auto f = fs::ifstream{path}; f.is_open())
+            if(auto f = std::ifstream{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
 #endif
 
-    path = fs::path(al::char_as_u8(GetProcBinary().path));
+    path = std::filesystem::path(al::char_as_u8(GetProcBinary().path));
     if(!path.empty())
     {
         path /= L"alsoft.ini";
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = fs::ifstream{path}; f.is_open())
+        if(auto f = std::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -416,7 +416,7 @@ void ReadALConfig()
     {
         path = *confpath;
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = fs::ifstream{path}; f.is_open())
+        if(auto f = std::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 }
@@ -425,10 +425,10 @@ void ReadALConfig()
 
 void ReadALConfig()
 {
-    auto path = fs::path{"/etc/openal/alsoft.conf"};
+    auto path = std::filesystem::path{"/etc/openal/alsoft.conf"};
 
     TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-    if(auto f = fs::ifstream{path}; f.is_open())
+    if(auto f = std::ifstream{path}; f.is_open())
         LoadConfigFromFile(f);
 
     auto confpaths = al::getenv("XDG_CONFIG_DIRS").value_or("/etc/xdg");
@@ -442,12 +442,13 @@ void ReadALConfig()
         auto next = confpaths.rfind(':');
         if(next < confpaths.length())
         {
-            path = fs::path{std::string_view{confpaths}.substr(next+1)}.lexically_normal();
+            path = std::filesystem::path{std::string_view{confpaths}.substr(next+1)}
+                .lexically_normal();
             confpaths.erase(next);
         }
         else
         {
-            path = fs::path{confpaths}.lexically_normal();
+            path = std::filesystem::path{confpaths}.lexically_normal();
             confpaths.clear();
         }
 
@@ -458,7 +459,7 @@ void ReadALConfig()
             path /= "alsoft.conf";
 
             TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-            if(auto f = fs::ifstream{path}; f.is_open())
+            if(auto f = std::ifstream{path}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }

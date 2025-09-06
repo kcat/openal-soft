@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <cstring>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <system_error>
@@ -42,7 +43,6 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/logging.h"
-#include "filesystem.h"
 #include "gsl/gsl"
 #include "strutils.hpp"
 
@@ -239,7 +239,7 @@ void WaveBackend::open(std::string_view name)
         throw al::backend_exception{al::backend_error::NoDevice, "Device name \"{}\" not found",
             name};
 
-    mFile.open(fs::path(al::char_as_u8(*fname)), std::ios_base::binary);
+    mFile.open(std::filesystem::path(al::char_as_u8(*fname)), std::ios_base::binary);
     if(!mFile.is_open())
         throw al::backend_exception{al::backend_error::DeviceError, "Could not open file '{}': {}",
             *fname, std::generic_category().message(errno)};

@@ -28,6 +28,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <numbers>
@@ -39,7 +40,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "phase_shifter.h"
 #include "vector.h"
 
@@ -304,7 +304,8 @@ auto main(std::span<std::string_view> args) -> int
         }
         ++num_files;
 
-        auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".uhj.flac");
+        const auto outname = std::filesystem::path(al::char_as_u8(arg)).stem()
+            .replace_extension(u8".uhj.flac");
 
         auto ininfo = SF_INFO{};
         auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};

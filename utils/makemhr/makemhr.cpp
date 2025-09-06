@@ -72,6 +72,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -87,7 +88,6 @@
 #include "alcomplex.h"
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -304,7 +304,8 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
     const uint n{hData->mIrPoints};
     uint dither_seed{22222};
 
-    auto ostream = fs::ofstream{fs::path(al::char_as_u8(filename)), std::ios::binary};
+    auto ostream = std::ofstream{std::filesystem::path(al::char_as_u8(filename)),
+        std::ios::binary};
     if(!ostream.is_open())
     {
         fmt::println(std::cerr, "\nError: Could not open MHR file '{}'.", filename);
@@ -1158,16 +1159,17 @@ bool ProcessDefinition(std::string_view inName, const uint outRate, const Channe
     }
     else
     {
-        auto input = std::make_unique<fs::ifstream>(fs::path(al::char_as_u8(inName)));
+        auto input = std::make_unique<std::ifstream>(
+            std::filesystem::path(al::char_as_u8(inName)));
         if(!input->is_open())
         {
             fmt::println(std::cerr, "Error: Could not open input file '{}'", inName);
             return false;
         }
 
-        std::array<char,4> startbytes{};
-        input->read(startbytes.data(), startbytes.size());
-        if(input->gcount() != startbytes.size() || !input->good())
+        auto startbytes = std::array<char,4>{};
+        input->read(startbytes.data(), std::ssize(startbytes));
+        if(input->gcount() != std::ssize(startbytes) || !input->good())
         {
             fmt::println(std::cerr, "Error: Could not read input file '{}'", inName);
             return false;

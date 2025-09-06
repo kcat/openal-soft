@@ -1,6 +1,8 @@
 module;
 
 #include "fmt/base.h"
+#include "fmt/chrono.h"
+#include "fmt/format.h"
 #include "fmt/ostream.h"
 #include "fmt/ranges.h"
 #include "fmt/std.h"

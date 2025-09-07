@@ -104,7 +104,8 @@ void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args 
     if(gLogLevel >= level)
     {
         auto &logfile = gLogFile ? gLogFile : std::cerr;
-        fmt::println(logfile, "{}{}", prefix, msg);
+        /* std::vprint_unicode */
+        fmt::vprint(logfile, "{}{}\n", fmt::make_format_args(prefix, msg));
         logfile.flush();
     }
 #if defined(_WIN32) && !defined(NDEBUG)

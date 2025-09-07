@@ -66,7 +66,7 @@ constexpr auto GetLevelCode(const LogLevel level) noexcept -> std::optional<char
 
 } // namespace
 
-void al_open_logfile(const std::filesystem::path &fname)
+void al_open_logfile(const fs::path &fname)
 {
     gLogFile.open(fname);
     if(!gLogFile.is_open())

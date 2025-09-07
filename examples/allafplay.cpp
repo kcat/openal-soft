@@ -59,7 +59,6 @@
 #include <array>
 #include <bit>
 #include <cstdint>
-#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -83,6 +82,7 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/std.h"
@@ -517,7 +517,7 @@ void LafStream::convertPositions(const std::span<float> dst) const
     }, mSampleLine);
 }
 
-auto LoadLAF(const std::filesystem::path &fname) -> std::unique_ptr<LafStream>
+auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 {
     auto laf = std::make_unique<LafStream>();
     auto &infile = std::invoke([&fname,&laf]() -> std::streambuf&
@@ -729,7 +729,7 @@ auto LoadLAF(const std::filesystem::path &fname) -> std::unique_ptr<LafStream>
 
 void PlayLAF(std::string_view fname)
 try {
-    const auto laf = LoadLAF(std::filesystem::path(al::char_as_u8(fname)));
+    const auto laf = LoadLAF(fs::path(al::char_as_u8(fname)));
 
     switch(laf->mQuality)
     {
@@ -899,9 +899,9 @@ try {
                 * gsl::narrow_cast<int>(framesize);
         }
 
-        auto outname = std::filesystem::path(al::char_as_u8(fname)).stem();
+        auto outname = fs::path(al::char_as_u8(fname)).stem();
         outname += u8".caf";
-        if(std::filesystem::exists(outname) && !std::filesystem::is_fifo(outname))
+        if(fs::exists(outname) && !fs::is_fifo(outname))
             throw std::runtime_error{fmt::format("Output file {} exists", outname)};
 
         renderFile.open(outname, std::ios_base::binary | std::ios_base::out);

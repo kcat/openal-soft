@@ -30,7 +30,6 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -44,6 +43,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/std.h"
@@ -413,8 +413,7 @@ auto main(std::span<std::string_view> args) -> int
         fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels,
             (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
-        const auto outname = std::filesystem::path(al::char_as_u8(arg)).stem()
-            .replace_extension(u8".amb");
+        auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
         auto outfile = std::ofstream{outname, std::ios_base::binary};
         if(!outfile.is_open())
         {

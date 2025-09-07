@@ -9,7 +9,6 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -19,6 +18,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "gsl/gsl"
 
 
@@ -61,7 +61,7 @@ auto make_error(size_t linenum, std::format_string<Args...> fmt, Args&& ...args)
 auto AmbDecConf::load(const std::string_view fname) noexcept
     -> al::expected<std::monostate,std::string>
 {
-    auto f = std::ifstream{std::filesystem::path(al::char_as_u8(fname))};
+    auto f = fs::ifstream{fs::path(al::char_as_u8(fname))};
     if(!f.is_open())
         return al::unexpected(std::format("Failed to open file \"{}\"", fname));
 

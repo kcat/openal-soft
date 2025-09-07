@@ -26,6 +26,7 @@
 #include <atomic>
 #include <cmath>
 #include <deque>
+#include <format>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -148,7 +149,7 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
     case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
     case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
     }
-    throw std::runtime_error{fmt::format("Unexpected distance model {:#x}",
+    throw std::runtime_error{std::format("Unexpected distance model {:#x}",
         al::to_underlying(model))};
 }
 

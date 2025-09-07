@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -30,7 +31,6 @@
 #include "alstring.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "helpers.h"
 #include "hrtf_loader.hpp"
@@ -390,7 +390,7 @@ void AddFileEntry(const std::string_view filename)
     auto count = 1;
     auto newname = std::string{basename};
     while(checkName(newname))
-        newname = fmt::format("{} #{}", basename, ++count);
+        newname = std::format("{} #{}", basename, ++count);
 
     const auto &entry = EnumeratedHrtfs.emplace_back(newname, filename);
     TRACE("Adding file entry \"{}\"", entry.mFilename);
@@ -401,7 +401,7 @@ void AddFileEntry(const std::string_view filename)
  */
 void AddBuiltInEntry(const std::string_view dispname, uint residx)
 {
-    auto filename = fmt::format("!{}_{}", residx, dispname);
+    auto filename = std::format("!{}_{}", residx, dispname);
 
     if(std::ranges::find(EnumeratedHrtfs, filename,&HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
@@ -415,7 +415,7 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
     auto count = 1;
     auto newname = std::string{dispname};
     while(checkName(newname))
-        newname = fmt::format("{} #{}", dispname, ++count);
+        newname = std::format("{} #{}", dispname, ++count);
 
     const auto &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
     TRACE("Adding built-in entry \"{}\"", entry.mFilename);

@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -50,7 +51,6 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -355,7 +355,7 @@ public:
             TRACE("Default playback device: {}", default_sink);
             DefaultPlaybackDevName = default_sink;
 
-            const auto msg = fmt::format("Default playback device changed: {}", default_sink);
+            const auto msg = std::format("Default playback device changed: {}", default_sink);
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
         }
         if(default_src != DefaultCaptureDevName)
@@ -363,7 +363,7 @@ public:
             TRACE("Default capture device: {}", default_src);
             DefaultCaptureDevName = default_src;
 
-            const auto msg = fmt::format("Default capture device changed: {}", default_src);
+            const auto msg = std::format("Default capture device changed: {}", default_src);
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
         }
         signal();
@@ -387,14 +387,14 @@ public:
         auto count = 1;
         auto newname = std::string{info->description};
         while(checkName(PlaybackDevices, newname))
-            newname = fmt::format("{} #{}", info->description, ++count);
+            newname = std::format("{} #{}", info->description, ++count);
 
         const auto &newentry = PlaybackDevices.emplace_back(DevMap{std::move(newname),
             info->name, info->index});
         TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
             newentry.index);
 
-        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        const auto msg = std::format("Device added: {}", newentry.device_name);
         alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Playback, msg);
     }
 
@@ -416,14 +416,14 @@ public:
         auto count = 1;
         auto newname = std::string{info->description};
         while(checkName(CaptureDevices, newname))
-            newname = fmt::format("{} #{}", info->description, ++count);
+            newname = std::format("{} #{}", info->description, ++count);
 
         const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name,
             info->index});
         TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
             newentry.index);
 
-        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        const auto msg = std::format("Device added: {}", newentry.device_name);
         alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Capture, msg);
     }
 
@@ -477,7 +477,7 @@ public:
             {
                 devlist.erase(iter);
 
-                const auto msg = fmt::format("Device removed: {}", idx);
+                const auto msg = std::format("Device removed: {}", idx);
                 alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
             }
         }

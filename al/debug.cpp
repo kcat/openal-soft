@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstring>
 #include <deque>
+#include <format>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -32,7 +33,6 @@
 #include "direct_defs.h"
 #include "effect.h"
 #include "filter.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "source.h"
@@ -106,7 +106,7 @@ constexpr auto GetDebugSourceEnum(DebugSource source) -> ALenum
     case DebugSource::Application: return AL_DEBUG_SOURCE_APPLICATION_EXT;
     case DebugSource::Other: return AL_DEBUG_SOURCE_OTHER_EXT;
     }
-    throw std::runtime_error{fmt::format("Unexpected debug source value: {}",
+    throw std::runtime_error{std::format("Unexpected debug source value: {}",
         int{al::to_underlying(source)})};
 }
 
@@ -124,7 +124,7 @@ constexpr auto GetDebugTypeEnum(DebugType type) -> ALenum
     case DebugType::PopGroup: return AL_DEBUG_TYPE_POP_GROUP_EXT;
     case DebugType::Other: return AL_DEBUG_TYPE_OTHER_EXT;
     }
-    throw std::runtime_error{fmt::format("Unexpected debug type value: {}",
+    throw std::runtime_error{std::format("Unexpected debug type value: {}",
         int{al::to_underlying(type)})};
 }
 
@@ -137,7 +137,7 @@ constexpr auto GetDebugSeverityEnum(DebugSeverity severity) -> ALenum
     case DebugSeverity::Low: return AL_DEBUG_SEVERITY_LOW_EXT;
     case DebugSeverity::Notification: return AL_DEBUG_SEVERITY_NOTIFICATION_EXT;
     }
-    throw std::runtime_error{fmt::format("Unexpected debug severity value: {}",
+    throw std::runtime_error{std::format("Unexpected debug severity value: {}",
         int{al::to_underlying(severity)})};
 }
 

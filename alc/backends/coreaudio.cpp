@@ -24,6 +24,7 @@
 
 #include <cinttypes>
 #include <cmath>
+#include <format>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -42,7 +43,6 @@
 #include "core/converter.h"
 #include "core/device.h"
 #include "core/logging.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
@@ -294,7 +294,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
                 auto name = std::string{};
                 auto count = 1_uz;
                 do {
-                    name = fmt::format("{} #{}", curitem->mName, ++count);
+                    name = std::format("{} #{}", curitem->mName, ++count);
                 } while(std::ranges::find(subrange, name, &DeviceEntry::mName) != subrange.end());
                 curitem->mName = std::move(name);
             }

@@ -6,6 +6,7 @@
 #include <atomic>
 #include <bitset>
 #include <exception>
+#include <format>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -28,7 +29,6 @@
 #include "core/except.h"
 #include "core/logging.h"
 #include "direct_defs.h"
-#include "fmt/core.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -99,7 +99,7 @@ auto EventThread(al::Context *context) -> void
                         break;
                     }
 
-                    const auto msg = fmt::format("Source ID {} state has changed to {}", evt.mId,
+                    const auto msg = std::format("Source ID {} state has changed to {}", evt.mId,
                         state_sv);
                     context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
                         al::sizei(msg), msg.c_str(), context->mEventParam);
@@ -110,7 +110,7 @@ auto EventThread(al::Context *context) -> void
                         || !enabledevts.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
                         return;
 
-                    const auto msg = fmt::format("{} buffer{} completed", evt.mCount,
+                    const auto msg = std::format("{} buffer{} completed", evt.mCount,
                         (evt.mCount == 1) ? "" : "s");
                     context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
                         al::sizei(msg), msg.c_str(), context->mEventParam);

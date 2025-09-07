@@ -35,6 +35,7 @@
 #include <cerrno>
 #include <chrono>
 #include <ctime>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -76,6 +77,7 @@ std_pragma("GCC diagnostic ignored \"-Wsign-compare\"")
 std_pragma("GCC diagnostic ignored \"-Winline\"")
 std_pragma("GCC diagnostic ignored \"-Wpragmas\"")
 std_pragma("GCC diagnostic ignored \"-Wvla\"")
+std_pragma("GCC diagnostic ignored \"-Winvalid-constexpr\"")
 std_pragma("GCC diagnostic ignored \"-Weverything\"")
 #include "pipewire/pipewire.h"
 #include "pipewire/extensions/metadata.h"
@@ -747,7 +749,7 @@ void EventManager::RemoveDevice(uint32_t id)
             return false;
         TRACE("Removing device \"{}\"", n.mDevName);
         if(gEventHandler.initIsDone(std::memory_order_relaxed))
-            n.callEvent(alc::EventType::DeviceRemoved, fmt::format("Device removed: {}", n.mName));
+            n.callEvent(alc::EventType::DeviceRemoved, std::format("Device removed: {}", n.mName));
         return true;
     });
     sList.erase(end.begin(), end.end());
@@ -840,7 +842,7 @@ void DeviceNode::parseSampleRate(const spa_pod *value, bool force_update) noexce
         auto srates = get_pod_body<int32_t>(value, nvals);
 
         /* [0] is the default, [1...size()-1] are available selections. */
-        TRACE("  sample rate: {} {}", srates[0], srates.subspan(1));
+        TRACE("{}", fmt::format("  sample rate: {} {}", srates[0], srates.subspan(1)));
         /* Pick the first rate listed that's within the allowed range (default
          * rate if possible).
          */
@@ -1011,7 +1013,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         {
             if(nodeName && *nodeName)
                 return std::string{nodeName};
-            return fmt::format("PipeWire node #{}", info->id);
+            return std::format("PipeWire node #{}", info->id);
         });
 
         auto *form_factor = spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR);
@@ -1041,7 +1043,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             {
                 if(!node.mName.empty())
                 {
-                    const auto msg = fmt::format("Device removed: {}", node.mName);
+                    const auto msg = std::format("Device removed: {}", node.mName);
                     node.callEvent(alc::EventType::DeviceRemoved, msg);
                 }
                 notifyAdd = true;
@@ -1054,7 +1056,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             || al::case_compare(form_factor, "headset"sv) == 0);
         if(notifyAdd)
         {
-            const auto msg = fmt::format("Device added: {}", node.mName);
+            const auto msg = std::format("Device added: {}", node.mName);
             node.callEvent(alc::EventType::DeviceAdded, msg);
         }
     }
@@ -1147,7 +1149,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
                     auto *entry = EventManager::FindDevice(*propValue);
-                    const auto message = fmt::format("Default playback device changed: {}",
+                    const auto message = std::format("Default playback device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
                         message);
@@ -1159,7 +1161,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
                     auto *entry = EventManager::FindDevice(*propValue);
-                    const auto message = fmt::format("Default capture device changed: {}",
+                    const auto message = std::format("Default capture device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
                         message);
@@ -1552,7 +1554,7 @@ void PipeWirePlayback::open(std::string_view name)
     if(!mLoop)
     {
         const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
-        const auto thread_name = fmt::format("ALSoftP{}", count);
+        const auto thread_name = std::format("ALSoftP{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
@@ -2024,7 +2026,7 @@ void PipeWireCapture::open(std::string_view name)
     if(!mLoop)
     {
         const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
-        const auto thread_name = fmt::format("ALSoftC{}", count);
+        const auto thread_name = std::format("ALSoftC{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,

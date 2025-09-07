@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdarg>
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <span>
 #include <string>
@@ -13,7 +14,6 @@
 #include "alc/events.h"
 #include "core/device.h"
 #include "core/except.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 
@@ -108,12 +108,12 @@ enum class backend_error {
 class backend_exception final : public base_exception {
     backend_error mErrorCode;
 
-    static auto make_string(fmt::string_view fmt, fmt::format_args args) -> std::string;
+    static auto make_string(std::string_view fmt, std::format_args args) -> std::string;
 
 public:
     template<typename ...Args>
-    backend_exception(backend_error code, fmt::format_string<Args...> fmt, Args&& ...args)
-        : base_exception{make_string(fmt, fmt::make_format_args(args...))}, mErrorCode{code}
+    backend_exception(backend_error code, std::format_string<Args...> fmt, Args&& ...args)
+        : base_exception{make_string(fmt.get(), std::make_format_args(args...))}, mErrorCode{code}
     { }
     backend_exception(const backend_exception&) = default;
     backend_exception(backend_exception&&) = default;

@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -39,7 +40,7 @@ constexpr auto EnumFromWaveform(ModulatorWaveform type) -> ALenum
     case ModulatorWaveform::Sawtooth: return AL_RING_MODULATOR_SAWTOOTH;
     case ModulatorWaveform::Square: return AL_RING_MODULATOR_SQUARE;
     }
-    throw std::runtime_error{fmt::format("Invalid modulator waveform: {}",
+    throw std::runtime_error{std::format("Invalid modulator waveform: {}",
         int{al::to_underlying(type)})};
 }
 

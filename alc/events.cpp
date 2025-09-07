@@ -3,13 +3,13 @@
 
 #include "events.h"
 
+#include <format>
 #include <ranges>
 #include <span>
 
 #include "alnumeric.h"
 #include "core/logging.h"
 #include "device.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 
 
@@ -24,7 +24,7 @@ auto EnumFromEventType(const alc::EventType type) -> ALCenum
     case alc::EventType::DeviceRemoved: return ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT;
     case alc::EventType::Count: break;
     }
-    throw std::runtime_error{fmt::format("Invalid EventType: {}", int{al::to_underlying(type)})};
+    throw std::runtime_error{std::format("Invalid EventType: {}", int{al::to_underlying(type)})};
 }
 
 } // namespace

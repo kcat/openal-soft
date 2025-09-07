@@ -35,6 +35,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <memory.h>
 #include <span>
 #include <string>
@@ -48,7 +49,6 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
@@ -138,7 +138,7 @@ auto CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     auto count = 1;
     auto newname = basename;
     while(checkName(devices, newname))
-        newname = fmt::format("{} #{}", basename, ++count);
+        newname = std::format("{} #{}", basename, ++count);
     const DevMap &newentry = devices.emplace_back(std::move(newname), *guid);
 
     auto *guidstr = LPOLESTR{};

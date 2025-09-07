@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <memory>
 #include <ranges>
@@ -23,7 +24,6 @@
 #include "devformat.h"
 #include "filters/nfc.h"
 #include "flexarray.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
@@ -387,8 +387,8 @@ struct DeviceBase {
     void doDisconnect(std::string&& msg);
 
     template<typename ...Args>
-    void handleDisconnect(fmt::format_string<Args...> fmt, Args&& ...args)
-    { doDisconnect(fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
+    void handleDisconnect(std::format_string<Args...> fmt, Args&& ...args)
+    { doDisconnect(std::format(std::move(fmt), std::forward<Args>(args)...)); }
 
 private:
     uint renderSamples(const uint numSamples);

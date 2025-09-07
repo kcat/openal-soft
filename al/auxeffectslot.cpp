@@ -26,6 +26,7 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -93,7 +94,7 @@ auto getFactoryByType(EffectSlotType type) -> gsl::not_null<EffectStateFactory*>
     case EffectSlotType::PitchShifter: return PshifterStateFactory_getFactory();
     case EffectSlotType::VocalMorpher: return VmorpherStateFactory_getFactory();
     }
-    throw std::runtime_error{fmt::format("Unexpected effect slot type: {:#x}",
+    throw std::runtime_error{std::format("Unexpected effect slot type: {:#x}",
         al::to_underlying(type))};
 }
 

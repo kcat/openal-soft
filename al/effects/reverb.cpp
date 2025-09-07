@@ -14,7 +14,6 @@
 #include "alnumeric.h"
 #include "core/logging.h"
 #include "effects.h"
-#include "fmt/ranges.h"
 #include "gsl/gsl"
 
 #if ALSOFT_EAX
@@ -1063,10 +1062,10 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
             "  DecayLFRatio: {:f}\n"
             "  ReflectionsGain: {:f}\n"
             "  ReflectionsDelay: {:f}\n"
-            "  ReflectionsPan: {}\n"
+            "  ReflectionsPan: [{}, {}, {}]\n"
             "  LateReverbGain: {:f}\n"
             "  LateReverbDelay: {:f}\n"
-            "  LateRevernPan: {}\n"
+            "  LateRevernPan: [{}, {}, {}]\n"
             "  EchoTime: {:f}\n"
             "  EchoDepth: {:f}\n"
             "  ModulationTime: {:f}\n"
@@ -1077,10 +1076,11 @@ bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
             "  RoomRolloffFactor: {:f}\n"
             "  DecayHFLimit: {}", ret.Density, ret.Diffusion, ret.Gain, ret.GainHF, ret.GainLF,
             ret.DecayTime, ret.DecayHFRatio, ret.DecayLFRatio, ret.ReflectionsGain,
-            ret.ReflectionsDelay, ret.ReflectionsPan, ret.LateReverbGain, ret.LateReverbDelay,
-            ret.LateReverbPan, ret.EchoTime, ret.EchoDepth, ret.ModulationTime,
-            ret.ModulationDepth, ret.AirAbsorptionGainHF, ret.HFReference, ret.LFReference,
-            ret.RoomRolloffFactor, ret.DecayHFLimit ? "true" : "false");
+            ret.ReflectionsDelay, ret.ReflectionsPan[0], ret.ReflectionsPan[1],
+            ret.ReflectionsPan[2], ret.LateReverbGain, ret.LateReverbDelay, ret.LateReverbPan[0],
+            ret.LateReverbPan[1], ret.LateReverbPan[2], ret.EchoTime, ret.EchoDepth,
+            ret.ModulationTime, ret.ModulationDepth, ret.AirAbsorptionGainHF, ret.HFReference,
+            ret.LFReference, ret.RoomRolloffFactor, ret.DecayHFLimit ? "true" : "false");
     }
 
     return true;

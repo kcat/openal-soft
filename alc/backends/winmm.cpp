@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <format>
 #include <ranges>
 #include <string>
 #include <thread>
@@ -43,7 +44,6 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
@@ -79,7 +79,7 @@ void ProbePlaybackDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(PlaybackDevices, newname))
-                newname = fmt::format("{} #{}", basename, ++count);
+                newname = std::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);
@@ -106,7 +106,7 @@ void ProbeCaptureDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(CaptureDevices, newname))
-                newname = fmt::format("{} #{}", basename, ++count);
+                newname = std::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);

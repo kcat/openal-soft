@@ -60,9 +60,9 @@ auto alGetError(gsl::not_null<al::Context*> context) noexcept -> ALenum
 } // namespace
 
 
-void al::Context::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args)
+void al::Context::setErrorImpl(ALenum errorCode, const std::string_view fmt, std::format_args args)
 {
-    const auto message = fmt::vformat(fmt, std::move(args));
+    const auto message = std::vformat(fmt, std::move(args));
 
     WARN("Error generated on context {}, code {:#04x}, \"{}\"",
         decltype(std::declval<void*>()){this}, as_unsigned(errorCode), message);
@@ -84,8 +84,8 @@ void al::Context::setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt
         message);
 }
 
-void al::Context::throw_error_impl(ALenum errorCode, const fmt::string_view fmt,
-    fmt::format_args args)
+void al::Context::throw_error_impl(ALenum errorCode, const std::string_view fmt,
+    std::format_args args)
 {
     setErrorImpl(errorCode, fmt, std::move(args));
     throw al::base_exception{};

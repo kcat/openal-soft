@@ -29,6 +29,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -92,7 +93,7 @@ constexpr auto EnumFromAmbiLayout(AmbiLayout layout) -> ALenum
     case AmbiLayout::FuMa: return AL_FUMA_SOFT;
     case AmbiLayout::ACN: return AL_ACN_SOFT;
     }
-    throw std::runtime_error{fmt::format("Invalid AmbiLayout: {}",
+    throw std::runtime_error{std::format("Invalid AmbiLayout: {}",
         int{al::to_underlying(layout)})};
 }
 
@@ -115,7 +116,7 @@ constexpr auto EnumFromAmbiScaling(AmbiScaling scale) -> ALenum
     case AmbiScaling::N3D: return AL_N3D_SOFT;
     case AmbiScaling::UHJ: break;
     }
-    throw std::runtime_error{fmt::format("Invalid AmbiScaling: {}",
+    throw std::runtime_error{std::format("Invalid AmbiScaling: {}",
         int{al::to_underlying(scale)})};
 }
 
@@ -138,7 +139,7 @@ constexpr auto EnumFromEaxStorage(EaxStorage storage) -> ALenum
     case EaxStorage::Accessible: return AL_STORAGE_ACCESSIBLE;
     case EaxStorage::Hardware: return AL_STORAGE_HARDWARE;
     }
-    throw std::runtime_error{fmt::format("Invalid EaxStorage: {}",
+    throw std::runtime_error{std::format("Invalid EaxStorage: {}",
         int{al::to_underlying(storage)})};
 }
 

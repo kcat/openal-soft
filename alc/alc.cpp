@@ -43,6 +43,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -419,7 +420,7 @@ void alc_initconfig()
     {
         auto names = std::array<std::string_view,BackendList.size()>{};
         std::ranges::transform(BackendList, names.begin(), &BackendInfo::name);
-        TRACE("Supported backends: {}", fmt::join(names, ", "));
+        TRACE("{}", fmt::format("Supported backends: {}", fmt::join(names, ", ")));
     }
     ReadALConfig();
 
@@ -881,7 +882,7 @@ ALCenum EnumFromDevFmt(DevFmtType type)
     case DevFmtUInt: return ALC_UNSIGNED_INT_SOFT;
     case DevFmtFloat: return ALC_FLOAT_SOFT;
     }
-    throw std::runtime_error{fmt::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
+    throw std::runtime_error{std::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
 }
 
 std::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
@@ -916,7 +917,7 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     case DevFmtX3D71:
         break;
     }
-    throw std::runtime_error{fmt::format("Invalid DevFmtChannels: {}",
+    throw std::runtime_error{std::format("Invalid DevFmtChannels: {}",
         int{al::to_underlying(channels)})};
 }
 
@@ -937,7 +938,7 @@ ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
     case DevAmbiLayout::FuMa: return ALC_FUMA_SOFT;
     case DevAmbiLayout::ACN: return ALC_ACN_SOFT;
     }
-    throw std::runtime_error{fmt::format("Invalid DevAmbiLayout: {}",
+    throw std::runtime_error{std::format("Invalid DevAmbiLayout: {}",
         int{al::to_underlying(layout)})};
 }
 
@@ -960,7 +961,7 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
     case DevAmbiScaling::SN3D: return ALC_SN3D_SOFT;
     case DevAmbiScaling::N3D: return ALC_N3D_SOFT;
     }
-    throw std::runtime_error{fmt::format("Invalid DevAmbiScaling: {}",
+    throw std::runtime_error{std::format("Invalid DevAmbiScaling: {}",
         int{al::to_underlying(scaling)})};
 }
 
@@ -1937,7 +1938,7 @@ auto VerifyDevice(ALCdevice *device) -> gsl::not_null<DeviceRef>
         return gsl::make_not_null(DeviceRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    throw al::base_exception{fmt::format("Invalid device handle {}", voidp{device})};
+    throw al::base_exception{std::format("Invalid device handle {}", voidp{device})};
 }
 
 
@@ -1955,7 +1956,7 @@ auto VerifyContext(ALCcontext *context) -> gsl::not_null<ContextRef>
         return gsl::make_not_null(ContextRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-    throw al::base_exception{fmt::format("Invalid context handle {}", voidp{context})};
+    throw al::base_exception{std::format("Invalid context handle {}", voidp{context})};
 }
 
 } // namespace

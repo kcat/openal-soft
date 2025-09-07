@@ -70,7 +70,7 @@ void al_open_logfile(const std::filesystem::path &fname)
 {
     gLogFile.open(fname);
     if(!gLogFile.is_open())
-        ERR("Failed to open log file '{}'", fname);
+        ERR("Failed to open log file '{}'", al::u8_as_char(fname.u8string()));
 }
 
 void al_set_log_callback(LogCallbackFunc callback, void *userptr)
@@ -88,9 +88,9 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
     }
 }
 
-void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args args)
+void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args args)
 {
-    const auto msg = fmt::vformat(fmt, std::move(args));
+    const auto msg = std::vformat(fmt, std::move(args));
 
     auto prefix = "[ALSOFT] (--) "sv;
     switch(level)
@@ -112,7 +112,7 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-    OutputDebugStringW(utf8_to_wstr(fmt::format("{}{}\n", prefix, msg)).c_str());
+    OutputDebugStringW(utf8_to_wstr(std::format("{}{}\n", prefix, msg)).c_str());
 #elif defined(__ANDROID__)
     auto android_severity = [](LogLevel l) noexcept
     {

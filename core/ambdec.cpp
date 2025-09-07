@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <span>
@@ -18,7 +19,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 
 
@@ -47,11 +47,11 @@ enum class ReaderScope {
 };
 
 template<typename ...Args>
-auto make_error(size_t linenum, fmt::format_string<Args...> fmt, Args&& ...args)
+auto make_error(size_t linenum, std::format_string<Args...> fmt, Args&& ...args)
     -> al::unexpected<std::string>
 {
-    auto str = fmt::format("Line {}: ", linenum);
-    str += fmt::format(std::move(fmt), std::forward<Args>(args)...);
+    auto str = std::format("Line {}: ", linenum);
+    str += std::format(std::move(fmt), std::forward<Args>(args)...);
     return al::unexpected(std::move(str));
 }
 
@@ -63,7 +63,7 @@ auto AmbDecConf::load(const std::string_view fname) noexcept
 {
     auto f = std::ifstream{std::filesystem::path(al::char_as_u8(fname))};
     if(!f.is_open())
-        return al::unexpected(fmt::format("Failed to open file \"{}\"", fname));
+        return al::unexpected(std::format("Failed to open file \"{}\"", fname));
 
     auto scope = ReaderScope::Global;
     auto speaker_pos = 0_uz;

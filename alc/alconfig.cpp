@@ -204,8 +204,9 @@ void LoadConfigFromFile(std::istream &f)
 
         if(not validate_utf8(buffer))
         {
-            ERR(" config parse error: non-UTF-8 characters on line {}:", linenum);
-            ERR("  {::#04x}", buffer|std::views::transform([](auto c) { return as_unsigned(c); }));
+            ERR(" config parse error: non-UTF-8 characters on line {}", linenum);
+            ERR("{}", fmt::format("  {::#04x}",
+                buffer|std::views::transform([](auto c) { return as_unsigned(c); })));
             continue;
         }
 

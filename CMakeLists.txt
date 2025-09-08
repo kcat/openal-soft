@@ -212,11 +212,11 @@ elseif(HAVE_MSSTL)
 endif()
 
 # Work out whether C++20 modules are supported. Currently only works with CMake
-# 3.28+ and the Ninja generator, along with GCC 15+, Clang 17+, or MSVC 14.34+.
-# Unfortunately CMake doesn't provide any check to tell whether it supports
-# modules with the given generator and compiler, so we have to do a check
-# ourselves (which is far less inclusive and more pessimistic than what it can
-# actually do, especially as CMake continues to update and improve).
+# 3.28+ and the Ninja or VS 17 2022 generator, along with GCC 15+, Clang 17+,
+# or MSVC 14.34+. Unfortunately CMake doesn't provide any check to tell whether
+# it supports modules with the given generator and compiler, so we have to do a
+# check ourselves (which is far less inclusive and more pessimistic than what
+# it can actually do, especially as CMake continues to update and improve).
 option(ALSOFT_ENABLE_MODULES "Enable use of C++20 modules when supported" ON)
 set(HAVE_CXXMODULES FALSE)
 if(ALSOFT_ENABLE_MODULES)

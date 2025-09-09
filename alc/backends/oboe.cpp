@@ -26,7 +26,7 @@ using namespace std::string_view_literals;
 struct OboePlayback final : public BackendBase, public oboe::AudioStreamCallback {
     explicit OboePlayback(gsl::not_null<DeviceBase*> device) : BackendBase{device} { }
 
-    oboe::ManagedStream mStream;
+    std::shared_ptr<oboe::AudioStream> mStream;
 
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *oboeStream, void *audioData,
         int32_t numFrames) override;
@@ -65,10 +65,10 @@ void OboePlayback::open(std::string_view name)
             name};
 
     /* Open a basic output stream, just to ensure it can work. */
-    auto stream = oboe::ManagedStream{};
+    auto stream = std::shared_ptr<oboe::AudioStream>{};
     const auto result = oboe::AudioStreamBuilder{}.setDirection(oboe::Direction::Output)
         ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-        ->openManagedStream(stream);
+        ->openStream(stream);
     if(result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: {}",
             oboe::convertToText(result)};
@@ -128,7 +128,7 @@ bool OboePlayback::reset()
         builder.setFormat(format);
     }
 
-    oboe::Result result{builder.openManagedStream(mStream)};
+    auto result = builder.openStream(mStream);
     /* If the format failed, try asking for the defaults. */
     while(result == oboe::Result::ErrorInvalidFormat)
     {
@@ -140,7 +140,7 @@ bool OboePlayback::reset()
             builder.setChannelCount(oboe::ChannelCount::Unspecified);
         else
             break;
-        result = builder.openManagedStream(mStream);
+        result = builder.openStream(mStream);
     }
     if(result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: {}",
@@ -215,7 +215,7 @@ void OboePlayback::stop()
 struct OboeCapture final : public BackendBase, public oboe::AudioStreamCallback {
     explicit OboeCapture(gsl::not_null<DeviceBase*> device) : BackendBase{device} { }
 
-    oboe::ManagedStream mStream;
+    std::shared_ptr<oboe::AudioStream> mStream;
 
     RingBufferPtr<std::byte> mRing;
 
@@ -301,7 +301,7 @@ void OboeCapture::open(std::string_view name)
             "{} capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
     }
 
-    if(const auto result = builder.openManagedStream(mStream); result != oboe::Result::OK)
+    if(const auto result = builder.openStream(mStream); result != oboe::Result::OK)
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to create stream: {}",
             oboe::convertToText(result)};
 

@@ -1,6 +1,8 @@
 #ifndef AL_STRING_H
 #define AL_STRING_H
 
+#include <string_view>
+
 #include "opthelpers.h"
 
 

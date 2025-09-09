@@ -22,7 +22,6 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "core/async_event.h"
 #include "core/context.h"
 #include "core/effects/base.h"
@@ -102,7 +101,7 @@ auto EventThread(al::Context *context) -> void
                     const auto msg = std::format("Source ID {} state has changed to {}", evt.mId,
                         state_sv);
                     context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
-                        al::sizei(msg), msg.c_str(), context->mEventParam);
+                        al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);
                 },
                 [context,enabledevts](AsyncBufferCompleteEvent &evt)
                 {
@@ -113,7 +112,7 @@ auto EventThread(al::Context *context) -> void
                     const auto msg = std::format("{} buffer{} completed", evt.mCount,
                         (evt.mCount == 1) ? "" : "s");
                     context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
-                        al::sizei(msg), msg.c_str(), context->mEventParam);
+                        al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);
                 },
                 [context,enabledevts](AsyncDisconnectEvent &evt)
                 {
@@ -121,8 +120,9 @@ auto EventThread(al::Context *context) -> void
                         || !enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
                         return;
 
-                    context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0, al::sizei(evt.msg),
-                        evt.msg.c_str(), context->mEventParam);
+                    context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
+                        al::saturate_cast<ALsizei>(evt.msg.size()), evt.msg.c_str(),
+                        context->mEventParam);
                 }
             }, event);
         }

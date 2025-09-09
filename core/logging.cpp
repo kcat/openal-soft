@@ -15,6 +15,7 @@
 #include <string_view>
 #include <utility>
 
+#include "alnumeric.h"
 #include "alstring.h"
 #include "fmt/std.h"
 #include "strutils.hpp"
@@ -129,8 +130,8 @@ void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args 
         return ANDROID_LOG_ERROR;
     };
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
-    __android_log_print(android_severity(level), "openal", "%.*s%s", al::sizei(prefix),
-        prefix.data(), msg.c_str());
+    __android_log_print(android_severity(level), "openal", "%.*s%s",
+        al::saturate_cast<int>(prefix), prefix.data(), msg.c_str());
 #endif
 
     auto cblock = std::lock_guard{LogCallbackMutex};
@@ -139,7 +140,8 @@ void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args 
         if(auto logcode = GetLevelCode(level))
         {
             if(gLogCallback)
-                gLogCallback(gLogCallbackPtr, *logcode, msg.data(), al::sizei(msg));
+                gLogCallback(gLogCallbackPtr, *logcode, msg.data(),
+                    al::saturate_cast<int>(msg.size()));
             else if(gLogState == LogState::FirstRun)
                 gLogState = LogState::Disable;
         }

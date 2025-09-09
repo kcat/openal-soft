@@ -353,7 +353,7 @@ struct Channel {
 };
 
 struct LafStream {
-    std::filebuf mInFile;
+    std::ifstream mInFile;
 
     Quality mQuality{};
     Mode mMode{};
@@ -395,8 +395,20 @@ struct LafStream {
 auto LafStream::readChunk() -> uint32_t
 {
     auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
-    auto &infile = mInFile.is_open() ? mInFile : *std::cin.rdbuf();
-    infile.sgetn(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u));
+    auto &infile = mInFile.is_open() ? mInFile : std::cin;
+    if(!infile.read(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u)))
+         [[unlikely]]
+    {
+        /* Only print an error when expecting more samples. A sample count of
+         * ~0_u64 indicates unbounded input, which will end when it has nothing
+         * more to give.
+         */
+        if(mSampleCount < ~0_u64 || infile.gcount() != 0)
+            fmt::println(std::cerr, "Premature end of file ({} of {} samples)", mCurrentSample,
+                mSampleCount);
+        mSampleCount = mCurrentSample;
+        return 0u;
+    }
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = gsl::narrow<unsigned>(std::accumulate(mEnabledTracks.cbegin(),
@@ -411,24 +423,22 @@ auto LafStream::readChunk() -> uint32_t
      * enabled track. The last chunk may be shorter if there isn't enough time
      * remaining for a full second.
      */
-    auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
+    const auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
 
-    auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
+    const auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
         * mNumEnabled);
-    if(const auto got = infile.sgetn(mSampleChunk.data(), toread); got != toread)
+    if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
-        /* Only error when expecting more samples. A sample count of ~0_u64
-         * essentially indicates unbounded input, which will end when it has
-         * nothing more to give.
-         */
+        const auto framesize = BytesFromQuality(mQuality) * mNumEnabled;
+        const auto samplesread = al::saturate_cast<uint64_t>(infile.gcount()) / framesize;
+        mCurrentSample += samplesread;
         if(mSampleCount < ~0_u64)
-            throw std::runtime_error{"Failed to read sample chunk"};
-        numsamples = al::saturate_cast<uint64_t>(got) / BytesFromQuality(mQuality) / mNumEnabled;
-        mSampleCount = mCurrentSample + numsamples;
-        toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
-            * mNumEnabled);
+            fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
+                mCurrentSample, mSampleCount);
+        mSampleCount = mCurrentSample;
+        std::ranges::fill(mSampleChunk | std::views::drop(numsamples*framesize), char{});
+        return gsl::narrow<uint32_t>(samplesread);
     }
-
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
     mCurrentSample += numsamples;
@@ -520,7 +530,7 @@ void LafStream::convertPositions(const std::span<float> dst) const
 auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 {
     auto laf = std::make_unique<LafStream>();
-    auto &infile = std::invoke([&fname,&laf]() -> std::streambuf&
+    auto &infile = std::invoke([&fname,&laf]() -> std::istream&
     {
         if(fname == "-")
         {
@@ -531,23 +541,26 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             if(_setmode(_fileno(stdin), _O_BINARY) == -1)
                 throw std::runtime_error{"Failed to set stdin to binary mode"};
 #endif
-            return *std::cin.rdbuf();
+            return std::cin;
         }
 
-        if(!laf->mInFile.open(fname, std::ios_base::binary | std::ios_base::in))
+        laf->mInFile.open(fname, std::ios_base::binary);
+        if(!laf->mInFile.is_open())
             throw std::runtime_error{"Could not open file"};
         return laf->mInFile;
     });
+    /* Throw exceptions if we fail reading the header, so it will skip the file
+     * and go to the next.
+     */
+    infile.exceptions(std::ios_base::eofbit | std::ios_base::failbit | std::ios_base::badbit);
 
     auto marker = std::array<char,9>{};
-    if(infile.sgetn(marker.data(), marker.size()) != marker.size())
-        throw std::runtime_error{"Failed to read file marker"};
+    infile.read(marker.data(), marker.size());
     if(std::string_view{marker.data(), marker.size()} != "LIMITLESS"sv)
         throw std::runtime_error{"Not an LAF file"};
 
     auto header = std::array<char,10>{};
-    if(infile.sgetn(header.data(), header.size()) != header.size())
-        throw std::runtime_error{"Failed to read header"};
+    infile.read(header.data(), header.size());
     while(std::string_view{header.data(), 4} != "HEAD"sv)
     {
         auto headview = std::string_view{header.data(), header.size()};
@@ -571,9 +584,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         else if(headview.back() == 'H')
             hiter = std::ranges::copy_n(header.end()-1, 1, hiter).out;
 
-        const auto toread = std::distance(hiter, header.end());
-        if(infile.sgetn(std::to_address(hiter), toread) != toread)
-            throw std::runtime_error{"Failed to read header"};
+        infile.read(std::to_address(hiter), std::distance(hiter, header.end()));
     }
 
     laf->mQuality = std::invoke([stype=int{header[4]}]
@@ -609,9 +620,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         throw std::runtime_error{fmt::format("Too many tracks: {}", laf->mNumTracks)};
 
     auto chandata = std::vector<char>(laf->mNumTracks*9_uz);
-    auto headersize = std::ssize(chandata);
-    if(infile.sgetn(chandata.data(), headersize) != headersize)
-        throw std::runtime_error{"Failed to read channel header data"};
+    infile.read(chandata.data(), std::ssize(chandata));
 
     if(laf->mMode == Mode::Channels)
         laf->mChannels.resize(laf->mNumTracks);
@@ -681,8 +690,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         MyAssert(((laf->mChannels.size()-1)>>4) == laf->mPosTracks.size()-1);
 
     auto footer = std::array<char,12>{};
-    if(infile.sgetn(footer.data(), footer.size()) != footer.size())
-        throw std::runtime_error{"Failed to read sample header data"};
+    infile.read(footer.data(), footer.size());
 
     laf->mSampleRate = std::invoke([input=std::span{footer}.first<4>()]
     {
@@ -724,6 +732,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     case Quality::s24: laf->mSampleLine.emplace<std::vector<int32_t>>(laf->mSampleRate); break;
     }
 
+    /* Re-disable exceptions since we'll manually check each read. */
+    infile.exceptions(std::ios_base::goodbit);
     return laf;
 }
 

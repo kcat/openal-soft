@@ -131,7 +131,7 @@ void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args 
     };
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
     __android_log_print(android_severity(level), "openal", "%.*s%s",
-        al::saturate_cast<int>(prefix), prefix.data(), msg.c_str());
+        al::saturate_cast<int>(prefix.size()), prefix.data(), msg.c_str());
 #endif
 
     auto cblock = std::lock_guard{LogCallbackMutex};

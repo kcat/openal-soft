@@ -24,6 +24,11 @@ import alsoft.gsl;
 import alsoft.router;
 import openal.alc;
 
+#ifndef ALC_API
+ #define ALC_API __declspec(dllimport)
+#endif
+#define ALC_APIENTRY __cdecl
+
 #else
 
 #include "AL/alc.h"

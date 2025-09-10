@@ -5,6 +5,11 @@
 import alsoft.router;
 import openal.al;
 
+#ifndef AL_API
+ #define AL_API __declspec(dllimport)
+#endif
+#define AL_APIENTRY __cdecl
+
 #else
 
 #include "AL/al.h"

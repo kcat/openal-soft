@@ -5,6 +5,9 @@
 #include "router.h"
 #endif
 
+#include <windows.h>
+#include <winnt.h>
+
 #include <algorithm>
 #include <array>
 #include <bit>

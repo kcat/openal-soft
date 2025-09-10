@@ -64,6 +64,10 @@ const auto alcFunctions = std::array{
     DECL(alcSetThreadContext),
     DECL(alcGetThreadContext),
 
+    DECL(alcLoopbackOpenDeviceSOFT),
+    DECL(alcIsRenderFormatSupportedSOFT),
+    DECL(alcRenderSamplesSOFT),
+
     DECL(alEnable),
     DECL(alDisable),
     DECL(alIsEnabled),
@@ -299,7 +303,7 @@ constexpr auto alcEnumerations = std::array{
 [[nodiscard]] constexpr auto GetExtensionString() noexcept -> gsl::czstring
 {
     return "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
-        "ALC_EXT_thread_local_context";
+        "ALC_EXT_thread_local_context ALC_SOFT_loopback";
 }
 
 [[nodiscard]] consteval auto GetExtensionArray() noexcept
@@ -1059,4 +1063,89 @@ ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
     if(auto *iface = GetThreadDriver())
         return iface->alcGetThreadContext();
     return nullptr;
+}
+
+ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) noexcept
+    -> ALCdevice*
+{
+    LoadDrivers();
+
+    auto *device = LPALCdevice{nullptr};
+    auto idx = std::optional<ALCuint>{};
+
+    if(deviceName && *deviceName != '\0')
+    {
+        {
+            auto enumlock = std::lock_guard{EnumerationLock};
+            if(!DevicesList)
+                std::ignore = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
+            idx = DevicesList.getDriverIndexForName(deviceName);
+        }
+
+        if(!idx)
+        {
+            LastError.store(ALC_INVALID_VALUE);
+            TRACE("Failed to find driver for name \"{}\"", deviceName);
+            return nullptr;
+        }
+        TRACE("Found driver {} for name \"{}\"", *idx, deviceName);
+        if(!DriverList[*idx]->alcLoopbackOpenDeviceSOFT)
+        {
+            LastError.store(ALC_INVALID_VALUE);
+            WARN("Loopback not supported on device {}", deviceName);
+            return nullptr;
+        }
+        device = DriverList[*idx]->alcLoopbackOpenDeviceSOFT(deviceName);
+    }
+    else
+    {
+        const auto iter = std::ranges::find_if(DriverList, [&device](const DriverIface &drv) ->bool
+        {
+            if(drv.alcLoopbackOpenDeviceSOFT)
+            {
+                TRACE("Using default loopback device from driver {}", wstr_to_utf8(drv.Name));
+                device = drv.alcLoopbackOpenDeviceSOFT(nullptr);
+                return true;
+            }
+            return false;
+        }, &DriverIfacePtr::operator*);
+        if(iter == DriverList.end())
+        {
+            LastError.store(ALC_INVALID_DEVICE);
+            return nullptr;
+        }
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
+    }
+
+    if(!device)
+        LastError.store(DriverList[idx.value()]->alcGetError(nullptr));
+    else
+    {
+        try {
+            DeviceIfaceMap.emplace(device, idx.value());
+        }
+        catch(...) {
+            DriverList[idx.value()]->alcCloseDevice(device);
+            device = nullptr;
+        }
+    }
+
+    return device;
+}
+
+ALC_API auto ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq,
+    ALCenum channels, ALCenum type) noexcept -> ALCboolean
+{
+    if(const auto idx = maybe_get(DeviceIfaceMap, device))
+        return DriverList[*idx]->alcIsRenderFormatSupportedSOFT(device, freq, channels, type);
+    LastError.store(ALC_INVALID_DEVICE);
+    return ALC_FALSE;
+}
+
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer,
+    ALCsizei samples) noexcept
+{
+    if(const auto idx = maybe_get(DeviceIfaceMap, device))
+        return DriverList[*idx]->alcRenderSamplesSOFT(device, buffer, samples);
+    LastError.store(ALC_INVALID_DEVICE);
 }

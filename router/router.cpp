@@ -246,6 +246,12 @@ void AddModule(HMODULE module, const std::wstring_view name)
             LOAD_PROC(alcSetThreadContext);
             LOAD_PROC(alcGetThreadContext);
         }
+        if(newdrv.alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
+        {
+            LOAD_PROC(alcLoopbackOpenDeviceSOFT);
+            LOAD_PROC(alcIsRenderFormatSupportedSOFT);
+            LOAD_PROC(alcRenderSamplesSOFT);
+        }
 #undef LOAD_PROC
     }
 

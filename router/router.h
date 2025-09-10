@@ -47,6 +47,10 @@ struct DriverIface {
     PFNALCSETTHREADCONTEXTPROC alcSetThreadContext{nullptr};
     PFNALCGETTHREADCONTEXTPROC alcGetThreadContext{nullptr};
 
+    LPALCLOOPBACKOPENDEVICESOFT alcLoopbackOpenDeviceSOFT{nullptr};
+    LPALCISRENDERFORMATSUPPORTEDSOFT alcIsRenderFormatSupportedSOFT{nullptr};
+    LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT{nullptr};
+
     LPALENABLE alEnable{nullptr};
     LPALDISABLE alDisable{nullptr};
     LPALISENABLED alIsEnabled{nullptr};

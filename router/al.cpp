@@ -1,9 +1,12 @@
 
 #include "config.h"
 
+#include <atomic>
+
 #if HAVE_CXXMODULES
 import alsoft.router;
 import openal.al;
+import openal.efx;
 
 #ifndef AL_API
  #define AL_API __declspec(dllimport)
@@ -13,6 +16,7 @@ import openal.al;
 #else
 
 #include "AL/al.h"
+#include "AL/efx.h"
 #include "router.h"
 #endif
 

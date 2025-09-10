@@ -22,7 +22,7 @@
 #if HAVE_CXXMODULES
 import alsoft.gsl;
 import alsoft.router;
-import openal.alc;
+import openal;
 
 #ifndef ALC_API
  #define ALC_API __declspec(dllimport)
@@ -32,6 +32,8 @@ import openal.alc;
 #else
 
 #include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
 #include "gsl/gsl"
 #include "router.h"
 #endif

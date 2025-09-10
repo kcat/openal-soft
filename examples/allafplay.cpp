@@ -104,6 +104,11 @@ import openal;
 
 namespace {
 
+using ALCdevicePtr = std::unique_ptr<ALCdevice, decltype([](ALCdevice *device)
+    { alcCloseDevice(device); })>;
+using ALCcontextPtr = std::unique_ptr<ALCcontext, decltype([](ALCcontext *context)
+    { alcDestroyContext(context); })>;
+
 /* Filter object functions */
 auto alGenFilters = LPALGENFILTERS{};
 auto alDeleteFilters = LPALDELETEFILTERS{};
@@ -872,7 +877,7 @@ try {
         const auto framesize = size_t{chancount} * samplesize;
         renderbuf.resize(framesize * FramesPerPos);
 
-        if(RenderSampleRate != gsl::narrow_cast<int>(laf->mSampleRate))
+        if(std::cmp_not_equal(RenderSampleRate, laf->mSampleRate))
         {
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
             const auto alcResetDeviceSOFT = reinterpret_cast<LPALCRESETDEVICESOFT>(
@@ -897,7 +902,7 @@ try {
         {
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
             const auto alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
-                alcGetProcAddress(nullptr, "alcGetInteger64vSOFT"));
+                alcGetProcAddress(device, "alcGetInteger64vSOFT"));
 
             auto latency = ALCint64SOFT{};
             alcGetInteger64vSOFT(device, ALC_DEVICE_LATENCY_SOFT, 1, &latency);
@@ -1064,8 +1069,8 @@ try {
                     leadIn -= std::ssize(renderbuf);
                 else if(leadIn > 0)
                 {
-                    renderFile.write(std::to_address(renderbuf.begin()+leadIn),
-                        std::ssize(renderbuf)-leadIn);
+                    const auto out = renderbuf | std::views::drop(leadIn);
+                    renderFile.write(out.data(), std::ssize(out));
                     leadIn = 0;
                 }
                 else
@@ -1179,8 +1184,8 @@ try {
                 leadIn -= std::ssize(renderbuf);
             else if(leadIn > 0)
             {
-                renderFile.write(std::to_address(renderbuf.begin()+leadIn),
-                    std::ssize(renderbuf)-leadIn);
+                const auto out = renderbuf | std::views::drop(leadIn);
+                renderFile.write(out.data(), std::ssize(out));
                 leadIn = 0;
             }
             else
@@ -1242,8 +1247,13 @@ auto main(std::span<std::string_view> args) -> int
     auto almgr = InitAL(args);
     almgr.printName();
 
-    if(args.size() >= 2 && args[0] == "-render")
+    if(!args.empty() && args[0] == "-render")
     {
+        if(args.size() < 2)
+        {
+            fmt::println(std::cerr, "Missing -render format");
+            return 1;
+        }
         auto params = std::vector<std::string>{};
         std::ranges::transform(args[1] | std::views::split(','), std::back_inserter(params),
             [](auto prange) { return std::string(prange.begin(), prange.end()); });
@@ -1319,8 +1329,6 @@ auto main(std::span<std::string_view> args) -> int
 
         RenderSampleRate = 48000;
 
-        ALCdevice *loopbackDev{};
-        ALCcontext *loopbackCtx{};
         if(!alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
         {
             fmt::println(std::cerr, "Loopback rendering not supported");
@@ -1336,23 +1344,25 @@ auto main(std::span<std::string_view> args) -> int
             alcGetProcAddress(nullptr, "alcRenderSamplesSOFT"));
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-        loopbackDev = alcLoopbackOpenDevice(nullptr);
+        auto loopbackDev = ALCdevicePtr{alcLoopbackOpenDevice(nullptr)};
         if(!loopbackDev)
         {
             fmt::println(std::cerr, "Failed to open loopback device: {:x}", alcGetError(nullptr));
             return 1;
         }
 
-        if(!alcIsRenderFormatSupported(loopbackDev, RenderSampleRate, RenderChannels, RenderSamples))
+        if(!alcIsRenderFormatSupported(loopbackDev.get(), RenderSampleRate, RenderChannels,
+            RenderSamples))
         {
-            fmt::println(std::cerr, "Format {},{} not supported", params[0], params[1]);
+            fmt::println(std::cerr, "Format {},{} @ {}hz not supported", params[0], params[1],
+                RenderSampleRate);
             return 1;
         }
         if(RenderAmbiOrder > 0)
         {
             auto maxorder = ALCint{};
-            if(alcIsExtensionPresent(loopbackDev, "ALC_SOFT_loopback_bformat"))
-                alcGetIntegerv(loopbackDev, ALC_MAX_AMBISONIC_ORDER_SOFT, 1, &maxorder);
+            if(alcIsExtensionPresent(loopbackDev.get(), "ALC_SOFT_loopback_bformat"))
+                alcGetIntegerv(loopbackDev.get(), ALC_MAX_AMBISONIC_ORDER_SOFT, 1, &maxorder);
             if(RenderAmbiOrder > maxorder)
             {
                 fmt::println(std::cerr, "Unsupported ambisonic order: {} (max: {})",
@@ -1370,20 +1380,17 @@ auto main(std::span<std::string_view> args) -> int
             ALC_AMBISONIC_SCALING_SOFT, ALC_SN3D_SOFT,
             ALC_AMBISONIC_ORDER_SOFT, RenderAmbiOrder,
             0});
-        loopbackCtx = alcCreateContext(loopbackDev, attribs.data());
-        if(!loopbackCtx || alcMakeContextCurrent(loopbackCtx) == ALC_FALSE)
+        auto loopbackCtx = ALCcontextPtr{alcCreateContext(loopbackDev.get(), attribs.data())};
+        if(!loopbackCtx || alcMakeContextCurrent(loopbackCtx.get()) == ALC_FALSE)
         {
-            if(loopbackCtx)
-                alcDestroyContext(loopbackCtx);
-            alcCloseDevice(loopbackDev);
             fmt::println(std::cerr, "Failed to create loopback device context: {:x}",
-                alcGetError(loopbackDev));
+                alcGetError(loopbackDev.get()));
             return 1;
         }
 
         almgr.close();
-        almgr.device = loopbackDev;
-        almgr.context = loopbackCtx;
+        almgr.device = loopbackDev.release();
+        almgr.context = loopbackCtx.release();
     }
 
     /* Automate effect cleanup at end of scope (before almgr destructs). */

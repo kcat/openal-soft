@@ -1,7 +1,9 @@
 
 #include "config.h"
 
+#if !HAVE_CXXMODULES
 #include "router.h"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -14,16 +16,23 @@
 #include <string_view>
 #include <vector>
 
-#include "AL/alc.h"
-
 #include "alstring.h"
 #include "filesystem.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
 
 #include "version.h"
 
+#if HAVE_CXXMODULES
+import alsoft.gsl;
+import alsoft.router;
+import openal.alc;
+
+#else
+
+#include "AL/alc.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

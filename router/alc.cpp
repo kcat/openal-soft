@@ -15,13 +15,21 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "AL/alc.h"
-
 #include "alnumeric.h"
 #include "alstring.h"
+#include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import alsoft.gsl;
+import alsoft.router;
+import openal.alc;
+
+#else
+
+#include "AL/alc.h"
 #include "gsl/gsl"
 #include "router.h"
-#include "strutils.hpp"
+#endif
 
 
 namespace {

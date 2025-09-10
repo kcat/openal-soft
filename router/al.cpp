@@ -1,8 +1,16 @@
 
 #include "config.h"
 
+#if HAVE_CXXMODULES
+import alsoft.router;
+import openal.al;
+
+#else
+
 #include "AL/al.h"
 #include "router.h"
+#endif
+
 
 
 #define DECL_THUNK1(R,n,T1)                                                   \

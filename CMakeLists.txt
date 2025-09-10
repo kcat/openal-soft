@@ -1454,6 +1454,9 @@ if(HAVE_CXXMODULES)
     set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
         modules/alext.cppm modules/openal.cppm)
 
+    # For importing while building the examples and utilities (functions are
+    # set to be imported from the shared library, or as free functions with
+    # static library builds).
     add_library(openal.modules OBJECT EXCLUDE_FROM_ALL)
     target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES ${MODULES_OBJS})
     target_include_directories(openal.modules PRIVATE ${OpenAL_SOURCE_DIR}/include)
@@ -1462,6 +1465,16 @@ if(HAVE_CXXMODULES)
     set_target_properties(openal.modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         POSITION_INDEPENDENT_CODE TRUE)
     set(MODULES_TARGET openal.modules)
+
+    # For importing while building the library (functions are set to be
+    # exported from the shared library).
+    add_library(alsoft.modules OBJECT EXCLUDE_FROM_ALL)
+    target_sources(alsoft.modules PUBLIC FILE_SET CXX_MODULES FILES ${MODULES_OBJS})
+    target_compile_definitions(alsoft.modules PRIVATE AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
+        "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
+    target_compile_options(alsoft.modules PRIVATE ${C_FLAGS})
+    set_target_properties(alsoft.modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+        POSITION_INDEPENDENT_CODE TRUE)
 else()
     set(MODULES_TARGET )
 endif()
@@ -1495,6 +1508,10 @@ endforeach()
 
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
+    if(TARGET openal.modules)
+        target_compile_definitions(openal.modules PUBLIC AL_LIBTYPE_STATIC)
+    endif()
+
     add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
@@ -1513,6 +1530,19 @@ if(LIBTYPE STREQUAL "STATIC")
 else()
     set(RC_CONFIG resources/openal32.rc)
     if(WIN32 AND ALSOFT_BUILD_ROUTER)
+        if(HAVE_CXXMODULES)
+            add_library(alsoft.router-modules OBJECT EXCLUDE_FROM_ALL)
+            target_sources(alsoft.router-modules PUBLIC FILE_SET CXX_MODULES FILES
+                alsoft-modules/router.cppm)
+            target_compile_definitions(alsoft.router-modules PRIVATE AL_ALEXT_PROTOTYPES
+                "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
+            target_compile_options(alsoft.router-modules PRIVATE ${C_FLAGS})
+            target_link_libraries(alsoft.router-modules PRIVATE alsoft::fmt alsoft.modules)
+            set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+                POSITION_INDEPENDENT_CODE TRUE)
+            list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/alsoft-modules/router.cppm")
+        endif()
+
         add_library(OpenAL SHARED
             resources/router.rc
             router/router.cpp
@@ -1524,7 +1554,8 @@ else()
             PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
             "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
         target_compile_options(OpenAL PRIVATE ${C_FLAGS})
-        target_link_libraries(OpenAL PRIVATE alsoft.common ${LINKER_FLAGS} alsoft::fmt)
+        target_link_libraries(OpenAL PRIVATE alsoft.common ${LINKER_FLAGS} alsoft::fmt
+            $<$<BOOL:${HAVE_CXXMODULES}>:alsoft.modules alsoft.router-modules>)
         target_include_directories(OpenAL
           PUBLIC
             $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>

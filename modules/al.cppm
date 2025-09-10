@@ -423,6 +423,11 @@ ENUMDCL AL_CHANNELS =                            0x2003;
 /** Buffer data size in bytes (query only). */
 ENUMDCL AL_SIZE =                                0x2004;
 
+/* Buffer state. Not for public use. */
+ENUMDCL AL_UNUSED =                              0x2010;
+ENUMDCL AL_PENDING =                             0x2011;
+ENUMDCL AL_PROCESSED =                           0x2012;
+
 
 /** No error. */
 ENUMDCL AL_NO_ERROR =                            0;

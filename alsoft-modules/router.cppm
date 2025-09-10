@@ -201,9 +201,8 @@ inline void TRACE(fmt::format_string<Args...> fmt, Args&& ...args)
     if(LogLevel >= eLogLevel::Trace)
     {
         auto &file = LogFile ? LogFile : std::cerr;
-        auto fmtargs = fmt::make_format_args(std::forward<Args>(args)...);
-        fmt::vprint(file, "AL Router (II): {}\n",
-            fmt::make_format_args(fmt::vformat(fmt, std::move(fmtargs))));
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (II): {}\n", fmt::make_format_args(msg));
         file.flush();
     }
 }
@@ -214,9 +213,8 @@ inline void WARN(fmt::format_string<Args...> fmt, Args&& ...args)
     if(LogLevel >= eLogLevel::Warn)
     {
         auto &file = LogFile ? LogFile : std::cerr;
-        auto fmtargs = fmt::make_format_args(std::forward<Args>(args)...);
-        fmt::vprint(file, "AL Router (WW): {}\n",
-            fmt::make_format_args(fmt::vformat(fmt, std::move(fmtargs))));
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (WW): {}\n", fmt::make_format_args(msg));
         file.flush();
     }
 }
@@ -227,9 +225,8 @@ inline void ERR(fmt::format_string<Args...> fmt, Args&& ...args)
     if(LogLevel >= eLogLevel::Error)
     {
         auto &file = LogFile ? LogFile : std::cerr;
-        auto fmtargs = fmt::make_format_args(std::forward<Args>(args)...);
-        fmt::vprint(file, "AL Router (EE): {}\n",
-            fmt::make_format_args(fmt::vformat(fmt, std::move(fmtargs))));
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (EE): {}\n", fmt::make_format_args(msg));
         file.flush();
     }
 }

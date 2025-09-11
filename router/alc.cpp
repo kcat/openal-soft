@@ -341,7 +341,7 @@ auto LastError = std::atomic<ALCenum>{ALC_NO_ERROR};
 
 template<typename T>
 class ProtectedIfaceMap {
-    std::mutex IfaceMutex = std::mutex{};
+    std::mutex IfaceMutex;
     std::unordered_map<T,ALCuint> IfaceMap{};
 
 public:

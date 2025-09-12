@@ -514,9 +514,9 @@ ENUMDCL AL_EXPONENT_DISTANCE =                   0xD005;
 ENUMDCL AL_EXPONENT_DISTANCE_CLAMPED =           0xD006;
 
 /* Deprecated enums. */
-ENUMDCL AL_INVALID [[deprecated]] =              -1;
-ENUMDCL AL_ILLEGAL_ENUM [[deprecated]] =         AL_INVALID_ENUM;
-ENUMDCL AL_ILLEGAL_COMMAND [[deprecated]] =      AL_INVALID_OPERATION;
+ENUMDCL AL_INVALID [[deprecated("Use -1 instead")]] = -1;
+ENUMDCL AL_ILLEGAL_ENUM [[deprecated("Use AL_INVALID_ENUM")]] = AL_INVALID_ENUM;
+ENUMDCL AL_ILLEGAL_COMMAND [[deprecated("Use AL_INVALID_OPERATION")]] = AL_INVALID_OPERATION;
 #undef ENUMDCL
 
 

@@ -229,7 +229,7 @@ ENUMDCL ALC_DEFAULT_ALL_DEVICES_SPECIFIER =      0x1012;
 ENUMDCL ALC_ALL_DEVICES_SPECIFIER =              0x1013;
 
 /** Deprecated enum. */
-ENUMDCL ALC_INVALID [[deprecated]] =             0;
+ENUMDCL ALC_INVALID [[deprecated("Use 0 instead")]] = 0;
 #undef ENUMDCL
 
 

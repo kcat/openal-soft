@@ -421,7 +421,7 @@ auto LafStream::readChunk() -> uint32_t
     { return val + std::popcount(in); }));
 
     /* Make sure enable bits aren't set for non-existent tracks. */
-    if(mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
+    if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
         throw std::runtime_error{"Invalid channel enable bits"};
 
     /* Each chunk is exactly one second long, with samples interleaved for each

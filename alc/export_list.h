@@ -404,7 +404,6 @@ struct EnumExport {
 };
 #define DECL(x) EnumExport{#x, (x)}
 inline constexpr auto alcEnumerations = std::to_array({
-    DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
 
@@ -505,7 +504,7 @@ inline constexpr auto alcEnumerations = std::to_array({
     DECL(ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT),
 
 
-    DECL(AL_INVALID),
+    EnumExport{ "AL_INVALID", -1 }, /* Deprecated enum */
     DECL(AL_NONE),
     DECL(AL_FALSE),
     DECL(AL_TRUE),

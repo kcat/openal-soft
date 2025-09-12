@@ -201,7 +201,6 @@ struct EnumExportEntry {
 };
 #define DECL(x) EnumExportEntry{ #x##sv, (x) }
 constexpr auto alcEnumerations = std::array{
-    DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
 
@@ -230,7 +229,7 @@ constexpr auto alcEnumerations = std::array{
     DECL(ALC_INVALID_VALUE),
     DECL(ALC_OUT_OF_MEMORY),
 
-    DECL(AL_INVALID),
+    EnumExportEntry{ "AL_INVALID"sv, -1 }, /* Deprecated enum */
     DECL(AL_NONE),
     DECL(AL_FALSE),
     DECL(AL_TRUE),

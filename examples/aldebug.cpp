@@ -179,10 +179,10 @@ auto main(std::span<std::string_view> args) -> int
     if(!args.empty() && args[0] == "-nodebug")
         flags &= ~ALC_CONTEXT_DEBUG_BIT_EXT;
 
-    const auto attribs = std::array<ALCint,3>{{
+    const auto attribs = std::to_array<ALCint>({
         ALC_CONTEXT_FLAGS_EXT, flags,
         0 /* end-of-list */
-    }};
+    });
     auto context = ContextPtr{alcCreateContext(device.get(), attribs.data())};
     if(!context || alcMakeContextCurrent(context.get()) == ALC_FALSE)
     {
@@ -222,7 +222,7 @@ auto main(std::span<std::string_view> args) -> int
 
     for(auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT);numlogs > 0;--numlogs)
     {
-        auto message = std::vector<char>(static_cast<ALuint>(maxloglength), '\0');
+        auto message = std::vector<char>(gsl::narrow<ALuint>(maxloglength), '\0');
         auto source = ALenum{};
         auto type = ALenum{};
         auto id = ALuint{};
@@ -244,7 +244,7 @@ auto main(std::span<std::string_view> args) -> int
          * the offset to the next message.
          */
         const auto msgstr = std::string_view{message.data(),
-            static_cast<ALuint>(msglength ? msglength-1 : 0)};
+            gsl::narrow<ALuint>(msglength ? msglength-1 : 0)};
         fmt::println("Got message from log:\n"
             "  Source: {}\n"
             "  Type: {}\n"
@@ -265,7 +265,7 @@ auto main(std::span<std::string_view> args) -> int
         /* The message length provided to the callback does not include the
          * null terminator.
          */
-        const auto msgstr = std::string_view{message, static_cast<ALuint>(length)};
+        const auto msgstr = std::string_view{message, gsl::narrow<ALuint>(length)};
         fmt::println("Got message from callback:\n"
             "  Source: {}\n"
             "  Type: {}\n"

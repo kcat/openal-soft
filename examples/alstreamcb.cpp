@@ -55,6 +55,7 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alsoft.gsl;
 import openal;
 
 #else
@@ -62,6 +63,7 @@ import openal;
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
+#include "gsl/gsl"
 #endif
 
 
@@ -214,16 +216,16 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     {
     case SampleType::Int16:
         mSamplesPerBlock = 1_uz;
-        mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * sizeof(short);
+        mBytesPerBlock = gsl::narrow<size_t>(mSfInfo.channels) * sizeof(short);
         break;
     case SampleType::Float:
         mSamplesPerBlock = 1_uz;
-        mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * sizeof(float);
+        mBytesPerBlock = gsl::narrow<size_t>(mSfInfo.channels) * sizeof(float);
         break;
     case SampleType::IMA4:
     case SampleType::MSADPCM:
-        mSamplesPerBlock = static_cast<size_t>(splblocksize);
-        mBytesPerBlock = static_cast<size_t>(byteblocksize);
+        mSamplesPerBlock = gsl::narrow<size_t>(splblocksize);
+        mBytesPerBlock = gsl::narrow<size_t>(byteblocksize);
         break;
     }
 
@@ -286,7 +288,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     }
 
     /* Set a 1s ring buffer size. */
-    const auto numblocks = (static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1_uz)
+    const auto numblocks = (gsl::narrow<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1_uz)
         / mSamplesPerBlock;
     switch(sampleFormat)
     {
@@ -337,7 +339,7 @@ auto StreamPlayer::bufferCallback(const std::span<std::byte> output) noexcept ->
      */
 
     auto roffset = mReadPos.load(std::memory_order_acquire);
-    while(const auto remaining = static_cast<size_t>(std::distance(dst, output.end())))
+    while(const auto remaining = gsl::narrow<size_t>(std::distance(dst, output.end())))
     {
         /* If the write offset == read offset, there's nothing left in the
          * ring-buffer. Break from the loop and give what has been written.
@@ -369,13 +371,13 @@ auto StreamPlayer::bufferCallback(const std::span<std::byte> output) noexcept ->
      */
     mReadPos.store(roffset, std::memory_order_release);
 
-    return static_cast<ALsizei>(std::distance(output.begin(), dst));
+    return gsl::narrow<ALsizei>(std::distance(output.begin(), dst));
 }
 
 auto StreamPlayer::prepare() -> bool
 {
     if(mSamplesPerBlock > 1_uz)
-        alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, static_cast<int>(mSamplesPerBlock));
+        alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, gsl::narrow<int>(mSamplesPerBlock));
 
     /* A lambda without captures can decay to a normal function pointer,
      * which here just forwards to a normal class method and gives the buffer
@@ -421,8 +423,8 @@ auto StreamPlayer::update() -> bool
          */
         const auto curtime = ((state == AL_STOPPED)
             ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
-            : (size_t{static_cast<ALuint>(pos)} + mStartOffset))
-            / static_cast<ALuint>(mSfInfo.samplerate);
+            : (size_t{gsl::narrow<ALuint>(pos)} + mStartOffset))
+            / gsl::narrow<ALuint>(mSfInfo.samplerate);
         fmt::print("\r {}m{:02}s ({:3}% full)", curtime/60, curtime%60,
             readable * 100 / mBufferData.size());
     }
@@ -463,23 +465,23 @@ auto StreamPlayer::update() -> bool
             if constexpr(std::is_same_v<sample_t, short>)
             {
                 const auto num_frames = sf_readf_short(mSndfile, &data[woffset/sizeof(short)],
-                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mSamplesPerBlock));
                 if(num_frames < 1) return 0_uz;
-                return static_cast<size_t>(num_frames) * mBytesPerBlock;
+                return gsl::narrow<size_t>(num_frames) * mBytesPerBlock;
             }
             else if constexpr(std::is_same_v<sample_t, float>)
             {
                 const auto num_frames = sf_readf_float(mSndfile, &data[woffset/sizeof(float)],
-                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mSamplesPerBlock));
                 if(num_frames < 1) return 0_uz;
-                return static_cast<size_t>(num_frames) * mBytesPerBlock;
+                return gsl::narrow<size_t>(num_frames) * mBytesPerBlock;
             }
             else if constexpr(std::is_same_v<sample_t, std::byte>)
             {
                 const auto numbytes = sf_read_raw(mSndfile, &data[woffset],
-                    static_cast<sf_count_t>(writable*mBytesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mBytesPerBlock));
                 if(numbytes < 1) return size_t{0};
-                return static_cast<size_t>(numbytes);
+                return gsl::narrow<size_t>(numbytes);
             }
         }, mBufferVariant);
         if(read_bytes == 0)

@@ -280,33 +280,33 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
 
     if(sample_format == FormatType::Int16)
     {
-        auto &vec = memstore.emplace<std::vector<short>>(static_cast<size_t>(sfinfo.frames
+        auto &vec = memstore.emplace<std::vector<short>>(gsl::narrow<size_t>(sfinfo.frames
             / splblockalign * sfinfo.channels));
         const auto num_frames = sf_readf_short(sndfile.get(), vec.data(), sfinfo.frames);
         if(num_frames > 0)
         {
-            const auto num_samples = static_cast<size_t>(num_frames * sfinfo.channels);
+            const auto num_samples = gsl::narrow<size_t>(num_frames * sfinfo.channels);
             membuf = std::as_writable_bytes(std::span{vec}.first(num_samples));
         }
     }
     else if(sample_format == FormatType::Float)
     {
-        auto &vec = memstore.emplace<std::vector<float>>(static_cast<size_t>(sfinfo.frames
+        auto &vec = memstore.emplace<std::vector<float>>(gsl::narrow<size_t>(sfinfo.frames
             / splblockalign * sfinfo.channels));
         const auto num_frames = sf_readf_float(sndfile.get(), vec.data(), sfinfo.frames);
         if(num_frames > 0)
         {
-            const auto num_samples = static_cast<size_t>(num_frames * sfinfo.channels);
+            const auto num_samples = gsl::narrow<size_t>(num_frames * sfinfo.channels);
             membuf = std::as_writable_bytes(std::span{vec}.first(num_samples));
         }
     }
     else
     {
         const auto count = sfinfo.frames / splblockalign * byteblockalign;
-        auto &vec = memstore.emplace<std::vector<std::byte>>(static_cast<size_t>(count));
+        auto &vec = memstore.emplace<std::vector<std::byte>>(gsl::narrow<size_t>(count));
         const auto num_bytes = sf_read_raw(sndfile.get(), membuf.data(), count);
         if(num_bytes > 0)
-            membuf = std::as_writable_bytes(std::span{vec}.first(static_cast<size_t>(num_bytes)));
+            membuf = std::as_writable_bytes(std::span{vec}.first(gsl::narrow<size_t>(num_bytes)));
     }
     if(membuf.empty())
     {
@@ -320,7 +320,7 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
     alGenBuffersDirect(context, 1, &buffer);
     if(splblockalign > 1)
         alBufferiDirect(context, buffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, splblockalign);
-    alBufferDataDirect(context, buffer, format, membuf.data(), static_cast<ALsizei>(membuf.size()),
+    alBufferDataDirect(context, buffer, format, membuf.data(), gsl::narrow<ALsizei>(membuf.size()),
         sfinfo.samplerate);
 
     /* Check if an error occurred, and clean up if so. */

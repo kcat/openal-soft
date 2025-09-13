@@ -1230,15 +1230,15 @@ auto main(std::span<std::string_view> args) -> int
     if(args.size() < 2)
     {
         fmt::println(std::cerr,
-            "Usage: {} [-device <name> | -render <channels,samples>] <filenames...>\n"
+            "Usage: {} [-device <name>] [-render <channels,samples>] <filenames...>\n"
             "\n"
-            "  -render    Renders samples to an output file instead of real-time playback.\n"
-            "             Outputs a CAF file with the same name as the input, but with the\n"
-            "             \"caf\" extension.\n"
-            "             Available channels: mono, stereo, hrtf, uhj, quad, surround51,\n"
-            "                                 surround61, surround71, ambi1, ambi2, ambi3,\n"
-            "                                 ambi4\n"
-            "             Available samples: s16, f32",
+            "  -render   Renders samples to an output file instead of real-time playback.\n"
+            "            Outputs a CAF file with the same name as the input, but with the\n"
+            "            \"caf\" extension.\n"
+            "            Available channels: mono, stereo, hrtf, uhj, quad, surround51,\n"
+            "                                surround61, surround71, ambi1, ambi2, ambi3,\n"
+            "                                ambi4\n"
+            "            Available samples: s16, f32",
             args[0]);
         return 1;
     }

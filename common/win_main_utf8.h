@@ -19,45 +19,37 @@
 
 #define STATIC_CAST(...) static_cast<__VA_ARGS__>
 #define REINTERPRET_CAST(...) reinterpret_cast<__VA_ARGS__>
-#define MAYBE_UNUSED [[maybe_unused]]
 
 #else
 
 #define STATIC_CAST(...) (__VA_ARGS__)
 #define REINTERPRET_CAST(...) (__VA_ARGS__)
-#ifdef __GNUC__
-#define MAYBE_UNUSED __attribute__((__unused__))
-#else
-#define MAYBE_UNUSED
-#endif
-#endif
 
-MAYBE_UNUSED static FILE *my_fopen(const char *fname, const char *mode)
+#ifdef __GNUC__
+__attribute__((__unused__))
+#endif
+static FILE *my_fopen(const char *fname, const wchar_t *wmode)
 {
-    wchar_t *wname=NULL, *wmode=NULL;
-    int namelen, modelen;
-    FILE *file = NULL;
+    wchar_t *wname;
+    int namelen;
     errno_t err;
+    FILE *file;
 
     namelen = MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0);
-    modelen = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-
-    if(namelen <= 0 || modelen <= 0)
+    if(namelen <= 0)
     {
-        fprintf(stderr, "Failed to convert UTF-8 fname \"%s\", mode \"%s\"\n", fname, mode);
+        fprintf(stderr, "Failed to convert UTF-8 fname \"%s\"\n", fname);
         return NULL;
     }
 
-#ifdef __cplusplus
-    auto strbuf = std::make_unique<wchar_t[]>(static_cast<size_t>(namelen) +
-        static_cast<size_t>(modelen));
-    wname = strbuf.get();
-#else
-    wname = (wchar_t*)calloc((size_t)namelen + (size_t)modelen, sizeof(wchar_t));
-#endif
-    wmode = wname + namelen;
+    wname = (wchar_t*)calloc((size_t)namelen, sizeof(wchar_t));
+    if(!wname)
+    {
+        fprintf(stderr, "Failed to allocate %zu bytes for fname conversion\n",
+            sizeof(wchar_t)*(size_t)namelen);
+        return NULL;
+    }
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
-    MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
 
     err = _wfopen_s(&file, wname, wmode);
     if(err)
@@ -66,12 +58,11 @@ MAYBE_UNUSED static FILE *my_fopen(const char *fname, const char *mode)
         file = NULL;
     }
 
-#ifndef __cplusplus
     free(wname);
-#endif
     return file;
 }
-#define fopen my_fopen
+#define fopen(f, m) my_fopen((f), (L##m))
+#endif
 
 
 /* SDL overrides main and provides UTF-8 args for us. */

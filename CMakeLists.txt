@@ -1799,7 +1799,8 @@ endif()
 set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)
     add_executable(openal-info utils/openal-info.c)
-    target_include_directories(openal-info PRIVATE ${OpenAL_SOURCE_DIR}/common)
+    target_include_directories(openal-info
+        PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
     target_compile_options(openal-info PRIVATE ${C_FLAGS})
     target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL ${UNICODE_FLAG})
     set_target_properties(openal-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
@@ -1872,9 +1873,10 @@ if(ALSOFT_UTILS)
         set(SOFAINFO_SRCS  utils/sofa-info.cpp)
         add_executable(sofa-info ${SOFAINFO_SRCS})
         target_compile_definitions(sofa-info PRIVATE ${CPP_DEFS})
-        target_include_directories(sofa-info PRIVATE ${OpenAL_SOURCE_DIR}/utils)
+        target_include_directories(sofa-info
+            PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
-        target_link_libraries(sofa-info PRIVATE ${LINKER_FLAGS} alsoft.sofa-support
+        target_link_libraries(sofa-info PRIVATE alsoft.common ${LINKER_FLAGS} alsoft.sofa-support
             ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(sofa-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/sofa-info.cpp")

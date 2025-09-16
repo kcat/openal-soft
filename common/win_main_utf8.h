@@ -109,7 +109,7 @@ auto wmain(int argc, wchar_t **wargv) -> int
         }
     }
     catch(std::exception& e) {
-        fmt::println(std::cerr, "Failed to convert command line to UTF-8");
+        fmt::println(std::cerr, "Failed to convert command line to UTF-8: {}", e.what());
         return -1;
     }
 

@@ -205,65 +205,45 @@ inline unsigned int fastf2u(float f) noexcept
 
 /** Converts float-to-int using standard behavior (truncation). */
 [[nodiscard]]
-inline int float2int(float f) noexcept
+inline auto float2int(float f) noexcept -> int
 {
-#if HAVE_SSE_INTRINSICS
-    return _mm_cvtt_ss2si(_mm_set_ss(f));
-
-#elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0) \
-    || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
-        && !defined(__SSE_MATH__))
+    /* We can't rely on SSE or the compiler generated conversion if we want
+     * clamping behavior with overflow and underflow.
+     */
     const auto conv_i = std::bit_cast<int>(f);
 
     const auto sign = (conv_i>>31) | 1;
     const auto shift = ((conv_i>>23)&0xff) - (127+23);
 
-    /* Over/underflow */
-    if(shift >= 31 || shift < -23) [[unlikely]]
+    /* Too small. */
+    if(shift < -23) [[unlikely]]
         return 0;
+    /* Too large (or NaN). */
+    if(shift > 7) [[unlikely]]
+        return (sign > 0) ? std::numeric_limits<int>::max() : std::numeric_limits<int>::min();
 
-    const auto mant = (conv_i&0x7fffff) | 0x800000;
+    const auto mant = (conv_i&0x7f'ff'ff) | 0x80'00'00;
     if(shift < 0) [[likely]]
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
-
-#else
-
-    return gsl::narrow_cast<int>(f);
-#endif
 }
 [[nodiscard]]
-inline unsigned int float2uint(float f) noexcept
-{ return gsl::narrow_cast<unsigned int>(float2int(f)); }
-
-/** Converts double-to-int using standard behavior (truncation). */
-[[nodiscard]]
-inline int double2int(double d) noexcept
+inline auto float2uint(float f) noexcept -> unsigned int
 {
-#if HAVE_SSE_INTRINSICS
-    return _mm_cvttsd_si32(_mm_set_sd(d));
+    const auto conv_i = std::bit_cast<int>(f);
 
-#elif (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2) \
-    || ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
-        && !defined(__SSE2_MATH__))
-    const auto conv_i64 = std::bit_cast<int64_t>(d);
+    const auto mask = static_cast<unsigned>(conv_i>>31) ^ 0xff'ff'ff'ffu;
+    const auto shift = ((conv_i>>23)&0xff) - (127+23);
 
-    const auto sign = gsl::narrow_cast<int>(conv_i64 >> 63) | 1;
-    const auto shift = (gsl::narrow_cast<int>(conv_i64 >> 52) & 0x7ff) - (1023 + 52);
-
-    /* Over/underflow */
-    if(shift >= 63 || shift < -52) [[unlikely]]
+    if(shift < -23) [[unlikely]]
         return 0;
+    if(shift > 8) [[unlikely]]
+        return std::numeric_limits<unsigned>::max() & mask;
 
-    const auto mant = (conv_i64 & 0xfffffffffffff_i64) | 0x10000000000000_i64;
+    const auto mant = gsl::narrow_cast<unsigned>(conv_i&0x7f'ff'ff) | 0x80'00'00u;
     if(shift < 0) [[likely]]
-        return gsl::narrow_cast<int>(mant >> -shift) * sign;
-    return gsl::narrow_cast<int>(mant << shift) * sign;
-
-#else
-
-    return gsl::narrow_cast<int>(d);
-#endif
+        return (mant >> -shift) & mask;
+    return (mant << shift) & mask;
 }
 
 /**

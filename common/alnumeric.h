@@ -203,7 +203,10 @@ inline int fastf2i(float f) noexcept
 inline unsigned int fastf2u(float f) noexcept
 { return gsl::narrow_cast<unsigned int>(fastf2i(f)); }
 
-/** Converts float-to-int using standard behavior (truncation). */
+/**
+ * Converts float-to-int using standard behavior (truncation). Out of range
+ * values are clamped.
+ */
 [[nodiscard]]
 inline auto float2int(float f) noexcept -> int
 {
@@ -227,11 +230,16 @@ inline auto float2int(float f) noexcept -> int
         return (mant >> -shift) * sign;
     return (mant << shift) * sign;
 }
+/**
+ * Converts float-to-uint using standard behavior (truncation). Out of range
+ * values are clamped.
+ */
 [[nodiscard]]
 inline auto float2uint(float f) noexcept -> unsigned int
 {
     const auto conv_i = std::bit_cast<int>(f);
 
+    /* A 0 mask for negative values creates a 0 result. */
     const auto mask = static_cast<unsigned>(conv_i>>31) ^ 0xff'ff'ff'ffu;
     const auto shift = ((conv_i>>23)&0xff) - (127+23);
 

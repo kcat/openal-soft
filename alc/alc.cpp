@@ -591,7 +591,7 @@ void alc_initconfig()
             auto entry = std::string_view{namerange.begin(), namerange.end()};
 
             constexpr auto whitespace_chars = " \t\n\f\r\v"sv;
-            entry.remove_prefix(entry.find_first_not_of(whitespace_chars));
+            entry.remove_prefix(std::min(entry.find_first_not_of(whitespace_chars), entry.size()));
             entry.remove_suffix(entry.size() - (entry.find_last_not_of(whitespace_chars)+1));
             if(entry.empty())
             {

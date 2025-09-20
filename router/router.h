@@ -197,7 +197,7 @@ inline std::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
 #define TRACE(...) do {                                     \
     if(LogLevel >= eLogLevel::Trace)                        \
     {                                                       \
-        auto &file = LogFile ? LogFile : std::cerr;         \
+        auto &file = LogFile.is_open()?LogFile : std::cerr; \
         fmt::println(file, "AL Router (II): " __VA_ARGS__); \
         file.flush();                                       \
     }                                                       \
@@ -205,7 +205,7 @@ inline std::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
 #define WARN(...) do {                                      \
     if(LogLevel >= eLogLevel::Warn)                         \
     {                                                       \
-        auto &file = LogFile ? LogFile : std::cerr;         \
+        auto &file = LogFile.is_open()?LogFile : std::cerr; \
         fmt::println(file, "AL Router (WW): " __VA_ARGS__); \
         file.flush();                                       \
     }                                                       \
@@ -213,7 +213,7 @@ inline std::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
 #define ERR(...) do {                                       \
     if(LogLevel >= eLogLevel::Error)                        \
     {                                                       \
-        auto &file = LogFile ? LogFile : std::cerr;         \
+        auto &file = LogFile.is_open()?LogFile : std::cerr; \
         fmt::println(file, "AL Router (EE): " __VA_ARGS__); \
         file.flush();                                       \
     }                                                       \

@@ -104,7 +104,7 @@ void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args 
 
     if(gLogLevel >= level)
     {
-        auto &logfile = gLogFile ? gLogFile : std::cerr;
+        auto &logfile = gLogFile.is_open() ? gLogFile : std::cerr;
         /* std::vprint_unicode */
         fmt::vprint(logfile, "{}{}\n", fmt::make_format_args(prefix, msg));
         logfile.flush();

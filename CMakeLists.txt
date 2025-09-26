@@ -1806,7 +1806,7 @@ if(ALSOFT_UTILS)
     target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL ${UNICODE_FLAG})
     set_target_properties(openal-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/openal-info.c")
-    if(ALSOFT_INSTALL_EXAMPLES)
+    if(ALSOFT_INSTALL_UTILS)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
 
@@ -1867,7 +1867,7 @@ if(ALSOFT_UTILS)
             "${CMAKE_SOURCE_DIR}/utils/makemhr/loadsofa.h"
             "${CMAKE_SOURCE_DIR}/utils/makemhr/makemhr.cpp"
             "${CMAKE_SOURCE_DIR}/utils/makemhr/makemhr.h")
-        if(ALSOFT_INSTALL_EXAMPLES)
+        if(ALSOFT_INSTALL_UTILS)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
         endif()
 

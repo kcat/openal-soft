@@ -1219,7 +1219,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         case DevFmtX71: layout = "surround71"sv; break;
         case DevFmtX714: layout = "surround714"sv; break;
         case DevFmtX7144: layout = "surround7144"sv; break;
-        case DevFmtX3D71: layout = "surround3d71"sv; break;
+        case DevFmtX3D71: layout = "3d71"sv; break;
         /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
         case DevFmtMono:
         case DevFmtStereo:
@@ -1233,7 +1233,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         auto usingCustom = false;
         if(!layout.empty())
         {
-            if(auto decopt = device->configValue<std::string>("decoder", layout))
+            auto decopt = device->configValue<std::string>("decoder", layout);
+            if(!decopt && layout == "3d71"sv)
+                decopt = device->configValue<std::string>("decoder", "surround3d71");
+            if(decopt)
                 usingCustom = LoadAmbDecConfig(*decopt, device, decoder_store, decoder,
                     speakerdists);
         }

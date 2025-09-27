@@ -93,7 +93,7 @@ const auto speakerModeList = std::array{
     NameValuePair{ QStringLiteral("5.1 Surround"), QStringLiteral("surround51") },
     NameValuePair{ QStringLiteral("6.1 Surround"), QStringLiteral("surround61") },
     NameValuePair{ QStringLiteral("7.1 Surround"), QStringLiteral("surround71") },
-    NameValuePair{ QStringLiteral("3D7.1 Surround"), QStringLiteral("surround3d71") },
+    NameValuePair{ QStringLiteral("3D7.1"), QStringLiteral("3d71") },
 
     NameValuePair{ QStringLiteral("Ambisonic, 1st Order"), QStringLiteral("ambi1") },
     NameValuePair{ QStringLiteral("Ambisonic, 2nd Order"), QStringLiteral("ambi2") },
@@ -760,7 +760,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoder51LineEdit->setText(settings.value(QStringLiteral("decoder/surround51")).toString());
     ui->decoder61LineEdit->setText(settings.value(QStringLiteral("decoder/surround61")).toString());
     ui->decoder71LineEdit->setText(settings.value(QStringLiteral("decoder/surround71")).toString());
-    ui->decoder3D71LineEdit->setText(settings.value(QStringLiteral("decoder/surround3d71")).toString());
+    ui->decoder3D71LineEdit->setText(settings.value(QStringLiteral("decoder/3d71")).toString());
 
     QStringList disabledCpuExts{settings.value(QStringLiteral("disable-cpu-exts")).toStringList()};
     if(disabledCpuExts.size() == 1)
@@ -1021,7 +1021,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue(QStringLiteral("decoder/surround51"), ui->decoder51LineEdit->text());
     settings.setValue(QStringLiteral("decoder/surround61"), ui->decoder61LineEdit->text());
     settings.setValue(QStringLiteral("decoder/surround71"), ui->decoder71LineEdit->text());
-    settings.setValue(QStringLiteral("decoder/surround3d71"), ui->decoder3D71LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/3d71"), ui->decoder3D71LineEdit->text());
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())

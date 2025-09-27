@@ -845,7 +845,7 @@ configuration file.</string>
         </rect>
        </property>
        <property name="text">
-        <string>3D7.1 Surround:</string>
+        <string>3D7.1:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

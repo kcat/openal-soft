@@ -1139,7 +1139,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             else
                 opttype = iter->type;
         }
-        if(auto chanopt = device->configValue<std::string>({}, "channels"))
+        if(auto const chanopt = device->configValue<std::string>({}, "channels"); chanopt
+            && al::case_compare(*chanopt, "surround3d71"sv) != 0)
         {
             struct ChannelMap {
                 std::string_view name;
@@ -1153,14 +1154,14 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 ChannelMap{"surround51"sv, DevFmtX51,    0},
                 ChannelMap{"surround61"sv, DevFmtX61,    0},
                 ChannelMap{"surround71"sv, DevFmtX71,    0},
-                ChannelMap{"surround714"sv, DevFmtX714,  0},
+                ChannelMap{"3d71"sv,         DevFmtX3D71, 0},
+                ChannelMap{"surround714"sv,  DevFmtX714,  0},
                 ChannelMap{"surround7144"sv, DevFmtX7144, 0},
-                ChannelMap{"surround3d71"sv, DevFmtX3D71, 0},
-                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
                 ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
                 ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
                 ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
                 ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
+                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
             };
 
             const auto iter = std::ranges::find_if(chanlist,
@@ -1173,6 +1174,12 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 optchans = iter->chans;
                 aorder = iter->order;
             }
+        }
+        else if(chanopt)
+        {
+            ERR("Channels setting {} is deprecated;", *chanopt);
+            ERR("  If you mean 7.1 surround sound, please use \"surround71\"");
+            ERR("  Otherwise, if 3D7.1 specifically is set up correctly, please use \"3d71\"");
         }
         if(auto ambiopt = device->configValue<std::string>({}, "ambi-format"sv))
         {

@@ -22,7 +22,7 @@ non-OpenAL uses. The code is also very crude. Have fun!
 class Header:
     header_file: str
     registry_file: str
-    api: str
+    api: str | typing.List[str]
     is_extension_header: bool = False
     include: typing.Optional[typing.List[str]] = None
     exclude: typing.Optional[typing.List[str]] = None
@@ -336,11 +336,7 @@ class Registry:
                 if name is None:
                     print(f"Skipping: {command}")
                     continue
-                noexcept = (
-                    f" {namespace}_API_NOEXCEPT"
-                    if command.attrib.get("except") == "no"
-                    else ""
-                )
+                noexcept = f" {namespace}_API_NOEXCEPT"
                 if len(params) == 0:
                     params = "(void)"
                 else:
@@ -432,13 +428,15 @@ def main():
         registries[registry] = Registry(registry_xml)
 
     for header in CONFIGURATION:
+        if isinstance(header.api, str):
+            header.api = [header.api]
         if header.include is None:
             header.include = [
                 k
                 for k, v in registries[header.registry_file].sets.items()
                 if not v.is_feature == header.is_extension_header
                 and (header.exclude is None or k not in header.exclude)
-                and header.api in v.api
+                and any(a in v.api for a in header.api)
             ]
         print(f"Generating {header.header_file}...")
         registries[header.registry_file].create_header(

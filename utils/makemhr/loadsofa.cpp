@@ -127,7 +127,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         }
         else
             fmt::println(std::cerr, "Unexpected sample rate attribute: {} = {}", srate_attrs->name,
-                srate_attrs->value);
+                srate_attrs->value ? srate_attrs->value : "<null>");
         srate_attrs = srate_attrs->next;
     }
     if(!srate_dim)

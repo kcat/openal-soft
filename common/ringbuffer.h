@@ -4,7 +4,9 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <new>
 #include <ranges>
@@ -246,8 +248,9 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(size_t) > sizeof(uint32_t))
-                power_of_two |= power_of_two>>32;
+#if SIZE_MAX > UINT32_MAX
+            power_of_two |= power_of_two>>32;
+#endif
         }
         ++power_of_two;
         if(power_of_two < sz || power_of_two > std::numeric_limits<std::size_t>::max()>>1
@@ -539,8 +542,9 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(size_t) > sizeof(uint32_t))
-                power_of_two |= power_of_two>>32;
+#if SIZE_MAX > UINT32_MAX
+            power_of_two |= power_of_two>>32;
+#endif
         }
         ++power_of_two;
         if(power_of_two < count || power_of_two > std::numeric_limits<std::size_t>::max()>>1

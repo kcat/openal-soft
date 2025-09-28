@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-06 17:57:54.188885+00:00
+ * Last regenerated: 2025-09-28 19:13:41.524578+00:00
  */
 
 /* NOLINTBEGIN */
@@ -362,10 +362,16 @@ typedef void ALvoid;
 /** Signed 16-bit stereo buffer format. */
 #define AL_FORMAT_STEREO16                       0x1103
 
-/** Buffer frequency/sample rate (query only). */
+/**
+ * Buffer frequency/sample rate (query only).
+ * Type: ALint
+ */
 #define AL_FREQUENCY                             0x2001
 
-/** Buffer data size in bytes (query only). */
+/**
+ * Buffer data size in bytes (query only).
+ * Type: ALint
+ */
 #define AL_SIZE                                  0x2004
 
 /* Buffer state. Not for public use. */
@@ -509,6 +515,7 @@ AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources) AL_API_NOEXCEPT
 /** Delete source objects. */
 AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
 
+/** Verify an ID is for a valid source. */
 AL_API ALboolean AL_APIENTRY alIsSource(ALuint source) AL_API_NOEXCEPT;
 
 /* Set source parameters. */
@@ -587,94 +594,120 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
 AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
-
 #endif /* AL_NO_PROTOTYPES */
 
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
  */
-typedef void          (AL_APIENTRY *LPALENABLE)(ALenum capability) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDISABLE)(ALenum capability) AL_API_NOEXCEPT17;
-typedef ALboolean     (AL_APIENTRY *LPALISENABLED)(ALenum capability) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDOPPLERFACTOR)(ALfloat value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDOPPLERVELOCITY)(ALfloat value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDISTANCEMODEL)(ALenum distanceModel) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALENABLE)(ALenum capability) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDISABLE)(ALenum capability) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISENABLED)(ALenum capability) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALDOPPLERFACTOR)(ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDOPPLERVELOCITY)(ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDISTANCEMODEL)(ALenum distanceModel) AL_API_NOEXCEPT17;
+
 typedef const ALchar* (AL_APIENTRY *LPALGETSTRING)(ALenum param) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBOOLEANV)(ALenum param, ALboolean *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETINTEGERV)(ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETFLOATV)(ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETDOUBLEV)(ALenum param, ALdouble *values) AL_API_NOEXCEPT17;
-typedef ALboolean     (AL_APIENTRY *LPALGETBOOLEAN)(ALenum param) AL_API_NOEXCEPT17;
-typedef ALint         (AL_APIENTRY *LPALGETINTEGER)(ALenum param) AL_API_NOEXCEPT17;
-typedef ALfloat       (AL_APIENTRY *LPALGETFLOAT)(ALenum param) AL_API_NOEXCEPT17;
-typedef ALdouble      (AL_APIENTRY *LPALGETDOUBLE)(ALenum param) AL_API_NOEXCEPT17;
-typedef ALenum        (AL_APIENTRY *LPALGETERROR)(void) AL_API_NOEXCEPT17;
-typedef ALboolean     (AL_APIENTRY *LPALISEXTENSIONPRESENT)(const ALchar *extname) AL_API_NOEXCEPT17;
-typedef void*         (AL_APIENTRY *LPALGETPROCADDRESS)(const ALchar *fname) AL_API_NOEXCEPT17;
-typedef ALenum        (AL_APIENTRY *LPALGETENUMVALUE)(const ALchar *ename) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENERF)(ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENER3F)(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENERFV)(ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENERI)(ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENER3I)(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALLISTENERIV)(ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENERF)(ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENER3F)(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENERFV)(ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENERI)(ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENER3I)(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETLISTENERIV)(ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGENSOURCES)(ALsizei n, ALuint *sources) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDELETESOURCES)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
-typedef ALboolean     (AL_APIENTRY *LPALISSOURCE)(ALuint source) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEF)(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCE3F)(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEFV)(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEI)(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCE3I)(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEIV)(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCEF)(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCE3F)(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCEFV)(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCEI)(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCE3I)(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETSOURCEIV)(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEPLAY)(ALuint source) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCESTOP)(ALuint source) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEREWIND)(ALuint source) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEPAUSE)(ALuint source) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEPLAYV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCESTOPV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEREWINDV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEPAUSEV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEQUEUEBUFFERS)(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALSOURCEUNQUEUEBUFFERS)(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGENBUFFERS)(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALDELETEBUFFERS)(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT17;
-typedef ALboolean     (AL_APIENTRY *LPALISBUFFER)(ALuint buffer) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFERDATA)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFERF)(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFER3F)(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFERFV)(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFERI)(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFER3I)(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALBUFFERIV)(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFERF)(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFER3F)(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFERFV)(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFERI)(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFER3I)(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
-typedef void          (AL_APIENTRY *LPALGETBUFFERIV)(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBOOLEANV)(ALenum param, ALboolean *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETINTEGERV)(ALenum param, ALint *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFLOATV)(ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETDOUBLEV)(ALenum param, ALdouble *values) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALGETBOOLEAN)(ALenum param) AL_API_NOEXCEPT17;
+typedef ALint (AL_APIENTRY *LPALGETINTEGER)(ALenum param) AL_API_NOEXCEPT17;
+typedef ALfloat (AL_APIENTRY *LPALGETFLOAT)(ALenum param) AL_API_NOEXCEPT17;
+typedef ALdouble (AL_APIENTRY *LPALGETDOUBLE)(ALenum param) AL_API_NOEXCEPT17;
+
+typedef ALenum (AL_APIENTRY *LPALGETERROR)(void) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISEXTENSIONPRESENT)(const ALchar *extname) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY *LPALGETPROCADDRESS)(const ALchar *fname) AL_API_NOEXCEPT17;
+typedef ALenum (AL_APIENTRY *LPALGETENUMVALUE)(const ALchar *ename) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALLISTENERF)(ALenum param, ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALLISTENER3F)(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALLISTENERFV)(ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALLISTENERI)(ALenum param, ALint value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALLISTENER3I)(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALLISTENERIV)(ALenum param, const ALint *values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGETLISTENERF)(ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETLISTENER3F)(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETLISTENERFV)(ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETLISTENERI)(ALenum param, ALint *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETLISTENER3I)(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETLISTENERIV)(ALenum param, ALint *values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGENSOURCES)(ALsizei n, ALuint *sources) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDELETESOURCES)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISSOURCE)(ALuint source) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALSOURCEF)(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3F)(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEFV)(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEI)(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3I)(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEIV)(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGETSOURCEF)(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3F)(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEFV)(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEI)(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3I)(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEIV)(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALSOURCEPLAY)(ALuint source) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCESTOP)(ALuint source) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEREWIND)(ALuint source) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEPAUSE)(ALuint source) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALSOURCEPLAYV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCESTOPV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEREWINDV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEPAUSEV)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALSOURCEQUEUEBUFFERS)(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEUNQUEUEBUFFERS)(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGENBUFFERS)(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDELETEBUFFERS)(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISBUFFER)(ALuint buffer) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERDATA)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALBUFFERF)(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFER3F)(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERFV)(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERI)(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFER3I)(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERIV)(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGETBUFFERF)(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFER3F)(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERFV)(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERI)(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFER3I)(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERIV)(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT17;
 #endif
+
 #ifndef AL_VERSION_1_1
 #define AL_VERSION_1_1 1
-/** Source buffer offset, in seconds. */
+/**
+ * Source buffer offset, in seconds.
+ * Type:  ALint
+ * Range: [0 - ]
+ */
 #define AL_SEC_OFFSET                            0x1024
 
-/** Source buffer offset, in sample frames. */
+/**
+ * Source buffer offset, in sample frames.
+ * Type:  ALint
+ * Range: [0 - ]
+ */
 #define AL_SAMPLE_OFFSET                         0x1025
 
-/** Source buffer offset, in bytes. */
+/**
+ * Source buffer offset, in bytes.
+ * Type:  ALint
+ * Range: [0 - ]
+ */
 #define AL_BYTE_OFFSET                           0x1026
 
 /**
@@ -697,10 +730,16 @@ typedef void          (AL_APIENTRY *LPALGETBUFFERIV)(ALuint buffer, ALenum param
 #define AL_STREAMING                             0x1029
 #define AL_UNDETERMINED                          0x1030
 
-/** Buffer bits per sample (query only). */
+/**
+ * Buffer bits per sample (query only).
+ * Type: ALint
+ */
 #define AL_BITS                                  0x2002
 
-/** Buffer channel count (query only). */
+/**
+ * Buffer channel count (query only).
+ * Type: ALint
+ */
 #define AL_CHANNELS                              0x2003
 
 /**
@@ -715,13 +754,10 @@ typedef void          (AL_APIENTRY *LPALGETBUFFERIV)(ALuint buffer, ALenum param
 #define AL_SPEED_OF_SOUND                        0xC003
 
 #define AL_LINEAR_DISTANCE                       0xD003
-
 #define AL_LINEAR_DISTANCE_CLAMPED               0xD004
 
 #define AL_EXPONENT_DISTANCE                     0xD005
-
 #define AL_EXPONENT_DISTANCE_CLAMPED             0xD006
-
 #ifndef AL_NO_PROTOYPES
 AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT;
 
@@ -730,8 +766,10 @@ AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT;
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
  */
-typedef void          (AL_APIENTRY *LPALSPEEDOFSOUND)(ALfloat value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSPEEDOFSOUND)(ALfloat value) AL_API_NOEXCEPT17;
+
 #endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

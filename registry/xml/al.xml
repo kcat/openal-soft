@@ -27,6 +27,8 @@
     </comment>
 
     <types namespace="AL">
+        <type category="include" name="float.h"/>
+
         <type category="define">#define <name>OPENAL</name></type>
         <type category="define">#define <name>ALAPI</name>                                    AL_API</type>
         <type category="define">#define <name>ALAPIENTRY</name>                               AL_APIENTRY</type>
@@ -48,6 +50,7 @@
         <type category="basetype" comment="32-bit IEEE-754 floating-point">typedef float <name>ALfloat</name>;</type>
         <type category="basetype" comment="64-bit IEEE-754 floating-point">typedef double <name>ALdouble</name>;</type>
         <type category="basetype" comment="void type (opaque pointers only)">typedef void <name>ALvoid</name>;</type>
+        <type category="basetype">struct <name>_GUID</name>;</type>
 
         <!-- TODO We should probably add the preambles here, vk.xml has an example of what this could look like, but has
              the drawback that today it only has one define/typedef per <type> block i.e. so we can't have multiple
@@ -60,6 +63,18 @@
         <!-- Defines for promotions. TODO Should we figure out a better way? -->
         <type category="define" comment="Capture extension">#define <name>ALC_EXT_CAPTURE</name> 1</type>
         <type category="define" comment="Enumerate All extension">#define <name>ALC_ENUMERATE_ALL_EXT</name> 1</type>
+
+        <type category="basetype">typedef _alsoft_int64_t <name>ALint64SOFT</name>;</type>
+        <type category="basetype">typedef _alsoft_uint64_t <name>ALuint64SOFT</name>;</type>
+
+        <type category="define">#define <name>AL_EXT_FOLDBACK_NAME</name>                     "AL_EXT_FOLDBACK"</type>
+        <type category="funcpointer">typedef void (AL_APIENTRY*<name>LPALFOLDBACKCALLBACK</name>)(<type>ALenum</type>,<type>ALsizei</type>) AL_API_NOEXCEPT17;</type>
+        <type category="funcpointer">
+            typedef void (AL_APIENTRY*<name>ALEVENTPROCSOFT</name>)(<type>ALenum</type> eventType, <type>ALuint</type> object, <type>ALuint</type> param,
+                <type>ALsizei</type> length, const <type>ALchar</type> *message, void *userParam) AL_API_NOEXCEPT17;
+        </type>
+        <type category="funcpointer">typedef <type>ALsizei</type> (AL_APIENTRY*<name>ALBUFFERCALLBACKTYPESOFT</name>)(<type>ALvoid</type> *userptr, <type>ALvoid</type> *sampledata, <type>ALsizei</type> numbytes) AL_API_NOEXCEPT17;</type>
+        <type category="funcpointer">typedef void (AL_APIENTRY*<name>ALDEBUGPROCEXT</name>)(<type>ALenum</type> source, <type>ALenum</type> type, <type>ALuint</type> id, <type>ALenum</type> severity, <type>ALsizei</type> length, const <type>ALchar</type> *message, void *userParam) AL_API_NOEXCEPT17;</type>
     </types>
 
     <types namespace="ALC">
@@ -84,6 +99,15 @@
         <type category="basetype" comment="32-bit IEEE-754 floating-point">typedef float <name>ALCfloat</name>;</type>
         <type category="basetype" comment="64-bit IEEE-754 floating-point">typedef double <name>ALCdouble</name>;</type>
         <type category="basetype" comment="void type (for opaque pointers only)">typedef void <name>ALCvoid</name>;</type>
+
+        <type category="basetype">typedef _alsoft_int64_t <name>ALCint64SOFT</name>;</type>
+        <type category="basetype">typedef _alsoft_uint64_t <name>ALCuint64SOFT</name>;</type>
+
+        <type category="define">#define <name>ALC_EXT_EFX_NAME</name>                         "ALC_EXT_EFX"</type>
+        <type category="funcpointer">
+            typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</type> eventType, <type>ALCenum</type> deviceType,
+                <type>ALCdevice</type> *device, <type>ALCsizei</type> length, const <type>ALCchar</type> *message, void *userParam) ALC_API_NOEXCEPT17;
+        </type>
     </types>
 
     <enums namespace="AL" group="SpecialNumbers">
@@ -247,13 +271,13 @@
             </comment>
         </enum>
         <enum value="0x1024" name="AL_SEC_OFFSET" group="SourcePName,SourceInteger,SourceFloat" comment="Source buffer offset, in seconds.">
-            <property on="source" type="ALint,ALfloat" range="0.."/>
+            <property on="source" type="ALint" range="0.."/>
         </enum>
         <enum value="0x1025" name="AL_SAMPLE_OFFSET" group="SourcePName,SourceInteger,SourceFloat" comment="Source buffer offset, in sample frames.">
-            <property on="source" type="ALint,ALfloat" range="0.."/>
+            <property on="source" type="ALint" range="0.."/>
         </enum>
         <enum value="0x1026" name="AL_BYTE_OFFSET" group="SourcePName,SourceInteger,SourceFloat" comment="Source buffer offset, in bytes.">
-            <property on="source" type="ALint,ALfloat" range="0.."/>
+            <property on="source" type="ALint" range="0.."/>
         </enum>
         <enum value="0x1027" name="AL_SOURCE_TYPE" group="SourcePName,SourceInteger" comment="Source type (query only).">
             <property on="source" type="ALenum" group="SourceType"/>
@@ -736,336 +760,336 @@
         <enum value="0x0001" name="AL_FILTER_LOWPASS" group="FilterType"/>
         <enum value="0x0002" name="AL_FILTER_HIGHPASS" group="FilterType"/>
         <enum value="0x0003" name="AL_FILTER_BANDPASS" group="FilterType"/>
-        <enum value="0.0f" name="AL_LOWPASS_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_LOWPASS_MAX_GAIN"/>
-        <enum value="1.0f" name="AL_LOWPASS_DEFAULT_GAIN"/>
-        <enum value="0.0f" name="AL_LOWPASS_MIN_GAINHF"/>
-        <enum value="1.0f" name="AL_LOWPASS_MAX_GAINHF"/>
-        <enum value="1.0f" name="AL_LOWPASS_DEFAULT_GAINHF"/>
-        <enum value="0.0f" name="AL_HIGHPASS_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_HIGHPASS_MAX_GAIN"/>
-        <enum value="1.0f" name="AL_HIGHPASS_DEFAULT_GAIN"/>
-        <enum value="0.0f" name="AL_HIGHPASS_MIN_GAINLF"/>
-        <enum value="1.0f" name="AL_HIGHPASS_MAX_GAINLF"/>
-        <enum value="1.0f" name="AL_HIGHPASS_DEFAULT_GAINLF"/>
-        <enum value="0.0f" name="AL_BANDPASS_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_BANDPASS_MAX_GAIN"/>
-        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAIN"/>
-        <enum value="0.0f" name="AL_BANDPASS_MIN_GAINHF"/>
-        <enum value="1.0f" name="AL_BANDPASS_MAX_GAINHF"/>
-        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAINHF"/>
-        <enum value="0.0f" name="AL_BANDPASS_MIN_GAINLF"/>
-        <enum value="1.0f" name="AL_BANDPASS_MAX_GAINLF"/>
-        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAINLF"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_DENSITY"/>
-        <enum value="1.0f" name="AL_REVERB_MAX_DENSITY"/>
-        <enum value="1.0f" name="AL_REVERB_DEFAULT_DENSITY"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_DIFFUSION"/>
-        <enum value="1.0f" name="AL_REVERB_MAX_DIFFUSION"/>
-        <enum value="1.0f" name="AL_REVERB_DEFAULT_DIFFUSION"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_REVERB_MAX_GAIN"/>
-        <enum value="0.32f" name="AL_REVERB_DEFAULT_GAIN"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_GAINHF"/>
-        <enum value="1.0f" name="AL_REVERB_MAX_GAINHF"/>
-        <enum value="0.89f" name="AL_REVERB_DEFAULT_GAINHF"/>
-        <enum value="0.1f" name="AL_REVERB_MIN_DECAY_TIME"/>
-        <enum value="20.0f" name="AL_REVERB_MAX_DECAY_TIME"/>
-        <enum value="1.49f" name="AL_REVERB_DEFAULT_DECAY_TIME"/>
-        <enum value="0.1f" name="AL_REVERB_MIN_DECAY_HFRATIO"/>
-        <enum value="2.0f" name="AL_REVERB_MAX_DECAY_HFRATIO"/>
-        <enum value="0.83f" name="AL_REVERB_DEFAULT_DECAY_HFRATIO"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_REFLECTIONS_GAIN"/>
-        <enum value="3.16f" name="AL_REVERB_MAX_REFLECTIONS_GAIN"/>
-        <enum value="0.05f" name="AL_REVERB_DEFAULT_REFLECTIONS_GAIN"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_REFLECTIONS_DELAY"/>
-        <enum value="0.3f" name="AL_REVERB_MAX_REFLECTIONS_DELAY"/>
-        <enum value="0.007f" name="AL_REVERB_DEFAULT_REFLECTIONS_DELAY"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_LATE_REVERB_GAIN"/>
-        <enum value="10.0f" name="AL_REVERB_MAX_LATE_REVERB_GAIN"/>
-        <enum value="1.26f" name="AL_REVERB_DEFAULT_LATE_REVERB_GAIN"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_LATE_REVERB_DELAY"/>
-        <enum value="0.1f" name="AL_REVERB_MAX_LATE_REVERB_DELAY"/>
-        <enum value="0.011f" name="AL_REVERB_DEFAULT_LATE_REVERB_DELAY"/>
-        <enum value="0.892f" name="AL_REVERB_MIN_AIR_ABSORPTION_GAINHF"/>
-        <enum value="1.0f" name="AL_REVERB_MAX_AIR_ABSORPTION_GAINHF"/>
-        <enum value="0.994f" name="AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
-        <enum value="0.0f" name="AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="10.0f" name="AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="0.0f" name="AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_LOWPASS_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_LOWPASS_MAX_GAIN"/>
+        <enum value="(1.0f)" name="AL_LOWPASS_DEFAULT_GAIN"/>
+        <enum value="(0.0f)" name="AL_LOWPASS_MIN_GAINHF"/>
+        <enum value="(1.0f)" name="AL_LOWPASS_MAX_GAINHF"/>
+        <enum value="(1.0f)" name="AL_LOWPASS_DEFAULT_GAINHF"/>
+        <enum value="(0.0f)" name="AL_HIGHPASS_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_HIGHPASS_MAX_GAIN"/>
+        <enum value="(1.0f)" name="AL_HIGHPASS_DEFAULT_GAIN"/>
+        <enum value="(0.0f)" name="AL_HIGHPASS_MIN_GAINLF"/>
+        <enum value="(1.0f)" name="AL_HIGHPASS_MAX_GAINLF"/>
+        <enum value="(1.0f)" name="AL_HIGHPASS_DEFAULT_GAINLF"/>
+        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAIN"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAIN"/>
+        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAINHF"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAINHF"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAINHF"/>
+        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAINLF"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAINLF"/>
+        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAINLF"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_DENSITY"/>
+        <enum value="(1.0f)" name="AL_REVERB_MAX_DENSITY"/>
+        <enum value="(1.0f)" name="AL_REVERB_DEFAULT_DENSITY"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_DIFFUSION"/>
+        <enum value="(1.0f)" name="AL_REVERB_MAX_DIFFUSION"/>
+        <enum value="(1.0f)" name="AL_REVERB_DEFAULT_DIFFUSION"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_REVERB_MAX_GAIN"/>
+        <enum value="(0.32f)" name="AL_REVERB_DEFAULT_GAIN"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_GAINHF"/>
+        <enum value="(1.0f)" name="AL_REVERB_MAX_GAINHF"/>
+        <enum value="(0.89f)" name="AL_REVERB_DEFAULT_GAINHF"/>
+        <enum value="(0.1f)" name="AL_REVERB_MIN_DECAY_TIME"/>
+        <enum value="(20.0f)" name="AL_REVERB_MAX_DECAY_TIME"/>
+        <enum value="(1.49f)" name="AL_REVERB_DEFAULT_DECAY_TIME"/>
+        <enum value="(0.1f)" name="AL_REVERB_MIN_DECAY_HFRATIO"/>
+        <enum value="(2.0f)" name="AL_REVERB_MAX_DECAY_HFRATIO"/>
+        <enum value="(0.83f)" name="AL_REVERB_DEFAULT_DECAY_HFRATIO"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_REFLECTIONS_GAIN"/>
+        <enum value="(3.16f)" name="AL_REVERB_MAX_REFLECTIONS_GAIN"/>
+        <enum value="(0.05f)" name="AL_REVERB_DEFAULT_REFLECTIONS_GAIN"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_REFLECTIONS_DELAY"/>
+        <enum value="(0.3f)" name="AL_REVERB_MAX_REFLECTIONS_DELAY"/>
+        <enum value="(0.007f)" name="AL_REVERB_DEFAULT_REFLECTIONS_DELAY"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_LATE_REVERB_GAIN"/>
+        <enum value="(10.0f)" name="AL_REVERB_MAX_LATE_REVERB_GAIN"/>
+        <enum value="(1.26f)" name="AL_REVERB_DEFAULT_LATE_REVERB_GAIN"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_LATE_REVERB_DELAY"/>
+        <enum value="(0.1f)" name="AL_REVERB_MAX_LATE_REVERB_DELAY"/>
+        <enum value="(0.011f)" name="AL_REVERB_DEFAULT_LATE_REVERB_DELAY"/>
+        <enum value="(0.892f)" name="AL_REVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(1.0f)" name="AL_REVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(0.994f)" name="AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(0.0f)" name="AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(10.0f)" name="AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
         <enum value="AL_FALSE" name="AL_REVERB_MIN_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_REVERB_MAX_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_REVERB_DEFAULT_DECAY_HFLIMIT"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_DENSITY"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_DENSITY"/>
-        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DENSITY"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_DIFFUSION"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_DIFFUSION"/>
-        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DIFFUSION"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAIN"/>
-        <enum value="0.32f" name="AL_EAXREVERB_DEFAULT_GAIN"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAINHF"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAINHF"/>
-        <enum value="0.89f" name="AL_EAXREVERB_DEFAULT_GAINHF"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAINLF"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAINLF"/>
-        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_GAINLF"/>
-        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_TIME"/>
-        <enum value="20.0f" name="AL_EAXREVERB_MAX_DECAY_TIME"/>
-        <enum value="1.49f" name="AL_EAXREVERB_DEFAULT_DECAY_TIME"/>
-        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_HFRATIO"/>
-        <enum value="2.0f" name="AL_EAXREVERB_MAX_DECAY_HFRATIO"/>
-        <enum value="0.83f" name="AL_EAXREVERB_DEFAULT_DECAY_HFRATIO"/>
-        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_LFRATIO"/>
-        <enum value="2.0f" name="AL_EAXREVERB_MAX_DECAY_LFRATIO"/>
-        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DECAY_LFRATIO"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_REFLECTIONS_GAIN"/>
-        <enum value="3.16f" name="AL_EAXREVERB_MAX_REFLECTIONS_GAIN"/>
-        <enum value="0.05f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_REFLECTIONS_DELAY"/>
-        <enum value="0.3f" name="AL_EAXREVERB_MAX_REFLECTIONS_DELAY"/>
-        <enum value="0.007f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY"/>
-        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_LATE_REVERB_GAIN"/>
-        <enum value="10.0f" name="AL_EAXREVERB_MAX_LATE_REVERB_GAIN"/>
-        <enum value="1.26f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_LATE_REVERB_DELAY"/>
-        <enum value="0.1f" name="AL_EAXREVERB_MAX_LATE_REVERB_DELAY"/>
-        <enum value="0.011f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY"/>
-        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ"/>
-        <enum value="0.075f" name="AL_EAXREVERB_MIN_ECHO_TIME"/>
-        <enum value="0.25f" name="AL_EAXREVERB_MAX_ECHO_TIME"/>
-        <enum value="0.25f" name="AL_EAXREVERB_DEFAULT_ECHO_TIME"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_ECHO_DEPTH"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_ECHO_DEPTH"/>
-        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_ECHO_DEPTH"/>
-        <enum value="0.04f" name="AL_EAXREVERB_MIN_MODULATION_TIME"/>
-        <enum value="4.0f" name="AL_EAXREVERB_MAX_MODULATION_TIME"/>
-        <enum value="0.25f" name="AL_EAXREVERB_DEFAULT_MODULATION_TIME"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_MODULATION_DEPTH"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_MODULATION_DEPTH"/>
-        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_MODULATION_DEPTH"/>
-        <enum value="0.892f" name="AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF"/>
-        <enum value="1.0f" name="AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF"/>
-        <enum value="0.994f" name="AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
-        <enum value="1000.0f" name="AL_EAXREVERB_MIN_HFREFERENCE"/>
-        <enum value="20000.0f" name="AL_EAXREVERB_MAX_HFREFERENCE"/>
-        <enum value="5000.0f" name="AL_EAXREVERB_DEFAULT_HFREFERENCE"/>
-        <enum value="20.0f" name="AL_EAXREVERB_MIN_LFREFERENCE"/>
-        <enum value="1000.0f" name="AL_EAXREVERB_MAX_LFREFERENCE"/>
-        <enum value="250.0f" name="AL_EAXREVERB_DEFAULT_LFREFERENCE"/>
-        <enum value="0.0f" name="AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="10.0f" name="AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_DENSITY"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_DENSITY"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DENSITY"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_DIFFUSION"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_DIFFUSION"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DIFFUSION"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAIN"/>
+        <enum value="(0.32f)" name="AL_EAXREVERB_DEFAULT_GAIN"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAINHF"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAINHF"/>
+        <enum value="(0.89f)" name="AL_EAXREVERB_DEFAULT_GAINHF"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAINLF"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAINLF"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_GAINLF"/>
+        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_TIME"/>
+        <enum value="(20.0f)" name="AL_EAXREVERB_MAX_DECAY_TIME"/>
+        <enum value="(1.49f)" name="AL_EAXREVERB_DEFAULT_DECAY_TIME"/>
+        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_HFRATIO"/>
+        <enum value="(2.0f)" name="AL_EAXREVERB_MAX_DECAY_HFRATIO"/>
+        <enum value="(0.83f)" name="AL_EAXREVERB_DEFAULT_DECAY_HFRATIO"/>
+        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_LFRATIO"/>
+        <enum value="(2.0f)" name="AL_EAXREVERB_MAX_DECAY_LFRATIO"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DECAY_LFRATIO"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_REFLECTIONS_GAIN"/>
+        <enum value="(3.16f)" name="AL_EAXREVERB_MAX_REFLECTIONS_GAIN"/>
+        <enum value="(0.05f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_REFLECTIONS_DELAY"/>
+        <enum value="(0.3f)" name="AL_EAXREVERB_MAX_REFLECTIONS_DELAY"/>
+        <enum value="(0.007f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_LATE_REVERB_GAIN"/>
+        <enum value="(10.0f)" name="AL_EAXREVERB_MAX_LATE_REVERB_GAIN"/>
+        <enum value="(1.26f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_LATE_REVERB_DELAY"/>
+        <enum value="(0.1f)" name="AL_EAXREVERB_MAX_LATE_REVERB_DELAY"/>
+        <enum value="(0.011f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ"/>
+        <enum value="(0.075f)" name="AL_EAXREVERB_MIN_ECHO_TIME"/>
+        <enum value="(0.25f)" name="AL_EAXREVERB_MAX_ECHO_TIME"/>
+        <enum value="(0.25f)" name="AL_EAXREVERB_DEFAULT_ECHO_TIME"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_ECHO_DEPTH"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_ECHO_DEPTH"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_ECHO_DEPTH"/>
+        <enum value="(0.04f)" name="AL_EAXREVERB_MIN_MODULATION_TIME"/>
+        <enum value="(4.0f)" name="AL_EAXREVERB_MAX_MODULATION_TIME"/>
+        <enum value="(0.25f)" name="AL_EAXREVERB_DEFAULT_MODULATION_TIME"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_MODULATION_DEPTH"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_MODULATION_DEPTH"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_MODULATION_DEPTH"/>
+        <enum value="(0.892f)" name="AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(0.994f)" name="AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+        <enum value="(1000.0f)" name="AL_EAXREVERB_MIN_HFREFERENCE"/>
+        <enum value="(20000.0f)" name="AL_EAXREVERB_MAX_HFREFERENCE"/>
+        <enum value="(5000.0f)" name="AL_EAXREVERB_DEFAULT_HFREFERENCE"/>
+        <enum value="(20.0f)" name="AL_EAXREVERB_MIN_LFREFERENCE"/>
+        <enum value="(1000.0f)" name="AL_EAXREVERB_MAX_LFREFERENCE"/>
+        <enum value="(250.0f)" name="AL_EAXREVERB_DEFAULT_LFREFERENCE"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(10.0f)" name="AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
         <enum value="AL_FALSE" name="AL_EAXREVERB_MIN_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_EAXREVERB_MAX_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT"/>
-        <enum value="0" name="AL_CHORUS_WAVEFORM_SINUSOID" group="ChorusWaveform"/>
-        <enum value="1" name="AL_CHORUS_WAVEFORM_TRIANGLE" group="ChorusWaveform"/>
-        <enum value="0" name="AL_CHORUS_MIN_WAVEFORM"/>
-        <enum value="1" name="AL_CHORUS_MAX_WAVEFORM"/>
-        <enum value="1" name="AL_CHORUS_DEFAULT_WAVEFORM"/>
-        <enum value="-180" name="AL_CHORUS_MIN_PHASE"/>
-        <enum value="180" name="AL_CHORUS_MAX_PHASE"/>
-        <enum value="90" name="AL_CHORUS_DEFAULT_PHASE"/>
-        <enum value="0.0f" name="AL_CHORUS_MIN_RATE"/>
-        <enum value="10.0f" name="AL_CHORUS_MAX_RATE"/>
-        <enum value="1.1f" name="AL_CHORUS_DEFAULT_RATE"/>
-        <enum value="0.0f" name="AL_CHORUS_MIN_DEPTH"/>
-        <enum value="1.0f" name="AL_CHORUS_MAX_DEPTH"/>
-        <enum value="0.1f" name="AL_CHORUS_DEFAULT_DEPTH"/>
-        <enum value="-1.0f" name="AL_CHORUS_MIN_FEEDBACK"/>
-        <enum value="1.0f" name="AL_CHORUS_MAX_FEEDBACK"/>
-        <enum value="0.25f" name="AL_CHORUS_DEFAULT_FEEDBACK"/>
-        <enum value="0.0f" name="AL_CHORUS_MIN_DELAY"/>
-        <enum value="0.016f" name="AL_CHORUS_MAX_DELAY"/>
-        <enum value="0.016f" name="AL_CHORUS_DEFAULT_DELAY"/>
-        <enum value="0.0f" name="AL_DISTORTION_MIN_EDGE"/>
-        <enum value="1.0f" name="AL_DISTORTION_MAX_EDGE"/>
-        <enum value="0.2f" name="AL_DISTORTION_DEFAULT_EDGE"/>
-        <enum value="0.01f" name="AL_DISTORTION_MIN_GAIN"/>
-        <enum value="1.0f" name="AL_DISTORTION_MAX_GAIN"/>
-        <enum value="0.05f" name="AL_DISTORTION_DEFAULT_GAIN"/>
-        <enum value="80.0f" name="AL_DISTORTION_MIN_LOWPASS_CUTOFF"/>
-        <enum value="24000.0f" name="AL_DISTORTION_MAX_LOWPASS_CUTOFF"/>
-        <enum value="8000.0f" name="AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF"/>
-        <enum value="80.0f" name="AL_DISTORTION_MIN_EQCENTER"/>
-        <enum value="24000.0f" name="AL_DISTORTION_MAX_EQCENTER"/>
-        <enum value="3600.0f" name="AL_DISTORTION_DEFAULT_EQCENTER"/>
-        <enum value="80.0f" name="AL_DISTORTION_MIN_EQBANDWIDTH"/>
-        <enum value="24000.0f" name="AL_DISTORTION_MAX_EQBANDWIDTH"/>
-        <enum value="3600.0f" name="AL_DISTORTION_DEFAULT_EQBANDWIDTH"/>
-        <enum value="0.0f" name="AL_ECHO_MIN_DELAY"/>
-        <enum value="0.207f" name="AL_ECHO_MAX_DELAY"/>
-        <enum value="0.1f" name="AL_ECHO_DEFAULT_DELAY"/>
-        <enum value="0.0f" name="AL_ECHO_MIN_LRDELAY"/>
-        <enum value="0.404f" name="AL_ECHO_MAX_LRDELAY"/>
-        <enum value="0.1f" name="AL_ECHO_DEFAULT_LRDELAY"/>
-        <enum value="0.0f" name="AL_ECHO_MIN_DAMPING"/>
-        <enum value="0.99f" name="AL_ECHO_MAX_DAMPING"/>
-        <enum value="0.5f" name="AL_ECHO_DEFAULT_DAMPING"/>
-        <enum value="0.0f" name="AL_ECHO_MIN_FEEDBACK"/>
-        <enum value="1.0f" name="AL_ECHO_MAX_FEEDBACK"/>
-        <enum value="0.5f" name="AL_ECHO_DEFAULT_FEEDBACK"/>
-        <enum value="-1.0f" name="AL_ECHO_MIN_SPREAD"/>
-        <enum value="1.0f" name="AL_ECHO_MAX_SPREAD"/>
-        <enum value="-1.0f" name="AL_ECHO_DEFAULT_SPREAD"/>
-        <enum value="0" name="AL_FLANGER_WAVEFORM_SINUSOID" group="FlangerWaveform"/>
-        <enum value="1" name="AL_FLANGER_WAVEFORM_TRIANGLE" group="FlangerWaveform"/>
-        <enum value="0" name="AL_FLANGER_MIN_WAVEFORM"/>
-        <enum value="1" name="AL_FLANGER_MAX_WAVEFORM"/>
-        <enum value="1" name="AL_FLANGER_DEFAULT_WAVEFORM"/>
-        <enum value="-180" name="AL_FLANGER_MIN_PHASE"/>
-        <enum value="180" name="AL_FLANGER_MAX_PHASE"/>
-        <enum value="0" name="AL_FLANGER_DEFAULT_PHASE"/>
-        <enum value="0.0f" name="AL_FLANGER_MIN_RATE"/>
-        <enum value="10.0f" name="AL_FLANGER_MAX_RATE"/>
-        <enum value="0.27f" name="AL_FLANGER_DEFAULT_RATE"/>
-        <enum value="0.0f" name="AL_FLANGER_MIN_DEPTH"/>
-        <enum value="1.0f" name="AL_FLANGER_MAX_DEPTH"/>
-        <enum value="1.0f" name="AL_FLANGER_DEFAULT_DEPTH"/>
-        <enum value="-1.0f" name="AL_FLANGER_MIN_FEEDBACK"/>
-        <enum value="1.0f" name="AL_FLANGER_MAX_FEEDBACK"/>
-        <enum value="-0.5f" name="AL_FLANGER_DEFAULT_FEEDBACK"/>
-        <enum value="0.0f" name="AL_FLANGER_MIN_DELAY"/>
-        <enum value="0.004f" name="AL_FLANGER_MAX_DELAY"/>
-        <enum value="0.002f" name="AL_FLANGER_DEFAULT_DELAY"/>
-        <enum value="0.0f" name="AL_FREQUENCY_SHIFTER_MIN_FREQUENCY"/>
-        <enum value="24000.0f" name="AL_FREQUENCY_SHIFTER_MAX_FREQUENCY"/>
-        <enum value="0.0f" name="AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY"/>
-        <enum value="0" name="AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION"/>
-        <enum value="2" name="AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION"/>
-        <enum value="0" name="AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION"/>
-        <enum value="0" name="AL_FREQUENCY_SHIFTER_DIRECTION_DOWN" group="FrequencyShifterDirection"/>
-        <enum value="1" name="AL_FREQUENCY_SHIFTER_DIRECTION_UP" group="FrequencyShifterDirection"/>
-        <enum value="2" name="AL_FREQUENCY_SHIFTER_DIRECTION_OFF" group="FrequencyShifterDirection"/>
-        <enum value="0" name="AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION"/>
-        <enum value="2" name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
-        <enum value="0" name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
-        <enum value="29" name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
-        <enum value="-24" name="AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING"/>
-        <enum value="24" name="AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_MIN_PHONEMEB"/>
-        <enum value="29" name="AL_VOCAL_MORPHER_MAX_PHONEMEB"/>
-        <enum value="10" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB"/>
-        <enum value="-24" name="AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING"/>
-        <enum value="24" name="AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_PHONEME_A" group="VocalMorpherPhoneme"/>
-        <enum value="1" name="AL_VOCAL_MORPHER_PHONEME_E" group="VocalMorpherPhoneme"/>
-        <enum value="2" name="AL_VOCAL_MORPHER_PHONEME_I" group="VocalMorpherPhoneme"/>
-        <enum value="3" name="AL_VOCAL_MORPHER_PHONEME_O" group="VocalMorpherPhoneme"/>
-        <enum value="4" name="AL_VOCAL_MORPHER_PHONEME_U" group="VocalMorpherPhoneme"/>
-        <enum value="5" name="AL_VOCAL_MORPHER_PHONEME_AA" group="VocalMorpherPhoneme"/>
-        <enum value="6" name="AL_VOCAL_MORPHER_PHONEME_AE" group="VocalMorpherPhoneme"/>
-        <enum value="7" name="AL_VOCAL_MORPHER_PHONEME_AH" group="VocalMorpherPhoneme"/>
-        <enum value="8" name="AL_VOCAL_MORPHER_PHONEME_AO" group="VocalMorpherPhoneme"/>
-        <enum value="9" name="AL_VOCAL_MORPHER_PHONEME_EH" group="VocalMorpherPhoneme"/>
-        <enum value="10" name="AL_VOCAL_MORPHER_PHONEME_ER" group="VocalMorpherPhoneme"/>
-        <enum value="11" name="AL_VOCAL_MORPHER_PHONEME_IH" group="VocalMorpherPhoneme"/>
-        <enum value="12" name="AL_VOCAL_MORPHER_PHONEME_IY" group="VocalMorpherPhoneme"/>
-        <enum value="13" name="AL_VOCAL_MORPHER_PHONEME_UH" group="VocalMorpherPhoneme"/>
-        <enum value="14" name="AL_VOCAL_MORPHER_PHONEME_UW" group="VocalMorpherPhoneme"/>
-        <enum value="15" name="AL_VOCAL_MORPHER_PHONEME_B" group="VocalMorpherPhoneme"/>
-        <enum value="16" name="AL_VOCAL_MORPHER_PHONEME_D" group="VocalMorpherPhoneme"/>
-        <enum value="17" name="AL_VOCAL_MORPHER_PHONEME_F" group="VocalMorpherPhoneme"/>
-        <enum value="18" name="AL_VOCAL_MORPHER_PHONEME_G" group="VocalMorpherPhoneme"/>
-        <enum value="19" name="AL_VOCAL_MORPHER_PHONEME_J" group="VocalMorpherPhoneme"/>
-        <enum value="20" name="AL_VOCAL_MORPHER_PHONEME_K" group="VocalMorpherPhoneme"/>
-        <enum value="21" name="AL_VOCAL_MORPHER_PHONEME_L" group="VocalMorpherPhoneme"/>
-        <enum value="22" name="AL_VOCAL_MORPHER_PHONEME_M" group="VocalMorpherPhoneme"/>
-        <enum value="23" name="AL_VOCAL_MORPHER_PHONEME_N" group="VocalMorpherPhoneme"/>
-        <enum value="24" name="AL_VOCAL_MORPHER_PHONEME_P" group="VocalMorpherPhoneme"/>
-        <enum value="25" name="AL_VOCAL_MORPHER_PHONEME_R" group="VocalMorpherPhoneme"/>
-        <enum value="26" name="AL_VOCAL_MORPHER_PHONEME_S" group="VocalMorpherPhoneme"/>
-        <enum value="27" name="AL_VOCAL_MORPHER_PHONEME_T" group="VocalMorpherPhoneme"/>
-        <enum value="28" name="AL_VOCAL_MORPHER_PHONEME_V" group="VocalMorpherPhoneme"/>
-        <enum value="29" name="AL_VOCAL_MORPHER_PHONEME_Z" group="VocalMorpherPhoneme"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_WAVEFORM_SINUSOID" group="VocalMorpherWaveform"/>
-        <enum value="1" name="AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE" group="VocalMorpherWaveform"/>
-        <enum value="2" name="AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH" group="VocalMorpherWaveform"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_MIN_WAVEFORM"/>
-        <enum value="2" name="AL_VOCAL_MORPHER_MAX_WAVEFORM"/>
-        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_WAVEFORM"/>
-        <enum value="0.0f" name="AL_VOCAL_MORPHER_MIN_RATE"/>
-        <enum value="10.0f" name="AL_VOCAL_MORPHER_MAX_RATE"/>
-        <enum value="1.41f" name="AL_VOCAL_MORPHER_DEFAULT_RATE"/>
-        <enum value="-12" name="AL_PITCH_SHIFTER_MIN_COARSE_TUNE"/>
-        <enum value="12" name="AL_PITCH_SHIFTER_MAX_COARSE_TUNE"/>
-        <enum value="12" name="AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE"/>
-        <enum value="-50" name="AL_PITCH_SHIFTER_MIN_FINE_TUNE"/>
-        <enum value="50" name="AL_PITCH_SHIFTER_MAX_FINE_TUNE"/>
-        <enum value="0" name="AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE"/>
-        <enum value="0.0f" name="AL_RING_MODULATOR_MIN_FREQUENCY"/>
-        <enum value="8000.0f" name="AL_RING_MODULATOR_MAX_FREQUENCY"/>
-        <enum value="440.0f" name="AL_RING_MODULATOR_DEFAULT_FREQUENCY"/>
-        <enum value="0.0f" name="AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF"/>
-        <enum value="24000.0f" name="AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF"/>
-        <enum value="800.0f" name="AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF"/>
-        <enum value="0" name="AL_RING_MODULATOR_SINUSOID" group="RingModulatorWaveform"/>
-        <enum value="1" name="AL_RING_MODULATOR_SAWTOOTH" group="RingModulatorWaveform"/>
-        <enum value="2" name="AL_RING_MODULATOR_SQUARE" group="RingModulatorWaveform"/>
-        <enum value="0" name="AL_RING_MODULATOR_MIN_WAVEFORM"/>
-        <enum value="2" name="AL_RING_MODULATOR_MAX_WAVEFORM"/>
-        <enum value="0" name="AL_RING_MODULATOR_DEFAULT_WAVEFORM"/>
-        <enum value="0.0001f" name="AL_AUTOWAH_MIN_ATTACK_TIME"/>
-        <enum value="1.0f" name="AL_AUTOWAH_MAX_ATTACK_TIME"/>
-        <enum value="0.06f" name="AL_AUTOWAH_DEFAULT_ATTACK_TIME"/>
-        <enum value="0.0001f" name="AL_AUTOWAH_MIN_RELEASE_TIME"/>
-        <enum value="1.0f" name="AL_AUTOWAH_MAX_RELEASE_TIME"/>
-        <enum value="0.06f" name="AL_AUTOWAH_DEFAULT_RELEASE_TIME"/>
-        <enum value="2.0f" name="AL_AUTOWAH_MIN_RESONANCE"/>
-        <enum value="1000.0f" name="AL_AUTOWAH_MAX_RESONANCE"/>
-        <enum value="1000.0f" name="AL_AUTOWAH_DEFAULT_RESONANCE"/>
-        <enum value="0.00003f" name="AL_AUTOWAH_MIN_PEAK_GAIN"/>
-        <enum value="31621.0f" name="AL_AUTOWAH_MAX_PEAK_GAIN"/>
-        <enum value="11.22f" name="AL_AUTOWAH_DEFAULT_PEAK_GAIN"/>
-        <enum value="0" name="AL_COMPRESSOR_MIN_ONOFF"/>
-        <enum value="1" name="AL_COMPRESSOR_MAX_ONOFF"/>
-        <enum value="1" name="AL_COMPRESSOR_DEFAULT_ONOFF"/>
-        <enum value="0.126f" name="AL_EQUALIZER_MIN_LOW_GAIN"/>
-        <enum value="7.943f" name="AL_EQUALIZER_MAX_LOW_GAIN"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_LOW_GAIN"/>
-        <enum value="50.0f" name="AL_EQUALIZER_MIN_LOW_CUTOFF"/>
-        <enum value="800.0f" name="AL_EQUALIZER_MAX_LOW_CUTOFF"/>
-        <enum value="200.0f" name="AL_EQUALIZER_DEFAULT_LOW_CUTOFF"/>
-        <enum value="0.126f" name="AL_EQUALIZER_MIN_MID1_GAIN"/>
-        <enum value="7.943f" name="AL_EQUALIZER_MAX_MID1_GAIN"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID1_GAIN"/>
-        <enum value="200.0f" name="AL_EQUALIZER_MIN_MID1_CENTER"/>
-        <enum value="3000.0f" name="AL_EQUALIZER_MAX_MID1_CENTER"/>
-        <enum value="500.0f" name="AL_EQUALIZER_DEFAULT_MID1_CENTER"/>
-        <enum value="0.01f" name="AL_EQUALIZER_MIN_MID1_WIDTH"/>
-        <enum value="1.0f" name="AL_EQUALIZER_MAX_MID1_WIDTH"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID1_WIDTH"/>
-        <enum value="0.126f" name="AL_EQUALIZER_MIN_MID2_GAIN"/>
-        <enum value="7.943f" name="AL_EQUALIZER_MAX_MID2_GAIN"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID2_GAIN"/>
-        <enum value="1000.0f" name="AL_EQUALIZER_MIN_MID2_CENTER"/>
-        <enum value="8000.0f" name="AL_EQUALIZER_MAX_MID2_CENTER"/>
-        <enum value="3000.0f" name="AL_EQUALIZER_DEFAULT_MID2_CENTER"/>
-        <enum value="0.01f" name="AL_EQUALIZER_MIN_MID2_WIDTH"/>
-        <enum value="1.0f" name="AL_EQUALIZER_MAX_MID2_WIDTH"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID2_WIDTH"/>
-        <enum value="0.126f" name="AL_EQUALIZER_MIN_HIGH_GAIN"/>
-        <enum value="7.943f" name="AL_EQUALIZER_MAX_HIGH_GAIN"/>
-        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_HIGH_GAIN"/>
-        <enum value="4000.0f" name="AL_EQUALIZER_MIN_HIGH_CUTOFF"/>
-        <enum value="16000.0f" name="AL_EQUALIZER_MAX_HIGH_CUTOFF"/>
-        <enum value="6000.0f" name="AL_EQUALIZER_DEFAULT_HIGH_CUTOFF"/>
-        <enum value="0.0f" name="AL_MIN_AIR_ABSORPTION_FACTOR"/>
-        <enum value="10.0f" name="AL_MAX_AIR_ABSORPTION_FACTOR"/>
-        <enum value="0.0f" name="AL_DEFAULT_AIR_ABSORPTION_FACTOR"/>
-        <enum value="0.0f" name="AL_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="10.0f" name="AL_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="0.0f" name="AL_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="0.0f" name="AL_MIN_CONE_OUTER_GAINHF"/>
-        <enum value="1.0f" name="AL_MAX_CONE_OUTER_GAINHF"/>
-        <enum value="1.0f" name="AL_DEFAULT_CONE_OUTER_GAINHF"/>
+        <enum value="(0)" name="AL_CHORUS_WAVEFORM_SINUSOID" group="ChorusWaveform"/>
+        <enum value="(1)" name="AL_CHORUS_WAVEFORM_TRIANGLE" group="ChorusWaveform"/>
+        <enum value="(0)" name="AL_CHORUS_MIN_WAVEFORM"/>
+        <enum value="(1)" name="AL_CHORUS_MAX_WAVEFORM"/>
+        <enum value="(1)" name="AL_CHORUS_DEFAULT_WAVEFORM"/>
+        <enum value="(-180)" name="AL_CHORUS_MIN_PHASE"/>
+        <enum value="(180)" name="AL_CHORUS_MAX_PHASE"/>
+        <enum value="(90)" name="AL_CHORUS_DEFAULT_PHASE"/>
+        <enum value="(0.0f)" name="AL_CHORUS_MIN_RATE"/>
+        <enum value="(10.0f)" name="AL_CHORUS_MAX_RATE"/>
+        <enum value="(1.1f)" name="AL_CHORUS_DEFAULT_RATE"/>
+        <enum value="(0.0f)" name="AL_CHORUS_MIN_DEPTH"/>
+        <enum value="(1.0f)" name="AL_CHORUS_MAX_DEPTH"/>
+        <enum value="(0.1f)" name="AL_CHORUS_DEFAULT_DEPTH"/>
+        <enum value="(-1.0f)" name="AL_CHORUS_MIN_FEEDBACK"/>
+        <enum value="(1.0f)" name="AL_CHORUS_MAX_FEEDBACK"/>
+        <enum value="(0.25f)" name="AL_CHORUS_DEFAULT_FEEDBACK"/>
+        <enum value="(0.0f)" name="AL_CHORUS_MIN_DELAY"/>
+        <enum value="(0.016f)" name="AL_CHORUS_MAX_DELAY"/>
+        <enum value="(0.016f)" name="AL_CHORUS_DEFAULT_DELAY"/>
+        <enum value="(0.0f)" name="AL_DISTORTION_MIN_EDGE"/>
+        <enum value="(1.0f)" name="AL_DISTORTION_MAX_EDGE"/>
+        <enum value="(0.2f)" name="AL_DISTORTION_DEFAULT_EDGE"/>
+        <enum value="(0.01f)" name="AL_DISTORTION_MIN_GAIN"/>
+        <enum value="(1.0f)" name="AL_DISTORTION_MAX_GAIN"/>
+        <enum value="(0.05f)" name="AL_DISTORTION_DEFAULT_GAIN"/>
+        <enum value="(80.0f)" name="AL_DISTORTION_MIN_LOWPASS_CUTOFF"/>
+        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_LOWPASS_CUTOFF"/>
+        <enum value="(8000.0f)" name="AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF"/>
+        <enum value="(80.0f)" name="AL_DISTORTION_MIN_EQCENTER"/>
+        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_EQCENTER"/>
+        <enum value="(3600.0f)" name="AL_DISTORTION_DEFAULT_EQCENTER"/>
+        <enum value="(80.0f)" name="AL_DISTORTION_MIN_EQBANDWIDTH"/>
+        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_EQBANDWIDTH"/>
+        <enum value="(3600.0f)" name="AL_DISTORTION_DEFAULT_EQBANDWIDTH"/>
+        <enum value="(0.0f)" name="AL_ECHO_MIN_DELAY"/>
+        <enum value="(0.207f)" name="AL_ECHO_MAX_DELAY"/>
+        <enum value="(0.1f)" name="AL_ECHO_DEFAULT_DELAY"/>
+        <enum value="(0.0f)" name="AL_ECHO_MIN_LRDELAY"/>
+        <enum value="(0.404f)" name="AL_ECHO_MAX_LRDELAY"/>
+        <enum value="(0.1f)" name="AL_ECHO_DEFAULT_LRDELAY"/>
+        <enum value="(0.0f)" name="AL_ECHO_MIN_DAMPING"/>
+        <enum value="(0.99f)" name="AL_ECHO_MAX_DAMPING"/>
+        <enum value="(0.5f)" name="AL_ECHO_DEFAULT_DAMPING"/>
+        <enum value="(0.0f)" name="AL_ECHO_MIN_FEEDBACK"/>
+        <enum value="(1.0f)" name="AL_ECHO_MAX_FEEDBACK"/>
+        <enum value="(0.5f)" name="AL_ECHO_DEFAULT_FEEDBACK"/>
+        <enum value="(-1.0f)" name="AL_ECHO_MIN_SPREAD"/>
+        <enum value="(1.0f)" name="AL_ECHO_MAX_SPREAD"/>
+        <enum value="(-1.0f)" name="AL_ECHO_DEFAULT_SPREAD"/>
+        <enum value="(0)" name="AL_FLANGER_WAVEFORM_SINUSOID" group="FlangerWaveform"/>
+        <enum value="(1)" name="AL_FLANGER_WAVEFORM_TRIANGLE" group="FlangerWaveform"/>
+        <enum value="(0)" name="AL_FLANGER_MIN_WAVEFORM"/>
+        <enum value="(1)" name="AL_FLANGER_MAX_WAVEFORM"/>
+        <enum value="(1)" name="AL_FLANGER_DEFAULT_WAVEFORM"/>
+        <enum value="(-180)" name="AL_FLANGER_MIN_PHASE"/>
+        <enum value="(180)" name="AL_FLANGER_MAX_PHASE"/>
+        <enum value="(0)" name="AL_FLANGER_DEFAULT_PHASE"/>
+        <enum value="(0.0f)" name="AL_FLANGER_MIN_RATE"/>
+        <enum value="(10.0f)" name="AL_FLANGER_MAX_RATE"/>
+        <enum value="(0.27f)" name="AL_FLANGER_DEFAULT_RATE"/>
+        <enum value="(0.0f)" name="AL_FLANGER_MIN_DEPTH"/>
+        <enum value="(1.0f)" name="AL_FLANGER_MAX_DEPTH"/>
+        <enum value="(1.0f)" name="AL_FLANGER_DEFAULT_DEPTH"/>
+        <enum value="(-1.0f)" name="AL_FLANGER_MIN_FEEDBACK"/>
+        <enum value="(1.0f)" name="AL_FLANGER_MAX_FEEDBACK"/>
+        <enum value="(-0.5f)" name="AL_FLANGER_DEFAULT_FEEDBACK"/>
+        <enum value="(0.0f)" name="AL_FLANGER_MIN_DELAY"/>
+        <enum value="(0.004f)" name="AL_FLANGER_MAX_DELAY"/>
+        <enum value="(0.002f)" name="AL_FLANGER_DEFAULT_DELAY"/>
+        <enum value="(0.0f)" name="AL_FREQUENCY_SHIFTER_MIN_FREQUENCY"/>
+        <enum value="(24000.0f)" name="AL_FREQUENCY_SHIFTER_MAX_FREQUENCY"/>
+        <enum value="(0.0f)" name="AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY"/>
+        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION"/>
+        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION"/>
+        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION"/>
+        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DIRECTION_DOWN" group="FrequencyShifterDirection"/>
+        <enum value="(1)" name="AL_FREQUENCY_SHIFTER_DIRECTION_UP" group="FrequencyShifterDirection"/>
+        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_DIRECTION_OFF" group="FrequencyShifterDirection"/>
+        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION"/>
+        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
+        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
+        <enum value="(29)" name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
+        <enum value="(-24)" name="AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING"/>
+        <enum value="(24)" name="AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_PHONEMEB"/>
+        <enum value="(29)" name="AL_VOCAL_MORPHER_MAX_PHONEMEB"/>
+        <enum value="(10)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB"/>
+        <enum value="(-24)" name="AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING"/>
+        <enum value="(24)" name="AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_PHONEME_A" group="VocalMorpherPhoneme"/>
+        <enum value="(1)" name="AL_VOCAL_MORPHER_PHONEME_E" group="VocalMorpherPhoneme"/>
+        <enum value="(2)" name="AL_VOCAL_MORPHER_PHONEME_I" group="VocalMorpherPhoneme"/>
+        <enum value="(3)" name="AL_VOCAL_MORPHER_PHONEME_O" group="VocalMorpherPhoneme"/>
+        <enum value="(4)" name="AL_VOCAL_MORPHER_PHONEME_U" group="VocalMorpherPhoneme"/>
+        <enum value="(5)" name="AL_VOCAL_MORPHER_PHONEME_AA" group="VocalMorpherPhoneme"/>
+        <enum value="(6)" name="AL_VOCAL_MORPHER_PHONEME_AE" group="VocalMorpherPhoneme"/>
+        <enum value="(7)" name="AL_VOCAL_MORPHER_PHONEME_AH" group="VocalMorpherPhoneme"/>
+        <enum value="(8)" name="AL_VOCAL_MORPHER_PHONEME_AO" group="VocalMorpherPhoneme"/>
+        <enum value="(9)" name="AL_VOCAL_MORPHER_PHONEME_EH" group="VocalMorpherPhoneme"/>
+        <enum value="(10)" name="AL_VOCAL_MORPHER_PHONEME_ER" group="VocalMorpherPhoneme"/>
+        <enum value="(11)" name="AL_VOCAL_MORPHER_PHONEME_IH" group="VocalMorpherPhoneme"/>
+        <enum value="(12)" name="AL_VOCAL_MORPHER_PHONEME_IY" group="VocalMorpherPhoneme"/>
+        <enum value="(13)" name="AL_VOCAL_MORPHER_PHONEME_UH" group="VocalMorpherPhoneme"/>
+        <enum value="(14)" name="AL_VOCAL_MORPHER_PHONEME_UW" group="VocalMorpherPhoneme"/>
+        <enum value="(15)" name="AL_VOCAL_MORPHER_PHONEME_B" group="VocalMorpherPhoneme"/>
+        <enum value="(16)" name="AL_VOCAL_MORPHER_PHONEME_D" group="VocalMorpherPhoneme"/>
+        <enum value="(17)" name="AL_VOCAL_MORPHER_PHONEME_F" group="VocalMorpherPhoneme"/>
+        <enum value="(18)" name="AL_VOCAL_MORPHER_PHONEME_G" group="VocalMorpherPhoneme"/>
+        <enum value="(19)" name="AL_VOCAL_MORPHER_PHONEME_J" group="VocalMorpherPhoneme"/>
+        <enum value="(20)" name="AL_VOCAL_MORPHER_PHONEME_K" group="VocalMorpherPhoneme"/>
+        <enum value="(21)" name="AL_VOCAL_MORPHER_PHONEME_L" group="VocalMorpherPhoneme"/>
+        <enum value="(22)" name="AL_VOCAL_MORPHER_PHONEME_M" group="VocalMorpherPhoneme"/>
+        <enum value="(23)" name="AL_VOCAL_MORPHER_PHONEME_N" group="VocalMorpherPhoneme"/>
+        <enum value="(24)" name="AL_VOCAL_MORPHER_PHONEME_P" group="VocalMorpherPhoneme"/>
+        <enum value="(25)" name="AL_VOCAL_MORPHER_PHONEME_R" group="VocalMorpherPhoneme"/>
+        <enum value="(26)" name="AL_VOCAL_MORPHER_PHONEME_S" group="VocalMorpherPhoneme"/>
+        <enum value="(27)" name="AL_VOCAL_MORPHER_PHONEME_T" group="VocalMorpherPhoneme"/>
+        <enum value="(28)" name="AL_VOCAL_MORPHER_PHONEME_V" group="VocalMorpherPhoneme"/>
+        <enum value="(29)" name="AL_VOCAL_MORPHER_PHONEME_Z" group="VocalMorpherPhoneme"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_WAVEFORM_SINUSOID" group="VocalMorpherWaveform"/>
+        <enum value="(1)" name="AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE" group="VocalMorpherWaveform"/>
+        <enum value="(2)" name="AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH" group="VocalMorpherWaveform"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_WAVEFORM"/>
+        <enum value="(2)" name="AL_VOCAL_MORPHER_MAX_WAVEFORM"/>
+        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_WAVEFORM"/>
+        <enum value="(0.0f)" name="AL_VOCAL_MORPHER_MIN_RATE"/>
+        <enum value="(10.0f)" name="AL_VOCAL_MORPHER_MAX_RATE"/>
+        <enum value="(1.41f)" name="AL_VOCAL_MORPHER_DEFAULT_RATE"/>
+        <enum value="(-12)" name="AL_PITCH_SHIFTER_MIN_COARSE_TUNE"/>
+        <enum value="(12)" name="AL_PITCH_SHIFTER_MAX_COARSE_TUNE"/>
+        <enum value="(12)" name="AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE"/>
+        <enum value="(-50)" name="AL_PITCH_SHIFTER_MIN_FINE_TUNE"/>
+        <enum value="(50)" name="AL_PITCH_SHIFTER_MAX_FINE_TUNE"/>
+        <enum value="(0)" name="AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE"/>
+        <enum value="(0.0f)" name="AL_RING_MODULATOR_MIN_FREQUENCY"/>
+        <enum value="(8000.0f)" name="AL_RING_MODULATOR_MAX_FREQUENCY"/>
+        <enum value="(440.0f)" name="AL_RING_MODULATOR_DEFAULT_FREQUENCY"/>
+        <enum value="(0.0f)" name="AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF"/>
+        <enum value="(24000.0f)" name="AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF"/>
+        <enum value="(800.0f)" name="AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF"/>
+        <enum value="(0)" name="AL_RING_MODULATOR_SINUSOID" group="RingModulatorWaveform"/>
+        <enum value="(1)" name="AL_RING_MODULATOR_SAWTOOTH" group="RingModulatorWaveform"/>
+        <enum value="(2)" name="AL_RING_MODULATOR_SQUARE" group="RingModulatorWaveform"/>
+        <enum value="(0)" name="AL_RING_MODULATOR_MIN_WAVEFORM"/>
+        <enum value="(2)" name="AL_RING_MODULATOR_MAX_WAVEFORM"/>
+        <enum value="(0)" name="AL_RING_MODULATOR_DEFAULT_WAVEFORM"/>
+        <enum value="(0.0001f)" name="AL_AUTOWAH_MIN_ATTACK_TIME"/>
+        <enum value="(1.0f)" name="AL_AUTOWAH_MAX_ATTACK_TIME"/>
+        <enum value="(0.06f)" name="AL_AUTOWAH_DEFAULT_ATTACK_TIME"/>
+        <enum value="(0.0001f)" name="AL_AUTOWAH_MIN_RELEASE_TIME"/>
+        <enum value="(1.0f)" name="AL_AUTOWAH_MAX_RELEASE_TIME"/>
+        <enum value="(0.06f)" name="AL_AUTOWAH_DEFAULT_RELEASE_TIME"/>
+        <enum value="(2.0f)" name="AL_AUTOWAH_MIN_RESONANCE"/>
+        <enum value="(1000.0f)" name="AL_AUTOWAH_MAX_RESONANCE"/>
+        <enum value="(1000.0f)" name="AL_AUTOWAH_DEFAULT_RESONANCE"/>
+        <enum value="(0.00003f)" name="AL_AUTOWAH_MIN_PEAK_GAIN"/>
+        <enum value="(31621.0f)" name="AL_AUTOWAH_MAX_PEAK_GAIN"/>
+        <enum value="(11.22f)" name="AL_AUTOWAH_DEFAULT_PEAK_GAIN"/>
+        <enum value="(0)" name="AL_COMPRESSOR_MIN_ONOFF"/>
+        <enum value="(1)" name="AL_COMPRESSOR_MAX_ONOFF"/>
+        <enum value="(1)" name="AL_COMPRESSOR_DEFAULT_ONOFF"/>
+        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_LOW_GAIN"/>
+        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_LOW_GAIN"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_LOW_GAIN"/>
+        <enum value="(50.0f)" name="AL_EQUALIZER_MIN_LOW_CUTOFF"/>
+        <enum value="(800.0f)" name="AL_EQUALIZER_MAX_LOW_CUTOFF"/>
+        <enum value="(200.0f)" name="AL_EQUALIZER_DEFAULT_LOW_CUTOFF"/>
+        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_MID1_GAIN"/>
+        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_MID1_GAIN"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID1_GAIN"/>
+        <enum value="(200.0f)" name="AL_EQUALIZER_MIN_MID1_CENTER"/>
+        <enum value="(3000.0f)" name="AL_EQUALIZER_MAX_MID1_CENTER"/>
+        <enum value="(500.0f)" name="AL_EQUALIZER_DEFAULT_MID1_CENTER"/>
+        <enum value="(0.01f)" name="AL_EQUALIZER_MIN_MID1_WIDTH"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_MAX_MID1_WIDTH"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID1_WIDTH"/>
+        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_MID2_GAIN"/>
+        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_MID2_GAIN"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID2_GAIN"/>
+        <enum value="(1000.0f)" name="AL_EQUALIZER_MIN_MID2_CENTER"/>
+        <enum value="(8000.0f)" name="AL_EQUALIZER_MAX_MID2_CENTER"/>
+        <enum value="(3000.0f)" name="AL_EQUALIZER_DEFAULT_MID2_CENTER"/>
+        <enum value="(0.01f)" name="AL_EQUALIZER_MIN_MID2_WIDTH"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_MAX_MID2_WIDTH"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID2_WIDTH"/>
+        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_HIGH_GAIN"/>
+        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_HIGH_GAIN"/>
+        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_HIGH_GAIN"/>
+        <enum value="(4000.0f)" name="AL_EQUALIZER_MIN_HIGH_CUTOFF"/>
+        <enum value="(16000.0f)" name="AL_EQUALIZER_MAX_HIGH_CUTOFF"/>
+        <enum value="(6000.0f)" name="AL_EQUALIZER_DEFAULT_HIGH_CUTOFF"/>
+        <enum value="(0.0f)" name="AL_MIN_AIR_ABSORPTION_FACTOR"/>
+        <enum value="(10.0f)" name="AL_MAX_AIR_ABSORPTION_FACTOR"/>
+        <enum value="(0.0f)" name="AL_DEFAULT_AIR_ABSORPTION_FACTOR"/>
+        <enum value="(0.0f)" name="AL_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(10.0f)" name="AL_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="(0.0f)" name="AL_MIN_CONE_OUTER_GAINHF"/>
+        <enum value="(1.0f)" name="AL_MAX_CONE_OUTER_GAINHF"/>
+        <enum value="(1.0f)" name="AL_DEFAULT_CONE_OUTER_GAINHF"/>
         <enum value="AL_FALSE" name="AL_MIN_DIRECT_FILTER_GAINHF_AUTO"/>
         <enum value="AL_TRUE" name="AL_MAX_DIRECT_FILTER_GAINHF_AUTO"/>
         <enum value="AL_TRUE" name="AL_DEFAULT_DIRECT_FILTER_GAINHF_AUTO"/>
@@ -1077,7 +1101,7 @@
         <enum value="AL_TRUE" name="AL_DEFAULT_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
         <enum value="FLT_MIN" name="AL_MIN_METERS_PER_UNIT"/>
         <enum value="FLT_MAX" name="AL_MAX_METERS_PER_UNIT"/>
-        <enum value="1.0f" name="AL_DEFAULT_METERS_PER_UNIT"/>
+        <enum value="(1.0f)" name="AL_DEFAULT_METERS_PER_UNIT"/>
         <enum value="0x200" name="AL_SOURCE_DISTANCE_MODEL" group="EnableCap"/>
         <enum value="0x1031" name="AL_BYTE_RW_OFFSETS_SOFT" group="SourceFloat,SourcePName">
             <property on="source" type="ALfloat" range="0.0.."/>
@@ -1430,90 +1454,87 @@
         <enum value="0x19DA" name="ALC_EVENT_NOT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
     </enums>
 
-typedef _alsoft_int64_t ALint64SOFT;
-typedef _alsoft_uint64_t ALuint64SOFT;
-
     <commands namespace="AL">
-        <command>
+        <command export="al">
             <proto>void <name>alEnable</name></proto>
             <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDisable</name></proto>
             <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>ALboolean <name>alIsEnabled</name></proto>
             <param group="EnableCap"><ptype>ALenum</ptype> <name>capability</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDopplerFactor</name></proto>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDopplerVelocity</name></proto>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSpeedOfSound</name></proto>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDistanceModel</name></proto>
             <param group="DistanceModel"><ptype>ALenum</ptype> <name>distanceModel</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>const <ptype>ALchar</ptype>* <name>alGetString</name></proto>
             <param group="StringPName"><ptype>ALenum</ptype> <name>param</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBooleanv</name></proto>
             <param group="BooleanPName"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALboolean</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetIntegerv</name></proto>
             <param group="IntegerPName"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetFloatv</name></proto>
             <param group="GetPName"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetDoublev</name></proto>
             <param group="GetPName"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALdouble</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALboolean</ptype> <name>alGetBoolean</name></proto>
             <param group="BooleanPName"><ptype>ALenum</ptype> <name>param</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALint</ptype> <name>alGetInteger</name></proto>
             <param group="IntegerPName"><ptype>ALenum</ptype> <name>param</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALfloat</ptype> <name>alGetFloat</name></proto>
             <param group="FloatPName"><ptype>ALenum</ptype> <name>param</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALdouble</ptype> <name>alGetDouble</name></proto>
             <param group="GetPName"><ptype>ALenum</ptype> <name>param</name></param>
         </command>
-        <command>
+        <command export="al">
             <comment>
                 Obtain the first error generated in the AL context since the last call to
                 this function.
             </comment>
             <proto group="ErrorCode"><ptype>ALenum</ptype> <name>alGetError</name></proto>
         </command>
-        <command comment="Query for the presence of an extension on the AL context.">
+        <command export="al" comment="Query for the presence of an extension on the AL context.">
             <proto><ptype>ALboolean</ptype> <name>alIsExtensionPresent</name></proto>
             <param>const <ptype>ALchar</ptype> *<name>extname</name></param>
         </command>
-        <command>
+        <command export="al">
             <comment>
                 Retrieve the address of a function. The returned function may be context-
                 specific.
@@ -1521,101 +1542,100 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <proto>void* <name>alGetProcAddress</name></proto>
             <param>const <ptype>ALchar</ptype> *<name>fname</name></param>
         </command>
-        <command>
+        <command export="al">
             <comment>Retrieve the value of an enum. The returned value may be context-specific.</comment>
             <proto><ptype>ALenum</ptype> <name>alGetEnumValue</name></proto>
             <param>const <ptype>ALchar</ptype> *<name>ename</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListenerf</name></proto>
             <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListener3f</name></proto>
             <param group="ListenerFloat3"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>value1</name></param>
             <param><ptype>ALfloat</ptype> <name>value2</name></param>
             <param><ptype>ALfloat</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListenerfv</name></proto>
             <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListeneri</name></proto>
             <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListener3i</name></proto>
             <param group="ListenerInteger3"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>value1</name></param>
             <param><ptype>ALint</ptype> <name>value2</name></param>
             <param><ptype>ALint</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alListeneriv</name></proto>
             <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListenerf</name></proto>
             <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListener3f</name></proto>
             <param group="ListenerFloat3"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>value1</name></param>
             <param><ptype>ALfloat</ptype> *<name>value2</name></param>
             <param><ptype>ALfloat</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListenerfv</name></proto>
             <param group="ListenerFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListeneri</name></proto>
             <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListener3i</name></proto>
             <param group="ListenerInteger3"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>value1</name></param>
             <param><ptype>ALint</ptype> *<name>value2</name></param>
             <param><ptype>ALint</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetListeneriv</name></proto>
             <param group="ListenerInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command comment="Create source objects.">
+        <command export="al" comment="Create source objects.">
             <proto>void <name>alGenSources</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source"><ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command comment="Delete source objects.">
+        <command export="al" comment="Delete source objects.">
             <proto>void <name>alDeleteSources</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command command="Verify an ID is for a valid source.">
+        <command export="al" comment="Verify an ID is for a valid source.">
             <proto><ptype>ALboolean</ptype> <name>alIsSource</name></proto>
             <param><ptype>ALuint</ptype> <name>source</name></param>
         </command>
-
-        <command>
+        <command export="al">
             <proto>void <name>alSourcef</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSource3f</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1623,19 +1643,19 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALfloat</ptype> <name>value2</name></param>
             <param><ptype>ALfloat</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcefv</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcei</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSource3i</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1643,37 +1663,37 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALint</ptype> <name>value2</name></param>
             <param><ptype>ALint</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourceiv</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcef</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcefv</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcei</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourceiv</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSource3i</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1681,7 +1701,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALint</ptype> *<name>value2</name></param>
             <param><ptype>ALint</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSource3f</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceFloat3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1689,69 +1709,69 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALfloat</ptype> *<name>value2</name></param>
             <param><ptype>ALfloat</ptype> *<name>value3</name></param>
         </command>
-        <command comment="Play, restart, or resume a source, setting its state to AL_PLAYING.">
+        <command export="al" comment="Play, restart, or resume a source, setting its state to AL_PLAYING.">
             <proto>void <name>alSourcePlay</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
         </command>
-        <command comment="Stop a source, setting its state to AL_STOPPED if playing or paused.">
+        <command export="al" comment="Stop a source, setting its state to AL_STOPPED if playing or paused.">
             <proto>void <name>alSourceStop</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
         </command>
-        <command comment="Rewind a source, setting its state to AL_INITIAL.">
+        <command export="al" comment="Rewind a source, setting its state to AL_INITIAL.">
             <proto>void <name>alSourceRewind</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
         </command>
-        <command comment="Pause a source, setting its state to AL_PAUSED if playing.">
+        <command export="al" comment="Pause a source, setting its state to AL_PAUSED if playing.">
             <proto>void <name>alSourcePause</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
         </command>
-        <command comment="Play, restart, or resume a list of sources atomically.">
+        <command export="al" comment="Play, restart, or resume a list of sources atomically.">
             <proto>void <name>alSourcePlayv</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command comment="Stop a list of sources atomically.">
+        <command export="al" comment="Stop a list of sources atomically.">
             <proto>void <name>alSourceStopv</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command comment="Rewind a list of sources atomically.">
+        <command export="al" comment="Rewind a list of sources atomically.">
             <proto>void <name>alSourceRewindv</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command comment="Pause a list of sources atomically.">
+        <command export="al" comment="Pause a list of sources atomically.">
             <proto>void <name>alSourcePausev</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="source">const <ptype>ALuint</ptype> *<name>sources</name></param>
         </command>
-        <command comment="Queue buffers onto a source">
+        <command export="al" comment="Queue buffers onto a source">
             <proto>void <name>alSourceQueueBuffers</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param><ptype>ALsizei</ptype> <name>nb</name></param>
             <param class="buffer">const <ptype>ALuint</ptype> *<name>buffers</name></param>
         </command>
-        <command comment="Unqueue processed buffers from a source">
+        <command export="al" comment="Unqueue processed buffers from a source">
             <proto>void <name>alSourceUnqueueBuffers</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param><ptype>ALsizei</ptype> <name>nb</name></param>
             <param class="buffer"><ptype>ALuint</ptype> *<name>buffers</name></param>
         </command>
-        <command comment="Create buffer objects">
+        <command export="al" comment="Create buffer objects">
             <proto>void <name>alGenBuffers</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param class="buffer"><ptype>ALuint</ptype> *<name>buffers</name></param>
         </command>
-        <command comment="Delete buffer objects">
+        <command export="al" comment="Delete buffer objects">
             <proto>void <name>alDeleteBuffers</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param class="buffer">const <ptype>ALuint</ptype> *<name>buffers</name></param>
         </command>
-        <command comment="Verify an ID is a valid buffer (including the NULL buffer)">
+        <command export="al" comment="Verify an ID is a valid buffer (including the NULL buffer)">
             <proto><ptype>ALboolean</ptype> <name>alIsBuffer</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
         </command>
-        <command>
+        <command export="al">
             <comment>
                 Copies data into the buffer, interpreting it using the specified format and
                 samplerate.
@@ -1763,13 +1783,13 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALsizei</ptype> <name>size</name></param>
             <param><ptype>ALsizei</ptype> <name>samplerate</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferf</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBuffer3f</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1777,19 +1797,19 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALfloat</ptype> <name>value2</name></param>
             <param><ptype>ALfloat</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferfv</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferi</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBuffer3i</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1797,37 +1817,37 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALint</ptype> <name>value2</name></param>
             <param><ptype>ALint</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferiv</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferf</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferfv</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferi</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferiv</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBuffer3i</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -1835,7 +1855,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALint</ptype> *<name>value2</name></param>
             <param><ptype>ALint</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBuffer3f</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferFloat3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2037,7 +2057,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferSubDataSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
@@ -2045,7 +2065,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALsizei</ptype> <name>offset</name></param>
             <param><ptype>ALsizei</ptype> <name>length</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alRequestFoldbackStart</name></proto>
             <param><ptype>ALenum</ptype> <name>mode</name></param>
             <param><ptype>ALsizei</ptype> <name>count</name></param>
@@ -2053,7 +2073,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALfloat</ptype> *<name>mem</name></param>
             <param><ptype>LPALFOLDBACKCALLBACK</ptype> <name>callback</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alRequestFoldbackStop</name></proto>
         </command>
         <command>
@@ -3201,7 +3221,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
         <command>
             <proto>const <ptype>ALchar</ptype>* <name>alGetStringiDirectSOFT</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
-            <param group="StringPName"><ptype>ALenum</ptype> <name>param</name></param>
+            <param group="StringPName"><ptype>ALenum</ptype> <name>pname</name></param>
             <param><ptype>ALsizei</ptype> <name>index</name></param>
         </command>
         <command>
@@ -3209,7 +3229,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param><ptype>ALsizei</ptype> <name>count</name></param>
             <param len="count">const <ptype>ALenum</ptype> *<name>types</name></param>
-            <param>const <ptype>ALboolean</ptype> <name>enable</name></param>
+            <param><ptype>ALboolean</ptype> <name>enable</name></param>
         </command>
         <command>
             <proto>void <name>alEventCallbackDirectSOFT</name></proto>
@@ -3307,12 +3327,12 @@ typedef _alsoft_uint64_t ALuint64SOFT;
     </commands>
 
     <commands namespace="ALC">
-        <command comment="Create and attach a context to the given device.">
+        <command export="alc" comment="Create and attach a context to the given device.">
             <proto><ptype>ALCcontext</ptype>* <name>alcCreateContext</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCint</ptype> *<name>attrlist</name></param>
         </command>
-        <command>
+        <command export="alc">
             <comment>
                 Makes the given context the active process-wide context. Passing NULL clears
                 the active context.
@@ -3320,38 +3340,38 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <proto><ptype>ALCboolean</ptype> <name>alcMakeContextCurrent</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command comment="Resumes processing updates for the given context.">
+        <command export="alc" comment="Resumes processing updates for the given context.">
             <proto>void <name>alcProcessContext</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command comment="Suspends updates for the given context.">
+        <command export="alc" comment="Suspends updates for the given context.">
             <proto>void <name>alcSuspendContext</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command comment="Remove a context from its device and destroys it.">
+        <command export="alc" comment="Remove a context from its device and destroys it.">
             <proto>void <name>alcDestroyContext</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command comment="Returns the currently active context.">
+        <command export="alc" comment="Returns the currently active context.">
             <proto><ptype>ALCcontext</ptype>* <name>alcGetCurrentContext</name></proto>
         </command>
-        <command comment="Returns the device that a particular context is attached to.">
+        <command export="alc" comment="Returns the device that a particular context is attached to.">
             <proto><ptype>ALCdevice</ptype>* <name>alcGetContextsDevice</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command comment="Opens the named playback device.">
+        <command export="alc" comment="Opens the named playback device.">
             <proto><ptype>ALCdevice</ptype>* <name>alcOpenDevice</name></proto>
             <param>const <ptype>ALCchar</ptype> *<name>devicename</name></param>
         </command>
-        <command comment="Closes the given playback device.">
+        <command export="alc" comment="Closes the given playback device.">
             <proto><ptype>ALCboolean</ptype> <name>alcCloseDevice</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command comment="Obtain the most recent Device error.">
+        <command export="alc" comment="Obtain the most recent Device error.">
             <proto group="ErrorCode"><ptype>ALCenum</ptype> <name>alcGetError</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command>
+        <command export="alc">
             <comment>
                 Query for the presence of an extension on the device. Pass a NULL device to
                 query a device-inspecific extension.
@@ -3360,7 +3380,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCchar</ptype> *<name>extname</name></param>
         </command>
-        <command>
+        <command export="alc">
             <comment>
                 Retrieve the address of a function. Given a non-NULL device, the returned
                 function may be device-specific.
@@ -3369,7 +3389,7 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCchar</ptype> *<name>funcname</name></param>
         </command>
-        <command>
+        <command export="alc">
             <comment>
                 Retrieve the value of an enum. Given a non-NULL device, the returned value
                 may be device-specific.
@@ -3378,19 +3398,19 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCchar</ptype> *<name>enumname</name></param>
         </command>
-        <command comment="Returns information about the device, and error strings.">
+        <command export="alc" comment="Returns information about the device, and error strings.">
             <proto>const <ptype>ALCchar</ptype>* <name>alcGetString</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param group="ContextString"><ptype>ALCenum</ptype> <name>param</name></param>
         </command>
-        <command comment="Returns information about the device and the version of OpenAL.">
+        <command export="alc" comment="Returns information about the device and the version of OpenAL.">
             <proto>void <name>alcGetIntegerv</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param group="ContextFloat"><ptype>ALCenum</ptype> <name>param</name></param>
             <param><ptype>ALCsizei</ptype> <name>size</name></param>
             <param len="size"><ptype>ALCint</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="alc">
             <comment>
                 Opens the named capture device with the given frequency, format, and buffer
                 size.
@@ -3401,19 +3421,19 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param group="Format"><ptype>ALCenum</ptype> <name>format</name></param>
             <param><ptype>ALCsizei</ptype> <name>buffersize</name></param>
         </command>
-        <command comment="Closes the given capture device.">
+        <command export="alc" comment="Closes the given capture device.">
             <proto><ptype>ALCboolean</ptype> <name>alcCaptureCloseDevice</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command comment="Starts capturing samples into the device buffer.">
+        <command export="alc" comment="Starts capturing samples into the device buffer.">
             <proto>void <name>alcCaptureStart</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command comment="Stops capturing samples. Samples in the device buffer remain available.">
+        <command export="alc" comment="Stops capturing samples. Samples in the device buffer remain available.">
             <proto>void <name>alcCaptureStop</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command comment="Reads samples from the device buffer.">
+        <command export="alc" comment="Reads samples from the device buffer.">
             <proto>void <name>alcCaptureSamples</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param><ptype>ALCvoid</ptype> *<name>buffer</name></param>
@@ -3490,12 +3510,12 @@ typedef _alsoft_uint64_t ALuint64SOFT;
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCchar</ptype> *<name>funcName</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto><ptype>ALCboolean</ptype> <name>alcSetThreadContext</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command>
-            <proto><ptype>ALCcontext</ptype>* <name>alcGetThreadContext</name>
+        <command export="alc">
+            <proto><ptype>ALCcontext</ptype>* <name>alcGetThreadContext</name></proto>
         </command>
     </commands>
 
@@ -3823,5 +3843,1587 @@ typedef _alsoft_uint64_t ALuint64SOFT;
         </require>
     </feature>
     <extensions>
+        <extension name="AL_LOKI_IMA_ADPCM_format" supported="al">
+            <require>
+                <enum name="AL_FORMAT_IMA_ADPCM_MONO16_EXT"/>
+                <enum name="AL_FORMAT_IMA_ADPCM_STEREO16_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_LOKI_WAVE_format" supported="al">
+            <require>
+                <enum name="AL_FORMAT_WAVE_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_vorbis" supported="al">
+            <require>
+                <enum name="AL_FORMAT_VORBIS_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_LOKI_quadriphonic" supported="al">
+            <require>
+                <enum name="AL_FORMAT_QUAD8_LOKI"/>
+                <enum name="AL_FORMAT_QUAD16_LOKI"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_float32" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_FLOAT32"/>
+                <enum name="AL_FORMAT_STEREO_FLOAT32"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_double" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_DOUBLE_EXT"/>
+                <enum name="AL_FORMAT_STEREO_DOUBLE_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_MULAW" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_MULAW_EXT"/>
+                <enum name="AL_FORMAT_STEREO_MULAW_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_ALAW" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_ALAW_EXT"/>
+                <enum name="AL_FORMAT_STEREO_ALAW_EXT"/>
+            </require>
+        </extension>
+        <extension name="ALC_LOKI_audio_channel" supported="alc">
+            <require>
+                <enum name="ALC_CHAN_MAIN_LOKI"/>
+                <enum name="ALC_CHAN_PCM_LOKI"/>
+                <enum name="ALC_CHAN_CD_LOKI"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_MCFORMATS" supported="al">
+            <comment>
+                Provides support for surround sound buffer formats with 8, 16, and 32-bit
+                samples.
+
+                QUAD8: Unsigned 8-bit, Quadraphonic (Front Left, Front Right, Rear Left,
+                       Rear Right).
+                QUAD16: Signed 16-bit, Quadraphonic.
+                QUAD32: 32-bit float, Quadraphonic.
+                REAR8: Unsigned 8-bit, Rear Stereo (Rear Left, Rear Right).
+                REAR16: Signed 16-bit, Rear Stereo.
+                REAR32: 32-bit float, Rear Stereo.
+                51CHN8: Unsigned 8-bit, 5.1 Surround (Front Left, Front Right, Front Center,
+                        LFE, Side Left, Side Right). Note that some audio systems may label
+                        5.1's Side channels as Rear or Surround; they are equivalent for the
+                        purposes of this extension.
+                51CHN16: Signed 16-bit, 5.1 Surround.
+                51CHN32: 32-bit float, 5.1 Surround.
+                61CHN8: Unsigned 8-bit, 6.1 Surround (Front Left, Front Right, Front Center,
+                        LFE, Rear Center, Side Left, Side Right).
+                61CHN16: Signed 16-bit, 6.1 Surround.
+                61CHN32: 32-bit float, 6.1 Surround.
+                71CHN8: Unsigned 8-bit, 7.1 Surround (Front Left, Front Right, Front Center,
+                        LFE, Rear Left, Rear Right, Side Left, Side Right).
+                71CHN16: Signed 16-bit, 7.1 Surround.
+                71CHN32: 32-bit float, 7.1 Surround.
+            </comment>
+            <require>
+                <enum name="AL_FORMAT_QUAD8"/>
+                <enum name="AL_FORMAT_QUAD16"/>
+                <enum name="AL_FORMAT_QUAD32"/>
+                <enum name="AL_FORMAT_REAR8"/>
+                <enum name="AL_FORMAT_REAR16"/>
+                <enum name="AL_FORMAT_REAR32"/>
+                <enum name="AL_FORMAT_51CHN8"/>
+                <enum name="AL_FORMAT_51CHN16"/>
+                <enum name="AL_FORMAT_51CHN32"/>
+                <enum name="AL_FORMAT_61CHN8"/>
+                <enum name="AL_FORMAT_61CHN16"/>
+                <enum name="AL_FORMAT_61CHN32"/>
+                <enum name="AL_FORMAT_71CHN8"/>
+                <enum name="AL_FORMAT_71CHN16"/>
+                <enum name="AL_FORMAT_71CHN32"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_MULAW_MCFORMATS" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_MULAW"/>
+                <enum name="AL_FORMAT_STEREO_MULAW"/>
+                <enum name="AL_FORMAT_QUAD_MULAW"/>
+                <enum name="AL_FORMAT_REAR_MULAW"/>
+                <enum name="AL_FORMAT_51CHN_MULAW"/>
+                <enum name="AL_FORMAT_61CHN_MULAW"/>
+                <enum name="AL_FORMAT_71CHN_MULAW"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_IMA4" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_IMA4"/>
+                <enum name="AL_FORMAT_STEREO_IMA4"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_IMA4" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_IMA4"/>
+                <enum name="AL_FORMAT_STEREO_IMA4"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_STATIC_BUFFER" supported="al">
+            <require>
+                <command name="alBufferDataStatic"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_EFX" supported="al|alc" header="efx.h">
+            <require api="al">
+               <type name="float.h"/>
+            </require>
+            <require api="alc">
+                <type name="ALC_EXT_EFX_NAME"/>
+            </require>
+            <require api="alc">
+                <enum name="ALC_EFX_MAJOR_VERSION"/>
+                <enum name="ALC_EFX_MINOR_VERSION"/>
+                <enum name="ALC_MAX_AUXILIARY_SENDS"/>
+            </require>
+            <require api="al" comment="Listener properties">
+                <enum name="AL_METERS_PER_UNIT"/>
+            </require>
+            <require api="al" comment="Source properties">
+                <enum name="AL_DIRECT_FILTER"/>
+                <enum name="AL_AUXILIARY_SEND_FILTER"/>
+                <enum name="AL_AIR_ABSORPTION_FACTOR"/>
+                <enum name="AL_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_CONE_OUTER_GAINHF"/>
+                <enum name="AL_DIRECT_FILTER_GAINHF_AUTO"/>
+                <enum name="AL_AUXILIARY_SEND_FILTER_GAIN_AUTO"/>
+                <enum name="AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
+            </require>
+            <require api="al" comment="Effect properties."/>
+            <require api="al" comment="Reverb effect parameters">
+                <enum name="AL_REVERB_DENSITY"/>
+                <enum name="AL_REVERB_DIFFUSION"/>
+                <enum name="AL_REVERB_GAIN"/>
+                <enum name="AL_REVERB_GAINHF"/>
+                <enum name="AL_REVERB_DECAY_TIME"/>
+                <enum name="AL_REVERB_DECAY_HFRATIO"/>
+                <enum name="AL_REVERB_REFLECTIONS_GAIN"/>
+                <enum name="AL_REVERB_REFLECTIONS_DELAY"/>
+                <enum name="AL_REVERB_LATE_REVERB_GAIN"/>
+                <enum name="AL_REVERB_LATE_REVERB_DELAY"/>
+                <enum name="AL_REVERB_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_REVERB_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_REVERB_DECAY_HFLIMIT"/>
+            </require>
+            <require api="al" comment="EAX Reverb effect parameters">
+                <enum name="AL_EAXREVERB_DENSITY"/>
+                <enum name="AL_EAXREVERB_DIFFUSION"/>
+                <enum name="AL_EAXREVERB_GAIN"/>
+                <enum name="AL_EAXREVERB_GAINHF"/>
+                <enum name="AL_EAXREVERB_GAINLF"/>
+                <enum name="AL_EAXREVERB_DECAY_TIME"/>
+                <enum name="AL_EAXREVERB_DECAY_HFRATIO"/>
+                <enum name="AL_EAXREVERB_DECAY_LFRATIO"/>
+                <enum name="AL_EAXREVERB_REFLECTIONS_GAIN"/>
+                <enum name="AL_EAXREVERB_REFLECTIONS_DELAY"/>
+                <enum name="AL_EAXREVERB_REFLECTIONS_PAN"/>
+                <enum name="AL_EAXREVERB_LATE_REVERB_GAIN"/>
+                <enum name="AL_EAXREVERB_LATE_REVERB_DELAY"/>
+                <enum name="AL_EAXREVERB_LATE_REVERB_PAN"/>
+                <enum name="AL_EAXREVERB_ECHO_TIME"/>
+                <enum name="AL_EAXREVERB_ECHO_DEPTH"/>
+                <enum name="AL_EAXREVERB_MODULATION_TIME"/>
+                <enum name="AL_EAXREVERB_MODULATION_DEPTH"/>
+                <enum name="AL_EAXREVERB_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_EAXREVERB_HFREFERENCE"/>
+                <enum name="AL_EAXREVERB_LFREFERENCE"/>
+                <enum name="AL_EAXREVERB_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_EAXREVERB_DECAY_HFLIMIT"/>
+            </require>
+            <require api="al" comment="Chorus effect parameters">
+                <enum name="AL_CHORUS_WAVEFORM"/>
+                <enum name="AL_CHORUS_PHASE"/>
+                <enum name="AL_CHORUS_RATE"/>
+                <enum name="AL_CHORUS_DEPTH"/>
+                <enum name="AL_CHORUS_FEEDBACK"/>
+                <enum name="AL_CHORUS_DELAY"/>
+            </require>
+            <require api="al" comment="Distortion effect parameters">
+                <enum name="AL_DISTORTION_EDGE"/>
+                <enum name="AL_DISTORTION_GAIN"/>
+                <enum name="AL_DISTORTION_LOWPASS_CUTOFF"/>
+                <enum name="AL_DISTORTION_EQCENTER"/>
+                <enum name="AL_DISTORTION_EQBANDWIDTH"/>
+            </require>
+            <require api="al" comment="Echo effect parameters">
+                <enum name="AL_ECHO_DELAY"/>
+                <enum name="AL_ECHO_LRDELAY"/>
+                <enum name="AL_ECHO_DAMPING"/>
+                <enum name="AL_ECHO_FEEDBACK"/>
+                <enum name="AL_ECHO_SPREAD"/>
+            </require>
+            <require api="al" comment="Flanger effect parameters">
+                <enum name="AL_FLANGER_WAVEFORM"/>
+                <enum name="AL_FLANGER_PHASE"/>
+                <enum name="AL_FLANGER_RATE"/>
+                <enum name="AL_FLANGER_DEPTH"/>
+                <enum name="AL_FLANGER_FEEDBACK"/>
+                <enum name="AL_FLANGER_DELAY"/>
+            </require>
+            <require api="al" comment="Frequency shifter effect parameters">
+                <enum name="AL_FREQUENCY_SHIFTER_FREQUENCY"/>
+                <enum name="AL_FREQUENCY_SHIFTER_LEFT_DIRECTION"/>
+                <enum name="AL_FREQUENCY_SHIFTER_RIGHT_DIRECTION"/>
+            </require>
+            <require api="al" comment="Vocal morpher effect parameters">
+                <enum name="AL_VOCAL_MORPHER_PHONEMEA"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEMEA_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEMEB"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEMEB_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_WAVEFORM"/>
+                <enum name="AL_VOCAL_MORPHER_RATE"/>
+            </require>
+            <require api="al" comment="Pitchshifter effect parameters">
+                <enum name="AL_PITCH_SHIFTER_COARSE_TUNE"/>
+                <enum name="AL_PITCH_SHIFTER_FINE_TUNE"/>
+            </require>
+            <require api="al" comment="Ringmodulator effect parameters">
+                <enum name="AL_RING_MODULATOR_FREQUENCY"/>
+                <enum name="AL_RING_MODULATOR_HIGHPASS_CUTOFF"/>
+                <enum name="AL_RING_MODULATOR_WAVEFORM"/>
+            </require>
+            <require api="al" comment="Autowah effect parameters">
+                <enum name="AL_AUTOWAH_ATTACK_TIME"/>
+                <enum name="AL_AUTOWAH_RELEASE_TIME"/>
+                <enum name="AL_AUTOWAH_RESONANCE"/>
+                <enum name="AL_AUTOWAH_PEAK_GAIN"/>
+            </require>
+            <require api="al" comment="Compressor effect parameters">
+                <enum name="AL_COMPRESSOR_ONOFF"/>
+            </require>
+            <require api="al" comment="Equalizer effect parameters">
+                <enum name="AL_EQUALIZER_LOW_GAIN"/>
+                <enum name="AL_EQUALIZER_LOW_CUTOFF"/>
+                <enum name="AL_EQUALIZER_MID1_GAIN"/>
+                <enum name="AL_EQUALIZER_MID1_CENTER"/>
+                <enum name="AL_EQUALIZER_MID1_WIDTH"/>
+                <enum name="AL_EQUALIZER_MID2_GAIN"/>
+                <enum name="AL_EQUALIZER_MID2_CENTER"/>
+                <enum name="AL_EQUALIZER_MID2_WIDTH"/>
+                <enum name="AL_EQUALIZER_HIGH_GAIN"/>
+                <enum name="AL_EQUALIZER_HIGH_CUTOFF"/>
+            </require>
+            <require api="al" comment="Effect type">
+                <enum name="AL_EFFECT_FIRST_PARAMETER"/>
+                <enum name="AL_EFFECT_LAST_PARAMETER"/>
+                <enum name="AL_EFFECT_TYPE"/>
+            </require>
+            <require api="al" comment="Effect types, used with the AL_EFFECT_TYPE property">
+                <enum name="AL_EFFECT_NULL"/>
+                <enum name="AL_EFFECT_REVERB"/>
+                <enum name="AL_EFFECT_CHORUS"/>
+                <enum name="AL_EFFECT_DISTORTION"/>
+                <enum name="AL_EFFECT_ECHO"/>
+                <enum name="AL_EFFECT_FLANGER"/>
+                <enum name="AL_EFFECT_FREQUENCY_SHIFTER"/>
+                <enum name="AL_EFFECT_VOCAL_MORPHER"/>
+                <enum name="AL_EFFECT_PITCH_SHIFTER"/>
+                <enum name="AL_EFFECT_RING_MODULATOR"/>
+                <enum name="AL_EFFECT_AUTOWAH"/>
+                <enum name="AL_EFFECT_COMPRESSOR"/>
+                <enum name="AL_EFFECT_EQUALIZER"/>
+                <enum name="AL_EFFECT_EAXREVERB"/>
+            </require>
+            <require api="al" comment="Auxiliary Effect Slot properties.">
+                <enum name="AL_EFFECTSLOT_EFFECT"/>
+                <enum name="AL_EFFECTSLOT_GAIN"/>
+                <enum name="AL_EFFECTSLOT_AUXILIARY_SEND_AUTO"/>
+            </require>
+            <require api="al" comment="NULL Auxiliary Slot ID to disable a source send.">
+                <enum name="AL_EFFECTSLOT_NULL"/>
+            </require>
+            <require api="al" comment="Filter properties."/>
+            <require api="al" comment="Lowpass filter paramteres">
+                <enum name="AL_LOWPASS_GAIN"/>
+                <enum name="AL_LOWPASS_GAINHF"/>
+            </require>
+            <require api="al" comment="Highpass filter parameters">
+                <enum name="AL_HIGHPASS_GAIN"/>
+                <enum name="AL_HIGHPASS_GAINLF"/>
+            </require>
+            <require api="al" comment="Bandpass filter parameters">
+                <enum name="AL_BANDPASS_GAIN"/>
+                <enum name="AL_BANDPASS_GAINLF"/>
+                <enum name="AL_BANDPASS_GAINHF"/>
+            </require>
+            <require api="al" comment="Filter type">
+                <enum name="AL_FILTER_FIRST_PARAMETER"/>
+                <enum name="AL_FILTER_LAST_PARAMETER"/>
+                <enum name="AL_FILTER_TYPE"/>
+            </require>
+            <require api="al" comment="Filter types, used with the AL_FILTER_TYPE property">
+                <enum name="AL_FILTER_NULL"/>
+                <enum name="AL_FILTER_LOWPASS"/>
+                <enum name="AL_FILTER_HIGHPASS"/>
+                <enum name="AL_FILTER_BANDPASS"/>
+            </require>
+            <require api="al" comment="Effect object function types.">
+                <command name="alGenEffects"/>
+                <command name="alDeleteEffects"/>
+                <command name="alIsEffect"/>
+                <command name="alEffecti"/>
+                <command name="alEffectiv"/>
+                <command name="alEffectf"/>
+                <command name="alEffectfv"/>
+                <command name="alGetEffecti"/>
+                <command name="alGetEffectiv"/>
+                <command name="alGetEffectf"/>
+                <command name="alGetEffectfv"/>
+            </require>
+            <require api="al" comment="Filter object function types.">
+                <command name="alGenFilters"/>
+                <command name="alDeleteFilters"/>
+                <command name="alIsFilter"/>
+                <command name="alFilteri"/>
+                <command name="alFilteriv"/>
+                <command name="alFilterf"/>
+                <command name="alFilterfv"/>
+                <command name="alGetFilteri"/>
+                <command name="alGetFilteriv"/>
+                <command name="alGetFilterf"/>
+                <command name="alGetFilterfv"/>
+            </require>
+            <require api="al" comment="Auxiliary Effect Slot object function types.">
+                <command name="alGenAuxiliaryEffectSlots"/>
+                <command name="alDeleteAuxiliaryEffectSlots"/>
+                <command name="alIsAuxiliaryEffectSlot"/>
+                <command name="alAuxiliaryEffectSloti"/>
+                <command name="alAuxiliaryEffectSlotiv"/>
+                <command name="alAuxiliaryEffectSlotf"/>
+                <command name="alAuxiliaryEffectSlotfv"/>
+                <command name="alGetAuxiliaryEffectSloti"/>
+                <command name="alGetAuxiliaryEffectSlotiv"/>
+                <command name="alGetAuxiliaryEffectSlotf"/>
+                <command name="alGetAuxiliaryEffectSlotfv"/>
+            </require>
+            <require api="al" comment="Effect parameter ranges and defaults."/>
+            <require api="al" comment="Standard reverb effect">
+                <enum name="AL_REVERB_MIN_DENSITY"/>
+                <enum name="AL_REVERB_MAX_DENSITY"/>
+                <enum name="AL_REVERB_DEFAULT_DENSITY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_DIFFUSION"/>
+                <enum name="AL_REVERB_MAX_DIFFUSION"/>
+                <enum name="AL_REVERB_DEFAULT_DIFFUSION"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_GAIN"/>
+                <enum name="AL_REVERB_MAX_GAIN"/>
+                <enum name="AL_REVERB_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_GAINHF"/>
+                <enum name="AL_REVERB_MAX_GAINHF"/>
+                <enum name="AL_REVERB_DEFAULT_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_DECAY_TIME"/>
+                <enum name="AL_REVERB_MAX_DECAY_TIME"/>
+                <enum name="AL_REVERB_DEFAULT_DECAY_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_DECAY_HFRATIO"/>
+                <enum name="AL_REVERB_MAX_DECAY_HFRATIO"/>
+                <enum name="AL_REVERB_DEFAULT_DECAY_HFRATIO"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_REFLECTIONS_GAIN"/>
+                <enum name="AL_REVERB_MAX_REFLECTIONS_GAIN"/>
+                <enum name="AL_REVERB_DEFAULT_REFLECTIONS_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_REFLECTIONS_DELAY"/>
+                <enum name="AL_REVERB_MAX_REFLECTIONS_DELAY"/>
+                <enum name="AL_REVERB_DEFAULT_REFLECTIONS_DELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_LATE_REVERB_GAIN"/>
+                <enum name="AL_REVERB_MAX_LATE_REVERB_GAIN"/>
+                <enum name="AL_REVERB_DEFAULT_LATE_REVERB_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_LATE_REVERB_DELAY"/>
+                <enum name="AL_REVERB_MAX_LATE_REVERB_DELAY"/>
+                <enum name="AL_REVERB_DEFAULT_LATE_REVERB_DELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_REVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+            </require>
+            <require api="al">
+                <enum name="AL_REVERB_MIN_DECAY_HFLIMIT"/>
+                <enum name="AL_REVERB_MAX_DECAY_HFLIMIT"/>
+                <enum name="AL_REVERB_DEFAULT_DECAY_HFLIMIT"/>
+            </require>
+            <require api="al" comment="EAX reverb effect">
+                <enum name="AL_EAXREVERB_MIN_DENSITY"/>
+                <enum name="AL_EAXREVERB_MAX_DENSITY"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DENSITY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_DIFFUSION"/>
+                <enum name="AL_EAXREVERB_MAX_DIFFUSION"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DIFFUSION"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_GAIN"/>
+                <enum name="AL_EAXREVERB_MAX_GAIN"/>
+                <enum name="AL_EAXREVERB_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_GAINHF"/>
+                <enum name="AL_EAXREVERB_MAX_GAINHF"/>
+                <enum name="AL_EAXREVERB_DEFAULT_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_GAINLF"/>
+                <enum name="AL_EAXREVERB_MAX_GAINLF"/>
+                <enum name="AL_EAXREVERB_DEFAULT_GAINLF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_DECAY_TIME"/>
+                <enum name="AL_EAXREVERB_MAX_DECAY_TIME"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DECAY_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_DECAY_HFRATIO"/>
+                <enum name="AL_EAXREVERB_MAX_DECAY_HFRATIO"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DECAY_HFRATIO"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_DECAY_LFRATIO"/>
+                <enum name="AL_EAXREVERB_MAX_DECAY_LFRATIO"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DECAY_LFRATIO"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_REFLECTIONS_GAIN"/>
+                <enum name="AL_EAXREVERB_MAX_REFLECTIONS_GAIN"/>
+                <enum name="AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_REFLECTIONS_DELAY"/>
+                <enum name="AL_EAXREVERB_MAX_REFLECTIONS_DELAY"/>
+                <enum name="AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_LATE_REVERB_GAIN"/>
+                <enum name="AL_EAXREVERB_MAX_LATE_REVERB_GAIN"/>
+                <enum name="AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_LATE_REVERB_DELAY"/>
+                <enum name="AL_EAXREVERB_MAX_LATE_REVERB_DELAY"/>
+                <enum name="AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_ECHO_TIME"/>
+                <enum name="AL_EAXREVERB_MAX_ECHO_TIME"/>
+                <enum name="AL_EAXREVERB_DEFAULT_ECHO_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_ECHO_DEPTH"/>
+                <enum name="AL_EAXREVERB_MAX_ECHO_DEPTH"/>
+                <enum name="AL_EAXREVERB_DEFAULT_ECHO_DEPTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_MODULATION_TIME"/>
+                <enum name="AL_EAXREVERB_MAX_MODULATION_TIME"/>
+                <enum name="AL_EAXREVERB_DEFAULT_MODULATION_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_MODULATION_DEPTH"/>
+                <enum name="AL_EAXREVERB_MAX_MODULATION_DEPTH"/>
+                <enum name="AL_EAXREVERB_DEFAULT_MODULATION_DEPTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+                <enum name="AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_HFREFERENCE"/>
+                <enum name="AL_EAXREVERB_MAX_HFREFERENCE"/>
+                <enum name="AL_EAXREVERB_DEFAULT_HFREFERENCE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_LFREFERENCE"/>
+                <enum name="AL_EAXREVERB_MAX_LFREFERENCE"/>
+                <enum name="AL_EAXREVERB_DEFAULT_LFREFERENCE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EAXREVERB_MIN_DECAY_HFLIMIT"/>
+                <enum name="AL_EAXREVERB_MAX_DECAY_HFLIMIT"/>
+                <enum name="AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_WAVEFORM_SINUSOID"/>
+                <enum name="AL_CHORUS_WAVEFORM_TRIANGLE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_WAVEFORM"/>
+                <enum name="AL_CHORUS_MAX_WAVEFORM"/>
+                <enum name="AL_CHORUS_DEFAULT_WAVEFORM"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_PHASE"/>
+                <enum name="AL_CHORUS_MAX_PHASE"/>
+                <enum name="AL_CHORUS_DEFAULT_PHASE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_RATE"/>
+                <enum name="AL_CHORUS_MAX_RATE"/>
+                <enum name="AL_CHORUS_DEFAULT_RATE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_DEPTH"/>
+                <enum name="AL_CHORUS_MAX_DEPTH"/>
+                <enum name="AL_CHORUS_DEFAULT_DEPTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_FEEDBACK"/>
+                <enum name="AL_CHORUS_MAX_FEEDBACK"/>
+                <enum name="AL_CHORUS_DEFAULT_FEEDBACK"/>
+            </require>
+            <require api="al">
+                <enum name="AL_CHORUS_MIN_DELAY"/>
+                <enum name="AL_CHORUS_MAX_DELAY"/>
+                <enum name="AL_CHORUS_DEFAULT_DELAY"/>
+            </require>
+            <require api="al" comment="Distortion effect">
+                <enum name="AL_DISTORTION_MIN_EDGE"/>
+                <enum name="AL_DISTORTION_MAX_EDGE"/>
+                <enum name="AL_DISTORTION_DEFAULT_EDGE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_DISTORTION_MIN_GAIN"/>
+                <enum name="AL_DISTORTION_MAX_GAIN"/>
+                <enum name="AL_DISTORTION_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_DISTORTION_MIN_LOWPASS_CUTOFF"/>
+                <enum name="AL_DISTORTION_MAX_LOWPASS_CUTOFF"/>
+                <enum name="AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_DISTORTION_MIN_EQCENTER"/>
+                <enum name="AL_DISTORTION_MAX_EQCENTER"/>
+                <enum name="AL_DISTORTION_DEFAULT_EQCENTER"/>
+            </require>
+            <require api="al">
+                <enum name="AL_DISTORTION_MIN_EQBANDWIDTH"/>
+                <enum name="AL_DISTORTION_MAX_EQBANDWIDTH"/>
+                <enum name="AL_DISTORTION_DEFAULT_EQBANDWIDTH"/>
+            </require>
+            <require api="al" comment="Echo effect">
+                <enum name="AL_ECHO_MIN_DELAY"/>
+                <enum name="AL_ECHO_MAX_DELAY"/>
+                <enum name="AL_ECHO_DEFAULT_DELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_ECHO_MIN_LRDELAY"/>
+                <enum name="AL_ECHO_MAX_LRDELAY"/>
+                <enum name="AL_ECHO_DEFAULT_LRDELAY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_ECHO_MIN_DAMPING"/>
+                <enum name="AL_ECHO_MAX_DAMPING"/>
+                <enum name="AL_ECHO_DEFAULT_DAMPING"/>
+            </require>
+            <require api="al">
+                <enum name="AL_ECHO_MIN_FEEDBACK"/>
+                <enum name="AL_ECHO_MAX_FEEDBACK"/>
+                <enum name="AL_ECHO_DEFAULT_FEEDBACK"/>
+            </require>
+            <require api="al">
+                <enum name="AL_ECHO_MIN_SPREAD"/>
+                <enum name="AL_ECHO_MAX_SPREAD"/>
+                <enum name="AL_ECHO_DEFAULT_SPREAD"/>
+            </require>
+            <require api="al" comment="Flanger effect">
+                <enum name="AL_FLANGER_WAVEFORM_SINUSOID"/>
+                <enum name="AL_FLANGER_WAVEFORM_TRIANGLE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_WAVEFORM"/>
+                <enum name="AL_FLANGER_MAX_WAVEFORM"/>
+                <enum name="AL_FLANGER_DEFAULT_WAVEFORM"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_PHASE"/>
+                <enum name="AL_FLANGER_MAX_PHASE"/>
+                <enum name="AL_FLANGER_DEFAULT_PHASE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_RATE"/>
+                <enum name="AL_FLANGER_MAX_RATE"/>
+                <enum name="AL_FLANGER_DEFAULT_RATE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_DEPTH"/>
+                <enum name="AL_FLANGER_MAX_DEPTH"/>
+                <enum name="AL_FLANGER_DEFAULT_DEPTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_FEEDBACK"/>
+                <enum name="AL_FLANGER_MAX_FEEDBACK"/>
+                <enum name="AL_FLANGER_DEFAULT_FEEDBACK"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FLANGER_MIN_DELAY"/>
+                <enum name="AL_FLANGER_MAX_DELAY"/>
+                <enum name="AL_FLANGER_DEFAULT_DELAY"/>
+            </require>
+            <require api="al" comment="Frequency shifter effect">
+                <enum name="AL_FREQUENCY_SHIFTER_MIN_FREQUENCY"/>
+                <enum name="AL_FREQUENCY_SHIFTER_MAX_FREQUENCY"/>
+                <enum name="AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION"/>
+                <enum name="AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION"/>
+                <enum name="AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FREQUENCY_SHIFTER_DIRECTION_DOWN"/>
+                <enum name="AL_FREQUENCY_SHIFTER_DIRECTION_UP"/>
+                <enum name="AL_FREQUENCY_SHIFTER_DIRECTION_OFF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION"/>
+                <enum name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
+                <enum name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
+            </require>
+            <require api="al" comment="Vocal moprher effect">
+                <enum name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_MIN_PHONEMEB"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_PHONEMEB"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_PHONEME_A"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_E"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_I"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_O"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_U"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_AA"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_AE"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_AH"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_AO"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_EH"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_ER"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_IH"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_IY"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_UH"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_UW"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_B"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_D"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_F"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_G"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_J"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_K"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_L"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_M"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_N"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_P"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_R"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_S"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_T"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_V"/>
+                <enum name="AL_VOCAL_MORPHER_PHONEME_Z"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_WAVEFORM_SINUSOID"/>
+                <enum name="AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE"/>
+                <enum name="AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_MIN_WAVEFORM"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_WAVEFORM"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_WAVEFORM"/>
+            </require>
+            <require api="al">
+                <enum name="AL_VOCAL_MORPHER_MIN_RATE"/>
+                <enum name="AL_VOCAL_MORPHER_MAX_RATE"/>
+                <enum name="AL_VOCAL_MORPHER_DEFAULT_RATE"/>
+            </require>
+            <require api="al" comment="Pitch shifter effect">
+                <enum name="AL_PITCH_SHIFTER_MIN_COARSE_TUNE"/>
+                <enum name="AL_PITCH_SHIFTER_MAX_COARSE_TUNE"/>
+                <enum name="AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_PITCH_SHIFTER_MIN_FINE_TUNE"/>
+                <enum name="AL_PITCH_SHIFTER_MAX_FINE_TUNE"/>
+                <enum name="AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE"/>
+            </require>
+            <require api="al" comment="Ring modulator effect">
+                <enum name="AL_RING_MODULATOR_MIN_FREQUENCY"/>
+                <enum name="AL_RING_MODULATOR_MAX_FREQUENCY"/>
+                <enum name="AL_RING_MODULATOR_DEFAULT_FREQUENCY"/>
+            </require>
+            <require api="al">
+                <enum name="AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF"/>
+                <enum name="AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF"/>
+                <enum name="AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_RING_MODULATOR_SINUSOID"/>
+                <enum name="AL_RING_MODULATOR_SAWTOOTH"/>
+                <enum name="AL_RING_MODULATOR_SQUARE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_RING_MODULATOR_MIN_WAVEFORM"/>
+                <enum name="AL_RING_MODULATOR_MAX_WAVEFORM"/>
+                <enum name="AL_RING_MODULATOR_DEFAULT_WAVEFORM"/>
+            </require>
+            <require api="al" comment="Autowah effect">
+                <enum name="AL_AUTOWAH_MIN_ATTACK_TIME"/>
+                <enum name="AL_AUTOWAH_MAX_ATTACK_TIME"/>
+                <enum name="AL_AUTOWAH_DEFAULT_ATTACK_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_AUTOWAH_MIN_RELEASE_TIME"/>
+                <enum name="AL_AUTOWAH_MAX_RELEASE_TIME"/>
+                <enum name="AL_AUTOWAH_DEFAULT_RELEASE_TIME"/>
+            </require>
+            <require api="al">
+                <enum name="AL_AUTOWAH_MIN_RESONANCE"/>
+                <enum name="AL_AUTOWAH_MAX_RESONANCE"/>
+                <enum name="AL_AUTOWAH_DEFAULT_RESONANCE"/>
+            </require>
+            <require api="al">
+                <enum name="AL_AUTOWAH_MIN_PEAK_GAIN"/>
+                <enum name="AL_AUTOWAH_MAX_PEAK_GAIN"/>
+                <enum name="AL_AUTOWAH_DEFAULT_PEAK_GAIN"/>
+            </require>
+            <require api="al" comment="Compressor effect">
+                <enum name="AL_COMPRESSOR_MIN_ONOFF"/>
+                <enum name="AL_COMPRESSOR_MAX_ONOFF"/>
+                <enum name="AL_COMPRESSOR_DEFAULT_ONOFF"/>
+            </require>
+            <require api="al" comment="Equalizer effect">
+                <enum name="AL_EQUALIZER_MIN_LOW_GAIN"/>
+                <enum name="AL_EQUALIZER_MAX_LOW_GAIN"/>
+                <enum name="AL_EQUALIZER_DEFAULT_LOW_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_LOW_CUTOFF"/>
+                <enum name="AL_EQUALIZER_MAX_LOW_CUTOFF"/>
+                <enum name="AL_EQUALIZER_DEFAULT_LOW_CUTOFF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID1_GAIN"/>
+                <enum name="AL_EQUALIZER_MAX_MID1_GAIN"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID1_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID1_CENTER"/>
+                <enum name="AL_EQUALIZER_MAX_MID1_CENTER"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID1_CENTER"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID1_WIDTH"/>
+                <enum name="AL_EQUALIZER_MAX_MID1_WIDTH"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID1_WIDTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID2_GAIN"/>
+                <enum name="AL_EQUALIZER_MAX_MID2_GAIN"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID2_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID2_CENTER"/>
+                <enum name="AL_EQUALIZER_MAX_MID2_CENTER"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID2_CENTER"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_MID2_WIDTH"/>
+                <enum name="AL_EQUALIZER_MAX_MID2_WIDTH"/>
+                <enum name="AL_EQUALIZER_DEFAULT_MID2_WIDTH"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_HIGH_GAIN"/>
+                <enum name="AL_EQUALIZER_MAX_HIGH_GAIN"/>
+                <enum name="AL_EQUALIZER_DEFAULT_HIGH_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_EQUALIZER_MIN_HIGH_CUTOFF"/>
+                <enum name="AL_EQUALIZER_MAX_HIGH_CUTOFF"/>
+                <enum name="AL_EQUALIZER_DEFAULT_HIGH_CUTOFF"/>
+            </require>
+            <require api="al" comment="Source parameter value ranges and defaults.">
+                <enum name="AL_MIN_AIR_ABSORPTION_FACTOR"/>
+                <enum name="AL_MAX_AIR_ABSORPTION_FACTOR"/>
+                <enum name="AL_DEFAULT_AIR_ABSORPTION_FACTOR"/>
+            </require>
+            <require api="al">
+                <enum name="AL_MIN_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_MAX_ROOM_ROLLOFF_FACTOR"/>
+                <enum name="AL_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+            </require>
+            <require api="al">
+                <enum name="AL_MIN_CONE_OUTER_GAINHF"/>
+                <enum name="AL_MAX_CONE_OUTER_GAINHF"/>
+                <enum name="AL_DEFAULT_CONE_OUTER_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_MIN_DIRECT_FILTER_GAINHF_AUTO"/>
+                <enum name="AL_MAX_DIRECT_FILTER_GAINHF_AUTO"/>
+                <enum name="AL_DEFAULT_DIRECT_FILTER_GAINHF_AUTO"/>
+            </require>
+            <require api="al">
+                <enum name="AL_MIN_AUXILIARY_SEND_FILTER_GAIN_AUTO"/>
+                <enum name="AL_MAX_AUXILIARY_SEND_FILTER_GAIN_AUTO"/>
+                <enum name="AL_DEFAULT_AUXILIARY_SEND_FILTER_GAIN_AUTO"/>
+            </require>
+            <require api="al">
+                <enum name="AL_MIN_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
+                <enum name="AL_MAX_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
+                <enum name="AL_DEFAULT_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
+            </require>
+            <require api="al" comment="Listener parameter value ranges and defaults">
+                <enum name="AL_MIN_METERS_PER_UNIT"/>
+                <enum name="AL_MAX_METERS_PER_UNIT"/>
+                <enum name="AL_DEFAULT_METERS_PER_UNIT"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_disconnect" supported="alc">
+            <require>
+                <enum name="ALC_CONNECTED"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_thread_local_context" supported="alc">
+            <require>
+                <command name="alcSetThreadContext"/>
+                <command name="alcGetThreadContext"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_source_distance_model" supported="al">
+            <require>
+                <enum name="AL_SOURCE_DISTANCE_MODEL"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_buffer_sub_data" supported="al">
+            <require>
+                <enum name="AL_BYTE_RW_OFFSETS_SOFT"/>
+                <enum name="AL_SAMPLE_RW_OFFSETS_SOFT"/>
+                <command name="alBufferSubDataSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_loop_points" supported="al">
+            <require>
+                <enum name="AL_LOOP_POINTS_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_FOLDBACK" supported="al">
+            <require>
+                <type name="AL_EXT_FOLDBACK_NAME"/>
+                <enum name="AL_FOLDBACK_EVENT_BLOCK"/>
+                <enum name="AL_FOLDBACK_EVENT_START"/>
+                <enum name="AL_FOLDBACK_EVENT_STOP"/>
+                <enum name="AL_FOLDBACK_MODE_MONO"/>
+                <enum name="AL_FOLDBACK_MODE_STEREO"/>
+                <type name="LPALFOLDBACKCALLBACK"/>
+                <command name="alRequestFoldbackStart"/>
+                <command name="alRequestFoldbackStop"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_DEDICATED" supported="al">
+            <require>
+                <enum name="AL_DEDICATED_GAIN"/>
+                <enum name="AL_EFFECT_DEDICATED_DIALOGUE"/>
+                <enum name="AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_DEDICATED" supported="al">
+            <require comment="Channel configurations">
+                <enum name="AL_MONO_SOFT"/>
+                <enum name="AL_STEREO_SOFT"/>
+                <enum name="AL_REAR_SOFT"/>
+                <enum name="AL_QUAD_SOFT"/>
+                <enum name="AL_5POINT1_SOFT"/>
+                <enum name="AL_6POINT1_SOFT"/>
+                <enum name="AL_7POINT1_SOFT"/>
+            </require>
+            <require comment="Sample types">
+                <enum name="AL_BYTE_SOFT"/>
+                <enum name="AL_UNSIGNED_BYTE_SOFT"/>
+                <enum name="AL_SHORT_SOFT"/>
+                <enum name="AL_UNSIGNED_SHORT_SOFT"/>
+                <enum name="AL_INT_SOFT"/>
+                <enum name="AL_UNSIGNED_INT_SOFT"/>
+                <enum name="AL_FLOAT_SOFT"/>
+                <enum name="AL_DOUBLE_SOFT"/>
+                <enum name="AL_BYTE3_SOFT"/>
+                <enum name="AL_UNSIGNED_BYTE3_SOFT"/>
+            </require>
+            <require comment="Storage formats">
+                <enum name="AL_MONO8_SOFT"/>
+                <enum name="AL_MONO16_SOFT"/>
+                <enum name="AL_MONO32F_SOFT"/>
+                <enum name="AL_STEREO8_SOFT"/>
+                <enum name="AL_STEREO16_SOFT"/>
+                <enum name="AL_STEREO32F_SOFT"/>
+                <enum name="AL_QUAD8_SOFT"/>
+                <enum name="AL_QUAD16_SOFT"/>
+                <enum name="AL_QUAD32F_SOFT"/>
+                <enum name="AL_REAR8_SOFT"/>
+                <enum name="AL_REAR16_SOFT"/>
+                <enum name="AL_REAR32F_SOFT"/>
+                <enum name="AL_5POINT1_8_SOFT"/>
+                <enum name="AL_5POINT1_16_SOFT"/>
+                <enum name="AL_5POINT1_32F_SOFT"/>
+                <enum name="AL_6POINT1_8_SOFT"/>
+                <enum name="AL_6POINT1_16_SOFT"/>
+                <enum name="AL_6POINT1_32F_SOFT"/>
+                <enum name="AL_7POINT1_8_SOFT"/>
+                <enum name="AL_7POINT1_16_SOFT"/>
+                <enum name="AL_7POINT1_32F_SOFT"/>
+            </require>
+            <require comment="Buffer attributes">
+                <enum name="AL_INTERNAL_FORMAT_SOFT"/>
+                <enum name="AL_BYTE_LENGTH_SOFT"/>
+                <enum name="AL_SAMPLE_LENGTH_SOFT"/>
+                <enum name="AL_SEC_LENGTH_SOFT"/>
+            </require>
+            <require>
+                <command name="alBufferSamplesSOFT"/>
+                <command name="alBufferSubSamplesSOFT"/>
+                <command name="alGetBufferSamplesSOFT"/>
+                <command name="alIsBufferFormatSupportedSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_direct_channels" supported="al">
+            <require>
+                <enum name="AL_DIRECT_CHANNELS_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_loopback" supported="alc">
+            <require>
+                <enum name="ALC_FORMAT_CHANNELS_SOFT"/>
+                <enum name="ALC_FORMAT_TYPE_SOFT"/>
+            </require>
+            <require comment="Sample types">
+                <enum name="ALC_BYTE_SOFT"/>
+                <enum name="ALC_UNSIGNED_BYTE_SOFT"/>
+                <enum name="ALC_SHORT_SOFT"/>
+                <enum name="ALC_UNSIGNED_SHORT_SOFT"/>
+                <enum name="ALC_INT_SOFT"/>
+                <enum name="ALC_UNSIGNED_INT_SOFT"/>
+                <enum name="ALC_FLOAT_SOFT"/>
+            </require>
+            <require comment="Channel configurations">
+                <enum name="ALC_MONO_SOFT"/>
+                <enum name="ALC_STEREO_SOFT"/>
+                <enum name="ALC_QUAD_SOFT"/>
+                <enum name="ALC_5POINT1_SOFT"/>
+                <enum name="ALC_6POINT1_SOFT"/>
+                <enum name="ALC_7POINT1_SOFT"/>
+            </require>
+            <require>
+                <command name="alcLoopbackOpenDeviceSOFT"/>
+                <command name="alcIsRenderFormatSupportedSOFT"/>
+                <command name="alcRenderSamplesSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_STEREO_ANGLES" supported="al">
+            <require>
+                <enum name="AL_STEREO_ANGLES"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_SOURCE_RADIUS" supported="al">
+            <require>
+                <enum name="AL_SOURCE_RADIUS"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_latency" supported="al">
+            <require>
+                <enum name="AL_SAMPLE_OFFSET_LATENCY_SOFT"/>
+                <enum name="AL_SEC_OFFSET_LATENCY_SOFT"/>
+                <type name="ALint64SOFT"/>
+                <type name="ALuint64SOFT"/>
+                <command name="alSourcedSOFT"/>
+                <command name="alSource3dSOFT"/>
+                <command name="alSourcedvSOFT"/>
+                <command name="alGetSourcedSOFT"/>
+                <command name="alGetSource3dSOFT"/>
+                <command name="alGetSourcedvSOFT"/>
+                <command name="alSourcei64SOFT"/>
+                <command name="alSource3i64SOFT"/>
+                <command name="alSourcei64vSOFT"/>
+                <command name="alGetSourcei64SOFT"/>
+                <command name="alGetSource3i64SOFT"/>
+                <command name="alGetSourcei64vSOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_DEFAULT_FILTER_ORDER" supported="alc">
+            <require>
+                <enum name="ALC_DEFAULT_FILTER_ORDER"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_deferred_updates" supported="al">
+            <require>
+                <enum name="AL_DEFERRED_UPDATES_SOFT"/>
+                <command name="alDeferUpdatesSOFT"/>
+                <command name="alProcessUpdatesSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_block_alignment" supported="al">
+            <require>
+                <enum name="AL_UNPACK_BLOCK_ALIGNMENT_SOFT"/>
+                <enum name="AL_PACK_BLOCK_ALIGNMENT_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_MSADPCM" supported="al">
+            <require>
+                <enum name="AL_FORMAT_MONO_MSADPCM_SOFT"/>
+                <enum name="AL_FORMAT_STEREO_MSADPCM_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_length" supported="al">
+            <require>
+                <enum name="AL_BYTE_LENGTH_SOFT"/>
+                <enum name="AL_SAMPLE_LENGTH_SOFT"/>
+                <enum name="AL_SEC_LENGTH_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_buffer_length_query" supported="al">
+            <require>
+                <enum name="AL_BYTE_LENGTH_SOFT"/>
+                <enum name="AL_SAMPLE_LENGTH_SOFT"/>
+                <enum name="AL_SEC_LENGTH_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_pause_device" supported="alc">
+            <require>
+                <command name="alcDevicePauseSOFT"/>
+                <command name="alcDeviceResumeSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_BFORMAT" supported="al">
+            <comment>
+                Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
+                and layout).
+
+                BFORMAT2D_8: Unsigned 8-bit, 3-channel non-periphonic (WXY).
+                BFORMAT2D_16: Signed 16-bit, 3-channel non-periphonic (WXY).
+                BFORMAT2D_FLOAT32: 32-bit float, 3-channel non-periphonic (WXY).
+                BFORMAT3D_8: Unsigned 8-bit, 4-channel periphonic (WXYZ).
+                BFORMAT3D_16: Signed 16-bit, 4-channel periphonic (WXYZ).
+                BFORMAT3D_FLOAT32: 32-bit float, 4-channel periphonic (WXYZ).
+            </comment>
+            <require>
+                <enum name="AL_FORMAT_BFORMAT2D_8"/>
+                <enum name="AL_FORMAT_BFORMAT2D_16"/>
+                <enum name="AL_FORMAT_BFORMAT2D_FLOAT32"/>
+                <enum name="AL_FORMAT_BFORMAT3D_8"/>
+                <enum name="AL_FORMAT_BFORMAT3D_16"/>
+                <enum name="AL_FORMAT_BFORMAT3D_FLOAT32"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_MULAW_BFORMAT" supported="al">
+            <require>
+                <enum name="AL_FORMAT_BFORMAT2D_MULAW"/>
+                <enum name="AL_FORMAT_BFORMAT3D_MULAW"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_pause_device" supported="alc">
+            <require>
+                <enum name="ALC_HRTF_SOFT"/>
+                <enum name="ALC_DONT_CARE_SOFT"/>
+                <enum name="ALC_HRTF_STATUS_SOFT"/>
+                <enum name="ALC_HRTF_DISABLED_SOFT"/>
+                <enum name="ALC_HRTF_ENABLED_SOFT"/>
+                <enum name="ALC_HRTF_DENIED_SOFT"/>
+                <enum name="ALC_HRTF_REQUIRED_SOFT"/>
+                <enum name="ALC_HRTF_HEADPHONES_DETECTED_SOFT"/>
+                <enum name="ALC_HRTF_UNSUPPORTED_FORMAT_SOFT"/>
+                <enum name="ALC_NUM_HRTF_SPECIFIERS_SOFT"/>
+                <enum name="ALC_HRTF_SPECIFIER_SOFT"/>
+                <enum name="ALC_HRTF_ID_SOFT"/>
+                <command name="alcGetStringiSOFT"/>
+                <command name="alcResetDeviceSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_gain_clamp_ex" supported="al">
+            <require>
+                <enum name="AL_GAIN_LIMIT_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_resampler" supported="al">
+            <require>
+                <enum name="AL_NUM_RESAMPLERS_SOFT"/>
+                <enum name="AL_DEFAULT_RESAMPLER_SOFT"/>
+                <enum name="AL_SOURCE_RESAMPLER_SOFT"/>
+                <enum name="AL_RESAMPLER_NAME_SOFT"/>
+                <command name="alGetStringiSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_spatialize" supported="al">
+            <require>
+                <enum name="AL_SOURCE_SPATIALIZE_SOFT"/>
+                <enum name="AL_AUTO_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_output_limiter" supported="alc">
+            <require>
+                <enum name="ALC_OUTPUT_LIMITER_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_device_clock" supported="al|alc">
+            <require api="alc">
+                <enum name="ALCint64SOFT"/>
+                <enum name="ALCuint64SOFT"/>
+                <enum name="ALC_DEVICE_CLOCK_SOFT"/>
+                <enum name="ALC_DEVICE_LATENCY_SOFT"/>
+                <enum name="ALC_DEVICE_CLOCK_LATENCY_SOFT"/>
+            </require>
+            <require api="al">
+                <enum name="AL_SAMPLE_OFFSET_CLOCK_SOFT"/>
+                <enum name="AL_SEC_OFFSET_CLOCK_SOFT"/>
+            </require>
+            <require api="alc">
+                <command name="alcGetInteger64vSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_direct_channels_remix" supported="al">
+            <require>
+                <enum name="AL_DROP_UNMATCHED_SOFT"/>
+                <enum name="AL_REMIX_UNMATCHED_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_bformat_ex" supported="al">
+            <require>
+                <enum name="AL_AMBISONIC_LAYOUT_SOFT"/>
+                <enum name="AL_AMBISONIC_SCALING_SOFT"/>
+            </require>
+            <require comment="Ambisonic layouts">
+                <enum name="AL_FUMA_SOFT"/>
+                <enum name="AL_ACN_SOFT"/>
+            </require>
+            <require comment="Ambisonic scalings (normalization)">
+                <enum name="AL_SN3D_SOFT"/>
+                <enum name="AL_N3D_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_loopback_bformat" supported="alc">
+            <require>
+                <enum name="ALC_AMBISONIC_LAYOUT_SOFT"/>
+                <enum name="ALC_AMBISONIC_SCALING_SOFT"/>
+                <enum name="ALC_AMBISONIC_ORDER_SOFT"/>
+                <enum name="ALC_MAX_AMBISONIC_ORDER_SOFT"/>
+            </require>
+            <require>
+                <enum name="ALC_BFORMAT3D_SOFT"/>
+            </require>
+            <require comment="Ambisonic layouts">
+                <enum name="ALC_FUMA_SOFT"/>
+                <enum name="ALC_ACN_SOFT"/>
+            </require>
+            <require comment="Ambisonic scalings (normalization)">
+                <enum name="ALC_SN3D_SOFT"/>
+                <enum name="ALC_N3D_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_effect_target" supported="al">
+            <require>
+                <enum name="AL_EFFECTSLOT_TARGET_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_events" supported="al">
+            <require>
+                <enum name="AL_EVENT_CALLBACK_FUNCTION_SOFT"/>
+                <enum name="AL_EVENT_CALLBACK_USER_PARAM_SOFT"/>
+                <enum name="AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT"/>
+                <enum name="AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT"/>
+                <enum name="AL_EVENT_TYPE_DISCONNECTED_SOFT"/>
+                <type name="ALEVENTPROCSOFT"/>
+                <command name="alEventControlSOFT"/>
+                <command name="alEventCallbackSOFT"/>
+                <command name="alGetPointerSOFT"/>
+                <command name="alGetPointervSOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_reopen_device" supported="alc">
+            <require>
+                <command name="alcReopenDeviceSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_callback_buffer" supported="al">
+            <require>
+                <enum name="AL_BUFFER_CALLBACK_FUNCTION_SOFT"/>
+                <enum name="AL_BUFFER_CALLBACK_USER_PARAM_SOFT"/>
+                <type name="ALBUFFERCALLBACKTYPESOFT"/>
+                <command name="alBufferCallbackSOFT"/>
+                <command name="alGetBufferPtrSOFT"/>
+                <command name="alGetBuffer3PtrSOFT"/>
+                <command name="alGetBufferPtrvSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_UHJ" supported="al">
+            <require>
+                <enum name="AL_FORMAT_UHJ2CHN8_SOFT"/>
+                <enum name="AL_FORMAT_UHJ2CHN16_SOFT"/>
+                <enum name="AL_FORMAT_UHJ2CHN_FLOAT32_SOFT"/>
+                <enum name="AL_FORMAT_UHJ3CHN8_SOFT"/>
+                <enum name="AL_FORMAT_UHJ3CHN16_SOFT"/>
+                <enum name="AL_FORMAT_UHJ3CHN_FLOAT32_SOFT"/>
+                <enum name="AL_FORMAT_UHJ4CHN8_SOFT"/>
+                <enum name="AL_FORMAT_UHJ4CHN16_SOFT"/>
+                <enum name="AL_FORMAT_UHJ4CHN_FLOAT32_SOFT"/>
+            </require>
+            <require>
+                <enum name="AL_STEREO_MODE_SOFT"/>
+                <enum name="AL_NORMAL_SOFT"/>
+                <enum name="AL_SUPER_STEREO_SOFT"/>
+                <enum name="AL_SUPER_STEREO_WIDTH_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_UHJ_ex" supported="al">
+            <require>
+                <enum name="AL_FORMAT_UHJ2CHN_MULAW_SOFT"/>
+                <enum name="AL_FORMAT_UHJ2CHN_ALAW_SOFT"/>
+                <enum name="AL_FORMAT_UHJ2CHN_IMA4_SOFT"/>
+                <enum name="AL_FORMAT_UHJ2CHN_MSADPCM_SOFT"/>
+                <enum name="AL_FORMAT_UHJ3CHN_MULAW_SOFT"/>
+                <enum name="AL_FORMAT_UHJ3CHN_ALAW_SOFT"/>
+                <enum name="AL_FORMAT_UHJ4CHN_MULAW_SOFT"/>
+                <enum name="AL_FORMAT_UHJ4CHN_ALAW_SOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_output_mode" supported="alc">
+            <require>
+                <enum name="ALC_OUTPUT_MODE_SOFT"/>
+                <enum name="ALC_ANY_SOFT"/>
+                <enum name="ALC_MONO_SOFT"/>
+                <enum name="ALC_STEREO_SOFT"/>
+                <enum name="ALC_STEREO_BASIC_SOFT"/>
+                <enum name="ALC_STEREO_UHJ_SOFT"/>
+                <enum name="ALC_STEREO_HRTF_SOFT"/>
+                <enum name="ALC_QUAD_SOFT"/>
+                <enum name="ALC_SURROUND_5_1_SOFT"/>
+                <enum name="ALC_SURROUND_6_1_SOFT"/>
+                <enum name="ALC_SURROUND_7_1_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_start_delay" supported="al">
+            <require>
+                <command name="alSourcePlayAtTimeSOFT"/>
+                <command name="alSourcePlayAtTimevSOFT"/>
+            </require>
+        </extension>
+        <extension name="ALC_EXT_debug" supported="alc">
+            <require>
+                <enum name="ALC_CONTEXT_FLAGS_EXT"/>
+                <enum name="ALC_CONTEXT_DEBUG_BIT_EXT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_debug" supported="al">
+            <require>
+                <enum name="AL_DONT_CARE_EXT"/>
+                <enum name="AL_DEBUG_OUTPUT_EXT"/>
+                <enum name="AL_DEBUG_CALLBACK_FUNCTION_EXT"/>
+                <enum name="AL_DEBUG_CALLBACK_USER_PARAM_EXT"/>
+                <enum name="AL_DEBUG_SOURCE_API_EXT"/>
+                <enum name="AL_DEBUG_SOURCE_AUDIO_SYSTEM_EXT"/>
+                <enum name="AL_DEBUG_SOURCE_THIRD_PARTY_EXT"/>
+                <enum name="AL_DEBUG_SOURCE_APPLICATION_EXT"/>
+                <enum name="AL_DEBUG_SOURCE_OTHER_EXT"/>
+                <enum name="AL_DEBUG_TYPE_ERROR_EXT"/>
+                <enum name="AL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_EXT"/>
+                <enum name="AL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_EXT"/>
+                <enum name="AL_DEBUG_TYPE_PORTABILITY_EXT"/>
+                <enum name="AL_DEBUG_TYPE_PERFORMANCE_EXT"/>
+                <enum name="AL_DEBUG_TYPE_MARKER_EXT"/>
+                <enum name="AL_DEBUG_TYPE_PUSH_GROUP_EXT"/>
+                <enum name="AL_DEBUG_TYPE_POP_GROUP_EXT"/>
+                <enum name="AL_DEBUG_TYPE_OTHER_EXT"/>
+                <enum name="AL_DEBUG_SEVERITY_HIGH_EXT"/>
+                <enum name="AL_DEBUG_SEVERITY_MEDIUM_EXT"/>
+                <enum name="AL_DEBUG_SEVERITY_LOW_EXT"/>
+                <enum name="AL_DEBUG_SEVERITY_NOTIFICATION_EXT"/>
+                <enum name="AL_DEBUG_LOGGED_MESSAGES_EXT"/>
+                <enum name="AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT"/>
+                <enum name="AL_MAX_DEBUG_MESSAGE_LENGTH_EXT"/>
+                <enum name="AL_MAX_DEBUG_LOGGED_MESSAGES_EXT"/>
+                <enum name="AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT"/>
+                <enum name="AL_MAX_LABEL_LENGTH_EXT"/>
+                <enum name="AL_STACK_OVERFLOW_EXT"/>
+                <enum name="AL_STACK_UNDERFLOW_EXT"/>
+                <enum name="AL_CONTEXT_FLAGS_EXT"/>
+                <enum name="AL_BUFFER_EXT"/>
+                <enum name="AL_SOURCE_EXT"/>
+                <enum name="AL_FILTER_EXT"/>
+                <enum name="AL_EFFECT_EXT"/>
+                <enum name="AL_AUXILIARY_EFFECT_SLOT_EXT"/>
+            </require>
+            <require>
+                <type name="ALDEBUGPROCEXT"/>
+                <command name="alDebugMessageCallbackEXT"/>
+                <command name="alDebugMessageInsertEXT"/>
+                <command name="alDebugMessageControlEXT"/>
+                <command name="alPushDebugGroupEXT"/>
+                <command name="alPopDebugGroupEXT"/>
+                <command name="alGetDebugMessageLogEXT"/>
+                <command name="alObjectLabelEXT"/>
+                <command name="alGetObjectLabelEXT"/>
+                <command name="alGetPointerEXT"/>
+                <command name="alGetPointervEXT"/>
+            </require>
+        </extension>
+        <extension name="ALC_SOFT_system_events" supported="alc">
+            <require>
+                <enum name="ALC_PLAYBACK_DEVICE_SOFT"/>
+                <enum name="ALC_CAPTURE_DEVICE_SOFT"/>
+                <enum name="ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT"/>
+                <enum name="ALC_EVENT_TYPE_DEVICE_ADDED_SOFT"/>
+                <enum name="ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT"/>
+                <enum name="ALC_EVENT_SUPPORTED_SOFT"/>
+                <enum name="ALC_EVENT_NOT_SUPPORTED_SOFT"/>
+                <type name="ALCEVENTPROCTYPESOFT"/>
+                <command name="alcEventIsSupportedSOFT"/>
+                <command name="alcEventControlSOFT"/>
+                <command name="alcEventCallbackSOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_EXT_direct_context" supported="al|alc">
+            <require api="alc">
+                <command name="alcGetProcAddress2"/>
+            </require>
+            <require api="al">
+                <command name="alEnableDirect"/>
+                <command name="alDisableDirect"/>
+                <command name="alIsEnabledDirect"/>
+            </require>
+            <require api="al">
+                <command name="alDopplerFactorDirect"/>
+                <command name="alSpeedOfSoundDirect"/>
+                <command name="alDistanceModelDirect"/>
+            </require>
+            <require api="al">
+                <command name="alGetStringDirect"/>
+                <command name="alGetBooleanvDirect"/>
+                <command name="alGetIntegervDirect"/>
+                <command name="alGetFloatvDirect"/>
+                <command name="alGetDoublevDirect"/>
+                <command name="alGetBooleanDirect"/>
+                <command name="alGetIntegerDirect"/>
+                <command name="alGetFloatDirect"/>
+                <command name="alGetDoubleDirect"/>
+            </require>
+            <require api="al">
+                <command name="alGetErrorDirect"/>
+                <command name="alIsExtensionPresentDirect"/>
+                <command name="alGetProcAddressDirect"/>
+                <command name="alGetEnumValueDirect"/>
+            </require>
+            <require api="al">
+                <command name="alListenerfDirect"/>
+                <command name="alListener3fDirect"/>
+                <command name="alListenerfvDirect"/>
+                <command name="alListeneriDirect"/>
+                <command name="alListener3iDirect"/>
+                <command name="alListenerivDirect"/>
+                <command name="alGetListenerfDirect"/>
+                <command name="alGetListener3fDirect"/>
+                <command name="alGetListenerfvDirect"/>
+                <command name="alGetListeneriDirect"/>
+                <command name="alGetListener3iDirect"/>
+                <command name="alGetListenerivDirect"/>
+            </require>
+            <require api="al">
+                <command name="alGenSourcesDirect"/>
+                <command name="alDeleteSourcesDirect"/>
+                <command name="alIsSourceDirect"/>
+                <command name="alSourcefDirect"/>
+                <command name="alSource3fDirect"/>
+                <command name="alSourcefvDirect"/>
+                <command name="alSourceiDirect"/>
+                <command name="alSource3iDirect"/>
+                <command name="alSourceivDirect"/>
+                <command name="alGetSourcefDirect"/>
+                <command name="alGetSource3fDirect"/>
+                <command name="alGetSourcefvDirect"/>
+                <command name="alGetSourceiDirect"/>
+                <command name="alGetSource3iDirect"/>
+                <command name="alGetSourceivDirect"/>
+                <command name="alSourcePlayDirect"/>
+                <command name="alSourceStopDirect"/>
+                <command name="alSourceRewindDirect"/>
+                <command name="alSourcePauseDirect"/>
+                <command name="alSourcePlayvDirect"/>
+                <command name="alSourceStopvDirect"/>
+                <command name="alSourceRewindvDirect"/>
+                <command name="alSourcePausevDirect"/>
+                <command name="alSourceQueueBuffersDirect"/>
+                <command name="alSourceUnqueueBuffersDirect"/>
+            </require>
+            <require api="al">
+                <command name="alGenBuffersDirect"/>
+                <command name="alDeleteBuffersDirect"/>
+                <command name="alIsBufferDirect"/>
+                <command name="alBufferDataDirect"/>
+                <command name="alBufferfDirect"/>
+                <command name="alBuffer3fDirect"/>
+                <command name="alBufferfvDirect"/>
+                <command name="alBufferiDirect"/>
+                <command name="alBuffer3iDirect"/>
+                <command name="alBufferivDirect"/>
+                <command name="alGetBufferfDirect"/>
+                <command name="alGetBuffer3fDirect"/>
+                <command name="alGetBufferfvDirect"/>
+                <command name="alGetBufferiDirect"/>
+                <command name="alGetBuffer3iDirect"/>
+                <command name="alGetBufferivDirect"/>
+            </require>
+            <require api="al" depends="ALC_EXT_EFX">
+                <command name="alGenEffectsDirect"/>
+                <command name="alDeleteEffectsDirect"/>
+                <command name="alIsEffectDirect"/>
+                <command name="alEffectiDirect"/>
+                <command name="alEffectivDirect"/>
+                <command name="alEffectfDirect"/>
+                <command name="alEffectfvDirect"/>
+                <command name="alGetEffectiDirect"/>
+                <command name="alGetEffectivDirect"/>
+                <command name="alGetEffectfDirect"/>
+                <command name="alGetEffectfvDirect"/>
+            </require>
+            <require api="al" depends="ALC_EXT_EFX">
+                <command name="alGenFiltersDirect"/>
+                <command name="alDeleteFiltersDirect"/>
+                <command name="alIsFilterDirect"/>
+                <command name="alFilteriDirect"/>
+                <command name="alFilterivDirect"/>
+                <command name="alFilterfDirect"/>
+                <command name="alFilterfvDirect"/>
+                <command name="alGetFilteriDirect"/>
+                <command name="alGetFilterivDirect"/>
+                <command name="alGetFilterfDirect"/>
+                <command name="alGetFilterfvDirect"/>
+            </require>
+            <require api="al" depends="ALC_EXT_EFX">
+                <command name="alGenAuxiliaryEffectSlotsDirect"/>
+                <command name="alDeleteAuxiliaryEffectSlotsDirect"/>
+                <command name="alIsAuxiliaryEffectSlotDirect"/>
+                <command name="alAuxiliaryEffectSlotiDirect"/>
+                <command name="alAuxiliaryEffectSlotivDirect"/>
+                <command name="alAuxiliaryEffectSlotfDirect"/>
+                <command name="alAuxiliaryEffectSlotfvDirect"/>
+                <command name="alGetAuxiliaryEffectSlotiDirect"/>
+                <command name="alGetAuxiliaryEffectSlotivDirect"/>
+                <command name="alGetAuxiliaryEffectSlotfDirect"/>
+                <command name="alGetAuxiliaryEffectSlotfvDirect"/>
+            </require>
+            <require api="al" depends="AL_EXT_STATIC_BUFFER">
+                <command name="alBufferDataStaticDirect"/>
+            </require>
+            <require api="al" depends="AL_EXT_debug">
+                <command name="alDebugMessageCallbackDirectEXT"/>
+                <command name="alDebugMessageInsertDirectEXT"/>
+                <command name="alDebugMessageControlDirectEXT"/>
+                <command name="alPushDebugGroupDirectEXT"/>
+                <command name="alPopDebugGroupDirectEXT"/>
+                <command name="alGetDebugMessageLogDirectEXT"/>
+                <command name="alObjectLabelDirectEXT"/>
+                <command name="alGetObjectLabelDirectEXT"/>
+                <command name="alGetPointerDirectEXT"/>
+                <command name="alGetPointervDirectEXT"/>
+            </require>
+            <require api="al" depends="AL_EXT_FOLDBACK">
+                <command name="alRequestFoldbackStartDirect"/>
+                <command name="alRequestFoldbackStopDirect"/>
+            </require>
+            <require api="al" depends="AL_SOFT_buffer_sub_data">
+                <command name="alBufferSubDataDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_source_latency">
+                <command name="alSourcedDirectSOFT"/>
+                <command name="alSource3dDirectSOFT"/>
+                <command name="alSourcedvDirectSOFT"/>
+                <command name="alGetSourcedDirectSOFT"/>
+                <command name="alGetSource3dDirectSOFT"/>
+                <command name="alGetSourcedvDirectSOFT"/>
+                <command name="alSourcei64DirectSOFT"/>
+                <command name="alSource3i64DirectSOFT"/>
+                <command name="alSourcei64vDirectSOFT"/>
+                <command name="alGetSourcei64DirectSOFT"/>
+                <command name="alGetSource3i64DirectSOFT"/>
+                <command name="alGetSourcei64vDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_deferred_updates">
+                <command name="alDeferUpdatesDirectSOFT"/>
+                <command name="alProcessUpdatesDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_source_resampler">
+                <command name="alGetStringiDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_events">
+                <command name="alEventControlDirectSOFT"/>
+                <command name="alEventCallbackDirectSOFT"/>
+                <command name="alGetPointerDirectSOFT"/>
+                <command name="alGetPointervDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_callback_buffer">
+                <command name="alBufferCallbackDirectSOFT"/>
+                <command name="alGetBufferPtrDirectSOFT"/>
+                <command name="alGetBuffer3PtrDirectSOFT"/>
+                <command name="alGetBufferPtrvDirectSOFT"/>
+            </require>
+            <require api="al" depends="AL_SOFT_source_start_delay">
+                <command name="alSourcePlayAtTimeDirectSOFT"/>
+                <command name="alSourcePlayAtTimevDirectSOFT"/>
+            </require>
+            <!-- TODO: should be depends="EAX" but EAX headers aren't defined here yet. -->
+            <require api="al">
+                <type name="_GUID"/>
+                <command name="EAXSetDirect"/>
+                <command name="EAXGetDirect"/>
+                <command name="EAXSetBufferModeDirect"/>
+                <command name="EAXGetBufferModeDirect"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_bformat_hoa" supported="al">
+            <require>
+                <enum name="AL_UNPACK_AMBISONIC_ORDER_SOFT"/>
+            </require>
+        </extension>
     </extensions>
 </registry>

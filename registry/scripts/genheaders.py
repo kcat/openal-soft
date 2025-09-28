@@ -12,9 +12,9 @@ import datetime
 
 """
 A purpose-built Khronos-style XML parser for al.xml and C header generator for the OpenAL Soft headers. This has been
-built to minimise changes to the shipping headers, and full compatibility, completeness, and correctness with the
-official Khronos scripts is an explicit non-goal. It is also expected that this script will not be adaptable to
-non-OpenAL uses. The code is also very crude. Have fun!
+built to minimise changes to the shipping headers. Full compatibility, completeness, and correctness with the official
+Khronos scripts is an explicit non-goal. It is also expected that this script will not be adaptable to non-OpenAL uses.
+The code is also very crude. Have fun!
 """
 
 
@@ -82,8 +82,41 @@ extern "C" {{
 
 """
 
+EXT_PREAMBLE = """#include <stddef.h>
+/* Define int64 and uint64 types */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||             \\
+    (defined(__cplusplus) && __cplusplus >= 201103L)
+#include <stdint.h>
+typedef int64_t _alsoft_int64_t;
+typedef uint64_t _alsoft_uint64_t;
+#elif defined(_WIN32)
+typedef __int64 _alsoft_int64_t;
+typedef unsigned __int64 _alsoft_uint64_t;
+#else
+/* Fallback if nothing above works */
+#include <stdint.h>
+typedef int64_t _alsoft_int64_t;
+typedef uint64_t _alsoft_uint64_t;
+#endif
+
+#include "alc.h"
+#include "al.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+"""
+
 
 CONFIGURATION = [
+    Header(
+        "../../include/AL/alc.h",
+        "../xml/al.xml",
+        "alc",
+        False,
+        preamble=PLATFORM_PREAMBLE.format(prefix="ALC"),
+    ),
     Header(
         "../../include/AL/al.h",
         "../xml/al.xml",
@@ -92,11 +125,11 @@ CONFIGURATION = [
         preamble=PLATFORM_PREAMBLE.format(prefix="AL"),
     ),
     Header(
-        "../../include/AL/alc.h",
+        "../../include/AL/alext.h",
         "../xml/al.xml",
-        "alc",
-        False,
-        preamble=PLATFORM_PREAMBLE.format(prefix="ALC"),
+        ["al", "alc"],
+        True,
+        preamble=EXT_PREAMBLE,
     ),
 ]
 
@@ -129,6 +162,7 @@ ENUM_NAME_COLS = 49
 class Requirement:
     apis: typing.List[str]
     comment: typing.Optional[str] = None
+    api_specific: typing.Optional[str] = None
 
 
 @dataclasses.dataclass
@@ -140,24 +174,85 @@ class ApiSet:
     # If feature, contains the value for "api"
     api: typing.List[str]
     require: typing.List[Requirement]
+    header: typing.Optional[str] = None
 
-    def render(self, registry: "Registry") -> typing.Generator[str]:
+    def render(
+        self, registry: "Registry", current_header: Header
+    ) -> typing.Generator[str]:
         yield f"#ifndef {self.name}"
         yield f"#define {self.name} 1"
-        for pass_name in ("non-command", "command-function", "command-pfn"):
+        if (
+            self.header is not None
+            and os.path.basename(current_header.header_file) != self.header
+        ):
+            ext_header_file = os.path.join(
+                os.path.dirname(__file__),
+                os.path.dirname(current_header.header_file),
+                self.header,
+            )
+            with open(ext_header_file, "w") as f:
+                external_headers = "".join(
+                    f"#include <{h.name}>\n"
+                    for h in registry.apis.values()
+                    if isinstance(h, Include)
+                )
+                other_headers = "".join(
+                    f'#include "{os.path.basename(h.header_file)}"\n'
+                    for h in CONFIGURATION
+                    if h.header_file != current_header.header_file
+                )
+                preamble = f'{external_headers}\n{other_headers}\n#ifdef __cplusplus\nextern "C" {{\n#endif'.strip()
+                f.write(
+                    STANDARD_TEMPLATE.format(
+                        guard=f"AL_{os.path.basename(self.header).upper().replace('.', '_')}",
+                        preamble=preamble,
+                        content="\n".join(
+                            self.render(
+                                registry,
+                                Header(
+                                    ext_header_file,
+                                    current_header.registry_file,
+                                    current_header.api,
+                                    current_header.include,
+                                    current_header.exclude,
+                                    preamble,
+                                ),
+                            )
+                        ),
+                        date=datetime.datetime.now(datetime.timezone.utc),
+                    )
+                )
+            yield f'#include "{self.header}"'
+            yield "#endif"
+            yield ""
+            return
+        for pass_no, pass_name in enumerate(
+            (
+                ("non-command", "command-pfn", "command-function"),
+                ("non-command", "command-function", "command-pfn"),
+            )[int(self.is_feature)]
+        ):
             written_preamble = False
-            for requirement in self.require:
+            for req_no, requirement in enumerate(self.require):
+                if (
+                    requirement.api_specific is not None
+                    and requirement.api_specific not in current_header.api
+                ):
+                    continue
                 should_write_comment = (
                     requirement.comment is not None and pass_name != "command-pfn"
                 )
                 written_comment = False
+                written_any = False
                 for api_name in requirement.apis:
                     # We pop on the last pass to take account of promotions
                     api = (
                         registry.apis.get(api_name)
-                        if pass_name != "command-pfn"
+                        if pass_no != 2
                         else registry.apis.pop(api_name, None)
                     )
+                    if isinstance(api, Include):
+                        continue
                     if api is None:
                         print(
                             f"Skipping {api_name} for {self.name} as it is unavailable (has it been promoted?)"
@@ -167,7 +262,10 @@ class ApiSet:
                         continue
                     if not written_preamble:
                         if pass_name == "command-function":
-                            yield "#ifndef AL_NO_PROTOYPES"
+                            if self.is_feature:
+                                yield "#ifndef AL_NO_PROTOYPES"
+                            else:
+                                yield "#ifdef AL_ALEXT_PROTOTYPES"
                         elif pass_name == "command-pfn" and self.is_feature:
                             yield "/* Pointer-to-function types, useful for storing dynamically loaded AL entry"
                             yield " * points."
@@ -176,24 +274,41 @@ class ApiSet:
                     if not written_comment and should_write_comment:
                         yield f"/* {requirement.comment} */"
                         written_comment = True
-                    if isinstance(api, Command):
-                        yield getattr(api, pass_name[len("command-") :])
-                    else:
-                        yield api
-                    if pass_name != "command-pfn" and requirement.comment is None:
+                    api = (
+                        getattr(api, pass_name[len("command-") :])
+                        if isinstance(api, Command)
+                        else api
+                    )
+                    line_cnt = 0
+                    for line in api.splitlines():
+                        line_cnt += 1
+                        yield line
+                    if line_cnt > 1:
                         yield ""
-                if requirement.comment is not None and written_comment:
+                    written_any = True
+                # if requirement.comment is not None and written_comment:
+                if written_any and req_no != len(self.require) - 1 and line_cnt <= 1:
                     yield ""
             if pass_name == "command-function" and written_preamble:
-                yield "#endif /* AL_NO_PROTOTYPES */"
-                yield ""
+                if self.is_feature:
+                    yield "#endif /* AL_NO_PROTOTYPES */"
+                else:
+                    yield "#endif"
+                if pass_no != 2:
+                    yield ""
         yield "#endif"
+        yield ""
 
 
 @dataclasses.dataclass
 class Command:
     function: str
     pfn: str
+
+
+@dataclasses.dataclass
+class Include:
+    name: str
 
 
 class Registry:
@@ -274,6 +389,9 @@ class Registry:
             comment = tag.attrib.get("comment")
             if comment is not None:
                 doclines.append(comment)
+            comment = tag.find("comment")
+            if comment is None and len(doclines) == 0:
+                return ""
             property = tag.find("property")
             if property is not None:
                 cols = 0
@@ -302,7 +420,6 @@ class Registry:
                     if "," in default:
                         default = "{" + default.replace(",", ", ") + "}"
                     doclines.append(f"{'Default: ':<{cols}}{default}")
-            comment = tag.find("comment")
             if comment is not None:
                 if len(doclines) > 0:
                     doclines.append("")
@@ -317,18 +434,18 @@ class Registry:
         self.apis = {}
         for type in registry.findall(".//types/type"):
             # Find name
-            name = type.find("name")
+            name = type.attrib.get("name") or type.find("name")
             if name is None:
                 print(f"Skipping: {type}")
+                continue
+            if type.attrib.get("category") == "include":
+                self.apis[name] = Include(name)
                 continue
             # Types are verbatim
             self.apis[name.text.strip()] = f"{doc(type)}{innertext(type)}".strip()
 
         for commands in registry.findall(".//commands"):
             namespace = commands.attrib.get("namespace", "AL")
-            pfn_return_cols = max(
-                len(return_type(p).strip()) for p in commands.findall(".//proto")
-            )
             for command in commands.iter("command"):
                 proto = command.find("proto")
                 name = proto.find("name")
@@ -341,13 +458,14 @@ class Registry:
                     params = "(void)"
                 else:
                     params = f"({', '.join(innertext(x).strip() for x in params)})"
+                export = f"{namespace}_API " if "export" in command.attrib else ""
                 self.apis[name.text.strip()] = Command(
                     (
-                        f"{doc(command)}{namespace}_API {return_type(proto)} "
+                        f"{doc(command)}{export}{return_type(proto)} "
                         f"{namespace}_APIENTRY {name.text.strip()}{params}{noexcept};"
                     ),
                     (
-                        f"typedef {return_type(proto): <{pfn_return_cols}} ({namespace}_APIENTRY *LP{name.text.upper()})"
+                        f"typedef {return_type(proto)} ({namespace}_APIENTRY *LP{name.text.upper()})"
                         f"{params}{noexcept}17;"
                         if noexcept != ""
                         else f"{params};"
@@ -360,8 +478,6 @@ class Registry:
             if name is None or value is None:
                 continue
             value = value.strip()
-            if "." in value:
-                value = f"({value})"
             self.apis[name.strip()] = (
                 f"{doc(enum)}{f'#define {name} ':<{ENUM_NAME_COLS}}{value}"
             )
@@ -388,26 +504,29 @@ class Registry:
                     Requirement(
                         [y.attrib["name"] for y in x if "name" in y.attrib],
                         x.attrib.get("comment"),
+                        x.attrib.get("api"),
                     )
                     for x in api_set
                     if x.tag == "require"
                 ],
+                header=api_set.attrib.get("header"),
             )
 
-        #for k, v in self.apis.items():
+        # for k, v in self.apis.items():
         #    if isinstance(v, Command):
         #        print(f'"{k}" = "{v.function}" "{v.pfn}"')
         #        continue
         #    print(f'"{k}" = "{v}"')
 
-    def create_header(
-        self, sets: typing.Iterable[str], output_file: str, preamble: str = ""
-    ):
+    def create_header(self, header: Header):
+        output_file = os.path.join(os.path.dirname(__file__), header.header_file)
         header = STANDARD_TEMPLATE.format(
             guard=f"AL_{os.path.basename(output_file).upper().replace('.', '_')}",
-            preamble=preamble,
+            preamble=header.preamble,
             content="\n".join(
-                x for y in (self.sets[s].render(self) for s in sets) for x in y
+                x
+                for y in (self.sets[s].render(self, header) for s in header.include)
+                for x in y
             ),
             date=datetime.datetime.now(datetime.timezone.utc),
         )
@@ -439,11 +558,7 @@ def main():
                 and any(a in v.api for a in header.api)
             ]
         print(f"Generating {header.header_file}...")
-        registries[header.registry_file].create_header(
-            header.include,
-            os.path.join(os.path.dirname(__file__), header.header_file),
-            header.preamble,
-        )
+        registries[header.registry_file].create_header(header)
 
 
 if __name__ == "__main__":

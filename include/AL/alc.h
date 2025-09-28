@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-06 17:57:54.189515+00:00
+ * Last regenerated: 2025-09-28 19:13:41.523928+00:00
  */
 
 /* NOLINTBEGIN */
@@ -178,25 +178,32 @@ typedef void ALCvoid;
 /* Context management. */
 /** Create and attach a context to the given device. */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT;
+
 /**
  * Makes the given context the active process-wide context. Passing NULL clears
  * the active context.
  */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) ALC_API_NOEXCEPT;
+
 /** Resumes processing updates for the given context. */
 ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) ALC_API_NOEXCEPT;
-/** Suspends updates for the given context.. */
+
+/** Suspends updates for the given context. */
 ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) ALC_API_NOEXCEPT;
+
 /** Remove a context from its device and destroys it. */
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) ALC_API_NOEXCEPT;
+
 /** Returns the currently active context. */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void) ALC_API_NOEXCEPT;
+
 /** Returns the device that a particular context is attached to. */
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context) ALC_API_NOEXCEPT;
 
 /* Device management. */
 /** Opens the named playback device. */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename) ALC_API_NOEXCEPT;
+
 /** Closes the given playback device. */
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) ALC_API_NOEXCEPT;
 
@@ -210,11 +217,13 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) ALC_API_NOEXCEPT;
  * query a device-inspecific extension.
  */
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extname) ALC_API_NOEXCEPT;
+
 /**
  * Retrieve the address of a function. Given a non-NULL device, the returned
  * function may be device-specific.
  */
 ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT;
+
 /**
  * Retrieve the value of an enum. Given a non-NULL device, the returned value
  * may be device-specific.
@@ -224,6 +233,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 /* Query functions. */
 /** Returns information about the device, and error strings. */
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param) ALC_API_NOEXCEPT;
+
 /** Returns information about the device and the version of OpenAL. */
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT;
 
@@ -232,22 +242,27 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
  */
-typedef ALCcontext*    (ALC_APIENTRY *LPALCCREATECONTEXT)(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT17;
-typedef ALCboolean     (ALC_APIENTRY *LPALCMAKECONTEXTCURRENT)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef void           (ALC_APIENTRY *LPALCPROCESSCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef void           (ALC_APIENTRY *LPALCSUSPENDCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef void           (ALC_APIENTRY *LPALCDESTROYCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef ALCcontext*    (ALC_APIENTRY *LPALCGETCURRENTCONTEXT)(void) ALC_API_NOEXCEPT17;
-typedef ALCdevice*     (ALC_APIENTRY *LPALCGETCONTEXTSDEVICE)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef ALCdevice*     (ALC_APIENTRY *LPALCOPENDEVICE)(const ALCchar *devicename) ALC_API_NOEXCEPT17;
-typedef ALCboolean     (ALC_APIENTRY *LPALCCLOSEDEVICE)(ALCdevice *device) ALC_API_NOEXCEPT17;
-typedef ALCenum        (ALC_APIENTRY *LPALCGETERROR)(ALCdevice *device) ALC_API_NOEXCEPT17;
-typedef ALCboolean     (ALC_APIENTRY *LPALCISEXTENSIONPRESENT)(ALCdevice *device, const ALCchar *extname) ALC_API_NOEXCEPT17;
-typedef ALCvoid*       (ALC_APIENTRY *LPALCGETPROCADDRESS)(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT17;
-typedef ALCenum        (ALC_APIENTRY *LPALCGETENUMVALUE)(ALCdevice *device, const ALCchar *enumname) ALC_API_NOEXCEPT17;
+typedef ALCcontext* (ALC_APIENTRY *LPALCCREATECONTEXT)(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCMAKECONTEXTCURRENT)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCPROCESSCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCSUSPENDCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCDESTROYCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef ALCcontext* (ALC_APIENTRY *LPALCGETCURRENTCONTEXT)(void) ALC_API_NOEXCEPT17;
+typedef ALCdevice* (ALC_APIENTRY *LPALCGETCONTEXTSDEVICE)(ALCcontext *context) ALC_API_NOEXCEPT17;
+
+typedef ALCdevice* (ALC_APIENTRY *LPALCOPENDEVICE)(const ALCchar *devicename) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCCLOSEDEVICE)(ALCdevice *device) ALC_API_NOEXCEPT17;
+
+typedef ALCenum (ALC_APIENTRY *LPALCGETERROR)(ALCdevice *device) ALC_API_NOEXCEPT17;
+
+typedef ALCboolean (ALC_APIENTRY *LPALCISEXTENSIONPRESENT)(ALCdevice *device, const ALCchar *extname) ALC_API_NOEXCEPT17;
+typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS)(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT17;
+typedef ALCenum (ALC_APIENTRY *LPALCGETENUMVALUE)(ALCdevice *device, const ALCchar *enumname) ALC_API_NOEXCEPT17;
+
 typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRING)(ALCdevice *device, ALCenum param) ALC_API_NOEXCEPT17;
-typedef void           (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT17;
 #endif
+
 #ifndef ALC_VERISON_1_1
 #define ALC_VERISON_1_1 1
 /** Context attribute: <int> requested Mono (3D) Sources. */
@@ -288,6 +303,7 @@ typedef void           (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCen
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013
 
 #endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

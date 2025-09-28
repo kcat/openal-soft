@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 19:13:41.525634+00:00
+ * Last regenerated: 2025-09-28 19:50:45.782398+00:00
  */
 
 /* NOLINTBEGIN */
@@ -88,6 +88,33 @@ extern "C" {
 
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
+/* 
+ * Provides support for surround sound buffer formats with 8, 16, and 32-bit
+ * samples.
+ * 
+ * QUAD8: Unsigned 8-bit, Quadraphonic (Front Left, Front Right, Rear Left,
+ * Rear Right).
+ * QUAD16: Signed 16-bit, Quadraphonic.
+ * QUAD32: 32-bit float, Quadraphonic.
+ * REAR8: Unsigned 8-bit, Rear Stereo (Rear Left, Rear Right).
+ * REAR16: Signed 16-bit, Rear Stereo.
+ * REAR32: 32-bit float, Rear Stereo.
+ * 51CHN8: Unsigned 8-bit, 5.1 Surround (Front Left, Front Right, Front Center,
+ * LFE, Side Left, Side Right). Note that some audio systems may label
+ * 5.1's Side channels as Rear or Surround; they are equivalent for the
+ * purposes of this extension.
+ * 51CHN16: Signed 16-bit, 5.1 Surround.
+ * 51CHN32: 32-bit float, 5.1 Surround.
+ * 61CHN8: Unsigned 8-bit, 6.1 Surround (Front Left, Front Right, Front Center,
+ * LFE, Rear Center, Side Left, Side Right).
+ * 61CHN16: Signed 16-bit, 6.1 Surround.
+ * 61CHN32: 32-bit float, 6.1 Surround.
+ * 71CHN8: Unsigned 8-bit, 7.1 Surround (Front Left, Front Right, Front Center,
+ * LFE, Rear Left, Rear Right, Side Left, Side Right).
+ * 71CHN16: Signed 16-bit, 7.1 Surround.
+ * 71CHN32: 32-bit float, 7.1 Surround.
+ * 
+ */
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
 #define AL_FORMAT_QUAD32                         0x1206
@@ -244,10 +271,10 @@ typedef void (AL_APIENTRY *LPALBUFFERSUBSAMPLESSOFT)(ALuint buffer, ALsizei offs
 typedef void (AL_APIENTRY *LPALGETBUFFERSAMPLESSOFT)(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, ALvoid *data) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISBUFFERFORMATSUPPORTEDSOFT)(ALenum format) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer, ALuint samplerate, ALenum internalformat, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, ALvoid *data) AL_API_NOEXCEPT;
-ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer, ALuint samplerate, ALenum internalformat, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, ALvoid *data) AL_API_NOEXCEPT;
+AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -282,9 +309,9 @@ typedef ALCdevice* (ALC_APIENTRY *LPALCLOOPBACKOPENDEVICESOFT)(const ALCchar *de
 typedef ALCboolean (ALC_APIENTRY *LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT17;
 typedef void (ALC_APIENTRY *LPALCRENDERSAMPLESSOFT)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) ALC_API_NOEXCEPT;
-ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT;
-void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
 #endif
 #endif
 
@@ -317,18 +344,18 @@ typedef void (AL_APIENTRY *LPALGETSOURCEI64SOFT)(ALuint source, ALenum param, AL
 typedef void (AL_APIENTRY *LPALGETSOURCE3I64SOFT)(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETSOURCEI64VSOFT)(ALuint source, ALenum param, ALint64SOFT *values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT;
-void AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *value) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value) AL_API_NOEXCEPT;
-void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALint64SOFT *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *value) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *value) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble *values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALint64SOFT *values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *value) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -343,8 +370,8 @@ void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *v
 typedef void (AL_APIENTRY *LPALDEFERUPDATESSOFT)(void) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALPROCESSUPDATESSOFT)(void) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alDeferUpdatesSOFT(void) AL_API_NOEXCEPT;
-void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDeferUpdatesSOFT(void) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -370,6 +397,44 @@ void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
 
 #ifndef ALC_SOFT_pause_device
 #define ALC_SOFT_pause_device 1
+typedef void (ALC_APIENTRY *LPALCDEVICEPAUSESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCDEVICERESUMESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEPT;
+#endif
+#endif
+
+#ifndef AL_EXT_BFORMAT
+#define AL_EXT_BFORMAT 1
+/* 
+ * Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
+ * and layout).
+ * 
+ * BFORMAT2D_8: Unsigned 8-bit, 3-channel non-periphonic (WXY).
+ * BFORMAT2D_16: Signed 16-bit, 3-channel non-periphonic (WXY).
+ * BFORMAT2D_FLOAT32: 32-bit float, 3-channel non-periphonic (WXY).
+ * BFORMAT3D_8: Unsigned 8-bit, 4-channel periphonic (WXYZ).
+ * BFORMAT3D_16: Signed 16-bit, 4-channel periphonic (WXYZ).
+ * BFORMAT3D_FLOAT32: 32-bit float, 4-channel periphonic (WXYZ).
+ * 
+ */
+#define AL_FORMAT_BFORMAT2D_8                    0x20021
+#define AL_FORMAT_BFORMAT2D_16                   0x20022
+#define AL_FORMAT_BFORMAT2D_FLOAT32              0x20023
+#define AL_FORMAT_BFORMAT3D_8                    0x20031
+#define AL_FORMAT_BFORMAT3D_16                   0x20032
+#define AL_FORMAT_BFORMAT3D_FLOAT32              0x20033
+#endif
+
+#ifndef AL_EXT_MULAW_BFORMAT
+#define AL_EXT_MULAW_BFORMAT 1
+#define AL_FORMAT_BFORMAT2D_MULAW                0x10031
+#define AL_FORMAT_BFORMAT3D_MULAW                0x10032
+#endif
+
+#ifndef ALC_SOFT_HRTF
+#define ALC_SOFT_HRTF 1
 #define ALC_HRTF_SOFT                            0x1992
 #define ALC_DONT_CARE_SOFT                       0x0002
 #define ALC_HRTF_STATUS_SOFT                     0x1993
@@ -385,25 +450,9 @@ void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
 typedef const ALchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT17;
 typedef ALCboolean (ALC_APIENTRY *LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-const ALchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT;
-ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT;
+ALC_API const ALchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT;
 #endif
-#endif
-
-#ifndef AL_EXT_BFORMAT
-#define AL_EXT_BFORMAT 1
-#define AL_FORMAT_BFORMAT2D_8                    0x20021
-#define AL_FORMAT_BFORMAT2D_16                   0x20022
-#define AL_FORMAT_BFORMAT2D_FLOAT32              0x20023
-#define AL_FORMAT_BFORMAT3D_8                    0x20031
-#define AL_FORMAT_BFORMAT3D_16                   0x20032
-#define AL_FORMAT_BFORMAT3D_FLOAT32              0x20033
-#endif
-
-#ifndef AL_EXT_MULAW_BFORMAT
-#define AL_EXT_MULAW_BFORMAT 1
-#define AL_FORMAT_BFORMAT2D_MULAW                0x10031
-#define AL_FORMAT_BFORMAT3D_MULAW                0x10032
 #endif
 
 #ifndef AL_SOFT_gain_clamp_ex
@@ -417,9 +466,9 @@ ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attr
 #define AL_DEFAULT_RESAMPLER_SOFT                0x1211
 #define AL_SOURCE_RESAMPLER_SOFT                 0x1212
 #define AL_RESAMPLER_NAME_SOFT                   0x1213
-typedef const ALchar* (AL_APIENTRY *LPALGETSTRINGISOFT)(ALenum param, ALsizei index) AL_API_NOEXCEPT17;
+typedef const ALchar* (AL_APIENTRY *LPALGETSTRINGISOFT)(ALenum pname, ALsizei index) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum param, ALsizei index) AL_API_NOEXCEPT;
+AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -447,7 +496,7 @@ typedef _alsoft_uint64_t ALCuint64SOFT;
 
 typedef void (ALC_APIENTRY *LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT;
 #endif
 #endif
 
@@ -502,17 +551,17 @@ void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei
 #define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x19A5
 #define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x19A6
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
-                ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
+    ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, const ALboolean enable) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT17;
 typedef void* (AL_APIENTRY *LPALGETPOINTERSOFT)(ALenum pname) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETPOINTERVSOFT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, const ALboolean enable) AL_API_NOEXCEPT;
-void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT;
-void* AL_APIENTRY alGetPointerSOFT(ALenum pname) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, const ALboolean enable) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT;
+AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -673,7 +722,7 @@ void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #define ALC_EVENT_SUPPORTED_SOFT                 0x19D9
 #define ALC_EVENT_NOT_SUPPORTED_SOFT             0x19DA
 typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCenum deviceType,
-                ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
+    ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
 
 typedef ALCenum (ALC_APIENTRY *LPALCEVENTISSUPPORTEDSOFT)(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT17;
 typedef ALCboolean (ALC_APIENTRY *LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
@@ -688,7 +737,7 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #ifndef AL_EXT_direct_context
 #define AL_EXT_direct_context 1
 struct _GUID;
-typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT17;
+typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALENABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDISABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
@@ -859,7 +908,7 @@ typedef ALenum (AL_APIENTRY *LPEAXGETDIRECT)(ALCcontext *context, const struct _
 typedef ALboolean (AL_APIENTRY *LPEAXSETBUFFERMODEDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETBUFFERMODEDIRECT)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT;
+ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT;
 
 void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;

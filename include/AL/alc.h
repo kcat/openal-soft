@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 19:13:41.523928+00:00
+ * Last regenerated: 2025-09-28 19:50:45.780510+00:00
  */
 
 /* NOLINTBEGIN */
@@ -174,7 +174,7 @@ typedef void ALCvoid;
 /** String for space-separated list of ALC extensions. */
 #define ALC_EXTENSIONS                           0x1006
 
-#ifndef AL_NO_PROTOYPES
+#ifndef AL_NO_PROTOTYPES
 /* Context management. */
 /** Create and attach a context to the given device. */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT;
@@ -301,6 +301,36 @@ typedef void (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, 
  * strings of known extended device specifiers (list ends with an empty string).
  */
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013
+
+#ifndef AL_NO_PROTOTYPES
+/**
+ * Opens the named capture device with the given frequency, format, and buffer
+ * size.
+ */
+ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize) ALC_API_NOEXCEPT;
+
+/** Closes the given capture device. */
+ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) ALC_API_NOEXCEPT;
+
+/** Starts capturing samples into the device buffer. */
+ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) ALC_API_NOEXCEPT;
+
+/** Stops capturing samples. Samples in the device buffer remain available. */
+ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) ALC_API_NOEXCEPT;
+
+/** Reads samples from the device buffer. */
+ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
+
+#endif /* AL_NO_PROTOTYPES */
+
+/* Pointer-to-function types, useful for storing dynamically loaded AL entry
+ * points.
+ */
+typedef ALCdevice* (ALC_APIENTRY *LPALCCAPTUREOPENDEVICE)(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCCAPTURECLOSEDEVICE)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCCAPTURESTART)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCCAPTURESTOP)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCCAPTURESAMPLES)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT17;
 
 #endif
 

@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 19:13:41.525145+00:00
+ * Last regenerated: 2025-09-28 19:50:45.781885+00:00
  */
 
 /* NOLINTBEGIN */
@@ -27,7 +27,7 @@ extern "C" {
 /* Listener properties */
 #define AL_METERS_PER_UNIT                       0x20004
 
-/* Source properties */
+/* Source properties. */
 #define AL_DIRECT_FILTER                         0x20005
 #define AL_AUXILIARY_SEND_FILTER                 0x20006
 #define AL_AIR_ABSORPTION_FACTOR                 0x20007
@@ -179,7 +179,7 @@ extern "C" {
 /* NULL Auxiliary Slot ID to disable a source send. */
 #define AL_EFFECTSLOT_NULL                       0x0000
 
-/* Lowpass filter paramteres */
+/* Lowpass filter parameters */
 #define AL_LOWPASS_GAIN                          0x0001
 #define AL_LOWPASS_GAINHF                        0x0002
 
@@ -202,6 +202,37 @@ extern "C" {
 #define AL_FILTER_LOWPASS                        0x0001
 #define AL_FILTER_HIGHPASS                       0x0002
 #define AL_FILTER_BANDPASS                       0x0003
+
+/* Lowpass filter */
+#define AL_LOWPASS_MIN_GAIN                      (0.0f)
+#define AL_LOWPASS_MAX_GAIN                      (1.0f)
+#define AL_LOWPASS_DEFAULT_GAIN                  (1.0f)
+
+#define AL_LOWPASS_MIN_GAINHF                    (0.0f)
+#define AL_LOWPASS_MAX_GAINHF                    (1.0f)
+#define AL_LOWPASS_DEFAULT_GAINHF                (1.0f)
+
+/* Highpass filter */
+#define AL_HIGHPASS_MIN_GAIN                     (0.0f)
+#define AL_HIGHPASS_MAX_GAIN                     (1.0f)
+#define AL_HIGHPASS_DEFAULT_GAIN                 (1.0f)
+
+#define AL_HIGHPASS_MIN_GAINLF                   (0.0f)
+#define AL_HIGHPASS_MAX_GAINLF                   (1.0f)
+#define AL_HIGHPASS_DEFAULT_GAINLF               (1.0f)
+
+/* Bandpass filter */
+#define AL_BANDPASS_MIN_GAIN                     (0.0f)
+#define AL_BANDPASS_MAX_GAIN                     (1.0f)
+#define AL_BANDPASS_DEFAULT_GAIN                 (1.0f)
+
+#define AL_BANDPASS_MIN_GAINHF                   (0.0f)
+#define AL_BANDPASS_MAX_GAINHF                   (1.0f)
+#define AL_BANDPASS_DEFAULT_GAINHF               (1.0f)
+
+#define AL_BANDPASS_MIN_GAINLF                   (0.0f)
+#define AL_BANDPASS_MAX_GAINLF                   (1.0f)
+#define AL_BANDPASS_DEFAULT_GAINLF               (1.0f)
 
 /* Standard reverb effect */
 #define AL_REVERB_MIN_DENSITY                    (0.0f)
@@ -459,7 +490,7 @@ extern "C" {
 #define AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION (2)
 #define AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION (0)
 
-/* Vocal moprher effect */
+/* Vocal morpher effect */
 #define AL_VOCAL_MORPHER_MIN_PHONEMEA            (0)
 #define AL_VOCAL_MORPHER_MAX_PHONEMEA            (29)
 #define AL_VOCAL_MORPHER_DEFAULT_PHONEMEA        (0)

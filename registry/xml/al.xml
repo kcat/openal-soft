@@ -70,8 +70,8 @@
         <type category="define">#define <name>AL_EXT_FOLDBACK_NAME</name>                     "AL_EXT_FOLDBACK"</type>
         <type category="funcpointer">typedef void (AL_APIENTRY*<name>LPALFOLDBACKCALLBACK</name>)(<type>ALenum</type>,<type>ALsizei</type>) AL_API_NOEXCEPT17;</type>
         <type category="funcpointer">
-            typedef void (AL_APIENTRY*<name>ALEVENTPROCSOFT</name>)(<type>ALenum</type> eventType, <type>ALuint</type> object, <type>ALuint</type> param,
-                <type>ALsizei</type> length, const <type>ALchar</type> *message, void *userParam) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY*<name>ALEVENTPROCSOFT</name>)(<type>ALenum</type> eventType, <type>ALuint</type> object, <type>ALuint</type> param,
+    <type>ALsizei</type> length, const <type>ALchar</type> *message, void *userParam) AL_API_NOEXCEPT17;
         </type>
         <type category="funcpointer">typedef <type>ALsizei</type> (AL_APIENTRY*<name>ALBUFFERCALLBACKTYPESOFT</name>)(<type>ALvoid</type> *userptr, <type>ALvoid</type> *sampledata, <type>ALsizei</type> numbytes) AL_API_NOEXCEPT17;</type>
         <type category="funcpointer">typedef void (AL_APIENTRY*<name>ALDEBUGPROCEXT</name>)(<type>ALenum</type> source, <type>ALenum</type> type, <type>ALuint</type> id, <type>ALenum</type> severity, <type>ALsizei</type> length, const <type>ALchar</type> *message, void *userParam) AL_API_NOEXCEPT17;</type>
@@ -105,8 +105,8 @@
 
         <type category="define">#define <name>ALC_EXT_EFX_NAME</name>                         "ALC_EXT_EFX"</type>
         <type category="funcpointer">
-            typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</type> eventType, <type>ALCenum</type> deviceType,
-                <type>ALCdevice</type> *device, <type>ALCsizei</type> length, const <type>ALCchar</type> *message, void *userParam) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</type> eventType, <type>ALCenum</type> deviceType,
+    <type>ALCdevice</type> *device, <type>ALCsizei</type> length, const <type>ALCchar</type> *message, void *userParam) ALC_API_NOEXCEPT17;
         </type>
     </types>
 
@@ -128,7 +128,7 @@
                 not be attenuated by direction.
             </comment>
         </enum>
-        <enum value="0x1002" name="AL_CONE_OUTER_ANGLE" group="SourcePName,SourceInteger,SourceFloat" comment="Inner cone angle, in degrees.">
+        <enum value="0x1002" name="AL_CONE_OUTER_ANGLE" group="SourcePName,SourceInteger,SourceFloat" comment="Outer cone angle, in degrees.">
             <property on="source" type="ALint,ALfloat" range="0..=360" default="360"/>
             <comment>
                 The angle covered by the outer cone, the area outside of which the source
@@ -1863,7 +1863,7 @@
             <param><ptype>ALfloat</ptype> *<name>value2</name></param>
             <param><ptype>ALfloat</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command funcpointer="PFNALBUFFERDATASTATICPROC">
             <proto>void <name>alBufferDataStatic</name></proto>
             <param class="buffer">const <ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
@@ -2057,7 +2057,7 @@
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command export="al">
+        <command export="al" funcpointer="PFNALBUFFERSUBDATASOFTPROC">
             <proto>void <name>alBufferSubDataSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
@@ -2076,7 +2076,7 @@
         <command export="al">
             <proto>void <name>alRequestFoldbackStop</name></proto>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferSamplesSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param><ptype>ALuint</ptype> <name>samplerate</name></param>
@@ -2086,7 +2086,7 @@
             <param group="SampleTypeSOFT"><ptype>ALenum</ptype> <name>type</name></param>
             <param>const <ptype>ALvoid</ptype> *<name>data</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferSubSamplesSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param><ptype>ALsizei</ptype> <name>offset</name></param>
@@ -2095,7 +2095,7 @@
             <param group="SampleTypeSOFT"><ptype>ALenum</ptype> <name>type</name></param>
             <param>const <ptype>ALvoid</ptype> *<name>data</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferSamplesSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param><ptype>ALsizei</ptype> <name>offset</name></param>
@@ -2104,17 +2104,17 @@
             <param group="SampleTypeSOFT"><ptype>ALenum</ptype> <name>type</name></param>
             <param><ptype>ALvoid</ptype> *<name>data</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALboolean</ptype> <name>alIsBufferFormatSupportedSOFT</name></proto>
             <param group="InternalFormat"><ptype>ALenum</ptype> <name>format</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcedSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALdouble</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSource3dSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2122,19 +2122,19 @@
             <param><ptype>ALdouble</ptype> <name>value2</name></param>
             <param><ptype>ALdouble</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcedvSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALdouble</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcedSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALdouble</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSource3dSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2142,19 +2142,19 @@
             <param><ptype>ALdouble</ptype> *<name>value2</name></param>
             <param><ptype>ALdouble</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcedvSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceDouble"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALdouble</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcei64SOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint64SOFT</ptype> <name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSource3i64SOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2162,19 +2162,19 @@
             <param><ptype>ALint64SOFT</ptype> <name>value2</name></param>
             <param><ptype>ALint64SOFT</ptype> <name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alSourcei64vSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint64SOFT</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcei64SOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint64SOFT</ptype> *<name>value</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSource3i64SOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger3"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2182,39 +2182,39 @@
             <param><ptype>ALint64SOFT</ptype> *<name>value2</name></param>
             <param><ptype>ALint64SOFT</ptype> *<name>value3</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetSourcei64vSOFT</name></proto>
             <param class="source"><ptype>ALuint</ptype> <name>source</name></param>
             <param group="SourceInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint64SOFT</ptype> *<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDeferUpdatesSOFT</name></proto>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alProcessUpdatesSOFT</name></proto>
         </command>
-        <command>
+        <command export="al">
             <proto>const <ptype>ALchar</ptype>* <name>alGetStringiSOFT</name></proto>
-            <param group="StringPName"><ptype>ALenum</ptype> <name>param</name></param>
+            <param group="StringPName"><ptype>ALenum</ptype> <name>pname</name></param>
             <param><ptype>ALsizei</ptype> <name>index</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEventControlSOFT</name></proto>
             <param><ptype>ALsizei</ptype> <name>count</name></param>
             <param len="count">const <ptype>ALenum</ptype> *<name>types</name></param>
             <param>const <ptype>ALboolean</ptype> <name>enable</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEventCallbackSOFT</name></proto>
             <param><ptype>ALEVENTPROCSOFT</ptype> <name>callback</name></param>
             <param>void *<name>userParam</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void* <name>alGetPointerSOFT</name></proto>
             <param group="PointerPName"><ptype>ALenum</ptype> <name>pname</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetPointervSOFT</name></proto>
             <param group="PointerPName"><ptype>ALenum</ptype> <name>pname</name></param>
             <param>void **<name>values</name></param>
@@ -3439,43 +3439,43 @@
             <param><ptype>ALCvoid</ptype> *<name>buffer</name></param>
             <param><ptype>ALCsizei</ptype> <name>samples</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto><ptype>ALCdevice</ptype>* <name>alcLoopbackOpenDeviceSOFT</name></proto>
             <param>const <ptype>ALCchar</ptype> *<name>deviceName</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto><ptype>ALCboolean</ptype> <name>alcIsRenderFormatSupportedSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param><ptype>ALCsizei</ptype> <name>freq</name></param>
             <param group="RenderFormatChannelSOFT"><ptype>ALCenum</ptype> <name>channels</name></param>
             <param group="RenderFormatTypeSOFT"><ptype>ALCenum</ptype> <name>type</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto>void <name>alcRenderSamplesSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param><ptype>ALCvoid</ptype> *<name>buffer</name></param>
             <param><ptype>ALCsizei</ptype> <name>samples</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto>void <name>alcDevicePauseSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto>void <name>alcDeviceResumeSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto>const <ptype>ALchar</ptype>* <name>alcGetStringiSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param group="ContextString"><ptype>ALCenum</ptype> <name>param</name></param>
             <param><ptype>ALCsizei</ptype> <name>index</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto><ptype>ALCboolean</ptype> <name>alcResetDeviceSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param>const <ptype>ALCint</ptype> *<name>attribs</name></param>
         </command>
-        <command>
+        <command export="alc">
             <proto>void <name>alcGetInteger64vSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param><ptype>ALCenum</ptype> <name>pname</name></param>
@@ -3508,13 +3508,13 @@
         <command>
             <proto><ptype>ALCvoid</ptype>* <name>alcGetProcAddress2</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
-            <param>const <ptype>ALCchar</ptype> *<name>funcName</name></param>
+            <param>const <ptype>ALCchar</ptype> *<name>funcname</name></param>
         </command>
-        <command export="alc">
+        <command export="alc" funcpointer="PFNALCSETTHREADCONTEXTPROC">
             <proto><ptype>ALCboolean</ptype> <name>alcSetThreadContext</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
         </command>
-        <command export="alc">
+        <command export="alc" funcpointer="PFNALCGETTHREADCONTEXTPROC">
             <proto><ptype>ALCcontext</ptype>* <name>alcGetThreadContext</name></proto>
         </command>
     </commands>
@@ -3835,6 +3835,11 @@
             <enum name="ALC_CAPTURE_DEVICE_SPECIFIER"/>
             <enum name="ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER"/>
             <enum name="ALC_CAPTURE_SAMPLES"/>
+            <command name="alcCaptureOpenDevice"/>
+            <command name="alcCaptureCloseDevice"/>
+            <command name="alcCaptureStart"/>
+            <command name="alcCaptureStop"/>
+            <command name="alcCaptureSamples"/>
         </require>
         <require>
             <type name="ALC_ENUMERATE_ALL_EXT"/>
@@ -3984,7 +3989,7 @@
             <require api="al" comment="Listener properties">
                 <enum name="AL_METERS_PER_UNIT"/>
             </require>
-            <require api="al" comment="Source properties">
+            <require api="al" comment="Source properties.">
                 <enum name="AL_DIRECT_FILTER"/>
                 <enum name="AL_AUXILIARY_SEND_FILTER"/>
                 <enum name="AL_AIR_ABSORPTION_FACTOR"/>
@@ -4138,7 +4143,7 @@
                 <enum name="AL_EFFECTSLOT_NULL"/>
             </require>
             <require api="al" comment="Filter properties."/>
-            <require api="al" comment="Lowpass filter paramteres">
+            <require api="al" comment="Lowpass filter parameters">
                 <enum name="AL_LOWPASS_GAIN"/>
                 <enum name="AL_LOWPASS_GAINHF"/>
             </require>
@@ -4200,6 +4205,41 @@
                 <command name="alGetAuxiliaryEffectSlotiv"/>
                 <command name="alGetAuxiliaryEffectSlotf"/>
                 <command name="alGetAuxiliaryEffectSlotfv"/>
+            </require>
+            <require api="al" comment="Lowpass filter">
+                <enum name="AL_LOWPASS_MIN_GAIN"/>
+                <enum name="AL_LOWPASS_MAX_GAIN"/>
+                <enum name="AL_LOWPASS_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_LOWPASS_MIN_GAINHF"/>
+                <enum name="AL_LOWPASS_MAX_GAINHF"/>
+                <enum name="AL_LOWPASS_DEFAULT_GAINHF"/>
+            </require>
+            <require api="al" comment="Highpass filter">
+                <enum name="AL_HIGHPASS_MIN_GAIN"/>
+                <enum name="AL_HIGHPASS_MAX_GAIN"/>
+                <enum name="AL_HIGHPASS_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_HIGHPASS_MIN_GAINLF"/>
+                <enum name="AL_HIGHPASS_MAX_GAINLF"/>
+                <enum name="AL_HIGHPASS_DEFAULT_GAINLF"/>
+            </require>
+            <require api="al" comment="Bandpass filter">
+                <enum name="AL_BANDPASS_MIN_GAIN"/>
+                <enum name="AL_BANDPASS_MAX_GAIN"/>
+                <enum name="AL_BANDPASS_DEFAULT_GAIN"/>
+            </require>
+            <require api="al">
+                <enum name="AL_BANDPASS_MIN_GAINHF"/>
+                <enum name="AL_BANDPASS_MAX_GAINHF"/>
+                <enum name="AL_BANDPASS_DEFAULT_GAINHF"/>
+            </require>
+            <require api="al">
+                <enum name="AL_BANDPASS_MIN_GAINLF"/>
+                <enum name="AL_BANDPASS_MAX_GAINLF"/>
+                <enum name="AL_BANDPASS_DEFAULT_GAINLF"/>
             </require>
             <require api="al" comment="Effect parameter ranges and defaults."/>
             <require api="al" comment="Standard reverb effect">
@@ -4516,7 +4556,7 @@
                 <enum name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
                 <enum name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
             </require>
-            <require api="al" comment="Vocal moprher effect">
+            <require api="al" comment="Vocal morpher effect">
                 <enum name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
                 <enum name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
                 <enum name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
@@ -4964,7 +5004,7 @@
                 <enum name="AL_FORMAT_BFORMAT3D_MULAW"/>
             </require>
         </extension>
-        <extension name="ALC_SOFT_pause_device" supported="alc">
+        <extension name="ALC_SOFT_HRTF" supported="alc">
             <require>
                 <enum name="ALC_HRTF_SOFT"/>
                 <enum name="ALC_DONT_CARE_SOFT"/>

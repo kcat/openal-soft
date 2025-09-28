@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 19:13:41.524578+00:00
+ * Last regenerated: 2025-09-28 19:50:45.781193+00:00
  */
 
 /* NOLINTBEGIN */
@@ -140,7 +140,7 @@ typedef void ALvoid;
 #define AL_CONE_INNER_ANGLE                      0x1001
 
 /**
- * Inner cone angle, in degrees.
+ * Outer cone angle, in degrees.
  * Type:    ALint, ALfloat
  * Range:   [0 - 360]
  * Default: 360
@@ -451,7 +451,7 @@ typedef void ALvoid;
 #define AL_INVERSE_DISTANCE                      0xD001
 #define AL_INVERSE_DISTANCE_CLAMPED              0xD002
 
-#ifndef AL_NO_PROTOYPES
+#ifndef AL_NO_PROTOTYPES
 /* Renderer State management. */
 AL_API void AL_APIENTRY alEnable(ALenum capability) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alDisable(ALenum capability) AL_API_NOEXCEPT;
@@ -758,7 +758,7 @@ typedef void (AL_APIENTRY *LPALGETBUFFERIV)(ALuint buffer, ALenum param, ALint *
 
 #define AL_EXPONENT_DISTANCE                     0xD005
 #define AL_EXPONENT_DISTANCE_CLAMPED             0xD006
-#ifndef AL_NO_PROTOYPES
+#ifndef AL_NO_PROTOTYPES
 AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT;
 
 #endif /* AL_NO_PROTOTYPES */

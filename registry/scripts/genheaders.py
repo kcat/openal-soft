@@ -175,12 +175,22 @@ class ApiSet:
     api: typing.List[str]
     require: typing.List[Requirement]
     header: typing.Optional[str] = None
+    comment: typing.Optional[str] = None
 
     def render(
         self, registry: "Registry", current_header: Header
     ) -> typing.Generator[str]:
         yield f"#ifndef {self.name}"
         yield f"#define {self.name} 1"
+        if self.comment is not None:
+            doclines = self.comment.splitlines()
+            if len(doclines) == 1:
+                yield f"/* {doclines[0].strip()} */"
+            else:
+                yield f"/* {doclines[0].strip()}"
+            for line in doclines[1:]:
+                yield f" * {line.strip()}"
+            yield " */"
         if (
             self.header is not None
             and os.path.basename(current_header.header_file) != self.header
@@ -263,7 +273,7 @@ class ApiSet:
                     if not written_preamble:
                         if pass_name == "command-function":
                             if self.is_feature:
-                                yield "#ifndef AL_NO_PROTOYPES"
+                                yield "#ifndef AL_NO_PROTOTYPES"
                             else:
                                 yield "#ifdef AL_ALEXT_PROTOTYPES"
                         elif pass_name == "command-pfn" and self.is_feature:
@@ -491,6 +501,10 @@ class Registry:
             )
             for x in y  # <-- flatten
         ):
+            comment = api_set.find("comment")
+            if comment is not None:
+                comment = comment.text
+            comment = comment or api_set.attrib.get("comment")
             # TODO if ever we use <remove>, add support here.
             self.sets[api_set.attrib["name"]] = ApiSet(
                 api_set.tag == "feature",
@@ -510,6 +524,7 @@ class Registry:
                     if x.tag == "require"
                 ],
                 header=api_set.attrib.get("header"),
+                comment=comment
             )
 
         # for k, v in self.apis.items():

@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 19:50:45.782398+00:00
+ * Last regenerated: 2025-09-28 20:00:48.253381+00:00
  */
 
 /* NOLINTBEGIN */
@@ -151,7 +151,7 @@ extern "C" {
 
 #ifndef AL_EXT_STATIC_BUFFER
 #define AL_EXT_STATIC_BUFFER 1
-typedef void (AL_APIENTRY *LPALBUFFERDATASTATIC)(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *PFNALBUFFERDATASTATICPROC)(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
 #endif
@@ -169,8 +169,8 @@ void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *
 
 #ifndef ALC_EXT_thread_local_context
 #define ALC_EXT_thread_local_context 1
-typedef ALCboolean (ALC_APIENTRY *LPALCSETTHREADCONTEXT)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef ALCcontext* (ALC_APIENTRY *LPALCGETTHREADCONTEXT)(void) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *PFNALCSETTHREADCONTEXTPROC)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef ALCcontext* (ALC_APIENTRY *PFNALCGETTHREADCONTEXTPROC)(void) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) ALC_API_NOEXCEPT;
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) ALC_API_NOEXCEPT;
@@ -186,7 +186,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) ALC_API_NOEXCEPT;
 #define AL_SOFT_buffer_sub_data 1
 #define AL_BYTE_RW_OFFSETS_SOFT                  0x1031
 #define AL_SAMPLE_RW_OFFSETS_SOFT                0x1032
-typedef void (AL_APIENTRY *LPALBUFFERSUBDATASOFT)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *PFNALBUFFERSUBDATASOFTPROC)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT;
 #endif

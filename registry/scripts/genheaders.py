@@ -469,13 +469,14 @@ class Registry:
                 else:
                     params = f"({', '.join(innertext(x).strip() for x in params)})"
                 export = f"{namespace}_API " if "export" in command.attrib else ""
+                funcpointer = command.attrib.get("funcpointer") or f"LP{name.text.upper()}"
                 self.apis[name.text.strip()] = Command(
                     (
                         f"{doc(command)}{export}{return_type(proto)} "
                         f"{namespace}_APIENTRY {name.text.strip()}{params}{noexcept};"
                     ),
                     (
-                        f"typedef {return_type(proto)} ({namespace}_APIENTRY *LP{name.text.upper()})"
+                        f"typedef {return_type(proto)} ({namespace}_APIENTRY *{funcpointer})"
                         f"{params}{noexcept}17;"
                         if noexcept != ""
                         else f"{params};"
@@ -524,7 +525,7 @@ class Registry:
                     if x.tag == "require"
                 ],
                 header=api_set.attrib.get("header"),
-                comment=comment
+                comment=comment,
             )
 
         # for k, v in self.apis.items():

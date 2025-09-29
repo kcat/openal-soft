@@ -3465,7 +3465,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
         <command export="alc">
-            <proto>const <ptype>ALchar</ptype>* <name>alcGetStringiSOFT</name></proto>
+            <proto>const <ptype>ALCchar</ptype>* <name>alcGetStringiSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
             <param group="ContextString"><ptype>ALCenum</ptype> <name>param</name></param>
             <param><ptype>ALCsizei</ptype> <name>index</name></param>
@@ -4812,7 +4812,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
                 <enum name="AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT"/>
             </require>
         </extension>
-        <extension name="ALC_EXT_DEDICATED" supported="al">
+        <extension name="AL_SOFT_buffer_samples" supported="al">
             <require comment="Channel configurations">
                 <enum name="AL_MONO_SOFT"/>
                 <enum name="AL_STEREO_SOFT"/>

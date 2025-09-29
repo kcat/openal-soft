@@ -236,12 +236,12 @@ class ApiSet:
             yield "#endif"
             yield ""
             return
-        for pass_no, pass_name in enumerate(
-            (
-                ("non-command", "command-pfn", "command-function"),
-                ("non-command", "command-function", "command-pfn"),
-            )[int(self.is_feature)]
-        ):
+        passes = (
+            ("non-command", "command-function", "command-pfn")
+            if self.is_feature
+            else ("non-command", "command-pfn", "command-function")
+        )
+        for pass_no, pass_name in enumerate(passes):
             written_preamble = False
             for req_no, requirement in enumerate(self.require):
                 if (
@@ -254,26 +254,31 @@ class ApiSet:
                 )
                 written_comment = False
                 written_any = False
+                last_namespace = None
                 for api_name in requirement.apis:
                     # We pop on the last pass to take account of promotions
-                    api = (
-                        registry.apis.get(api_name)
-                        if pass_no != 2
-                        else registry.apis.pop(api_name, None)
-                    )
-                    if isinstance(api, Include):
-                        continue
+                    api = registry.apis.get(api_name)
                     if api is None:
                         print(
-                            f"Skipping {api_name} for {self.name} as it is unavailable (has it been promoted?)"
+                            f"Skipping {api_name} for {self.name} as it doesn't exist"
                         )
+                        continue
+                    if isinstance(api, Include):
                         continue
                     if pass_name.startswith("command-") != isinstance(api, Command):
                         continue
+                    if (
+                        last_namespace is not None
+                        and pass_name == "command-function"
+                        and last_namespace != api.namespace
+                    ):
+                        yield "#endif"
+                        written_preamble = False
                     if not written_preamble:
                         if pass_name == "command-function":
                             if self.is_feature:
-                                yield "#ifndef AL_NO_PROTOTYPES"
+                                yield f"#ifndef {api.namespace}_NO_PROTOTYPES"
+                                last_namespace = api.namespace
                             else:
                                 yield "#ifdef AL_ALEXT_PROTOTYPES"
                         elif pass_name == "command-pfn" and self.is_feature:
@@ -289,15 +294,27 @@ class ApiSet:
                         if isinstance(api, Command)
                         else api
                     )
-                    line_cnt = 0
-                    for line in api.splitlines():
-                        line_cnt += 1
-                        yield line
-                    if line_cnt > 1:
+                    api_lines = api.splitlines()
+                    for line in api_lines:
+                        already_set = registry.written.get(api_name)
+                        if already_set is not None:
+                            if line.startswith("/*") or line.startswith(" *"):
+                                continue
+                            print(
+                                f"{api_name} is used in {self.name} but was already written by {already_set}"
+                            )
+                            yield f"/*{line}*/"
+                        else:
+                            yield line
+                    if len(api_lines) > 1:
                         yield ""
                     written_any = True
                 # if requirement.comment is not None and written_comment:
-                if written_any and req_no != len(self.require) - 1 and line_cnt <= 1:
+                if (
+                    written_any
+                    and req_no != len(self.require) - 1
+                    and len(api_lines) <= 1
+                ):
                     yield ""
             if pass_name == "command-function" and written_preamble:
                 if self.is_feature:
@@ -308,12 +325,16 @@ class ApiSet:
                     yield ""
         yield "#endif"
         yield ""
+        for requirement in self.require:
+            for api in requirement.apis:
+                registry.written[api] = self.name
 
 
 @dataclasses.dataclass
 class Command:
     function: str
     pfn: str
+    namespace: str
 
 
 @dataclasses.dataclass
@@ -330,6 +351,8 @@ class Registry:
     sets: typing.Dict[str, ApiSet]
 
     groups: typing.Dict[str, typing.List[str]]
+
+    written: typing.Dict[str, str] = dict()
 
     def __init__(self, registry: xml.etree.ElementTree.ElementTree):
         self.groups = {}
@@ -469,7 +492,9 @@ class Registry:
                 else:
                     params = f"({', '.join(innertext(x).strip() for x in params)})"
                 export = f"{namespace}_API " if "export" in command.attrib else ""
-                funcpointer = command.attrib.get("funcpointer") or f"LP{name.text.upper()}"
+                funcpointer = (
+                    command.attrib.get("funcpointer") or f"LP{name.text.upper()}"
+                )
                 self.apis[name.text.strip()] = Command(
                     (
                         f"{doc(command)}{export}{return_type(proto)} "
@@ -481,6 +506,7 @@ class Registry:
                         if noexcept != ""
                         else f"{params};"
                     ),
+                    namespace,
                 )
 
         for enum in registry.findall(".//enums/enum"):

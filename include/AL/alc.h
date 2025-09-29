@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 20:00:48.251660+00:00
+ * Last regenerated: 2025-09-29 17:05:10.891839+00:00
  */
 
 /* NOLINTBEGIN */
@@ -174,7 +174,7 @@ typedef void ALCvoid;
 /** String for space-separated list of ALC extensions. */
 #define ALC_EXTENSIONS                           0x1006
 
-#ifndef AL_NO_PROTOTYPES
+#ifndef ALC_NO_PROTOTYPES
 /* Context management. */
 /** Create and attach a context to the given device. */
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT;
@@ -302,7 +302,7 @@ typedef void (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, 
  */
 #define ALC_ALL_DEVICES_SPECIFIER                0x1013
 
-#ifndef AL_NO_PROTOTYPES
+#ifndef ALC_NO_PROTOTYPES
 /**
  * Opens the named capture device with the given frequency, format, and buffer
  * size.

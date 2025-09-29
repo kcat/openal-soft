@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-28 20:00:48.253381+00:00
+ * Last regenerated: 2025-09-29 17:05:10.893816+00:00
  */
 
 /* NOLINTBEGIN */
@@ -216,6 +216,13 @@ AL_API void AL_APIENTRY alRequestFoldbackStop(void) AL_API_NOEXCEPT;
 
 #ifndef ALC_EXT_DEDICATED
 #define ALC_EXT_DEDICATED 1
+#define AL_DEDICATED_GAIN                        0x0001
+#define AL_EFFECT_DEDICATED_DIALOGUE             0x9001
+#define AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT 0x9000
+#endif
+
+#ifndef AL_SOFT_buffer_samples
+#define AL_SOFT_buffer_samples 1
 /* Channel configurations */
 #define AL_MONO_SOFT                             0x1500
 #define AL_STEREO_SOFT                           0x1501
@@ -389,10 +396,16 @@ AL_API void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
 
 #ifndef AL_SOFT_source_length
 #define AL_SOFT_source_length 1
+/*#define AL_BYTE_LENGTH_SOFT                      0x2009*/
+/*#define AL_SAMPLE_LENGTH_SOFT                    0x200A*/
+/*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
 #ifndef AL_SOFT_buffer_length_query
 #define AL_SOFT_buffer_length_query 1
+/*#define AL_BYTE_LENGTH_SOFT                      0x2009*/
+/*#define AL_SAMPLE_LENGTH_SOFT                    0x200A*/
+/*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
 #ifndef ALC_SOFT_pause_device
@@ -447,10 +460,10 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
 #define ALC_NUM_HRTF_SPECIFIERS_SOFT             0x1994
 #define ALC_HRTF_SPECIFIER_SOFT                  0x1995
 #define ALC_HRTF_ID_SOFT                         0x1996
-typedef const ALchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT17;
+typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT17;
 typedef ALCboolean (ALC_APIENTRY *LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API const ALchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT;
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT;
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT;
 #endif
 #endif
@@ -624,9 +637,12 @@ void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **ptr) 
 #define ALC_SOFT_output_mode 1
 #define ALC_OUTPUT_MODE_SOFT                     0x19AC
 #define ALC_ANY_SOFT                             0x19AD
+/*#define ALC_MONO_SOFT                            0x1500*/
+/*#define ALC_STEREO_SOFT                          0x1501*/
 #define ALC_STEREO_BASIC_SOFT                    0x19AE
 #define ALC_STEREO_UHJ_SOFT                      0x19AF
 #define ALC_STEREO_HRTF_SOFT                     0x19B2
+/*#define ALC_QUAD_SOFT                            0x1503*/
 #define ALC_SURROUND_5_1_SOFT                    0x1504
 #define ALC_SURROUND_6_1_SOFT                    0x1505
 #define ALC_SURROUND_7_1_SOFT                    0x1506

@@ -68,7 +68,7 @@ struct SwsContext;
 #include "SDL3/SDL_video.h"
 
 #if HAVE_CXXMODULES
-import alsoft.gsl;
+import gsl;
 import openal;
 
 /* AL_APIENTRY is needed, but not exported from the module. */

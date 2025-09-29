@@ -27,8 +27,8 @@
 #include "version.h"
 
 #if HAVE_CXXMODULES
-import alsoft.gsl;
 import alsoft.router;
+import gsl;
 import openal.alc;
 
 #else

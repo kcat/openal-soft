@@ -14,7 +14,7 @@
 #include "fmt/ostream.h"
 
 #if HAVE_CXXMODULES
-import alsoft.gsl;
+import gsl;
 import openal.alc;
 
 #else

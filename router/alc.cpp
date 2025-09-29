@@ -20,13 +20,10 @@
 #include "strutils.hpp"
 
 #if HAVE_CXXMODULES
-import alsoft.gsl;
 import alsoft.router;
+import gsl;
 import openal;
 
-#ifndef ALC_API
- #define ALC_API __declspec(dllimport)
-#endif
 #define ALC_APIENTRY __cdecl
 
 #else

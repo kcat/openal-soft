@@ -74,7 +74,7 @@ int my_main(int, char**);
 #include "fmt/ostream.h"
 
 #if HAVE_CXXMODULES
-import alsoft.gsl;
+import gsl;
 #else
 #include "gsl/gsl"
 #endif

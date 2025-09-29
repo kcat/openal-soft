@@ -2,7 +2,7 @@ module;
 
 #include "gsl/gsl"
 
-export module alsoft.gsl;
+export module gsl;
 
 export namespace gsl {
 

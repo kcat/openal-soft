@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-29 17:05:10.891839+00:00
+ * Last regenerated: 2025-09-29 17:12:10.268933+00:00
  */
 
 /* NOLINTBEGIN */
@@ -237,7 +237,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 /** Returns information about the device and the version of OpenAL. */
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT;
 
-#endif /* AL_NO_PROTOTYPES */
+#endif /* ALC_NO_PROTOTYPES */
 
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
@@ -321,7 +321,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) ALC_API_NOEXCEPT;
 /** Reads samples from the device buffer. */
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
 
-#endif /* AL_NO_PROTOTYPES */
+#endif /* ALC_NO_PROTOTYPES */
 
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.

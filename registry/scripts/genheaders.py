@@ -243,6 +243,7 @@ class ApiSet:
         )
         for pass_no, pass_name in enumerate(passes):
             written_preamble = False
+            last_namespace = None
             for req_no, requirement in enumerate(self.require):
                 if (
                     requirement.api_specific is not None
@@ -254,7 +255,6 @@ class ApiSet:
                 )
                 written_comment = False
                 written_any = False
-                last_namespace = None
                 for api_name in requirement.apis:
                     # We pop on the last pass to take account of promotions
                     api = registry.apis.get(api_name)
@@ -318,7 +318,7 @@ class ApiSet:
                     yield ""
             if pass_name == "command-function" and written_preamble:
                 if self.is_feature:
-                    yield "#endif /* AL_NO_PROTOTYPES */"
+                    yield f"#endif /* {last_namespace}_NO_PROTOTYPES */"
                 else:
                     yield "#endif"
                 if pass_no != 2:

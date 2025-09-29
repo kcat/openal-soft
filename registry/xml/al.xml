@@ -2203,7 +2203,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <proto>void <name>alEventControlSOFT</name></proto>
             <param><ptype>ALsizei</ptype> <name>count</name></param>
             <param len="count">const <ptype>ALenum</ptype> *<name>types</name></param>
-            <param>const <ptype>ALboolean</ptype> <name>enable</name></param>
+            <param><ptype>ALboolean</ptype> <name>enable</name></param>
         </command>
         <command export="al">
             <proto>void <name>alEventCallbackSOFT</name></proto>
@@ -2840,7 +2840,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectInteger"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALint</ptype> *<name>iValue</name></param>
+            <param><ptype>ALint</ptype> *<name>piValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetEffectivDirect</name></proto>
@@ -2854,7 +2854,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectFloat"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
+            <param><ptype>ALfloat</ptype> *<name>pflValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetEffectfvDirect</name></proto>
@@ -2913,7 +2913,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterInteger"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALint</ptype> *<name>iValue</name></param>
+            <param><ptype>ALint</ptype> *<name>piValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetFilterivDirect</name></proto>
@@ -2927,7 +2927,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterFloat"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
+            <param><ptype>ALfloat</ptype> *<name>pflValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetFilterfvDirect</name></proto>
@@ -2986,7 +2986,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotInteger"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALint</ptype> *<name>iValue</name></param>
+            <param><ptype>ALint</ptype> *<name>piValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetAuxiliaryEffectSlotivDirect</name></proto>
@@ -3000,7 +3000,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
-            <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
+            <param><ptype>ALfloat</ptype> *<name>pflValue</name></param>
         </command>
         <command>
             <proto>void <name>alGetAuxiliaryEffectSlotfvDirect</name></proto>
@@ -3012,7 +3012,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <command>
             <proto>void <name>alBufferDataStaticDirect</name></proto>
             <param><ptype>ALCcontext</ptype> *<name>context</name></param>
-            <param class="buffer">const <ptype>ALuint</ptype> <name>buffer</name></param>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
             <param len="size"><ptype>ALvoid</ptype> *<name>data</name></param>
             <param><ptype>ALsizei</ptype> <name>size</name></param>
@@ -3467,7 +3467,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <command export="alc">
             <proto>const <ptype>ALCchar</ptype>* <name>alcGetStringiSOFT</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
-            <param group="ContextString"><ptype>ALCenum</ptype> <name>param</name></param>
+            <param group="ContextString"><ptype>ALCenum</ptype> <name>paramName</name></param>
             <param><ptype>ALCsizei</ptype> <name>index</name></param>
         </command>
         <command export="alc">
@@ -3508,7 +3508,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <command>
             <proto><ptype>ALCvoid</ptype>* <name>alcGetProcAddress2</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
-            <param>const <ptype>ALCchar</ptype> *<name>funcname</name></param>
+            <param>const <ptype>ALCchar</ptype> *<name>funcName</name></param>
         </command>
         <command export="alc" funcpointer="PFNALCSETTHREADCONTEXTPROC">
             <proto><ptype>ALCboolean</ptype> <name>alcSetThreadContext</name></proto>

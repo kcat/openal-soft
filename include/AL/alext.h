@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-29 17:05:10.893816+00:00
+ * Last regenerated: 2025-09-29 17:12:10.270714+00:00
  */
 
 /* NOLINTBEGIN */
@@ -460,10 +460,10 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
 #define ALC_NUM_HRTF_SPECIFIERS_SOFT             0x1994
 #define ALC_HRTF_SPECIFIER_SOFT                  0x1995
 #define ALC_HRTF_ID_SOFT                         0x1996
-typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT17;
+typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index) ALC_API_NOEXCEPT17;
 typedef ALCboolean (ALC_APIENTRY *LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum param, ALCsizei index) ALC_API_NOEXCEPT;
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index) ALC_API_NOEXCEPT;
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT;
 #endif
 #endif
@@ -566,12 +566,12 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
     ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
 
-typedef void (AL_APIENTRY *LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, const ALboolean enable) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT17;
 typedef void* (AL_APIENTRY *LPALGETPOINTERSOFT)(ALenum pname) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETPOINTERVSOFT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, const ALboolean enable) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT;
 AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values) AL_API_NOEXCEPT;
@@ -753,7 +753,7 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #ifndef AL_EXT_direct_context
 #define AL_EXT_direct_context 1
 struct _GUID;
-typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT17;
+typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALENABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDISABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
@@ -841,9 +841,9 @@ typedef void (AL_APIENTRY *LPALEFFECTIDIRECT)(ALCcontext *context, ALuint effect
 typedef void (AL_APIENTRY *LPALEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALGENFILTERSDIRECT)(ALCcontext *context, ALsizei n, ALuint *filters) AL_API_NOEXCEPT17;
@@ -853,9 +853,9 @@ typedef void (AL_APIENTRY *LPALFILTERIDIRECT)(ALCcontext *context, ALuint filter
 typedef void (AL_APIENTRY *LPALFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALGENAUXILIARYEFFECTSLOTSDIRECT)(ALCcontext *context, ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT17;
@@ -865,12 +865,12 @@ typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, 
 typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
 
-typedef void (AL_APIENTRY *LPALBUFFERDATASTATICDIRECT)(ALCcontext *context, const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERDATASTATICDIRECT)(ALCcontext *context, ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALDEBUGMESSAGECALLBACKDIRECTEXT)(ALCcontext *context, ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDEBUGMESSAGEINSERTDIRECTEXT)(ALCcontext *context, ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
@@ -924,7 +924,7 @@ typedef ALenum (AL_APIENTRY *LPEAXGETDIRECT)(ALCcontext *context, const struct _
 typedef ALboolean (AL_APIENTRY *LPEAXSETBUFFERMODEDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETBUFFERMODEDIRECT)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcname) ALC_API_NOEXCEPT;
+ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT;
 
 void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
@@ -1012,9 +1012,9 @@ void AL_APIENTRY alEffectiDirect(ALCcontext *context, ALuint effect, ALenum para
 void AL_APIENTRY alEffectivDirect(ALCcontext *context, ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
 void AL_APIENTRY alEffectfDirect(ALCcontext *context, ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetEffectiDirect(ALCcontext *context, ALuint effect, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetEffectivDirect(ALCcontext *context, ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetEffectfDirect(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetEffectfvDirect(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alGenFiltersDirect(ALCcontext *context, ALsizei n, ALuint *filters) AL_API_NOEXCEPT;
@@ -1024,9 +1024,9 @@ void AL_APIENTRY alFilteriDirect(ALCcontext *context, ALuint filter, ALenum para
 void AL_APIENTRY alFilterivDirect(ALCcontext *context, ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
 void AL_APIENTRY alFilterfDirect(ALCcontext *context, ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetFilteriDirect(ALCcontext *context, ALuint filter, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetFilterivDirect(ALCcontext *context, ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetFilterfDirect(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetFilterfvDirect(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alGenAuxiliaryEffectSlotsDirect(ALCcontext *context, ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT;
@@ -1036,12 +1036,12 @@ void AL_APIENTRY alAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effect
 void AL_APIENTRY alAuxiliaryEffectSlotivDirect(ALCcontext *context, ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
 void AL_APIENTRY alAuxiliaryEffectSlotfDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alAuxiliaryEffectSlotfvDirect(ALCcontext *context, ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetAuxiliaryEffectSlotiDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetAuxiliaryEffectSlotivDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetAuxiliaryEffectSlotfDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetAuxiliaryEffectSlotfDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetAuxiliaryEffectSlotfvDirect(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
 
-void AL_APIENTRY alBufferDataStaticDirect(ALCcontext *context, const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
+void AL_APIENTRY alBufferDataStaticDirect(ALCcontext *context, ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alDebugMessageCallbackDirectEXT(ALCcontext *context, ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
 void AL_APIENTRY alDebugMessageInsertDirectEXT(ALCcontext *context, ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;

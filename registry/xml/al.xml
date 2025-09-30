@@ -3747,8 +3747,8 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         </require>
     </feature>
     <!-- NOTE: Taking an executive decision here to match the numbering with OpenAL.
-         However, we do add a ALC_VERISON_0_1 for compatibility. -->
-    <feature api="alc" name="ALC_VERISON_1_0" number="1.0">
+         However, we do add a ALC_VERSION_0_1 for compatibility. -->
+    <feature api="alc" name="ALC_VERSION_1_0" number="1.0">
         <require comment="Deprecated macros.">
             <type name="ALCAPI"/>
             <type name="ALCAPIENTRY"/>

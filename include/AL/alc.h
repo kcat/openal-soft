@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-30 18:35:49.733537+00:00
+ * Last regenerated: 2025-09-30 20:10:51.861018+00:00
  */
 
 /* NOLINTBEGIN */
@@ -60,8 +60,8 @@ extern "C" {
 #endif
 
 
-#ifndef ALC_VERISON_1_0
-#define ALC_VERISON_1_0 1
+#ifndef ALC_VERSION_1_0
+#define ALC_VERSION_1_0 1
 /* Deprecated macros. */
 #define ALCAPI                                   ALC_API
 #define ALCAPIENTRY                              ALC_APIENTRY

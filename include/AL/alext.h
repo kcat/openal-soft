@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-29 17:12:10.270714+00:00
+ * Last regenerated: 2025-09-30 18:35:49.735444+00:00
  */
 
 /* NOLINTBEGIN */
@@ -596,10 +596,10 @@ typedef void (AL_APIENTRY *LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, AL
 typedef void (AL_APIENTRY *LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetBuffer3PtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
 #endif
 #endif
 

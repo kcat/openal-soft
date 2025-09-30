@@ -2219,7 +2219,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param group="PointerPName"><ptype>ALenum</ptype> <name>pname</name></param>
             <param>void **<name>values</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alBufferCallbackSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
@@ -2227,13 +2227,13 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALBUFFERCALLBACKTYPESOFT</ptype> <name>callback</name></param>
             <param><ptype>ALvoid</ptype> *<name>userptr</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferPtrSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferPointerSOFT"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALvoid</ptype> **<name>ptr</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBuffer3PtrSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferPointerSOFT"><ptype>ALenum</ptype> <name>param</name></param>
@@ -2241,7 +2241,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALvoid</ptype> **<name>ptr1</name></param>
             <param><ptype>ALvoid</ptype> **<name>ptr2</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetBufferPtrvSOFT</name></proto>
             <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="BufferPointerSOFT"><ptype>ALenum</ptype> <name>param</name></param>

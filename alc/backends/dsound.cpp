@@ -35,6 +35,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <memory.h>
 #include <span>
 #include <string>
@@ -48,7 +49,6 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
@@ -138,7 +138,7 @@ auto CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     auto count = 1;
     auto newname = basename;
     while(checkName(devices, newname))
-        newname = fmt::format("{} #{}", basename, ++count);
+        newname = std::format("{} #{}", basename, ++count);
     const DevMap &newentry = devices.emplace_back(std::move(newname), *guid);
 
     auto *guidstr = LPOLESTR{};
@@ -153,7 +153,7 @@ auto CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
 
 
 struct DSoundPlayback final : public BackendBase {
-    explicit DSoundPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit DSoundPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~DSoundPlayback() override;
 
     int mixerProc();
@@ -523,7 +523,7 @@ void DSoundPlayback::stop()
 
 
 struct DSoundCapture final : public BackendBase {
-    explicit DSoundCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit DSoundCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~DSoundCapture() override;
 
     void open(std::string_view name) override;
@@ -818,7 +818,8 @@ auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     return outnames;
 }
 
-BackendPtr DSoundBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto DSoundBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new DSoundPlayback{device}};

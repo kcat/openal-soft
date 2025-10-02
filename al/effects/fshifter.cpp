@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -38,7 +39,7 @@ constexpr ALenum EnumFromDirection(FShifterDirection dir)
     case FShifterDirection::Up: return AL_FREQUENCY_SHIFTER_DIRECTION_UP;
     case FShifterDirection::Off: return AL_FREQUENCY_SHIFTER_DIRECTION_OFF;
     }
-    throw std::runtime_error{fmt::format("Invalid direction: {}", int{al::to_underlying(dir)})};
+    throw std::runtime_error{std::format("Invalid direction: {}", int{al::to_underlying(dir)})};
 }
 
 consteval EffectProps genDefaultProps() noexcept
@@ -56,7 +57,7 @@ consteval EffectProps genDefaultProps() noexcept
 
 constinit const EffectProps FshifterEffectProps(genDefaultProps());
 
-void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props, ALenum param, int val)
+void FshifterEffectHandler::SetParami(al::Context *context, FshifterProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -80,10 +81,10 @@ void FshifterEffectHandler::SetParami(ALCcontext *context, FshifterProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::SetParamiv(ALCcontext *context, FshifterProps &props, ALenum param, const int *vals)
+void FshifterEffectHandler::SetParamiv(al::Context *context, FshifterProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void FshifterEffectHandler::SetParamf(ALCcontext *context, FshifterProps &props, ALenum param, float val)
+void FshifterEffectHandler::SetParamf(al::Context *context, FshifterProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -97,10 +98,10 @@ void FshifterEffectHandler::SetParamf(ALCcontext *context, FshifterProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::SetParamfv(ALCcontext *context, FshifterProps &props, ALenum param, const float *vals)
+void FshifterEffectHandler::SetParamfv(al::Context *context, FshifterProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void FshifterEffectHandler::GetParami(ALCcontext *context, const FshifterProps &props, ALenum param, int *val)
+void FshifterEffectHandler::GetParami(al::Context *context, const FshifterProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -115,10 +116,10 @@ void FshifterEffectHandler::GetParami(ALCcontext *context, const FshifterProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::GetParamiv(ALCcontext *context, const FshifterProps &props, ALenum param, int *vals)
+void FshifterEffectHandler::GetParamiv(al::Context *context, const FshifterProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
-void FshifterEffectHandler::GetParamf(ALCcontext *context, const FshifterProps &props, ALenum param, float *val)
+void FshifterEffectHandler::GetParamf(al::Context *context, const FshifterProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -128,7 +129,7 @@ void FshifterEffectHandler::GetParamf(ALCcontext *context, const FshifterProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid frequency shifter float property {:#04x}",
         as_unsigned(param));
 }
-void FshifterEffectHandler::GetParamfv(ALCcontext *context, const FshifterProps &props, ALenum param, float *vals)
+void FshifterEffectHandler::GetParamfv(al::Context *context, const FshifterProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
@@ -181,7 +182,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct FrequencyShifterCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
@@ -192,7 +193,7 @@ template<> [[noreturn]]
 void FrequencyShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props)
+auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXFREQUENCYSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

@@ -241,7 +241,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<VmorpherProps>(*props_);
-    const auto *device = context->mDevice;
+    const auto device = al::get_not_null(context->mDevice);
     const auto frequency = static_cast<float>(device->mSampleRate);
     const auto step = props.Rate / frequency;
     mStep = fastf2u(std::clamp(step*WaveformFracOne, 0.0f, WaveformFracOne-1.0f));
@@ -344,5 +344,5 @@ struct VmorpherStateFactory final : public EffectStateFactory {
 auto VmorpherStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static VmorpherStateFactory VmorpherFactory{};
-    return &VmorpherFactory;
+    return gsl::make_not_null(&VmorpherFactory);
 }

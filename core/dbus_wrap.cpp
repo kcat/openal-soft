@@ -23,9 +23,8 @@ void PrepareDBus()
         return;
     }
 
-    static constexpr auto load_func = [](auto &func, const gsl::czstring name) -> bool
+    static constexpr auto load_func = []<typename T>(T &func, const gsl::czstring name) -> bool
     {
-        using func_t = std::remove_reference_t<decltype(func)>;
         auto funcresult = GetSymbol(dbus_handle, name);
         if(!funcresult)
         {
@@ -33,7 +32,7 @@ void PrepareDBus()
             return false;
         }
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-        func = reinterpret_cast<func_t>(funcresult.value());
+        func = reinterpret_cast<T>(funcresult.value());
         return true;
     };
     auto ok = true;

@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -39,7 +40,7 @@ constexpr auto EnumFromWaveform(ModulatorWaveform type) -> ALenum
     case ModulatorWaveform::Sawtooth: return AL_RING_MODULATOR_SAWTOOTH;
     case ModulatorWaveform::Square: return AL_RING_MODULATOR_SQUARE;
     }
-    throw std::runtime_error{fmt::format("Invalid modulator waveform: {}",
+    throw std::runtime_error{std::format("Invalid modulator waveform: {}",
         int{al::to_underlying(type)})};
 }
 
@@ -56,7 +57,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps ModulatorEffectProps(genDefaultProps());
 
-void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &props, ALenum param, int val)
+void ModulatorEffectHandler::SetParami(al::Context *context, ModulatorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -77,10 +78,10 @@ void ModulatorEffectHandler::SetParami(ALCcontext *context, ModulatorProps &prop
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamiv(ALCcontext *context, ModulatorProps &props, ALenum param, const int *vals)
+void ModulatorEffectHandler::SetParamiv(al::Context *context, ModulatorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &props, ALenum param, float val)
+void ModulatorEffectHandler::SetParamf(al::Context *context, ModulatorProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -101,10 +102,10 @@ void ModulatorEffectHandler::SetParamf(ALCcontext *context, ModulatorProps &prop
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamfv(ALCcontext *context, ModulatorProps &props, ALenum param, const float *vals)
+void ModulatorEffectHandler::SetParamfv(al::Context *context, ModulatorProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps &props, ALenum param, int *val)
+void ModulatorEffectHandler::GetParami(al::Context *context, const ModulatorProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -116,9 +117,9 @@ void ModulatorEffectHandler::GetParami(ALCcontext *context, const ModulatorProps
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamiv(ALCcontext *context, const ModulatorProps &props, ALenum param, int *vals)
+void ModulatorEffectHandler::GetParamiv(al::Context *context, const ModulatorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps &props, ALenum param, float *val)
+void ModulatorEffectHandler::GetParamf(al::Context *context, const ModulatorProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -129,7 +130,7 @@ void ModulatorEffectHandler::GetParamf(ALCcontext *context, const ModulatorProps
     context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamfv(ALCcontext *context, const ModulatorProps &props, ALenum param, float *vals)
+void ModulatorEffectHandler::GetParamfv(al::Context *context, const ModulatorProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
@@ -182,7 +183,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct ModulatorCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
@@ -193,7 +194,7 @@ template<> [[noreturn]]
 void ModulatorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props)
+auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXRINGMODULATORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

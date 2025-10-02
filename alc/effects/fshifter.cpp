@@ -129,7 +129,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<FshifterProps>(*props_);
-    const auto *device = context->mDevice;
+    auto const device = al::get_not_null(context->mDevice);
 
     const auto step = props.Frequency / static_cast<float>(device->mSampleRate);
     std::ranges::fill(mChans | std::views::transform(&OutParams::mPhaseStep),
@@ -248,5 +248,5 @@ struct FshifterStateFactory final : public EffectStateFactory {
 auto FshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static FshifterStateFactory FshifterFactory{};
-    return &FshifterFactory;
+    return gsl::make_not_null(&FshifterFactory);
 }

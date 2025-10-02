@@ -204,8 +204,9 @@ void LoadConfigFromFile(std::istream &f)
 
         if(not validate_utf8(buffer))
         {
-            ERR(" config parse error: non-UTF-8 characters on line {}:", linenum);
-            ERR("  {::#04x}", buffer|std::views::transform([](auto c) { return as_unsigned(c); }));
+            ERR(" config parse error: non-UTF-8 characters on line {}", linenum);
+            ERR("{}", fmt::format("  {::#04x}",
+                buffer|std::views::transform([](auto c) { return as_unsigned(c); })));
             continue;
         }
 
@@ -259,11 +260,11 @@ void LoadConfigFromFile(std::istream &f)
                     else if(section[1] >= 'A' && section[1] <= 'F')
                         b = (section[1]-'A'+0x0a) << 4;
                     if(section[2] >= '0' && section[2] <= '9')
-                        b |= (section[2]-'0');
+                        b |= section[2]-'0';
                     else if(section[2] >= 'a' && section[2] <= 'f')
-                        b |= (section[2]-'a'+0xa);
+                        b |= section[2]-'a'+0xa;
                     else if(section[2] >= 'A' && section[2] <= 'F')
-                        b |= (section[2]-'A'+0x0a);
+                        b |= section[2]-'A'+0x0a;
                     curSection += gsl::narrow_cast<char>(b);
                     section.remove_prefix(3);
                 }

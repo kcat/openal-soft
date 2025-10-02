@@ -29,6 +29,7 @@
 #include <string_view>
 #include <utility>
 
+#include "alnumeric.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
@@ -91,7 +92,7 @@ void EnumeratePlaybackDevices()
 
 
 struct Sdl3Backend final : public BackendBase {
-    explicit Sdl3Backend(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit Sdl3Backend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~Sdl3Backend() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
@@ -251,8 +252,7 @@ auto Sdl3Backend::reset() -> bool
         }
     }
     if(mDevice->Flags.test(ChannelsRequest) || want.channels < 1)
-        want.channels = gsl::narrow_cast<int>(std::min<uint>(mDevice->channelsFromFmt(),
-            std::numeric_limits<int>::max()));
+        want.channels = al::saturate_cast<int>(mDevice->channelsFromFmt());
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
     if(!mStream)
@@ -373,7 +373,8 @@ auto SDL3BackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto SDL3BackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto SDL3BackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl3Backend{device}};

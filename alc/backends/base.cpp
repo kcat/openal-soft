@@ -11,10 +11,10 @@
 
 
 namespace al {
-auto backend_exception::make_string(fmt::string_view fmt, fmt::format_args args) -> std::string
-{ return fmt::vformat(fmt, std::move(args)); }
 
-backend_exception::~backend_exception() = default;
+auto backend_exception::make_string(std::string_view fmt, std::format_args args) -> std::string
+{ return std::vformat(fmt, std::move(args)); }
+
 } // namespace al
 
 

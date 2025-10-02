@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -50,7 +51,6 @@
 #include "core/device.h"
 #include "core/logging.h"
 #include "dynload.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -355,7 +355,7 @@ public:
             TRACE("Default playback device: {}", default_sink);
             DefaultPlaybackDevName = default_sink;
 
-            const auto msg = fmt::format("Default playback device changed: {}", default_sink);
+            const auto msg = std::format("Default playback device changed: {}", default_sink);
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback, msg);
         }
         if(default_src != DefaultCaptureDevName)
@@ -363,7 +363,7 @@ public:
             TRACE("Default capture device: {}", default_src);
             DefaultCaptureDevName = default_src;
 
-            const auto msg = fmt::format("Default capture device changed: {}", default_src);
+            const auto msg = std::format("Default capture device changed: {}", default_src);
             alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture, msg);
         }
         signal();
@@ -387,14 +387,14 @@ public:
         auto count = 1;
         auto newname = std::string{info->description};
         while(checkName(PlaybackDevices, newname))
-            newname = fmt::format("{} #{}", info->description, ++count);
+            newname = std::format("{} #{}", info->description, ++count);
 
         const auto &newentry = PlaybackDevices.emplace_back(DevMap{std::move(newname),
             info->name, info->index});
         TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
             newentry.index);
 
-        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        const auto msg = std::format("Device added: {}", newentry.device_name);
         alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Playback, msg);
     }
 
@@ -416,14 +416,14 @@ public:
         auto count = 1;
         auto newname = std::string{info->description};
         while(checkName(CaptureDevices, newname))
-            newname = fmt::format("{} #{}", info->description, ++count);
+            newname = std::format("{} #{}", info->description, ++count);
 
         const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name,
             info->index});
         TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
             newentry.index);
 
-        const auto msg = fmt::format("Device added: {}", newentry.device_name);
+        const auto msg = std::format("Device added: {}", newentry.device_name);
         alc::Event(alc::EventType::DeviceAdded, alc::DeviceType::Capture, msg);
     }
 
@@ -477,7 +477,7 @@ public:
             {
                 devlist.erase(iter);
 
-                const auto msg = fmt::format("Device removed: {}", idx);
+                const auto msg = std::format("Device removed: {}", idx);
                 alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
             }
         }
@@ -506,7 +506,7 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     }
 
 
-    void setEventHandler()
+    void setEventHandler() const
     {
         auto *context = mutex()->mContext;
 
@@ -546,14 +546,14 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     }
 
 
-    void contextStateCallback(pa_context *context) noexcept
+    void contextStateCallback(pa_context *context) const noexcept
     {
         const auto state = pa_context_get_state(context);
         if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
             mutex()->signal();
     }
 
-    void streamStateCallback(pa_stream *stream) noexcept
+    void streamStateCallback(pa_stream *stream) const noexcept
     {
         const auto state = pa_stream_get_state(stream);
         if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
@@ -602,7 +602,7 @@ void MainloopUniqueLock::connectContext()
     auto err = pa_context_connect(mutex()->mContext, nullptr, pulse_ctx_flags, nullptr);
     if(err >= 0)
     {
-        wait([&err,this]()
+        wait([&err,this]
         {
             auto state = pa_context_get_state(mutex()->mContext);
             if(!PA_CONTEXT_IS_GOOD(state))
@@ -648,7 +648,7 @@ auto MainloopUniqueLock::connectStream(const char *device_name, pa_stream_flags_
             stream_id, pa_strerror(err)};
     }
 
-    wait([&err,stream,stream_id,this]()
+    wait([&err,stream,stream_id,this]
     {
         auto state = pa_stream_get_state(stream);
         if(!PA_STREAM_IS_GOOD(state))
@@ -686,12 +686,12 @@ auto gGlobalMainloop = PulseMainloop{};
 
 
 struct PulsePlayback final : public BackendBase {
-    explicit PulsePlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulsePlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
-    void streamStateCallback(pa_stream *stream) noexcept;
-    void streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept;
+    void streamStateCallback(pa_stream *stream) const noexcept;
+    void streamWriteCallback(pa_stream *stream, size_t nbytes) const noexcept;
     void sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
@@ -730,7 +730,7 @@ void PulsePlayback::bufferAttrCallback(pa_stream *stream) noexcept
     TRACE("minreq={}, tlength={}, prebuf={}", mAttr.minreq, mAttr.tlength, mAttr.prebuf);
 }
 
-void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
+void PulsePlayback::streamStateCallback(pa_stream *stream) const noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
@@ -740,7 +740,7 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
     mMainloop.signal();
 }
 
-void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept
+void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) const noexcept
 {
     do {
         auto free_func = pa_free_cb_t{nullptr};
@@ -1114,10 +1114,10 @@ auto PulsePlayback::getClockLatency() -> ClockLatency
 
 
 struct PulseCapture final : public BackendBase {
-    explicit PulseCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit PulseCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
-    void streamStateCallback(pa_stream *stream) noexcept;
+    void streamStateCallback(pa_stream *stream) const noexcept;
     void sourceNameCallback(pa_context *context, const pa_source_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
 
@@ -1149,7 +1149,7 @@ PulseCapture::~PulseCapture()
 { if(mStream) mMainloop.close(mStream); }
 
 
-void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
+void PulseCapture::streamStateCallback(pa_stream *stream) const noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
@@ -1393,7 +1393,7 @@ auto PulseCapture::availableSamples() -> uint
     }
 
     /* Avoid uint overflow, and avoid decreasing the readable count. */
-    readable = std::min<size_t>(readable, std::numeric_limits<uint>::max());
+    readable = al::saturate_cast<uint>(readable);
     mLastReadable = std::max(mLastReadable, gsl::narrow_cast<uint>(readable));
     return mLastReadable / gsl::narrow_cast<uint>(pa_frame_size(&mSpec));
 }
@@ -1535,7 +1535,8 @@ auto PulseBackendFactory::enumerate(BackendType type) -> std::vector<std::string
     return outnames;
 }
 
-auto PulseBackendFactory::createBackend(DeviceBase *device, BackendType type) -> BackendPtr
+auto PulseBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PulsePlayback{device}};

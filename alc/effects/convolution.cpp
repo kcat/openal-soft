@@ -102,9 +102,9 @@ inline void LoadSampleArray(const std::span<float> dstSamples,
 void LoadSamples(const std::span<float> dstSamples, const SampleVariant &src, const size_t channel,
     const size_t srcstep) noexcept
 {
-    std::visit([&](auto&& splvec)
+    std::visit([&]<typename T>(T&& splvec)
     {
-        using span_t = std::remove_cvref_t<decltype(splvec)>;
+        using span_t = std::remove_cvref_t<T>;
         using sample_t = span_t::value_type;
         if constexpr(!std::is_same_v<sample_t,IMA4Data> && !std::is_same_v<sample_t,MSADPCMData>)
             LoadSampleArray<sample_t>(dstSamples, splvec, channel, srcstep);
@@ -149,8 +149,6 @@ struct ChanPosMap {
     std::array<float,3> pos;
 };
 
-
-using complex_f = std::complex<float>;
 
 constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
@@ -334,7 +332,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     mComplexData.resize(complex_length, 0.0f);
 
     /* Load the samples from the buffer. */
-    const auto srclinelength = size_t{RoundUp(buffer->mSampleLen+DecoderPadding, 16_uz)};
+    const auto srclinelength = size_t{RoundFromZero(buffer->mSampleLen+DecoderPadding, 16_uz)};
     auto srcsamples = std::vector<float>(srclinelength * numChannels);
     std::ranges::fill(srcsamples, 0.0f);
     for(const auto c : std::views::iota(0_uz, std::min<size_t>(numChannels, realChannels)))
@@ -486,7 +484,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     const float gain{slot->Gain};
     if(IsAmbisonic(mChannels))
     {
-        DeviceBase *device{context->mDevice};
+        auto const device = al::get_not_null(context->mDevice);
         if(mChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device->mPostProcess))
         {
             mMix = &ConvolutionState::UpsampleMix;
@@ -546,8 +544,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
     }
     else
     {
-        DeviceBase *device{context->mDevice};
-        std::span<const ChanPosMap> chanmap{};
+        auto const device = al::get_not_null(context->mDevice);
+        auto chanmap = std::span<const ChanPosMap>{};
         switch(mChannels)
         {
         case FmtMono: chanmap = MonoMap; break;
@@ -727,5 +725,5 @@ struct ConvolutionStateFactory final : public EffectStateFactory {
 auto ConvolutionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static ConvolutionStateFactory ConvolutionFactory{};
-    return &ConvolutionFactory;
+    return gsl::make_not_null(&ConvolutionFactory);
 }

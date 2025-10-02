@@ -98,9 +98,9 @@ struct EaxReverbCommitter {
     }
 
 
-    bool commit(const EAX_REVERBPROPERTIES &props);
-    bool commit(const EAX20LISTENERPROPERTIES &props);
-    bool commit(const EAXREVERBPROPERTIES &props);
+    auto commit(const EAX_REVERBPROPERTIES &props) const -> bool;
+    auto commit(const EAX20LISTENERPROPERTIES &props) const -> bool;
+    auto commit(const EAXREVERBPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EAX_REVERBPROPERTIES &props);
     static void SetDefaults(EAX20LISTENERPROPERTIES &props);
@@ -151,7 +151,7 @@ struct EaxAutowahCommitter : public EaxCommitter<EaxAutowahCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXAUTOWAHPROPERTIES &props);
+    auto commit(const EAXAUTOWAHPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props);
@@ -162,7 +162,7 @@ struct EaxChorusCommitter : public EaxCommitter<EaxChorusCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXCHORUSPROPERTIES &props);
+    auto commit(const EAXCHORUSPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props);
@@ -173,7 +173,7 @@ struct EaxCompressorCommitter : public EaxCommitter<EaxCompressorCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXAGCCOMPRESSORPROPERTIES &props);
+    auto commit(const EAXAGCCOMPRESSORPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXAGCCOMPRESSORPROPERTIES &props);
@@ -184,7 +184,7 @@ struct EaxDistortionCommitter : public EaxCommitter<EaxDistortionCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXDISTORTIONPROPERTIES &props);
+    auto commit(const EAXDISTORTIONPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props);
@@ -195,7 +195,7 @@ struct EaxEchoCommitter : public EaxCommitter<EaxEchoCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXECHOPROPERTIES &props);
+    auto commit(const EAXECHOPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXECHOPROPERTIES &props);
@@ -206,7 +206,7 @@ struct EaxEqualizerCommitter : public EaxCommitter<EaxEqualizerCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXEQUALIZERPROPERTIES &props);
+    auto commit(const EAXEQUALIZERPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props);
@@ -217,7 +217,7 @@ struct EaxFlangerCommitter : public EaxCommitter<EaxFlangerCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXFLANGERPROPERTIES &props);
+    auto commit(const EAXFLANGERPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props);
@@ -228,7 +228,7 @@ struct EaxFrequencyShifterCommitter : public EaxCommitter<EaxFrequencyShifterCom
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXFREQUENCYSHIFTERPROPERTIES &props);
+    auto commit(const EAXFREQUENCYSHIFTERPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXFREQUENCYSHIFTERPROPERTIES &props);
@@ -239,7 +239,7 @@ struct EaxModulatorCommitter : public EaxCommitter<EaxModulatorCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXRINGMODULATORPROPERTIES &props);
+    auto commit(const EAXRINGMODULATORPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXRINGMODULATORPROPERTIES &props);
@@ -250,7 +250,7 @@ struct EaxPitchShifterCommitter : public EaxCommitter<EaxPitchShifterCommitter> 
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXPITCHSHIFTERPROPERTIES &props);
+    auto commit(const EAXPITCHSHIFTERPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXPITCHSHIFTERPROPERTIES &props);
@@ -261,7 +261,7 @@ struct EaxVocalMorpherCommitter : public EaxCommitter<EaxVocalMorpherCommitter> 
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const EAXVOCALMORPHERPROPERTIES &props);
+    auto commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props);
@@ -272,7 +272,7 @@ struct EaxNullCommitter : public EaxCommitter<EaxNullCommitter> {
         : EaxCommitter{eaxprops, alprops}
     { }
 
-    bool commit(const std::monostate &props);
+    auto commit(const std::monostate &props) const -> bool;
 
     static void SetDefaults(EaxEffectProps &props);
     static void Get(const EaxCall &call, const std::monostate &props);

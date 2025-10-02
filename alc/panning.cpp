@@ -41,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "alc/context.h"
@@ -342,7 +341,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
         /* Round up to the next 4th sample, so each channel buffer starts
          * 16-byte aligned.
          */
-        total += RoundUp(ChanDelay[idx].Length, 4);
+        total += RoundFromZero(ChanDelay[idx].Length, 4);
     }
 
     if(total > 0)
@@ -356,7 +355,7 @@ void InitDistanceComp(al::Device *device, const std::span<const Channel> channel
             auto ret = DistanceComp::ChanData{};
             ret.Buffer = std::span{chanbuffer, data.Length};
             ret.Gain = data.Gain;
-            std::advance(chanbuffer, RoundUp(data.Length, 4));
+            std::advance(chanbuffer, RoundFromZero(data.Length, 4));
             return ret;
         });
         device->ChannelDelays = std::move(chandelays);
@@ -761,7 +760,7 @@ auto InitPanning(al::Device *device, const bool hqdec=false, const bool stablize
     auto chancoeffslf = std::vector<ChannelDec>{};
     for(const auto i : std::views::iota(0_uz, decoder.mChannels.size()))
     {
-        const auto idx = size_t{device->channelIdxByName(decoder.mChannels[i])};
+        const auto idx = size_t{device->RealOut.ChannelIndex[decoder.mChannels[i]]};
         if(idx == InvalidChannelIndex)
         {
             ERR("Failed to find {} channel in device",
@@ -1220,7 +1219,7 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         case DevFmtX71: layout = "surround71"sv; break;
         case DevFmtX714: layout = "surround714"sv; break;
         case DevFmtX7144: layout = "surround7144"sv; break;
-        case DevFmtX3D71: layout = "surround3d71"sv; break;
+        case DevFmtX3D71: layout = "3d71"sv; break;
         /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
         case DevFmtMono:
         case DevFmtStereo:
@@ -1234,7 +1233,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         auto usingCustom = false;
         if(!layout.empty())
         {
-            if(auto decopt = device->configValue<std::string>("decoder", layout))
+            auto decopt = device->configValue<std::string>("decoder", layout);
+            if(!decopt && layout == "3d71"sv)
+                decopt = device->configValue<std::string>("decoder", "surround3d71");
+            if(decopt)
                 usingCustom = LoadAmbDecConfig(*decopt, device, decoder_store, decoder,
                     speakerdists);
         }
@@ -1252,19 +1254,21 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
         auto postproc = InitPanning(device, hqdec, stablize, decoder);
         if(decoder)
         {
-            const auto spkr_count = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
-                [](const float curvalue, const float dist) noexcept -> float
-            { return curvalue + ((dist > 0.0f) ? 1.0f : 0.0f); });
-
+            auto dist_scale = 0.0f;
             const auto accum_dist = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
-                [](const float curvalue, const float dist) noexcept -> float
-            { return curvalue + ((dist > 0.0f) ? dist : 0.0f); });
+                [&dist_scale](const float curvalue, const float dist) noexcept -> float
+            {
+                if(!(dist > 0.0f))
+                    return curvalue;
+                dist_scale += 1.0f;
+                return std::lerp(curvalue, dist, 1.0f/dist_scale);
+            });
 
-            const auto avg_dist = (accum_dist > 0.0f && spkr_count > 0) ? accum_dist/spkr_count :
+            const auto avg_dist = (accum_dist > 0.0f) ? accum_dist :
                 device->configValue<float>("decoder", "speaker-dist").value_or(1.0f);
             InitNearFieldCtrl(device, avg_dist, decoder.mOrder, decoder.m3DMode);
 
-            if(spkr_count > 0)
+            if(accum_dist > 0.0f)
                 InitDistanceComp(device, decoder.mChannels, speakerdists);
         }
         if(postproc.stablizer)
@@ -1331,10 +1335,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
-        static constexpr auto init_encoder = [](auto arg)
+        static constexpr auto init_encoder = []<typename T>(T arg [[maybe_unused]])
             -> std::pair<std::unique_ptr<UhjEncoderBase>, std::string_view>
         {
-            using encoder_t = typename decltype(arg)::encoder_t;
+            using encoder_t = T::encoder_t;
             return {std::make_unique<encoder_t>(), encoder_t::TypeName()};
         };
 
@@ -1381,10 +1385,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 }
 
 
-void aluInitEffectPanning(EffectSlot *slot, ALCcontext *context)
+void aluInitEffectPanning(EffectSlot *slot, al::Context *context)
 {
-    auto *device = context->mDevice;
-    const auto count = AmbiChannelsFromOrder(device->mAmbiOrder);
+    auto const device = al::get_not_null(context->mDevice);
+    auto const count = AmbiChannelsFromOrder(device->mAmbiOrder);
 
     slot->mWetBuffer.resize(count);
 

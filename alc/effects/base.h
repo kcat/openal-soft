@@ -11,21 +11,21 @@
 inline float ReverbBoost{1.0f};
 
 
-gsl::not_null<EffectStateFactory*> NullStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> ReverbStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> ChorusStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> AutowahStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> CompressorStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> DistortionStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> EchoStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> EqualizerStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> FshifterStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> ModulatorStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> PshifterStateFactory_getFactory();
-gsl::not_null<EffectStateFactory*> VmorpherStateFactory_getFactory();
+auto NullStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto ReverbStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto ChorusStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto AutowahStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto CompressorStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto DistortionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto EchoStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto EqualizerStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto FshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto ModulatorStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto PshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
+auto VmorpherStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
 
-gsl::not_null<EffectStateFactory*> DedicatedStateFactory_getFactory();
+auto DedicatedStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
 
-gsl::not_null<EffectStateFactory*> ConvolutionStateFactory_getFactory();
+auto ConvolutionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>;
 
 #endif /* EFFECTS_BASE_H */

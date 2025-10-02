@@ -25,6 +25,7 @@
 #endif
 
 #include "almalloc.h"
+#include "gsl/gsl"
 
 namespace {
 
@@ -33,7 +34,7 @@ struct BackendNamePair {
     QString backend_name;
     QString full_string;
 };
-const std::array backendList{
+const auto backendList = std::array{
 #if HAVE_PIPEWIRE
     BackendNamePair{ QStringLiteral("pipewire"), QStringLiteral("PipeWire") },
 #endif
@@ -84,7 +85,7 @@ struct NameValuePair {
     QString name;
     QString value;
 };
-const std::array speakerModeList{
+const auto speakerModeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Mono"), QStringLiteral("mono") },
     NameValuePair{ QStringLiteral("Stereo"), QStringLiteral("stereo") },
@@ -92,14 +93,14 @@ const std::array speakerModeList{
     NameValuePair{ QStringLiteral("5.1 Surround"), QStringLiteral("surround51") },
     NameValuePair{ QStringLiteral("6.1 Surround"), QStringLiteral("surround61") },
     NameValuePair{ QStringLiteral("7.1 Surround"), QStringLiteral("surround71") },
-    NameValuePair{ QStringLiteral("3D7.1 Surround"), QStringLiteral("surround3d71") },
+    NameValuePair{ QStringLiteral("3D7.1"), QStringLiteral("3d71") },
 
     NameValuePair{ QStringLiteral("Ambisonic, 1st Order"), QStringLiteral("ambi1") },
     NameValuePair{ QStringLiteral("Ambisonic, 2nd Order"), QStringLiteral("ambi2") },
     NameValuePair{ QStringLiteral("Ambisonic, 3rd Order"), QStringLiteral("ambi3") },
     NameValuePair{ QStringLiteral("Ambisonic, 4th Order"), QStringLiteral("ambi4") },
 };
-const std::array sampleTypeList{
+const auto sampleTypeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("8-bit int"), QStringLiteral("int8") },
     NameValuePair{ QStringLiteral("8-bit uint"), QStringLiteral("uint8") },
@@ -109,7 +110,7 @@ const std::array sampleTypeList{
     NameValuePair{ QStringLiteral("32-bit uint"), QStringLiteral("uint32") },
     NameValuePair{ QStringLiteral("32-bit float"), QStringLiteral("float32") },
 };
-const std::array resamplerList{
+const auto resamplerList = std::array{
     NameValuePair{ QStringLiteral("Point"), QStringLiteral("point") },
     NameValuePair{ QStringLiteral("Linear"), QStringLiteral("linear") },
     NameValuePair{ QStringLiteral("Cubic Spline"), QStringLiteral("spline") },
@@ -122,25 +123,25 @@ const std::array resamplerList{
     NameValuePair{ QStringLiteral("47th order Sinc (fast)"), QStringLiteral("fast_bsinc48") },
     NameValuePair{ QStringLiteral("47th order Sinc"), QStringLiteral("bsinc48") },
 };
-const std::array stereoModeList{
+const auto stereoModeList = std::array{
     NameValuePair{ QStringLiteral("Autodetect"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Speakers"), QStringLiteral("speakers") },
     NameValuePair{ QStringLiteral("Headphones"), QStringLiteral("headphones") },
 };
-const std::array stereoEncList{
+const auto stereoEncList = std::array{
     NameValuePair{ QStringLiteral("Default"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Basic"), QStringLiteral("panpot") },
     NameValuePair{ QStringLiteral("UHJ"), QStringLiteral("uhj") },
     NameValuePair{ QStringLiteral("Binaural"), QStringLiteral("hrtf") },
 };
-const std::array ambiFormatList{
+const auto ambiFormatList = std::array{
     NameValuePair{ QStringLiteral("Default"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("AmbiX (ACN, SN3D)"), QStringLiteral("ambix") },
     NameValuePair{ QStringLiteral("Furse-Malham"), QStringLiteral("fuma") },
     NameValuePair{ QStringLiteral("ACN, N3D"), QStringLiteral("acn+n3d") },
     NameValuePair{ QStringLiteral("ACN, FuMa"), QStringLiteral("acn+fuma") },
 };
-const std::array hrtfModeList{
+const auto hrtfModeList = std::array{
     NameValuePair{ QStringLiteral("1st Order Ambisonic"), QStringLiteral("ambi1") },
     NameValuePair{ QStringLiteral("2nd Order Ambisonic"), QStringLiteral("ambi2") },
     NameValuePair{ QStringLiteral("3rd Order Ambisonic"), QStringLiteral("ambi3") },
@@ -154,13 +155,12 @@ auto GetDefaultIndex(const std::span<const NameValuePair> list) -> uint8_t
 {
     auto iter = std::ranges::find(list, QStringLiteral(""), &NameValuePair::value);
     if(iter != list.end())
-        return static_cast<uint8_t>(std::distance(list.begin(), iter));
+        return gsl::narrow<uint8_t>(std::distance(list.begin(), iter));
     throw std::runtime_error{"Failed to find default entry"};
 }
 
 #ifdef Q_OS_WIN32
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-using WCharBufferPtr = std::unique_ptr<WCHAR[], decltype([](void *buffer)
+using WCharBufferPtr = std::unique_ptr<WCHAR, decltype([](WCHAR *buffer)
     { CoTaskMemFree(buffer); })>;
 #endif
 
@@ -542,7 +542,7 @@ void MainWindow::showAboutPage()
 }
 
 
-QStringList MainWindow::collectHrtfs()
+auto MainWindow::collectHrtfs() const -> QStringList
 {
     QStringList ret;
     QStringList processed;
@@ -760,7 +760,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoder51LineEdit->setText(settings.value(QStringLiteral("decoder/surround51")).toString());
     ui->decoder61LineEdit->setText(settings.value(QStringLiteral("decoder/surround61")).toString());
     ui->decoder71LineEdit->setText(settings.value(QStringLiteral("decoder/surround71")).toString());
-    ui->decoder3D71LineEdit->setText(settings.value(QStringLiteral("decoder/surround3d71")).toString());
+    ui->decoder3D71LineEdit->setText(settings.value(QStringLiteral("decoder/3d71")).toString());
 
     QStringList disabledCpuExts{settings.value(QStringLiteral("disable-cpu-exts")).toStringList()};
     if(disabledCpuExts.size() == 1)
@@ -1021,7 +1021,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue(QStringLiteral("decoder/surround51"), ui->decoder51LineEdit->text());
     settings.setValue(QStringLiteral("decoder/surround61"), ui->decoder61LineEdit->text());
     settings.setValue(QStringLiteral("decoder/surround71"), ui->decoder71LineEdit->text());
-    settings.setValue(QStringLiteral("decoder/surround3d71"), ui->decoder3D71LineEdit->text());
+    settings.setValue(QStringLiteral("decoder/3d71"), ui->decoder3D71LineEdit->text());
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())
@@ -1294,12 +1294,12 @@ void MainWindow::removeHrtfFile()
     QList<gsl::owner<QListWidgetItem*>> selected{ui->hrtfFileList->selectedItems()};
     if(!selected.isEmpty())
     {
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
 }
 
-void MainWindow::updateHrtfRemoveButton()
+void MainWindow::updateHrtfRemoveButton() const
 {
     ui->hrtfRemoveButton->setEnabled(!ui->hrtfFileList->selectedItems().empty());
 }
@@ -1329,7 +1329,7 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     if(gotAction == removeAction)
     {
         QList<gsl::owner<QListWidgetItem*>> selected{ui->enabledBackendList->selectedItems()};
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)
@@ -1366,7 +1366,7 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     if(gotAction == removeAction)
     {
         QList<gsl::owner<QListWidgetItem*>> selected{ui->disabledBackendList->selectedItems()};
-        std::for_each(selected.begin(), selected.end(), std::default_delete<QListWidgetItem>{});
+        std::ranges::for_each(selected, std::default_delete<QListWidgetItem>{});
         enableApplyButton();
     }
     else if(gotAction != nullptr)

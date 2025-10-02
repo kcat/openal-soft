@@ -27,14 +27,14 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps ConvolutionEffectProps(genDefaultProps());
 
-void ConvolutionEffectHandler::SetParami(ALCcontext *context, ConvolutionProps& /*props*/, ALenum param, int /*val*/)
+void ConvolutionEffectHandler::SetParami(al::Context *context, ConvolutionProps& /*props*/, ALenum param, int /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect integer property {:#04x}", as_unsigned(param)); }
-void ConvolutionEffectHandler::SetParamiv(ALCcontext *context, ConvolutionProps &props, ALenum param, const int *vals)
+void ConvolutionEffectHandler::SetParamiv(al::Context *context, ConvolutionProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void ConvolutionEffectHandler::SetParamf(ALCcontext *context, ConvolutionProps& /*props*/, ALenum param, float /*val*/)
+void ConvolutionEffectHandler::SetParamf(al::Context *context, ConvolutionProps& /*props*/, ALenum param, float /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect float property {:#04x}", as_unsigned(param)); }
-void ConvolutionEffectHandler::SetParamfv(ALCcontext *context, ConvolutionProps &props, ALenum param, const float *values)
+void ConvolutionEffectHandler::SetParamfv(al::Context *context, ConvolutionProps &props, ALenum param, const float *values)
 {
     static constexpr auto is_finite = [](float val) -> bool { return std::isfinite(val); };
 
@@ -53,14 +53,14 @@ void ConvolutionEffectHandler::SetParamfv(ALCcontext *context, ConvolutionProps 
     SetParamf(context, props, param, *values);
 }
 
-void ConvolutionEffectHandler::GetParami(ALCcontext *context, const ConvolutionProps& /*props*/, ALenum param, int* /*val*/)
+void ConvolutionEffectHandler::GetParami(al::Context *context, const ConvolutionProps& /*props*/, ALenum param, int* /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect integer property {:#04x}", as_unsigned(param)); }
-void ConvolutionEffectHandler::GetParamiv(ALCcontext *context, const ConvolutionProps &props, ALenum param, int *vals)
+void ConvolutionEffectHandler::GetParamiv(al::Context *context, const ConvolutionProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
-void ConvolutionEffectHandler::GetParamf(ALCcontext *context, const ConvolutionProps& /*props*/, ALenum param, float* /*val*/)
+void ConvolutionEffectHandler::GetParamf(al::Context *context, const ConvolutionProps& /*props*/, ALenum param, float* /*val*/)
 { context->throw_error(AL_INVALID_ENUM, "Invalid convolution effect float property {:#04x}", as_unsigned(param)); }
-void ConvolutionEffectHandler::GetParamfv(ALCcontext *context, const ConvolutionProps &props, ALenum param, float *values)
+void ConvolutionEffectHandler::GetParamfv(al::Context *context, const ConvolutionProps &props, ALenum param, float *values)
 {
     switch(param)
     {

@@ -33,6 +33,7 @@
 #include <cerrno>
 #include <cstring>
 #include <exception>
+#include <format>
 #include <memory>
 #include <span>
 #include <string>
@@ -48,7 +49,6 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
@@ -161,7 +161,7 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
     auto count = 1;
     auto newname = std::string{handle};
     while(std::ranges::find(list, newname, &DevMap::name) != list.end())
-        newname = fmt::format("{} #{}", handle, ++count);
+        newname = std::format("{} #{}", handle, ++count);
 
     const auto &entry = list.emplace_back(std::move(newname), path);
     TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
@@ -236,7 +236,7 @@ constexpr auto log2i(uint x) -> uint
 
 
 struct OSSPlayback final : public BackendBase {
-    explicit OSSPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OSSPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OSSPlayback() override;
 
     void mixerProc();
@@ -441,7 +441,7 @@ void OSSPlayback::stop()
 
 
 struct OSScapture final : public BackendBase {
-    explicit OSScapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OSScapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
     void recordProc();
@@ -558,7 +558,7 @@ void OSScapture::open(std::string_view name)
     auto frameSize = numChannels * mDevice->bytesFromFmt();
     auto ossSpeed = mDevice->mSampleRate;
     /* according to the OSS spec, 16 bytes are the minimum */
-    const auto periods = 4u;
+    constexpr auto periods = 4u;
     const auto log2FragmentSize = std::max(log2i(mDevice->mBufferSize * frameSize / periods), 4u);
     auto numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
@@ -672,7 +672,8 @@ auto OSSBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-BackendPtr OSSBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto OSSBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OSSPlayback{device}};

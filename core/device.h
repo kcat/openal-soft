@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <memory>
 #include <ranges>
@@ -23,7 +24,6 @@
 #include "devformat.h"
 #include "filters/nfc.h"
 #include "flexarray.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
@@ -104,7 +104,7 @@ public:
 };
 
 
-constexpr auto InvalidChannelIndex = static_cast<std::uint8_t>(~0u);
+constexpr auto InvalidChannelIndex = gsl::narrow_cast<std::uint8_t>(~0u);
 
 struct BFChannelConfig {
     float Scale;
@@ -139,7 +139,7 @@ struct MixParams {
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = static_cast<std::uint8_t>(j);
+                    idx = gsl::narrow_cast<std::uint8_t>(j);
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }
@@ -373,7 +373,7 @@ struct DeviceBase {
             + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }
 
-    void Process(std::monostate&, const std::size_t) { }
+    static void Process(std::monostate&, const std::size_t) { }
     void Process(AmbiDecPostProcess &proc, const std::size_t SamplesToDo) const;
     void Process(HrtfPostProcess &proc, const std::size_t SamplesToDo);
     void Process(UhjPostProcess &proc, const std::size_t SamplesToDo);
@@ -387,15 +387,8 @@ struct DeviceBase {
     void doDisconnect(std::string&& msg);
 
     template<typename ...Args>
-    void handleDisconnect(fmt::format_string<Args...> fmt, Args&& ...args)
-    { doDisconnect(fmt::format(std::move(fmt), std::forward<Args>(args)...)); }
-
-    /**
-     * Returns the index for the given channel name (e.g. FrontCenter), or
-     * InvalidChannelIndex if it doesn't exist.
-     */
-    [[nodiscard]] auto channelIdxByName(Channel chan) const noexcept -> std::uint8_t
-    { return RealOut.ChannelIndex[chan]; }
+    void handleDisconnect(std::format_string<Args...> fmt, Args&& ...args)
+    { doDisconnect(std::format(std::move(fmt), std::forward<Args>(args)...)); }
 
 private:
     uint renderSamples(const uint numSamples);

@@ -41,8 +41,6 @@ struct ContextBase;
 
 namespace {
 
-using uint = unsigned int;
-
 struct DedicatedState final : public EffectState {
     /* The "dedicated" effect can output to the real output, so should have
      * gains for all possible output channels and not just the main ambisonic
@@ -123,5 +121,5 @@ struct DedicatedStateFactory final : public EffectStateFactory {
 auto DedicatedStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static DedicatedStateFactory DedicatedFactory{};
-    return &DedicatedFactory;
+    return gsl::make_not_null(&DedicatedFactory);
 }

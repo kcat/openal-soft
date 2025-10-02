@@ -33,6 +33,7 @@
 #include "core/cubic_defs.h"
 #include "core/resampler_limits.h"
 #include "defs.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 struct SSE2Tag;
@@ -63,26 +64,26 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const std::span<const float>
 {
     ASSUME(frac < MixerFracOne);
 
-    const auto increment4 = _mm_set1_epi32(static_cast<int>(increment*4));
+    const auto increment4 = _mm_set1_epi32(as_signed(increment*4));
     const auto fracMask4 = _mm_set1_epi32(MixerFracMask);
     const auto fracOne4 = _mm_set1_ps(1.0f/MixerFracOne);
 
     auto pos_ = std::array<uint,4>{};
     auto frac_ = std::array<uint,4>{};
     InitPosArrays(MaxResamplerEdge, frac, increment, std::span{frac_}, std::span{pos_});
-    auto pos4 = _mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
-        static_cast<int>(pos_[2]), static_cast<int>(pos_[3]));
-    auto frac4 = _mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
-        static_cast<int>(frac_[2]), static_cast<int>(frac_[3]));
+    auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
+        as_signed(pos_[3]));
+    auto frac4 = _mm_setr_epi32(as_signed(frac_[0]), as_signed(frac_[1]), as_signed(frac_[2]),
+        as_signed(frac_[3]));
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     std::ranges::generate(std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4},
         [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
     {
-        const auto pos0 = static_cast<uint>(_mm_cvtsi128_si32(pos4));
-        const auto pos1 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
-        const auto pos2 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)));
-        const auto pos3 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)));
+        const auto pos0 = as_unsigned(_mm_cvtsi128_si32(pos4));
+        const auto pos1 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
+        const auto pos2 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)));
+        const auto pos3 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)));
         ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
         const auto val1 = _mm_setr_ps(src[pos0], src[pos1], src[pos2], src[pos3]);
         const auto val2 = _mm_setr_ps(src[pos0+1_uz], src[pos1+1_uz], src[pos2+1_uz], src[pos3+1_uz]);
@@ -100,13 +101,13 @@ void Resample_<LerpTag,SSE2Tag>(const InterpState*, const std::span<const float>
 
     if(const auto todo = dst.size()&3)
     {
-        auto pos = size_t{static_cast<uint>(_mm_cvtsi128_si32(pos4))};
-        frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
+        auto pos = size_t{as_unsigned(_mm_cvtsi128_si32(pos4))};
+        frac = as_unsigned(_mm_cvtsi128_si32(frac4));
 
         std::ranges::generate(dst.last(todo), [src,increment,&pos,&frac]
         {
             const auto smp = lerpf(src[pos+0], src[pos+1],
-                static_cast<float>(frac) * (1.0f/MixerFracOne));
+                gsl::narrow_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             pos  += frac>>MixerFracBits;
@@ -124,7 +125,7 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const std::span<const
 
     const auto filter = std::get<CubicState>(*state).filter;
 
-    const auto increment4 = _mm_set1_epi32(static_cast<int>(increment*4));
+    const auto increment4 = _mm_set1_epi32(as_signed(increment*4));
     const auto fracMask4 = _mm_set1_epi32(MixerFracMask);
     const auto fracDiffOne4 = _mm_set1_ps(1.0f/CubicPhaseDiffOne);
     const auto fracDiffMask4 = _mm_set1_epi32(CubicPhaseDiffMask);
@@ -132,19 +133,19 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const std::span<const
     auto pos_ = std::array<uint,4>{};
     auto frac_ = std::array<uint,4>{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, std::span{frac_}, std::span{pos_});
-    auto frac4 = _mm_setr_epi32(static_cast<int>(frac_[0]), static_cast<int>(frac_[1]),
-        static_cast<int>(frac_[2]), static_cast<int>(frac_[3]));
-    auto pos4 = _mm_setr_epi32(static_cast<int>(pos_[0]), static_cast<int>(pos_[1]),
-        static_cast<int>(pos_[2]), static_cast<int>(pos_[3]));
+    auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
+        as_signed(pos_[3]));
+    auto frac4 = _mm_setr_epi32(as_signed(frac_[0]), as_signed(frac_[1]), as_signed(frac_[2]),
+        as_signed(frac_[3]));
 
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     std::ranges::generate(std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4},
         [src,filter,increment4,fracMask4,fracDiffOne4,fracDiffMask4,&pos4,&frac4]
     {
-        const auto pos0 = static_cast<uint>(_mm_cvtsi128_si32(pos4));
-        const auto pos1 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
-        const auto pos2 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)));
-        const auto pos3 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)));
+        const auto pos0 = as_unsigned(_mm_cvtsi128_si32(pos4));
+        const auto pos1 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
+        const auto pos2 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)));
+        const auto pos3 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)));
         ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
         const auto val0 = _mm_loadu_ps(&src[pos0]);
         const auto val1 = _mm_loadu_ps(&src[pos1]);
@@ -152,10 +153,10 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const std::span<const
         const auto val3 = _mm_loadu_ps(&src[pos3]);
 
         const auto pi4 = _mm_srli_epi32(frac4, CubicPhaseDiffBits);
-        const auto pi0 = static_cast<uint>(_mm_cvtsi128_si32(pi4));
-        const auto pi1 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 4)));
-        const auto pi2 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 8)));
-        const auto pi3 = static_cast<uint>(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 12)));
+        const auto pi0 = as_unsigned(_mm_cvtsi128_si32(pi4));
+        const auto pi1 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 4)));
+        const auto pi2 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 8)));
+        const auto pi3 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pi4, 12)));
         ASSUME(pi0 < CubicPhaseCount); ASSUME(pi1 < CubicPhaseCount);
         ASSUME(pi2 < CubicPhaseCount); ASSUME(pi3 < CubicPhaseCount);
 
@@ -190,13 +191,14 @@ void Resample_<CubicTag,SSE2Tag>(const InterpState *state, const std::span<const
 
     if(const auto todo = dst.size()&3)
     {
-        auto pos = size_t{static_cast<uint>(_mm_cvtsi128_si32(pos4))};
-        frac = static_cast<uint>(_mm_cvtsi128_si32(frac4));
+        auto pos = size_t{as_unsigned(_mm_cvtsi128_si32(pos4))};
+        frac = as_unsigned(_mm_cvtsi128_si32(frac4));
 
         std::ranges::generate(dst.last(todo), [src,filter,increment,&pos,&frac]
         {
-            const auto pi = frac >> CubicPhaseDiffBits; ASSUME(pi < CubicPhaseCount);
-            const auto pf = static_cast<float>(frac&CubicPhaseDiffMask) * (1.0f/CubicPhaseDiffOne);
+            const auto pi = size_t{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+            const auto pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)
+                * (1.0f/CubicPhaseDiffOne);
             const auto pf4 = _mm_set1_ps(pf);
 
             const auto f4 = vmadd(_mm_load_ps(filter[pi].mCoeffs.data()), pf4,

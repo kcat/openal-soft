@@ -21,15 +21,17 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
+#include "config.h"
+
 #include "loadsofa.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
-#include <cstdio>
 #include <functional>
 #include <future>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -40,13 +42,13 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
 
 #include "mysofa.h"
-
 
 namespace {
 
@@ -109,7 +111,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         {
             if(srate_dim)
             {
-                fmt::println(stderr, "Duplicate SampleRate.DIMENSION_LIST");
+                fmt::println(std::cerr, "Duplicate SampleRate.DIMENSION_LIST");
                 return 0.0f;
             }
             srate_dim = srate_attrs->value;
@@ -118,41 +120,41 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         {
             if(srate_units)
             {
-                fmt::println(stderr, "Duplicate SampleRate.Units");
+                fmt::println(std::cerr, "Duplicate SampleRate.Units");
                 return 0.0f;
             }
             srate_units = srate_attrs->value;
         }
         else
-            fmt::println(stderr, "Unexpected sample rate attribute: {} = {}", srate_attrs->name,
-                srate_attrs->value);
+            fmt::println(std::cerr, "Unexpected sample rate attribute: {} = {}", srate_attrs->name,
+                srate_attrs->value ? srate_attrs->value : "<null>");
         srate_attrs = srate_attrs->next;
     }
     if(!srate_dim)
     {
-        fmt::println(stderr, "Missing sample rate dimensions");
+        fmt::println(std::cerr, "Missing sample rate dimensions");
         return 0.0f;
     }
     if(srate_dim != "I"sv)
     {
-        fmt::println(stderr, "Unsupported sample rate dimensions: {}", srate_dim);
+        fmt::println(std::cerr, "Unsupported sample rate dimensions: {}", srate_dim);
         return 0.0f;
     }
     if(!srate_units)
     {
-        fmt::println(stderr, "Missing sample rate unit type");
+        fmt::println(std::cerr, "Missing sample rate unit type");
         return 0.0f;
     }
     if(srate_units != "hertz"sv)
     {
-        fmt::println(stderr, "Unsupported sample rate unit type: {}", srate_units);
+        fmt::println(std::cerr, "Unsupported sample rate unit type: {}", srate_units);
         return 0.0f;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
     const auto values = std::span{srate_array->values, sofaHrtf->I};
     if(values[0] < float{MIN_RATE} || values[0] > float{MAX_RATE})
     {
-        fmt::println(stderr, "Sample rate out of range: {:f} (expected {} to {})", values[0],
+        fmt::println(std::cerr, "Sample rate out of range: {:f} (expected {} to {})", values[0],
             MIN_RATE, MAX_RATE);
         return 0.0f;
     }
@@ -175,19 +177,19 @@ auto PrepareDelay(MYSOFA_HRTF *sofaHrtf) -> std::optional<DelayType>
         {
             if(delay_dim)
             {
-                fmt::println(stderr, "Duplicate Delay.DIMENSION_LIST");
+                fmt::println(std::cerr, "Duplicate Delay.DIMENSION_LIST");
                 return std::nullopt;
             }
             delay_dim = delay_attrs->value;
         }
         else
-            fmt::println(stderr, "Unexpected delay attribute: {} = {}", delay_attrs->name,
+            fmt::println(std::cerr, "Unexpected delay attribute: {} = {}", delay_attrs->name,
                 delay_attrs->value ? delay_attrs->value : "<null>");
         delay_attrs = delay_attrs->next;
     }
     if(!delay_dim)
     {
-        fmt::println(stderr, "Missing delay dimensions");
+        fmt::println(std::cerr, "Missing delay dimensions");
         return DelayType::None;
     }
     if(delay_dim == "I,R"sv)
@@ -195,7 +197,7 @@ auto PrepareDelay(MYSOFA_HRTF *sofaHrtf) -> std::optional<DelayType>
     if(delay_dim == "M,R"sv)
         return DelayType::M_R;
 
-    fmt::println(stderr, "Unsupported delay dimensions: {}", delay_dim);
+    fmt::println(std::cerr, "Unsupported delay dimensions: {}", delay_dim);
     return std::nullopt;
 }
 
@@ -210,24 +212,24 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
         {
             if(ir_dim)
             {
-                fmt::println(stderr, "Duplicate IR.DIMENSION_LIST");
+                fmt::println(std::cerr, "Duplicate IR.DIMENSION_LIST");
                 return false;
             }
             ir_dim = ir_attrs->value;
         }
         else
-            fmt::println(stderr, "Unexpected IR attribute: {} = {}", ir_attrs->name,
+            fmt::println(std::cerr, "Unexpected IR attribute: {} = {}", ir_attrs->name,
                 ir_attrs->value ? ir_attrs->value : "<null>");
         ir_attrs = ir_attrs->next;
     }
     if(!ir_dim)
     {
-        fmt::println(stderr, "Missing IR dimensions");
+        fmt::println(std::cerr, "Missing IR dimensions");
         return false;
     }
     if(ir_dim != "M,R,N"sv)
     {
-        fmt::println(stderr, "Unsupported IR dimensions: {}", ir_dim);
+        fmt::println(std::cerr, "Unsupported IR dimensions: {}", ir_dim);
         return false;
     }
     return true;
@@ -313,7 +315,7 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
             HrirAzT &azd = field->mEvs[ei].mAzs[ai];
             if(!azd.mIrs[0].empty())
             {
-                fmt::println(stderr, "\nMultiple measurements near [ a={:f}, e={:f}, r={:f} ].",
+                fmt::println(std::cerr, "\nMultiple measurements near [ a={:f}, e={:f}, r={:f} ].",
                     aer[0], aer[1], aer[2]);
                 return false;
             }
@@ -366,7 +368,7 @@ bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType dela
     do {
         load_status = load_future.wait_for(std::chrono::milliseconds{50});
         fmt::print("\rLoading HRIRs... {} of {}", loaded_count.load(), sofaHrtf->M);
-        fflush(stdout);
+        std::cout.flush();
     } while(load_status != std::future_status::ready);
     fmt::println("");
     return load_future.get();
@@ -430,20 +432,20 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     /* NOTE: Some valid SOFA files are failing this check. */
     err = mysofa_check(sofaHrtf.get());
     if(err != MYSOFA_OK)
-        fmt::println(stderr, "Warning: Supposedly malformed source file '{}': {} ({})", filename,
-            SofaErrorStr(err), err);
+        fmt::println(std::cerr, "Warning: Supposedly malformed source file '{}': {} ({})",
+            filename, SofaErrorStr(err), err);
 
     mysofa_tocartesian(sofaHrtf.get());
 
     /* Make sure emitter and receiver counts are sane. */
     if(sofaHrtf->E != 1)
     {
-        fmt::println(stderr, "{} emitters not supported", sofaHrtf->E);
+        fmt::println(std::cerr, "{} emitters not supported", sofaHrtf->E);
         return false;
     }
     if(sofaHrtf->R > 2 || sofaHrtf->R < 1)
     {
-        fmt::println(stderr, "{} receivers not supported", sofaHrtf->R);
+        fmt::println(std::cerr, "{} receivers not supported", sofaHrtf->R);
         return false;
     }
     /* Assume R=2 is a stereo measurement, and R=1 is mono left-ear-only. */
@@ -455,14 +457,14 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     /* Check and set the FFT and IR size. */
     if(sofaHrtf->N > fftSize)
     {
-        fmt::println(stderr, "Sample points exceeds the FFT size ({} > {}).", sofaHrtf->N,
+        fmt::println(std::cerr, "Sample points exceeds the FFT size ({} > {}).", sofaHrtf->N,
             fftSize);
         return false;
     }
     if(sofaHrtf->N < truncSize)
     {
-        fmt::println(stderr, "Sample points is below the truncation size ({} < {}).", sofaHrtf->N,
-            truncSize);
+        fmt::println(std::cerr, "Sample points is below the truncation size ({} < {}).",
+            sofaHrtf->N, truncSize);
         return false;
     }
     hData->mIrPoints = sofaHrtf->N;
@@ -504,7 +506,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
         }
         if(ei >= hData->mFds[fi].mEvs.size())
         {
-            fmt::println(stderr, "Missing source references [ {}, *, * ].", fi);
+            fmt::println(std::cerr, "Missing source references [{}, *, *].", fi);
             return false;
         }
         hData->mFds[fi].mEvStart = ei;
@@ -515,7 +517,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
                 HrirAzT &azd = hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd.mIrs[0].empty())
                 {
-                    fmt::println(stderr, "Missing source reference [ {}, {}, {} ].", fi, ei, ai);
+                    fmt::println(std::cerr, "Missing source reference [{}, {}, {}].", fi, ei, ai);
                     return false;
                 }
             }
@@ -575,7 +577,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
     do {
         load_status = load_future.wait_for(std::chrono::milliseconds{50});
         fmt::print("\rCalculating HRIR onsets... {} of {}", hrir_done.load(), hrir_total);
-        fflush(stdout);
+        std::cout.flush();
     } while(load_status != std::future_status::ready);
     fmt::println("");
     if(!load_future.get())
@@ -604,7 +606,7 @@ bool LoadSofaFile(const std::string_view filename, const uint numThreads, const 
         count = calculator.mDone.load();
 
         fmt::print("\rCalculating HRIR magnitudes... {} of {}", count, calculator.mIrs.size());
-        fflush(stdout);
+        std::cout.flush();
     } while(count != calculator.mIrs.size());
     fmt::println("");
 

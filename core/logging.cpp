@@ -7,13 +7,17 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include "alnumeric.h"
 #include "alstring.h"
+#include "fmt/std.h"
 #include "strutils.hpp"
 
 
@@ -43,6 +47,9 @@ enum class LogState : uint8_t {
 auto LogCallbackMutex = std::mutex{};
 auto gLogState = LogState::FirstRun;
 
+auto gLogFile = std::ofstream{}; /* NOLINT(cert-err58-cpp) */
+
+
 auto gLogCallback = LogCallbackFunc{};
 void *gLogCallbackPtr{};
 
@@ -60,6 +67,13 @@ constexpr auto GetLevelCode(const LogLevel level) noexcept -> std::optional<char
 
 } // namespace
 
+void al_open_logfile(const fs::path &fname)
+{
+    gLogFile.open(fname);
+    if(!gLogFile.is_open())
+        ERR("Failed to open log file '{}'", al::u8_as_char(fname.u8string()));
+}
+
 void al_set_log_callback(LogCallbackFunc callback, void *userptr)
 {
     auto cblock = std::lock_guard{LogCallbackMutex};
@@ -75,9 +89,9 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
     }
 }
 
-void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args args)
+void al_print_impl(LogLevel level, const std::string_view fmt, std::format_args args)
 {
-    const auto msg = fmt::vformat(fmt, std::move(args));
+    const auto msg = std::vformat(fmt, std::move(args));
 
     auto prefix = "[ALSOFT] (--) "sv;
     switch(level)
@@ -90,16 +104,17 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
 
     if(gLogLevel >= level)
     {
-        auto *logfile = gLogFile ? gLogFile : stderr;
-        fmt::println(logfile, "{}{}", prefix, msg);
-        fflush(logfile);
+        auto &logfile = gLogFile.is_open() ? gLogFile : std::cerr;
+        /* std::vprint_unicode */
+        fmt::vprint(logfile, "{}{}\n", fmt::make_format_args(prefix, msg));
+        logfile.flush();
     }
 #if defined(_WIN32) && !defined(NDEBUG)
     /* OutputDebugStringW has no 'level' property to distinguish between
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-    OutputDebugStringW(utf8_to_wstr(fmt::format("{}{}\n", prefix, msg)).c_str());
+    OutputDebugStringW(utf8_to_wstr(std::format("{}{}\n", prefix, msg)).c_str());
 #elif defined(__ANDROID__)
     auto android_severity = [](LogLevel l) noexcept
     {
@@ -115,8 +130,8 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
         return ANDROID_LOG_ERROR;
     };
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
-    __android_log_print(android_severity(level), "openal", "%.*s%s", al::sizei(prefix),
-        prefix.data(), msg.c_str());
+    __android_log_print(android_severity(level), "openal", "%.*s%s",
+        al::saturate_cast<int>(prefix.size()), prefix.data(), msg.c_str());
 #endif
 
     auto cblock = std::lock_guard{LogCallbackMutex};
@@ -125,7 +140,8 @@ void al_print_impl(LogLevel level, const fmt::string_view fmt, fmt::format_args 
         if(auto logcode = GetLevelCode(level))
         {
             if(gLogCallback)
-                gLogCallback(gLogCallbackPtr, *logcode, msg.data(), al::sizei(msg));
+                gLogCallback(gLogCallbackPtr, *logcode, msg.data(),
+                    al::saturate_cast<int>(msg.size()));
             else if(gLogState == LogState::FirstRun)
                 gLogState = LogState::Disable;
         }

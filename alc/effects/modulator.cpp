@@ -109,8 +109,8 @@ void ModulatorState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<ModulatorProps>(*props_);
-    const auto *device = context->mDevice;
-    const auto samplerate = static_cast<float>(device->mSampleRate);
+    auto const device = al::get_not_null(context->mDevice);
+    auto const samplerate = static_cast<float>(device->mSampleRate);
 
     /* The effective frequency will be adjusted to have a whole number of
      * samples per cycle (at 48khz, that allows 8000, 6857.14, 6000, 5333.33,
@@ -172,9 +172,9 @@ void ModulatorState::process(const size_t samplesToDo,
 {
     ASSUME(samplesToDo > 0);
 
-    std::visit([this,samplesToDo](auto&& type)
+    std::visit([this,samplesToDo]<typename T>(T&& type [[maybe_unused]])
     {
-        using Modulator = std::remove_cvref_t<decltype(type)>;
+        using Modulator = std::remove_cvref_t<T>;
         const auto range = mRange;
         const auto scale = mIndexScale;
         auto index = mIndex;
@@ -223,5 +223,5 @@ struct ModulatorStateFactory final : public EffectStateFactory {
 auto ModulatorStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static ModulatorStateFactory ModulatorFactory{};
-    return &ModulatorFactory;
+    return gsl::make_not_null(&ModulatorFactory);
 }

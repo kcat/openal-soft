@@ -26,7 +26,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps CompressorEffectProps(genDefaultProps());
 
-void CompressorEffectHandler::SetParami(ALCcontext *context, CompressorProps &props, ALenum param, int val)
+void CompressorEffectHandler::SetParami(al::Context *context, CompressorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -40,14 +40,14 @@ void CompressorEffectHandler::SetParami(ALCcontext *context, CompressorProps &pr
     context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
         as_unsigned(param));
 }
-void CompressorEffectHandler::SetParamiv(ALCcontext *context, CompressorProps &props, ALenum param, const int *vals)
+void CompressorEffectHandler::SetParamiv(al::Context *context, CompressorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void CompressorEffectHandler::SetParamf(ALCcontext *context, CompressorProps&, ALenum param, float)
+void CompressorEffectHandler::SetParamf(al::Context *context, CompressorProps&, ALenum param, float)
 { context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
-void CompressorEffectHandler::SetParamfv(ALCcontext *context, CompressorProps&, ALenum param, const float*)
+void CompressorEffectHandler::SetParamfv(al::Context *context, CompressorProps&, ALenum param, const float*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
-void CompressorEffectHandler::GetParami(ALCcontext *context, const CompressorProps &props, ALenum param, int *val)
+void CompressorEffectHandler::GetParami(al::Context *context, const CompressorProps &props, ALenum param, int *val)
 { 
     switch(param)
     {
@@ -57,11 +57,11 @@ void CompressorEffectHandler::GetParami(ALCcontext *context, const CompressorPro
     context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
         as_unsigned(param));
 }
-void CompressorEffectHandler::GetParamiv(ALCcontext *context, const CompressorProps &props, ALenum param, int *vals)
+void CompressorEffectHandler::GetParamiv(al::Context *context, const CompressorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void CompressorEffectHandler::GetParamf(ALCcontext *context, const CompressorProps&, ALenum param, float*)
+void CompressorEffectHandler::GetParamf(al::Context *context, const CompressorProps&, ALenum param, float*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
-void CompressorEffectHandler::GetParamfv(ALCcontext *context, const CompressorProps&, ALenum param, float*)
+void CompressorEffectHandler::GetParamfv(al::Context *context, const CompressorProps&, ALenum param, float*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
 
@@ -90,7 +90,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct CompressorCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
     { }
@@ -100,7 +100,7 @@ template<> [[noreturn]]
 void CompressorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props)
+auto EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXAGCCOMPRESSORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

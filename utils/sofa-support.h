@@ -1,7 +1,6 @@
 #ifndef UTILS_SOFA_SUPPORT_H
 #define UTILS_SOFA_SUPPORT_H
 
-#include <cstddef>
 #include <memory>
 #include <span>
 #include <vector>
@@ -10,7 +9,7 @@
 
 
 struct MySofaDeleter {
-    void operator()(MYSOFA_HRTF *sofa) { mysofa_free(sofa); }
+    void operator()(MYSOFA_HRTF *sofa) const { mysofa_free(sofa); }
 };
 using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaDeleter>;
 

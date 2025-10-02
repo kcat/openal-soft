@@ -56,7 +56,7 @@
 #  Sets the default output channel configuration. If left unspecified, one will
 #  try to be detected from the system, with a fallback to stereo. The available
 #  values are: mono, stereo, quad, surround51, surround61, surround71,
-#  surround714, surround3d71, ambi1, ambi2, ambi3, ambi4. Note that the ambi*
+#  surround714, 3d71, ambi1, ambi2, ambi3, ambi4. Note that the ambi*
 #  configurations output ambisonic channels of the given order (using ACN
 #  ordering and SN3D normalization by default), which need to be decoded to
 #  play correctly on speakers.
@@ -126,14 +126,13 @@
 #  Specifies the rendering mode for HRTF processing. Setting the mode to full
 #  (default) applies a unique HRIR filter to each source given its relative
 #  location, providing the clearest directional response at the cost of the
-#  highest CPU usage. Setting the mode to ambi1, ambi2, or ambi3 will instead
-#  mix to a first-, second-, or third-order ambisonic buffer respectively, then
-#  decode that buffer with HRTF filters. Ambi1 has the lowest CPU usage,
-#  replacing the per-source HRIR filter for a simple 4-channel panning mix, but
-#  retains full 3D placement at the cost of a more diffuse response. Ambi2,
-#  ambi3, and ambi4 increasingly improve the directional clarity, at the cost
-#  of more CPU usage (still less than "full", given some number of active
-#  sources).
+#  highest CPU usage. Setting the mode to ambi1, ambi2, ambi3, or ambi4 will
+#  instead mix to an ambisonic buffer of the given order, then decode that
+#  buffer with HRTF filters. Ambi1 has the lowest CPU usage, replacing the per-
+#  source HRIR filter for a simple 4-channel panning mix, but retains full 3D
+#  placement at the cost of a more diffuse response. Higher ambisonic orders
+#  increasingly improve the directional clarity, at the cost of more CPU usage
+#  (still less than "full", given some number of active sources).
 #hrtf-mode = full
 
 ## hrtf-size:
@@ -354,11 +353,11 @@
 #  docs/ambdec.txt for a description of the file format.
 #surround714 =
 
-## surround3d71:
-#  Decoder configuration file for 3D7.1 Surround channel output. See
-#  docs/ambdec.txt for a description of the file format. See also
-#  docs/3D7.1.txt for information about 3D7.1.
-#surround3d71 =
+## 3d71:
+#  Decoder configuration file for 3D7.1 channel output. See docs/ambdec.txt for
+#  a description of the file format. See also docs/3D7.1.txt for information
+#  about 3D7.1.
+#3d71 =
 
 ##
 ## UHJ and Super Stereo stuff

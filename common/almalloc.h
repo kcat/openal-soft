@@ -68,12 +68,12 @@ struct allocator {
     constexpr explicit allocator(const allocator<U,N>&) noexcept
     { static_assert(Alignment == allocator<U,N>::Alignment); }
 
-    constexpr auto allocate(std::size_t n) -> gsl::owner<T*>
+    static constexpr auto allocate(std::size_t n) -> gsl::owner<T*>
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
         return static_cast<gsl::owner<T*>>(::operator new[](n*sizeof(T), AlignVal));
     }
-    constexpr void deallocate(gsl::owner<T*> p, std::size_t) noexcept
+    static constexpr void deallocate(gsl::owner<T*> p, std::size_t) noexcept
     { ::operator delete[](gsl::owner<void*>{p}, AlignVal); }
 };
 template<typename T, std::size_t N, typename U, std::size_t M>
@@ -84,7 +84,7 @@ constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept
 { return allocator<T,N>::Alignment != allocator<U,M>::Alignment; }
 
 
-template<typename SP, typename PT, typename ...Args>
+template<typename SP, typename PT, typename...>
 class out_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 
@@ -120,7 +120,7 @@ auto out_ptr(SP &res, Args&& ...args)
 }
 
 
-template<typename SP, typename PT, typename ...Args>
+template<typename SP, typename PT, typename...>
 class inout_ptr_t {
     static_assert(!std::is_same_v<PT,void*>);
 

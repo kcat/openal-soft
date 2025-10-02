@@ -28,11 +28,10 @@
 #include <array>
 #include <bit>
 #include <cerrno>
-#include <complex>
 #include <cstddef>
-#include <cstdio>
 #include <cstring>
-#include <functional>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <numbers>
 #include <ranges>
@@ -43,8 +42,11 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/core.h"
-#include "gsl/gsl"
+#include "alstring.h"
+#include "filesystem.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
 #include "opthelpers.h"
 #include "phase_shifter.h"
 #include "vector.h"
@@ -53,45 +55,48 @@
 
 #include "win_main_utf8.h"
 
+#if HAVE_CXXMODULES
+import gsl;
+#else
+#include "gsl/gsl"
+#endif
+
 
 namespace {
 
 using namespace std::string_view_literals;
 
-using FilePtr = std::unique_ptr<FILE, decltype([](gsl::owner<FILE*> file) { fclose(file); })>;
 using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 using ubyte = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
-using complex_d = std::complex<double>;
-
-using byte4 = std::array<std::byte,4>;
 
 
-constexpr auto SUBTYPE_BFORMAT_FLOAT = std::array<ubyte,16>{
+constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<ubyte>({
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
-};
+}));
 
-void fwrite16le(ushort val, FILE *f)
+void fwrite16le(const ushort value, std::ostream &f)
 {
-    const auto data = std::array{gsl::narrow_cast<ubyte>(val&0xff),
-        gsl::narrow_cast<ubyte>((val>>8)&0xff)};
-    fwrite(data.data(), 1, data.size(), f);
+    auto data = std::bit_cast<std::array<char,2>>(value);
+    if constexpr(std::endian::native == std::endian::big)
+        std::ranges::reverse(data);
+    f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32le(uint val, FILE *f)
+void fwrite32le(const uint value, std::ostream &f)
 {
-    const auto data = std::array{gsl::narrow_cast<ubyte>(val&0xff),
-        gsl::narrow_cast<ubyte>((val>>8)&0xff), gsl::narrow_cast<ubyte>((val>>16)&0xff),
-        gsl::narrow_cast<ubyte>((val>>24)&0xff)};
-    fwrite(data.data(), 1, data.size(), f);
+    auto data = std::bit_cast<std::array<char,4>>(value);
+    if constexpr(std::endian::native == std::endian::big)
+        std::ranges::reverse(data);
+    f.write(data.data(), std::ssize(data));
 }
 
-auto f32AsLEBytes(const float value) -> byte4
+auto f32AsLEBytes(const float value) -> std::array<char,4>
 {
-    auto ret = std::bit_cast<byte4>(value);
+    auto ret = std::bit_cast<std::array<char,4>>(value);
     if constexpr(std::endian::native == std::endian::big)
         std::ranges::reverse(ret);
     return ret;
@@ -101,7 +106,6 @@ auto f32AsLEBytes(const float value) -> byte4
 constexpr auto BufferLineSize = 1024u;
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
-using FloatBufferSpan = std::span<float,BufferLineSize>;
 
 
 struct UhjDecoder {
@@ -384,91 +388,80 @@ auto main(std::span<std::string_view> args) -> int
         auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
-            fmt::println(stderr, "Failed to open {}", arg);
+            fmt::println(std::cerr, "Failed to open {}", arg);
             return;
         }
         if(sf_command(infile.get(), SFC_WAVEX_GET_AMBISONIC, nullptr, 0) == SF_AMBISONIC_B_FORMAT)
         {
-            fmt::println(stderr, "{} is already B-Format", arg);
+            fmt::println(std::cerr, "{} is already B-Format", arg);
             return;
         }
 
+        const auto inchannels = gsl::narrow<uint>(ininfo.channels);
         auto outchans = uint{};
-        if(ininfo.channels == 2)
+        if(inchannels == 2)
             outchans = 3;
-        else if(ininfo.channels == 3 || ininfo.channels == 4)
-            outchans = gsl::narrow_cast<uint>(ininfo.channels);
+        else if(inchannels == 3 || inchannels == 4)
+            outchans = inchannels;
         else
         {
-            fmt::println(stderr, "{} is not a 2-, 3-, or 4-channel file", arg);
+            fmt::println(std::cerr, "{} is not a 2-, 3-, or 4-channel file", arg);
             return;
         }
-        fmt::println("Converting {} from {}-channel UHJ{}...", arg, ininfo.channels,
-            (ininfo.channels == 2) ? use_general ? " (general)" : " (alternative)" : "");
+        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels,
+            (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
-        const auto fnamepart = arg.find_last_of('/')+1;
-        const auto lastdot = std::invoke([arg,fnamepart]
+        auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
+        auto outfile = std::ofstream{outname, std::ios_base::binary};
+        if(!outfile.is_open())
         {
-            const auto ret = std::min(arg.find_last_of('.'), arg.size());
-            if(ret < fnamepart) return arg.size();
-            return ret;
-        });
-        auto outname = std::string{arg.substr(fnamepart, lastdot-fnamepart)};
-        outname += ".amb";
-
-        auto outfile = FilePtr{fopen(outname.c_str(), "wb")};
-        if(!outfile)
-        {
-            fmt::println(stderr, "Failed to create {}", outname);
+            fmt::println(std::cerr, "Failed to create {}", outname);
             return;
         }
 
-        fputs("RIFF", outfile.get());
-        fwrite32le(0xFFFFFFFF, outfile.get()); // 'RIFF' header len; filled in at close
+        outfile.write("RIFF", 4);
+        fwrite32le(0xFFFFFFFF, outfile); // 'RIFF' header len; filled in at close
+        outfile.write("WAVE", 4);
 
-        fputs("WAVE", outfile.get());
-
-        fputs("fmt ", outfile.get());
-        fwrite32le(40, outfile.get()); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+        outfile.write("fmt ", 4);
+        fwrite32le(40, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
-        fwrite16le(0xFFFE, outfile.get());
+        fwrite16le(0xFFFE, outfile);
         // 16-bit val, channel count
-        fwrite16le(gsl::narrow_cast<ushort>(outchans), outfile.get());
+        fwrite16le(gsl::narrow<ushort>(outchans), outfile);
         // 32-bit val, frequency
-        fwrite32le(gsl::narrow_cast<uint>(ininfo.samplerate), outfile.get());
+        fwrite32le(gsl::narrow<uint>(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
-        fwrite32le(gsl::narrow_cast<uint>(ininfo.samplerate)*outchans*uint{sizeof(float)},
-            outfile.get());
+        fwrite32le(gsl::narrow<uint>(ininfo.samplerate)*outchans*uint{sizeof(float)}, outfile);
         // 16-bit val, frame size
-        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*outchans), outfile.get());
+        fwrite16le(gsl::narrow<ushort>(sizeof(float)*outchans), outfile);
         // 16-bit val, bits per sample
-        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*8), outfile.get());
+        fwrite16le(gsl::narrow<ushort>(sizeof(float)*8), outfile);
         // 16-bit val, extra byte count
-        fwrite16le(22, outfile.get());
+        fwrite16le(22, outfile);
         // 16-bit val, valid bits per sample
-        fwrite16le(gsl::narrow_cast<ushort>(sizeof(float)*8), outfile.get());
+        fwrite16le(gsl::narrow<ushort>(sizeof(float)*8), outfile);
         // 32-bit val, channel mask
-        fwrite32le(0, outfile.get());
+        fwrite32le(0, outfile);
         // 16 byte GUID, sub-type format
-        fwrite(SUBTYPE_BFORMAT_FLOAT.data(), 1, SUBTYPE_BFORMAT_FLOAT.size(), outfile.get());
+        outfile.write(SUBTYPE_BFORMAT_FLOAT.data(), std::ssize(SUBTYPE_BFORMAT_FLOAT));
 
-        fputs("data", outfile.get());
-        fwrite32le(0xFFFFFFFF, outfile.get()); // 'data' header len; filled in at close
-        if(ferror(outfile.get()))
+        outfile.write("data", 4);
+        fwrite32le(0xFFFFFFFF, outfile); // 'data' header len; filled in at close
+        if(!outfile)
         {
-            fmt::println(stderr, "Error writing wave file header: {} ({})",
+            fmt::println(std::cerr, "Error writing wave file header: {} ({})",
                 std::generic_category().message(errno), errno);
             return;
         }
 
-        auto DataStart = ftell(outfile.get());
+        const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(size_t{BufferLineSize}
-            * gsl::narrow_cast<uint>(ininfo.channels));
+        auto inmem = std::vector<float>(size_t{BufferLineSize} * inchannels);
         auto decmem = al::vector<std::array<float,BufferLineSize>, 16>(outchans);
-        auto outmem = std::vector<byte4>(size_t{BufferLineSize}*outchans);
+        auto outmem = std::vector<char>(size_t{BufferLineSize}*outchans*sizeof(float));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -476,22 +469,21 @@ auto main(std::span<std::string_view> args) -> int
          * to ensure none of the original input is lost.
          */
         auto LeadIn = size_t{UhjDecoder::sFilterDelay};
-        auto LeadOut = sf_count_t{UhjDecoder::sFilterDelay};
+        auto LeadOut = size_t{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
-            auto sgot = sf_readf_float(infile.get(), inmem.data(), BufferLineSize);
-            if(sgot < BufferLineSize)
+            auto got = al::saturate_cast<size_t>(sf_readf_float(infile.get(), inmem.data(),
+                BufferLineSize));
+            if(got < BufferLineSize)
             {
-                sgot = std::max(sgot, sf_count_t{0});
-                const auto remaining = std::min(BufferLineSize - sgot, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(sgot*ininfo.channels), 0.0f);
-                sgot += remaining;
+                const auto remaining = std::min(BufferLineSize - got, LeadOut);
+                std::ranges::fill(inmem | std::views::drop(got*inchannels), 0.0f);
+                got += remaining;
                 LeadOut -= remaining;
             }
 
-            auto got = gsl::narrow_cast<size_t>(sgot);
-            if(ininfo.channels > 2 || use_general)
-                decoder->decode(inmem, gsl::narrow_cast<uint>(ininfo.channels), decmem, got);
+            if(inchannels > 2 || use_general)
+                decoder->decode(inmem, inchannels, decmem, got);
             else
                 decoder->decode2(inmem, decmem, got);
             if(LeadIn >= got)
@@ -501,40 +493,40 @@ auto main(std::span<std::string_view> args) -> int
             }
 
             got -= LeadIn;
+            auto oiter = outmem.begin();
             for(auto i = 0_uz;i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
                 static constexpr auto inv_sqrt2 = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
                 for(auto j = 0_uz;j < outchans;++j)
-                    outmem[i*outchans + j] = f32AsLEBytes(decmem[j][LeadIn+i] * inv_sqrt2);
+                    oiter = std::ranges::copy(f32AsLEBytes(decmem[j][LeadIn+i]*inv_sqrt2), oiter)
+                        .out;
             }
             LeadIn = 0;
 
-            const auto wrote = fwrite(outmem.data(), sizeof(byte4)*outchans, got, outfile.get());
-            if(wrote < got)
+            if(!outfile.write(outmem.data(), std::distance(outmem.begin(), oiter)))
             {
-                fmt::println(stderr, "Error writing wave data: {} ({})",
+                fmt::println(std::cerr, "Error writing wave data: {} ({})",
                     std::generic_category().message(errno), errno);
                 break;
             }
         }
 
-        auto DataEnd = ftell(outfile.get());
-        if(DataEnd > DataStart)
+        if(const auto DataEnd = std::streamoff{outfile.tellp()}; DataEnd > DataStart)
         {
-            auto dataLen = DataEnd - DataStart;
-            if(fseek(outfile.get(), 4, SEEK_SET) == 0)
-                fwrite32le(gsl::narrow_cast<uint>(DataEnd-8), outfile.get()); // 'WAVE' header len
-            if(fseek(outfile.get(), DataStart-4, SEEK_SET) == 0)
-                fwrite32le(gsl::narrow_cast<uint>(dataLen), outfile.get()); // 'data' header len
+            const auto dataLen = DataEnd - DataStart;
+            if(outfile.seekp(4))
+                fwrite32le(gsl::narrow<uint>(DataEnd-8), outfile); // 'WAVE' header len
+            if(outfile.seekp(DataStart-4))
+                fwrite32le(gsl::narrow<uint>(dataLen), outfile); // 'data' header len
         }
-        fflush(outfile.get());
+        outfile.flush();
         ++num_decoded;
     });
     if(num_decoded == 0)
-        fmt::println(stderr, "Failed to decode any input files");
+        fmt::println(std::cerr, "Failed to decode any input files");
     else if(num_decoded < num_files)
-        fmt::println(stderr, "Decoded {} of {} files", num_decoded, num_files);
+        fmt::println(std::cerr, "Decoded {} of {} files", num_decoded, num_files);
     else
         fmt::println("Decoded {} file{}", num_decoded, (num_decoded==1)?"":"s");
     return 0;

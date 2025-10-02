@@ -1,12 +1,16 @@
 
 #include "config.h"
 
+#if !HAVE_CXXMODULES
 #include "router.h"
+#endif
+
+#include <windows.h>
+#include <winnt.h>
 
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -15,19 +19,23 @@
 #include <string_view>
 #include <vector>
 
-#include "AL/alc.h"
-#include "AL/al.h"
-
 #include "alstring.h"
-#include "gsl/gsl"
+#include "filesystem.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
 
 #include "version.h"
 
+#if HAVE_CXXMODULES
+import alsoft.router;
+import gsl;
+import openal.alc;
 
-eLogLevel LogLevel{eLogLevel::Error};
-gsl::owner<std::FILE*> LogFile;
+#else
+
+#include "AL/alc.h"
+#include "gsl/gsl"
+#endif
 
 namespace {
 
@@ -250,6 +258,12 @@ void AddModule(HMODULE module, const std::wstring_view name)
             LOAD_PROC(alcSetThreadContext);
             LOAD_PROC(alcGetThreadContext);
         }
+        if(newdrv.alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
+        {
+            LOAD_PROC(alcLoopbackOpenDeviceSOFT);
+            LOAD_PROC(alcIsRenderFormatSupportedSOFT);
+            LOAD_PROC(alcRenderSamplesSOFT);
+        }
 #undef LOAD_PROC
     }
 
@@ -425,11 +439,9 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
     case DLL_PROCESS_ATTACH:
         if(auto logfname = al::getenv(L"ALROUTER_LOGFILE"))
         {
-            auto f = gsl::owner<std::FILE*>{_wfopen(logfname->c_str(), L"w")};
-            if(f == nullptr)
+            LogFile.open(fs::path(*logfname));
+            if(!LogFile.is_open())
                 ERR("Could not open log file: {}", wstr_to_utf8(*logfname));
-            else
-                LogFile = f;
         }
         if(auto loglev = al::getenv("ALROUTER_LOGLEVEL"))
         {
@@ -452,10 +464,6 @@ auto APIENTRY DllMain(HINSTANCE, DWORD reason, void*) -> BOOL
 
     case DLL_PROCESS_DETACH:
         DriverList.clear();
-
-        if(LogFile)
-            fclose(LogFile);
-        LogFile = nullptr;
 
         break;
     }

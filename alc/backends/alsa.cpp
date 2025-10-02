@@ -28,6 +28,7 @@
 #include <chrono>
 #include <cstring>
 #include <exception>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -44,7 +45,6 @@
 #include "core/helpers.h"
 #include "core/logging.h"
 #include "dynload.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
@@ -319,7 +319,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
     for(;err >= 0 && card >= 0;err = snd_card_next(&card))
     {
         auto handle = SndCtlPtr{};
-        err = snd_ctl_open(al::out_ptr(handle), fmt::format("hw:{}", card).c_str(), 0);
+        err = snd_ctl_open(al::out_ptr(handle), std::format("hw:{}", card).c_str(), 0);
         if(err < 0)
         {
             ERR("control open (hw:{}): {}", card, snd_strerror(err));
@@ -334,7 +334,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
 
         const auto *cardname = snd_ctl_card_info_get_name(info.get());
         const auto *cardid = snd_ctl_card_info_get_id(info.get());
-        auto name = fmt::format("{}-{}", prefix_name(stream), cardid);
+        auto name = std::format("{}-{}", prefix_name(stream), cardid);
         const auto card_prefix = std::string{ConfigValueStr({}, "alsa"sv, name)
             .value_or(main_prefix)};
 
@@ -357,16 +357,16 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
             }
 
             /* "prefix-cardid-dev" */
-            name = fmt::format("{}-{}-{}", prefix_name(stream), cardid, dev);
+            name = std::format("{}-{}-{}", prefix_name(stream), cardid, dev);
             const auto device_prefix = std::string{ConfigValueStr({}, "alsa"sv, name)
                 .value_or(card_prefix)};
 
             /* "CardName, PcmName (CARD=cardid,DEV=dev)" */
-            name = fmt::format("{}, {} (CARD={},DEV={})", cardname,
+            name = std::format("{}, {} (CARD={},DEV={})", cardname,
                 snd_pcm_info_get_name(pcminfo.get()), cardid, dev);
 
             /* "devprefixCARD=cardid,DEV=dev" */
-            auto device = fmt::format("{}CARD={},DEV={}", device_prefix, cardid, dev);
+            auto device = std::format("{}CARD={},DEV={}", device_prefix, cardid, dev);
             
             const auto &entry = devlist.emplace_back(std::move(name), std::move(device));
             TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
@@ -422,7 +422,7 @@ auto verify_state(snd_pcm_t *handle) -> int
 
 
 struct AlsaPlayback final : public BackendBase {
-    explicit AlsaPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit AlsaPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~AlsaPlayback() override;
 
     void mixerProc();
@@ -842,7 +842,7 @@ auto AlsaPlayback::getClockLatency() -> ClockLatency
 
 
 struct AlsaCapture final : public BackendBase {
-    explicit AlsaCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit AlsaCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~AlsaCapture() override;
 
     void open(std::string_view name) override;
@@ -1215,7 +1215,8 @@ auto AlsaBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-BackendPtr AlsaBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto AlsaBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new AlsaPlayback{device}};

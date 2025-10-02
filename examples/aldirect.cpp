@@ -26,13 +26,16 @@
  * extension.
  */
 
+#include "config.h"
+
 #include <algorithm>
 #include <cstddef>
-#include <cstdio>
 #include <limits>
+#include <iostream>
 #include <memory>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -40,15 +43,24 @@
 
 #include "sndfile.h"
 
+#include "common/alhelpers.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+
+#include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import gsl;
+import openal;
+
+#else
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "common/alhelpers.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
-
-#include "win_main_utf8.h"
+#endif
 
 namespace {
 
@@ -82,10 +94,7 @@ LPALGETSOURCEFDIRECT alGetSourcefDirect{};
 LPALSOURCEPLAYDIRECT alSourcePlayDirect{};
 
 
-struct SndFileDeleter {
-    void operator()(SNDFILE *sndfile) { sf_close(sndfile); }
-};
-using SndFilePtr = std::unique_ptr<SNDFILE,SndFileDeleter>;
+using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
  * returns the new buffer ID.
@@ -97,13 +106,13 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
     auto sndfile = SndFilePtr{sf_open(std::string{filename}.c_str(), SFM_READ, &sfinfo)};
     if(!sndfile)
     {
-        fmt::println(stderr, "Could not open audio in {}: {}", filename,
+        fmt::println(std::cerr, "Could not open audio in {}: {}", filename,
             sf_strerror(sndfile.get()));
         return 0u;
     }
     if(sfinfo.frames < 1)
     {
-        fmt::println(stderr, "Bad sample count in {} ({})", filename, sfinfo.frames);
+        fmt::println(std::cerr, "Bad sample count in {} ({})", filename, sfinfo.frames);
         return 0u;
     }
 
@@ -255,13 +264,13 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
     }
     if(!format)
     {
-        fmt::println(stderr, "Unsupported channel count: {}", sfinfo.channels);
+        fmt::println(std::cerr, "Unsupported channel count: {}", sfinfo.channels);
         return 0u;
     }
 
     if(sfinfo.frames/splblockalign > sf_count_t{std::numeric_limits<int>::max()}/byteblockalign)
     {
-        fmt::println(stderr, "Too many sample frames in {} ({})", filename, sfinfo.frames);
+        fmt::println(std::cerr, "Too many sample frames in {} ({})", filename, sfinfo.frames);
         return 0u;
     }
 
@@ -271,37 +280,37 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
 
     if(sample_format == FormatType::Int16)
     {
-        auto &vec = memstore.emplace<std::vector<short>>(static_cast<size_t>(sfinfo.frames
+        auto &vec = memstore.emplace<std::vector<short>>(gsl::narrow<size_t>(sfinfo.frames
             / splblockalign * sfinfo.channels));
         const auto num_frames = sf_readf_short(sndfile.get(), vec.data(), sfinfo.frames);
         if(num_frames > 0)
         {
-            const auto num_samples = static_cast<size_t>(num_frames * sfinfo.channels);
+            const auto num_samples = gsl::narrow<size_t>(num_frames * sfinfo.channels);
             membuf = std::as_writable_bytes(std::span{vec}.first(num_samples));
         }
     }
     else if(sample_format == FormatType::Float)
     {
-        auto &vec = memstore.emplace<std::vector<float>>(static_cast<size_t>(sfinfo.frames
+        auto &vec = memstore.emplace<std::vector<float>>(gsl::narrow<size_t>(sfinfo.frames
             / splblockalign * sfinfo.channels));
         const auto num_frames = sf_readf_float(sndfile.get(), vec.data(), sfinfo.frames);
         if(num_frames > 0)
         {
-            const auto num_samples = static_cast<size_t>(num_frames * sfinfo.channels);
+            const auto num_samples = gsl::narrow<size_t>(num_frames * sfinfo.channels);
             membuf = std::as_writable_bytes(std::span{vec}.first(num_samples));
         }
     }
     else
     {
         const auto count = sfinfo.frames / splblockalign * byteblockalign;
-        auto &vec = memstore.emplace<std::vector<std::byte>>(static_cast<size_t>(count));
+        auto &vec = memstore.emplace<std::vector<std::byte>>(gsl::narrow<size_t>(count));
         const auto num_bytes = sf_read_raw(sndfile.get(), membuf.data(), count);
         if(num_bytes > 0)
-            membuf = std::as_writable_bytes(std::span{vec}.first(static_cast<size_t>(num_bytes)));
+            membuf = std::as_writable_bytes(std::span{vec}.first(gsl::narrow<size_t>(num_bytes)));
     }
     if(membuf.empty())
     {
-        fmt::println(stderr, "Failed to read samples in {}", filename);
+        fmt::println(std::cerr, "Failed to read samples in {}", filename);
         return 0u;
     }
 
@@ -311,13 +320,13 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
     alGenBuffersDirect(context, 1, &buffer);
     if(splblockalign > 1)
         alBufferiDirect(context, buffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, splblockalign);
-    alBufferDataDirect(context, buffer, format, membuf.data(), static_cast<ALsizei>(membuf.size()),
+    alBufferDataDirect(context, buffer, format, membuf.data(), gsl::narrow<ALsizei>(membuf.size()),
         sfinfo.samplerate);
 
     /* Check if an error occurred, and clean up if so. */
     if(const auto err = alGetErrorDirect(context); err != AL_NO_ERROR)
     {
-        fmt::println(stderr, "OpenAL Error: {}", alGetStringDirect(context, err));
+        fmt::println(std::cerr, "OpenAL Error: {}", alGetStringDirect(context, err));
         if(buffer && alIsBufferDirect(context, buffer))
             alDeleteBuffersDirect(context, 1, &buffer);
         return 0u;
@@ -332,7 +341,7 @@ auto main(std::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <name>] <filename>", args[0]);
+        fmt::println(std::cerr, "Usage: {} [-device <name>] <filename>", args[0]);
         return 1;
     }
 
@@ -344,20 +353,20 @@ auto main(std::span<std::string_view> args) -> int
     {
         device = p_alcOpenDevice(std::string{args[1]}.c_str());
         if(!device)
-            fmt::println(stderr, "Failed to open \"{}\", trying default", args[1]);
+            fmt::println(std::cerr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);
     }
     if(!device)
         device = p_alcOpenDevice(nullptr);
     if(!device)
     {
-        fmt::println(stderr, "Could not open a device!");
+        fmt::println(std::cerr, "Could not open a device!");
         return 1;
     }
 
     if(!p_alcIsExtensionPresent(device, "ALC_EXT_direct_context"))
     {
-        fmt::println(stderr, "ALC_EXT_direct_context not supported on device");
+        fmt::println(std::cerr, "ALC_EXT_direct_context not supported on device");
         p_alcCloseDevice(device);
         return 1;
     }
@@ -403,8 +412,7 @@ auto main(std::span<std::string_view> args) -> int
         LOAD_PROC(alcGetProcAddress);
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 #undef LOAD_PROC
-        device = p_alcOpenDevice(devname.c_str());
-        Ensures(device != nullptr);
+        device = gsl::make_not_null(p_alcOpenDevice(devname.c_str()));
     }
 
     /* Load the Direct API functions we're using. */
@@ -436,7 +444,7 @@ auto main(std::span<std::string_view> args) -> int
     if(!context)
     {
         p_alcCloseDevice(device);
-        fmt::println(stderr, "Could not create a context!");
+        fmt::println(std::cerr, "Could not create a context!");
         return 1;
     }
 
@@ -453,7 +461,8 @@ auto main(std::span<std::string_view> args) -> int
     auto source = ALuint{0u};
     alGenSourcesDirect(context, 1, &source);
     alSourceiDirect(context, source, AL_BUFFER, static_cast<ALint>(buffer));
-    Expects(alGetErrorDirect(context)==AL_NO_ERROR && "Failed to setup sound source");
+    if(alGetErrorDirect(context) != AL_NO_ERROR)
+        throw std::runtime_error{"Failed to setup sound source"};
 
     /* Play the sound until it finishes. */
     alSourcePlayDirect(context, source);
@@ -466,7 +475,7 @@ auto main(std::span<std::string_view> args) -> int
         auto offset = ALfloat{};
         alGetSourcefDirect(context, source, AL_SEC_OFFSET, &offset);
         fmt::print("  \rOffset: {:.02f}", offset);
-        fflush(stdout);
+        std::cout.flush();
     } while(alGetErrorDirect(context) == AL_NO_ERROR && state == AL_PLAYING);
     fmt::println("");
 

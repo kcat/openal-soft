@@ -53,7 +53,6 @@ struct DistortionState final : public EffectState {
     /* Effect parameters */
     BiquadFilter mLowpass;
     BiquadFilter mBandpass;
-    float mAttenuation{};
     float mEdgeCoeff{};
 
     alignas(16) std::array<FloatBufferLine,2> mBuffer{};
@@ -76,7 +75,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<DistortionProps>(*props_);
-    const auto *device = context->mDevice;
+    auto const device = al::get_not_null(context->mDevice);
 
     /* Store waveshaper edge settings. */
     const auto edge = std::min(std::sin(std::numbers::pi_v<float>*0.5f * props.Edge), 0.99f);
@@ -180,5 +179,5 @@ struct DistortionStateFactory final : public EffectStateFactory {
 auto DistortionStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static DistortionStateFactory DistortionFactory{};
-    return &DistortionFactory;
+    return gsl::make_not_null(&DistortionFactory);
 }

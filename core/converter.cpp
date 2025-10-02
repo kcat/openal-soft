@@ -150,7 +150,7 @@ template<DevFmtType T>
 void Multi2Mono(uint chanmask, const size_t step, const std::span<float> dst, const void *src)
     noexcept
 {
-    const auto scale = std::sqrt(1.0f / static_cast<float>(std::popcount(chanmask)));
+    const auto scale = std::sqrt(1.0f / gsl::narrow_cast<float>(std::popcount(chanmask)));
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), step*dst.size()};
     std::ranges::fill(dst, 0.0f);
     while(chanmask)
@@ -193,9 +193,9 @@ SampleConverterPtr SampleConverter::Create(DevFmtType srcType, DevFmtType dstTyp
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     auto mixer_mode = FPUCtl{};
-    const auto step = std::min(std::round(srcRate*double{MixerFracOne}/dstRate),
+    const auto step = std::clamp(std::round(srcRate*double{MixerFracOne}/dstRate), 1.0,
         MaxPitch*double{MixerFracOne});
-    converter->mIncrement = std::max(static_cast<uint>(step), 1u);
+    converter->mIncrement = gsl::narrow_cast<uint>(step);
     if(converter->mIncrement == MixerFracOne)
     {
         converter->mResample = [](const InterpState*, const std::span<const float> src, uint,
@@ -234,7 +234,7 @@ uint SampleConverter::availableOut(uint srcframes) const
     DataSize64 -= mFracOffset;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return static_cast<uint>(std::clamp((DataSize64 + mIncrement-1)/mIncrement, 1_u64,
+    return gsl::narrow_cast<uint>(std::clamp((DataSize64 + mIncrement-1)/mIncrement, 1_u64,
         uint64_t{std::numeric_limits<int>::max()}));
 }
 
@@ -278,8 +278,8 @@ uint SampleConverter::convert(const void **src, uint *srcframes, void *dst, uint
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = static_cast<uint>(std::clamp((DataSize64 + increment-1)/increment, 1_u64,
-            uint64_t{BufferLineSize}));
+        auto DstSize = gsl::narrow_cast<uint>(std::clamp((DataSize64 + increment-1)/increment,
+            1_u64, uint64_t{BufferLineSize}));
         DstSize = std::min(DstSize, dstframes-pos);
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
@@ -374,8 +374,8 @@ uint SampleConverter::convertPlanar(const void **src, uint *srcframes, void *con
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = static_cast<uint>(std::clamp((DataSize64 + increment-1)/increment, 1_u64,
-            uint64_t{BufferLineSize}));
+        auto DstSize = gsl::narrow_cast<uint>(std::clamp((DataSize64 + increment-1)/increment,
+            1_u64, uint64_t{BufferLineSize}));
         DstSize = std::min(DstSize, dstframes-pos);
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;

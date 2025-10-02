@@ -10,6 +10,7 @@
 
 #include "expected.hpp"
 #include "core/ambidefs.h"
+#include "opthelpers.h"
 
 /* Helpers to read .ambdec configuration files. */
 
@@ -49,7 +50,7 @@ struct AmbDecConf {
     std::array<float,MaxAmbiOrder+1> HFOrderGain{};
     std::span<CoeffArray> HFMatrix;
 
-    ~AmbDecConf();
+    NOINLINE ~AmbDecConf() = default;
 
     auto load(const std::string_view fname) noexcept -> al::expected<std::monostate,std::string>;
 };

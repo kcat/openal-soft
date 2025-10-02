@@ -22,8 +22,9 @@
  * Or visit:  http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
-#include "sofa-support.h"
+#include "config.h"
 
+#include "sofa-support.h"
 
 #include <algorithm>
 #include <array>
@@ -33,10 +34,10 @@
 #include <utility>
 #include <vector>
 
-#include "fmt/core.h"
+#include "fmt/base.h"
 #include "fmt/ranges.h"
-#include "mysofa.h"
 
+#include "mysofa.h"
 
 namespace {
 

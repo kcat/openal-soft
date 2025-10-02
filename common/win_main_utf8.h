@@ -4,60 +4,44 @@
 /* For Windows systems this provides a way to get UTF-8 encoded argv strings,
  * and also overrides fopen to accept UTF-8 filenames. Working with wmain
  * directly complicates cross-platform compatibility, while normal main() in
- * Windows uses the current codepage (which has limited availability of
+ * Windows uses the current codepage (which may have limited availability of
  * characters).
  *
  * For MinGW, you must link with -municode
  */
 #ifdef _WIN32
+#include "config.h"
+
 #include <windows.h>
 #include <shellapi.h>
 #include <wchar.h>
 
-#ifdef __cplusplus
-#include <memory>
-
-#define STATIC_CAST(...) static_cast<__VA_ARGS__>
-#define REINTERPRET_CAST(...) reinterpret_cast<__VA_ARGS__>
-#define MAYBE_UNUSED [[maybe_unused]]
-
-#else
-
-#define STATIC_CAST(...) (__VA_ARGS__)
-#define REINTERPRET_CAST(...) (__VA_ARGS__)
+#ifndef __cplusplus
 #ifdef __GNUC__
-#define MAYBE_UNUSED __attribute__((__unused__))
-#else
-#define MAYBE_UNUSED
+__attribute__((__unused__))
 #endif
-#endif
-
-MAYBE_UNUSED static FILE *my_fopen(const char *fname, const char *mode)
+static FILE *my_fopen(const char *fname, const wchar_t *wmode)
 {
-    wchar_t *wname=NULL, *wmode=NULL;
-    int namelen, modelen;
-    FILE *file = NULL;
+    wchar_t *wname;
+    int namelen;
     errno_t err;
+    FILE *file;
 
-    namelen = MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0);
-    modelen = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-
-    if(namelen <= 0 || modelen <= 0)
+    namelen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, fname, -1, NULL, 0);
+    if(namelen <= 0)
     {
-        fprintf(stderr, "Failed to convert UTF-8 fname \"%s\", mode \"%s\"\n", fname, mode);
+        fprintf(stderr, "Failed to convert UTF-8 fname \"%s\"\n", fname);
         return NULL;
     }
 
-#ifdef __cplusplus
-    auto strbuf = std::make_unique<wchar_t[]>(static_cast<size_t>(namelen) +
-        static_cast<size_t>(modelen));
-    wname = strbuf.get();
-#else
-    wname = (wchar_t*)calloc((size_t)namelen + (size_t)modelen, sizeof(wchar_t));
-#endif
-    wmode = wname + namelen;
-    MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
-    MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
+    wname = (wchar_t*)calloc((size_t)namelen, sizeof(wchar_t));
+    if(!wname)
+    {
+        fprintf(stderr, "Failed to allocate %zu bytes for fname conversion\n",
+            sizeof(wchar_t)*(size_t)namelen);
+        return NULL;
+    }
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, fname, -1, wname, namelen);
 
     err = _wfopen_s(&file, wname, wmode);
     if(err)
@@ -66,12 +50,11 @@ MAYBE_UNUSED static FILE *my_fopen(const char *fname, const char *mode)
         file = NULL;
     }
 
-#ifndef __cplusplus
     free(wname);
-#endif
     return file;
 }
-#define fopen my_fopen
+#define fopen(f, m) my_fopen((f), (L##m))
+#endif
 
 
 /* SDL overrides main and provides UTF-8 args for us. */
@@ -80,26 +63,82 @@ int my_main(int, char**);
 #define main my_main
 
 #ifdef __cplusplus
-extern "C"
+#include <iostream>
+#include <stdexcept>
+#include <span>
+#include <string>
+#include <string_view>
+
+#include "alnumeric.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+
+#if HAVE_CXXMODULES
+import gsl;
+#else
+#include "gsl/gsl"
 #endif
+
+extern "C"
+auto wmain(int argc, wchar_t **wargv) -> int
+{
+    static constexpr auto flags = DWORD{WC_ERR_INVALID_CHARS};
+    const auto wargs = std::span{wargv, gsl::narrow<size_t>(argc)};
+    auto argstr = std::string{};
+    try {
+        for(std::wstring_view arg : wargs)
+        {
+            if(arg.empty())
+            {
+                argstr.push_back('\0');
+                continue;
+            }
+
+            const auto u16len = gsl::narrow<int>(arg.size());
+            const auto u8len = WideCharToMultiByte(CP_UTF8, flags, arg.data(), u16len, nullptr, 0,
+                nullptr, nullptr);
+            if(u8len < 1)
+                throw std::runtime_error{"WideCharToMultiByte failed"};
+
+            const auto curlen = argstr.empty() ? argstr.size() : (argstr.size()+1);
+            const auto newlen = curlen + gsl::narrow<size_t>(u8len);
+            argstr.resize(newlen, '\0');
+            if(WideCharToMultiByte(CP_UTF8, flags, arg.data(), u16len, &argstr[curlen], u8len,
+                nullptr, nullptr) < 1)
+                throw std::runtime_error{"WideCharToMultiByte failed"};
+        }
+    }
+    catch(std::exception& e) {
+        fmt::println(std::cerr, "Failed to convert command line to UTF-8: {}", e.what());
+        return -1;
+    }
+
+    auto argv = std::vector<char*>(wargs.size());
+    auto stridx = 0_uz;
+    std::ranges::generate(argv, [&argstr,&stridx]
+    {
+        auto *ret = &argstr[stridx];
+        stridx = argstr.find('\0', stridx) + 1;
+        return ret;
+    });
+
+    return main(argc, argv.data());
+}
+
+#else /* __cplusplus */
+
 int wmain(int argc, wchar_t **wargv)
 {
     char **argv;
     size_t total;
     int i;
 
-    total = sizeof(*argv) * STATIC_CAST(size_t)(argc);
+    total = sizeof(*argv) * (size_t)argc;
     for(i = 0;i < argc;i++)
-        total += STATIC_CAST(size_t)(WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL,
-            NULL));
+        total += (size_t)WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL, NULL);
 
-#ifdef __cplusplus
-    auto argbuf = std::make_unique<char[]>(total);
-    argv = reinterpret_cast<char**>(argbuf.get());
-#else
     argv = (char**)calloc(1, total);
-#endif
-    argv[0] = REINTERPRET_CAST(char*)(argv + argc);
+    argv[0] = (char*)(argv + argc);
     for(i = 0;i < argc-1;i++)
     {
         int len = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], 65535, NULL, NULL);
@@ -107,15 +146,13 @@ int wmain(int argc, wchar_t **wargv)
     }
     WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], 65535, NULL, NULL);
 
-#ifdef __cplusplus
-    return main(argc, argv);
-#else
     i = main(argc, argv);
 
     free(argv);
     return i;
-#endif
 }
+#endif /* __cplusplus */
+
 #endif /* !defined(SDL_MAIN_NEEDED) && !defined(SDL_MAIN_AVAILABLE) */
 
 #endif /* _WIN32 */

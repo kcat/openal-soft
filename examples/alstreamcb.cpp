@@ -24,15 +24,16 @@
 
 /* This file contains a streaming audio player using a callback buffer. */
 
+#include "config.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -45,16 +46,25 @@
 
 #include "sndfile.h"
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
-
 #include "alnumeric.h"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
-#include "fmt/core.h"
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 
 #include "win_main_utf8.h"
+
+#if HAVE_CXXMODULES
+import gsl;
+import openal;
+
+#else
+
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+#include "gsl/gsl"
+#endif
 
 
 namespace {
@@ -127,7 +137,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     mSndfile = sf_open(filename.c_str(), SFM_READ, &mSfInfo);
     if(!mSndfile)
     {
-        fmt::println(stderr, "Could not open audio in {}: {}", filename,
+        fmt::println(std::cerr, "Could not open audio in {}: {}", filename,
             sf_strerror(mSndfile));
         return false;
     }
@@ -206,16 +216,16 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     {
     case SampleType::Int16:
         mSamplesPerBlock = 1_uz;
-        mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * sizeof(short);
+        mBytesPerBlock = gsl::narrow<size_t>(mSfInfo.channels) * sizeof(short);
         break;
     case SampleType::Float:
         mSamplesPerBlock = 1_uz;
-        mBytesPerBlock = static_cast<size_t>(mSfInfo.channels) * sizeof(float);
+        mBytesPerBlock = gsl::narrow<size_t>(mSfInfo.channels) * sizeof(float);
         break;
     case SampleType::IMA4:
     case SampleType::MSADPCM:
-        mSamplesPerBlock = static_cast<size_t>(splblocksize);
-        mBytesPerBlock = static_cast<size_t>(byteblocksize);
+        mSamplesPerBlock = gsl::narrow<size_t>(splblocksize);
+        mBytesPerBlock = gsl::narrow<size_t>(byteblocksize);
         break;
     }
 
@@ -270,7 +280,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     }
     if(!mFormat)
     {
-        fmt::println(stderr, "Unsupported channel count: {}", mSfInfo.channels);
+        fmt::println(std::cerr, "Unsupported channel count: {}", mSfInfo.channels);
         sf_close(mSndfile);
         mSndfile = nullptr;
 
@@ -278,7 +288,7 @@ auto StreamPlayer::open(const std::string &filename) -> bool
     }
 
     /* Set a 1s ring buffer size. */
-    const auto numblocks = (static_cast<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1_uz)
+    const auto numblocks = (gsl::narrow<ALuint>(mSfInfo.samplerate) + mSamplesPerBlock-1_uz)
         / mSamplesPerBlock;
     switch(sampleFormat)
     {
@@ -329,7 +339,7 @@ auto StreamPlayer::bufferCallback(const std::span<std::byte> output) noexcept ->
      */
 
     auto roffset = mReadPos.load(std::memory_order_acquire);
-    while(const auto remaining = static_cast<size_t>(std::distance(dst, output.end())))
+    while(const auto remaining = gsl::narrow<size_t>(std::distance(dst, output.end())))
     {
         /* If the write offset == read offset, there's nothing left in the
          * ring-buffer. Break from the loop and give what has been written.
@@ -361,13 +371,13 @@ auto StreamPlayer::bufferCallback(const std::span<std::byte> output) noexcept ->
      */
     mReadPos.store(roffset, std::memory_order_release);
 
-    return static_cast<ALsizei>(std::distance(output.begin(), dst));
+    return gsl::narrow<ALsizei>(std::distance(output.begin(), dst));
 }
 
 auto StreamPlayer::prepare() -> bool
 {
     if(mSamplesPerBlock > 1_uz)
-        alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, static_cast<int>(mSamplesPerBlock));
+        alBufferi(mBuffer, AL_UNPACK_BLOCK_ALIGNMENT_SOFT, gsl::narrow<int>(mSamplesPerBlock));
 
     /* A lambda without captures can decay to a normal function pointer,
      * which here just forwards to a normal class method and gives the buffer
@@ -386,7 +396,7 @@ auto StreamPlayer::prepare() -> bool
     alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
     if(const auto err = alGetError())
     {
-        fmt::println(stderr, "Failed to set callback: {} ({:#x})", alGetString(err),
+        fmt::println(std::cerr, "Failed to set callback: {} ({:#x})", alGetString(err),
             as_unsigned(err));
         return false;
     }
@@ -413,14 +423,14 @@ auto StreamPlayer::update() -> bool
          */
         const auto curtime = ((state == AL_STOPPED)
             ? (mDecoderOffset-readable) / mBytesPerBlock * mSamplesPerBlock
-            : (size_t{static_cast<ALuint>(pos)} + mStartOffset))
-            / static_cast<ALuint>(mSfInfo.samplerate);
+            : (size_t{gsl::narrow<ALuint>(pos)} + mStartOffset))
+            / gsl::narrow<ALuint>(mSfInfo.samplerate);
         fmt::print("\r {}m{:02}s ({:3}% full)", curtime/60, curtime%60,
             readable * 100 / mBufferData.size());
     }
     else
         fmt::println("Starting...");
-    fflush(stdout);
+    std::cout.flush();
 
     while(!sf_error(mSndfile))
     {
@@ -449,29 +459,29 @@ auto StreamPlayer::update() -> bool
         /* Read samples from the file according to the type of samples
          * being buffered, and get the number of bytes buffered.
          */
-        const auto read_bytes = std::visit([this,woffset,writable](auto&& data) -> size_t
+        const auto read_bytes = std::visit([this,woffset,writable]<typename T>(T&& data) -> size_t
         {
-            using sample_t = typename std::remove_cvref_t<decltype(data)>::value_type;
+            using sample_t = std::remove_cvref_t<T>::value_type;
             if constexpr(std::is_same_v<sample_t, short>)
             {
                 const auto num_frames = sf_readf_short(mSndfile, &data[woffset/sizeof(short)],
-                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mSamplesPerBlock));
                 if(num_frames < 1) return 0_uz;
-                return static_cast<size_t>(num_frames) * mBytesPerBlock;
+                return gsl::narrow<size_t>(num_frames) * mBytesPerBlock;
             }
             else if constexpr(std::is_same_v<sample_t, float>)
             {
                 const auto num_frames = sf_readf_float(mSndfile, &data[woffset/sizeof(float)],
-                    static_cast<sf_count_t>(writable*mSamplesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mSamplesPerBlock));
                 if(num_frames < 1) return 0_uz;
-                return static_cast<size_t>(num_frames) * mBytesPerBlock;
+                return gsl::narrow<size_t>(num_frames) * mBytesPerBlock;
             }
             else if constexpr(std::is_same_v<sample_t, std::byte>)
             {
                 const auto numbytes = sf_read_raw(mSndfile, &data[woffset],
-                    static_cast<sf_count_t>(writable*mBytesPerBlock));
+                    gsl::narrow<sf_count_t>(writable*mBytesPerBlock));
                 if(numbytes < 1) return size_t{0};
-                return static_cast<size_t>(numbytes);
+                return gsl::narrow<size_t>(numbytes);
             }
         }, mBufferVariant);
         if(read_bytes == 0)
@@ -515,16 +525,17 @@ auto main(std::span<std::string_view> args) -> int
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
     {
-        fmt::println(stderr, "Usage: {} [-device <name>] <filenames...>", args[0]);
+        fmt::println(std::cerr, "Usage: {} [-device <name>] <filenames...>", args[0]);
         return 1;
     }
-
     args = args.subspan(1);
+
     auto almgr = InitAL(args);
+    almgr.printName();
 
     if(!alIsExtensionPresent("AL_SOFT_callback_buffer"))
     {
-        fmt::println(stderr, "AL_SOFT_callback_buffer extension not available");
+        fmt::println(std::cerr, "AL_SOFT_callback_buffer extension not available");
         return 1;
     }
 
@@ -548,7 +559,7 @@ auto main(std::span<std::string_view> args) -> int
 
         fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
             player->mSfInfo.samplerate);
-        fflush(stdout);
+        std::cout.flush();
 
         if(!player->prepare())
         {
@@ -558,7 +569,7 @@ auto main(std::span<std::string_view> args) -> int
 
         while(player->update())
             std::this_thread::sleep_for(nanoseconds{seconds{1}} / refresh);
-        putc('\n', stdout);
+        fmt::println("");
 
         /* All done with this file. Close it and go to the next */
         player->close();

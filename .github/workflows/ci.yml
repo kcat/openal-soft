@@ -67,14 +67,14 @@ jobs:
           }
         - {
             name: "macOS-Release",
-            os: macos-latest,
+            os: macos-15,
             cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON \
               -DALSOFT_TESTS=ON",
             build_type: "Release"
           }
         - {
             name: "iOS-Release",
-            os: macos-latest,
+            os: macos-15,
             cmake_opts: "-GXcode \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DALSOFT_REQUIRE_COREAUDIO=ON \
@@ -117,7 +117,7 @@ jobs:
         - {
             name: "Android_arm64-v8a-Release",
             os: ubuntu-latest,
-            cmake_opts: "-DANDRIOD_ABI=arm64-v8a \
+            cmake_opts: "-DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=25 \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \

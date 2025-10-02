@@ -13,6 +13,7 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -107,9 +108,9 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
     const float ThresholdDb, const float Ratio, const float KneeDb, const float AttackTime,
     const float ReleaseTime) -> std::unique_ptr<Compressor>
 {
-    const auto lookAhead = static_cast<uint>(std::clamp(std::round(LookAheadTime*SampleRate), 0.0f,
-        BufferLineSize-1.0f));
-    const auto hold = static_cast<uint>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
+    const auto lookAhead = gsl::narrow_cast<uint>(std::clamp(std::round(LookAheadTime*SampleRate),
+        0.0f, BufferLineSize-1.0f));
+    const auto hold = gsl::narrow_cast<uint>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
         BufferLineSize-1.0f));
 
     auto Comp = std::make_unique<Compressor>(PrivateToken{});

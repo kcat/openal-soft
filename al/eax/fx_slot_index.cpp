@@ -8,14 +8,13 @@
 namespace
 {
 
-
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotIndexException : public EaxException {
 public:
     explicit EaxFxSlotIndexException(const std::string_view message)
         : EaxException{"EAX_FX_SLOT_INDEX", message}
     { }
-}; // EaxFxSlotIndexException
-
+};
 
 } // namespace
 

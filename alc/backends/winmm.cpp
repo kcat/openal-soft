@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <format>
 #include <ranges>
 #include <string>
 #include <thread>
@@ -43,7 +44,6 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "core/logging.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
@@ -79,7 +79,7 @@ void ProbePlaybackDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(PlaybackDevices, newname))
-                newname = fmt::format("{} #{}", basename, ++count);
+                newname = std::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);
@@ -106,7 +106,7 @@ void ProbeCaptureDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(CaptureDevices, newname))
-                newname = fmt::format("{} #{}", basename, ++count);
+                newname = std::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);
@@ -117,7 +117,7 @@ void ProbeCaptureDevices()
 
 
 struct WinMMPlayback final : public BackendBase {
-    explicit WinMMPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WinMMPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~WinMMPlayback() override;
 
     void CALLBACK waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
@@ -354,7 +354,7 @@ void WinMMPlayback::stop()
 
 
 struct WinMMCapture final : public BackendBase {
-    explicit WinMMCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WinMMCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~WinMMCapture() override;
 
     void CALLBACK waveInProc(HWAVEIN device, UINT msg, DWORD_PTR param1, DWORD_PTR param2) noexcept;
@@ -598,7 +598,8 @@ auto WinMMBackendFactory::enumerate(BackendType type) -> std::vector<std::string
     return outnames;
 }
 
-BackendPtr WinMMBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto WinMMBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WinMMPlayback{device}};

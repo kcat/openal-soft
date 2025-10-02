@@ -3,13 +3,13 @@
 
 #include "events.h"
 
+#include <format>
 #include <ranges>
 #include <span>
 
 #include "alnumeric.h"
 #include "core/logging.h"
 #include "device.h"
-#include "fmt/core.h"
 #include "gsl/gsl"
 
 
@@ -24,7 +24,7 @@ auto EnumFromEventType(const alc::EventType type) -> ALCenum
     case alc::EventType::DeviceRemoved: return ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT;
     case alc::EventType::Count: break;
     }
-    throw std::runtime_error{fmt::format("Invalid EventType: {}", int{al::to_underlying(type)})};
+    throw std::runtime_error{std::format("Invalid EventType: {}", int{al::to_underlying(type)})};
 }
 
 } // namespace
@@ -59,19 +59,19 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
 {
     if(enable != ALC_FALSE && enable != ALC_TRUE)
     {
-        alcSetError(nullptr, ALC_INVALID_ENUM);
+        al::Device::SetGlobalError(ALC_INVALID_ENUM);
         return ALC_FALSE;
     }
     if(count < 0)
     {
-        alcSetError(nullptr, ALC_INVALID_VALUE);
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return ALC_FALSE;
     }
     if(count == 0)
         return ALC_TRUE;
     if(!events)
     {
-        alcSetError(nullptr, ALC_INVALID_VALUE);
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return ALC_FALSE;
     }
 
@@ -88,7 +88,7 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
     if(invalidevent != eventrange.end())
     {
         WARN("Invalid event type: {:#04x}", as_unsigned(*invalidevent));
-        alcSetError(nullptr, ALC_INVALID_ENUM);
+        al::Device::SetGlobalError(ALC_INVALID_ENUM);
         return ALC_FALSE;
     }
 

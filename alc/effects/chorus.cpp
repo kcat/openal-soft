@@ -89,11 +89,6 @@ struct ChorusState final : public EffectState {
     void calcTriangleDelays(const size_t todo);
     void calcSinusoidDelays(const size_t todo);
 
-    void deviceUpdate(const DeviceBase *device, const float MaxDelay);
-    void update(const ContextBase *context, const EffectSlot *slot, const ChorusWaveform waveform,
-            const float delay, const float depth, const float feedback, const float rate,
-            int phase, const EffectTarget target);
-
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) final;
     void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
         const EffectTarget target) final;
@@ -123,8 +118,8 @@ void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
-    const auto *device = context->mDevice;
-    const auto frequency = static_cast<float>(device->mSampleRate);
+    auto const device = al::get_not_null(context->mDevice);
+    auto const frequency = static_cast<float>(device->mSampleRate);
 
     mWaveform = props.Waveform;
 
@@ -321,5 +316,5 @@ struct ChorusStateFactory final : public EffectStateFactory {
 auto ChorusStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
 {
     static ChorusStateFactory ChorusFactory{};
-    return &ChorusFactory;
+    return gsl::make_not_null(&ChorusFactory);
 }

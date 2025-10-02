@@ -6,7 +6,8 @@
 #ifdef _WIN32
 #include <windows.h>
 
-#include "fmt/core.h"
+#include <format>
+
 #include "gsl/gsl"
 #include "strutils.hpp"
 
@@ -25,7 +26,7 @@ auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
         message.resize(res);
         return al::unexpected(wstr_to_utf8(message));
     }
-    return al::unexpected(fmt::format("LoadLibraryW error: {}", err));
+    return al::unexpected(std::format("LoadLibraryW error: {}", err));
 }
 
 void CloseLib(void *handle)
@@ -49,7 +50,7 @@ auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, st
         message.resize(res);
         return al::unexpected(wstr_to_utf8(message));
     }
-    return al::unexpected(fmt::format("GetProcAddress error: {}", err));
+    return al::unexpected(std::format("GetProcAddress error: {}", err));
 }
 
 #elif defined(HAVE_DLFCN_H)

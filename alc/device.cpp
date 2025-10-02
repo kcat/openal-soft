@@ -3,8 +3,13 @@
 
 #include "device.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <algorithm>
 #include <bit>
+#include <csignal>
 #include <cstddef>
 #include <numeric>
 
@@ -29,6 +34,14 @@ using voidp = void*;
 } // namespace
 
 namespace al {
+
+void DeviceDeleter::operator()(gsl::owner<Device*> device) const noexcept
+{ delete device; }
+
+auto Device::Create(DeviceType type) -> al::intrusive_ptr<al::Device>
+{
+    return al::intrusive_ptr{new Device{type}};
+}
 
 Device::Device(DeviceType type) : DeviceBase{type}
 { }
@@ -81,7 +94,7 @@ auto Device::getOutputMode1() const noexcept -> OutputMode1
     case DevFmtStereo:
         if(mHrtf)
             return OutputMode1::Hrtf;
-        else if(std::holds_alternative<UhjPostProcess>(mPostProcess))
+        if(std::holds_alternative<UhjPostProcess>(mPostProcess))
             return OutputMode1::Uhj2;
         return OutputMode1::StereoBasic;
     case DevFmtQuad: return OutputMode1::Quad;
@@ -95,6 +108,27 @@ auto Device::getOutputMode1() const noexcept -> OutputMode1
         break;
     }
     return OutputMode1::Any;
+}
+
+
+void Device::SetError(Device *device, ALCenum errorCode)
+{
+    WARN("Error generated on device {}, code {:#04x}", voidp{device}, as_unsigned(errorCode));
+    if(sTrapALCError)
+    {
+#ifdef _WIN32
+        /* DebugBreak() will cause an exception if there is no debugger */
+        if(IsDebuggerPresent())
+            DebugBreak();
+#elif defined(SIGTRAP)
+        raise(SIGTRAP);
+#endif
+    }
+
+    if(device)
+        device->mLastError.store(errorCode);
+    else
+        sLastGlobalError.store(errorCode);
 }
 
 } // namespace al

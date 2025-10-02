@@ -51,6 +51,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <future>
 #include <iterator>
@@ -70,9 +71,8 @@
 #include "core/converter.h"
 #include "core/device.h"
 #include "core/logging.h"
-#include "fmt/core.h"
-#include "fmt/chrono.h"
 #include "gsl/gsl"
+#include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 
@@ -203,8 +203,7 @@ using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
 constexpr auto RefTime2Samples(const ReferenceTime &val, DWORD srate) noexcept -> uint
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return gsl::narrow_cast<uint>(std::min<decltype(retval)>(retval,
-        std::numeric_limits<uint>::max()));
+    return al::saturate_cast<uint>(retval);
 }
 
 
@@ -213,7 +212,7 @@ class GuidPrinter {
 
 public:
     explicit GuidPrinter(const GUID &guid)
-        : mMsg{fmt::format(
+        : mMsg{std::format(
             "{{{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}}}",
             guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
             guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7])}
@@ -277,10 +276,8 @@ struct DevMap {
     std::string endpoint_guid; // obtained from PKEY_AudioEndpoint_GUID , set to "Unknown device GUID" if absent.
     std::wstring devid;
 
-    /* To prevent GCC from complaining it doesn't want to inline this. */
-    ~DevMap();
+    NOINLINE ~DevMap() = default;
 };
-DevMap::~DevMap() = default;
 
 auto checkName(const std::span<DevMap> list, const std::string_view name) -> bool
 { return std::ranges::find(list, name, &DevMap::name) != list.end(); }
@@ -700,7 +697,7 @@ private:
         auto count = 1;
         auto newname = name;
         while(checkName(list, newname))
-            newname = fmt::format("{} #{}", name, ++count);
+            newname = std::format("{} #{}", name, ++count);
         const auto &newentry = list.emplace_back(std::move(newname), std::move(guid), devid);
 
         TRACE("Got device \"{}\", \"{}\", \"{}\"", newentry.name, newentry.endpoint_guid,
@@ -1165,7 +1162,7 @@ void DuplicateSamples(std::span<BYTE> insamples, DevFmtType sampletype, size_t s
 
 
 struct WasapiPlayback final : public BackendBase {
-    explicit WasapiPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~WasapiPlayback() override;
 
     struct PlainDevice {
@@ -2387,7 +2384,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 
 
 struct WasapiCapture final : public BackendBase {
-    explicit WasapiCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit WasapiCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~WasapiCapture() override;
 
     void recordProc(IAudioClient *client, IAudioCaptureClient *capture);
@@ -3112,7 +3109,8 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
     return outnames;
 }
 
-BackendPtr WasapiBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto WasapiBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WasapiPlayback{device}};

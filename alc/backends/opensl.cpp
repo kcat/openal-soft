@@ -191,7 +191,7 @@ inline void PrintErr(SLresult res, const char *str)
 
 
 struct OpenSLPlayback final : public BackendBase {
-    explicit OpenSLPlayback(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OpenSLPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OpenSLPlayback() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) noexcept;
@@ -606,7 +606,7 @@ ClockLatency OpenSLPlayback::getClockLatency()
 
 
 struct OpenSLCapture final : public BackendBase {
-    explicit OpenSLCapture(DeviceBase *device) noexcept : BackendBase{device} { }
+    explicit OpenSLCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OpenSLCapture() override;
 
     void process(SLAndroidSimpleBufferQueueItf bq) const noexcept;
@@ -1001,7 +1001,8 @@ auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return {};
 }
 
-BackendPtr OSLBackendFactory::createBackend(DeviceBase *device, BackendType type)
+auto OSLBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OpenSLPlayback{device}};

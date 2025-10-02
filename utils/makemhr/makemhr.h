@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "alcomplex.h"
+#include "opthelpers.h"
 #include "polyphase_resampler.h"
 
 
@@ -103,7 +104,7 @@ struct HrirDataT {
     std::vector<HrirFdT> mFds;
 
     /* GCC warns when it tries to inline this. */
-    ~HrirDataT();
+    NOINLINE ~HrirDataT() = default;
 };
 
 

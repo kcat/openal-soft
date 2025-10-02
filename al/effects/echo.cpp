@@ -34,11 +34,11 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps EchoEffectProps(genDefaultProps());
 
-void EchoEffectHandler::SetParami(ALCcontext *context, EchoProps&, ALenum param, int)
+void EchoEffectHandler::SetParami(al::Context *context, EchoProps&, ALenum param, int)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::SetParamiv(ALCcontext *context, EchoProps&, ALenum param, const int*)
+void EchoEffectHandler::SetParamiv(al::Context *context, EchoProps&, ALenum param, const int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer-vector property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::SetParamf(ALCcontext *context, EchoProps &props, ALenum param, float val)
+void EchoEffectHandler::SetParamf(al::Context *context, EchoProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -76,14 +76,14 @@ void EchoEffectHandler::SetParamf(ALCcontext *context, EchoProps &props, ALenum 
     context->throw_error(AL_INVALID_ENUM, "Invalid echo float property {:#04x}",
         as_unsigned(param));
 }
-void EchoEffectHandler::SetParamfv(ALCcontext *context, EchoProps &props, ALenum param, const float *vals)
+void EchoEffectHandler::SetParamfv(al::Context *context, EchoProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void EchoEffectHandler::GetParami(ALCcontext *context, const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParami(al::Context *context, const EchoProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::GetParamiv(ALCcontext *context, const EchoProps&, ALenum param, int*)
+void EchoEffectHandler::GetParamiv(al::Context *context, const EchoProps&, ALenum param, int*)
 { context->throw_error(AL_INVALID_ENUM, "Invalid echo integer-vector property {:#04x}", as_unsigned(param)); }
-void EchoEffectHandler::GetParamf(ALCcontext *context, const EchoProps &props, ALenum param, float *val)
+void EchoEffectHandler::GetParamf(al::Context *context, const EchoProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -97,7 +97,7 @@ void EchoEffectHandler::GetParamf(ALCcontext *context, const EchoProps &props, A
     context->throw_error(AL_INVALID_ENUM, "Invalid echo float property {:#04x}",
         as_unsigned(param));
 }
-void EchoEffectHandler::GetParamfv(ALCcontext *context, const EchoProps &props, ALenum param, float *vals)
+void EchoEffectHandler::GetParamfv(al::Context *context, const EchoProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
@@ -174,7 +174,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct EchoCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_ECHO_EFFECT", message}
     { }
@@ -184,7 +184,7 @@ template<> [[noreturn]]
 void EchoCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props)
+auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXECHOPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

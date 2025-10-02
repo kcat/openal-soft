@@ -32,11 +32,13 @@ struct FilterSubList;
 using uint = unsigned int;
 
 
-struct ALCdevice { virtual ~ALCdevice() = default; };
+struct ALCdevice { };
 
 namespace al {
+struct Device;
 
-struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBase {
+struct DeviceDeleter { void operator()(gsl::owner<Device*> device) const noexcept; };
+struct Device final : public ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
      * being changed. It's also used to serialize calls to the backend.
@@ -72,7 +74,7 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
 
     using OutputMode = OutputMode1;
 
-    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
+    std::atomic<ALCenum> mLastError{ALC_NO_ERROR};
 
     // Map of Buffers for this device
     std::mutex BufferLock;
@@ -99,37 +101,51 @@ struct Device final : public ALCdevice, al::intrusive_ref<al::Device>, DeviceBas
     std::string mVersionOverride;
     std::string mRendererOverride;
 
-    explicit Device(DeviceType type);
-    ~Device() final;
-
     void enumerateHrtfs();
 
-    bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
+    auto getConfigValueBool(const std::string_view block, const std::string_view key, bool def) const -> bool
     { return GetConfigValueBool(mDeviceName, block, key, def); }
 
     template<typename T>
-    auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
+    auto configValue(const std::string_view block, const std::string_view key) const -> std::optional<T> = delete;
+
+    static auto Create(DeviceType type) -> al::intrusive_ptr<al::Device>;
+
+    /** Stores the latest ALC device error. */
+    static void SetGlobalError(ALCenum errorCode) { SetError(nullptr, errorCode); }
+    void setError(ALCenum errorCode) { SetError(this, errorCode); }
+
+    static inline std::atomic<ALCenum> sLastGlobalError{ALC_NO_ERROR};
+    /* Flag to trap ALC device errors */
+    static inline bool sTrapALCError{false};
+
+protected:
+    ~Device();
+
+private:
+    explicit Device(DeviceType type);
+
+    static void SetError(Device *device, ALCenum errorCode);
+
+    friend DeviceDeleter;
 };
 
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<std::string>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<std::string>
 { return ConfigValueStr(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<int>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<int>
 { return ConfigValueInt(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<uint>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<uint>
 { return ConfigValueUInt(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<float>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<float>
 { return ConfigValueFloat(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<bool>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<bool>
 { return ConfigValueBool(mDeviceName, block, key); }
 
 } // namespace al
-
-/** Stores the latest ALC device error. */
-void alcSetError(al::Device *device, ALCenum errorCode);
 
 #endif

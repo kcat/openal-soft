@@ -1,7 +1,10 @@
 #ifndef OPTHELPERS_H
 #define OPTHELPERS_H
 
+#include <memory>
 #include <type_traits>
+
+#include "gsl/gsl"
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin
@@ -38,7 +41,7 @@
 #elif __has_attribute(assume)
 #define ASSUME(x) [[assume(x)]]
 #elif HAS_BUILTIN(__builtin_unreachable)
-#define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(0)
+#define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(false)
 #else
 #define ASSUME(x) (static_cast<void>(0))
 #endif
@@ -64,6 +67,18 @@ namespace al {
 template<typename T>
 constexpr std::underlying_type_t<T> to_underlying(T e) noexcept
 { return static_cast<std::underlying_type_t<T>>(e); }
+
+/**
+ * Gets a not_null<T*> from a not_null<SmartPtr<T>>, hopefully avoiding ths
+ * extraneous null check from not_null's constructor.
+ */
+template<typename T>
+constexpr auto get_not_null(const gsl::not_null<T> &val) noexcept
+{
+    auto *tmp = std::to_address(val);
+    ASSUME(tmp != nullptr);
+    return gsl::make_not_null(tmp);
+}
 
 } // namespace al
 

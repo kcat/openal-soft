@@ -625,7 +625,7 @@ auto CalcEffectSlotParams(EffectSlot *slot, EffectSlot **sorted_slots, ContextBa
     {
         if(auto *target = slot->Target)
             return EffectTarget{&target->Wet, nullptr};
-        auto *device = context->mDevice;
+        auto const device = al::get_not_null(context->mDevice);
         return EffectTarget{&device->Dry, &device->RealOut};
     });
     state->update(context, slot, &slot->mEffectProps, output);
@@ -1142,7 +1142,7 @@ void CalcDirectPanning(Voice *voice, DirectMode directmode,
     for(const auto c : std::views::iota(0_uz, chans.size()))
     {
         const auto pangain = ChannelPanGain(chans[c].channel);
-        if(auto idx = device->channelIdxByName(chans[c].channel); idx != InvalidChannelIndex)
+        if(auto idx = device->RealOut.ChannelIndex[chans[c].channel]; idx != InvalidChannelIndex)
             voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
         else if(directmode == DirectMode::RemixMismatch)
         {
@@ -1153,7 +1153,7 @@ void CalcDirectPanning(Voice *voice, DirectMode directmode,
 
             for(const auto &target : remap->targets)
             {
-                idx = device->channelIdxByName(target.channel);
+                idx = device->RealOut.ChannelIndex[target.channel];
                 if(idx != InvalidChannelIndex)
                     voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain
                         * target.mix;
@@ -1331,7 +1331,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
 
         if(voice->mFmtChannels == FmtMono && !props.mPanningEnabled)
         {
-            const auto coeffs = std::invoke([xpos,ypos,zpos,spread,device]()
+            const auto coeffs = std::invoke([xpos,ypos,zpos,spread,device]
             {
                 if(device->mRenderMode != RenderMode::Pairwise)
                     return CalcDirectionCoeffs(std::array{xpos, ypos, zpos}, spread);
@@ -1360,7 +1360,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    const auto idx = uint{device->channelIdxByName(chans[c].channel)};
+                    const auto idx = uint{device->RealOut.ChannelIndex[chans[c].channel]};
                     if(idx != InvalidChannelIndex)
                         voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
                 }
@@ -1432,7 +1432,7 @@ void CalcNormalPanning(Voice *voice, const float xpos, const float ypos, const f
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    const auto idx = size_t{device->channelIdxByName(chans[c].channel)};
+                    const auto idx = size_t{device->RealOut.ChannelIndex[chans[c].channel]};
                     if(idx != InvalidChannelIndex)
                         voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
                 }
@@ -1610,9 +1610,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         const auto hfNorm = props.Direct.HFReference * inv_samplerate;
         const auto lfNorm = props.Direct.LFReference * inv_samplerate;
 
-        voice->mDirect.FilterType = AF_None;
-        if(drygain.HF != 1.0f) voice->mDirect.FilterType |= AF_LowPass;
-        if(drygain.LF != 1.0f) voice->mDirect.FilterType |= AF_HighPass;
+        voice->mDirect.FilterActive = false;
+        if(drygain.HF != 1.0f || drygain.LF != 1.0f)
+            voice->mDirect.FilterActive = true;
 
         auto &lowpass = voice->mChans[0].mDryParams.LowPass;
         auto &highpass = voice->mChans[0].mDryParams.HighPass;
@@ -1629,9 +1629,9 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
         const auto hfNorm = props.Send[i].HFReference * inv_samplerate;
         const auto lfNorm = props.Send[i].LFReference * inv_samplerate;
 
-        voice->mSend[i].FilterType = AF_None;
-        if(wetgain[i].HF != 1.0f) voice->mSend[i].FilterType |= AF_LowPass;
-        if(wetgain[i].LF != 1.0f) voice->mSend[i].FilterType |= AF_HighPass;
+        voice->mSend[i].FilterActive = false;
+        if(wetgain[i].HF != 1.0f || wetgain[i].LF != 1.0f)
+            voice->mSend[i].FilterActive = true;
 
         auto &lowpass = voice->mChans[0].mWetParams[i].LowPass;
         auto &highpass = voice->mChans[0].mWetParams[i].HighPass;
@@ -1647,8 +1647,8 @@ void CalcPanningAndFilters(Voice *voice, const float xpos, const float ypos, con
 
 void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    const auto &props = voice->mProps;
-    auto *device = context->mDevice;
+    auto const &props = voice->mProps;
+    auto const device = al::get_not_null(context->mDevice);
     auto sendslots = std::array<EffectSlot*,MaxSendCount>{};
 
     voice->mDirect.Buffer = device->Dry.Buffer;
@@ -1699,9 +1699,9 @@ void CalcNonAttnSourceParams(Voice *voice, const ContextBase *context)
 
 void CalcAttnSourceParams(Voice *voice, const ContextBase *context)
 {
-    const auto &props = voice->mProps;
-    auto *device = context->mDevice;
-    const auto numsends = device->NumAuxSends;
+    auto const &props = voice->mProps;
+    auto const device = al::get_not_null(context->mDevice);
+    auto const numsends = device->NumAuxSends;
 
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = device->Dry.Buffer;
@@ -2310,11 +2310,11 @@ void ApplyDither(const std::span<FloatBufferLine> Samples, uint *dither_seed,
  * chokes on that given the inline specializations.
  */
 template<typename T>
-inline auto SampleConv(float) noexcept -> T;
+auto SampleConv(float) noexcept -> T = delete;
 
-template<> inline auto SampleConv(float val) noexcept -> float
+template<> auto SampleConv(float val) noexcept -> float
 { return val; }
-template<> inline auto SampleConv(float val) noexcept -> int32_t
+template<> auto SampleConv(float val) noexcept -> int32_t
 {
     /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
      * This means a normalized float has at most 25 bits of signed precision.
@@ -2323,17 +2323,17 @@ template<> inline auto SampleConv(float val) noexcept -> int32_t
      */
     return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
-template<> inline auto SampleConv(float val) noexcept -> int16_t
+template<> auto SampleConv(float val) noexcept -> int16_t
 { return gsl::narrow_cast<int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
-template<> inline auto SampleConv(float val) noexcept -> int8_t
+template<> auto SampleConv(float val) noexcept -> int8_t
 { return gsl::narrow_cast<int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
 
 /* Define unsigned output variations. */
-template<> inline auto SampleConv(float val) noexcept -> uint32_t
+template<> auto SampleConv(float val) noexcept -> uint32_t
 { return as_unsigned(SampleConv<int32_t>(val)) + 2147483648u; }
-template<> inline auto SampleConv(float val) noexcept -> uint16_t
+template<> auto SampleConv(float val) noexcept -> uint16_t
 { return gsl::narrow_cast<uint16_t>(SampleConv<int16_t>(val) + 32768); }
-template<> inline auto SampleConv(float val) noexcept -> uint8_t
+template<> auto SampleConv(float val) noexcept -> uint8_t
 { return gsl::narrow_cast<uint8_t>(SampleConv<int8_t>(val) + 128); }
 
 template<typename T>

@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -97,7 +98,7 @@ constexpr ALenum EnumFromPhenome(VMorpherPhenome phenome)
     HANDLE_PHENOME(V);
     HANDLE_PHENOME(Z);
     }
-    throw std::runtime_error{fmt::format("Invalid phenome: {}", int{al::to_underlying(phenome)})};
+    throw std::runtime_error{std::format("Invalid phenome: {}", int{al::to_underlying(phenome)})};
 #undef HANDLE_PHENOME
 }
 
@@ -119,7 +120,7 @@ constexpr ALenum EnumFromWaveform(VMorpherWaveform type)
     case VMorpherWaveform::Triangle: return AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE;
     case VMorpherWaveform::Sawtooth: return AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH;
     }
-    throw std::runtime_error{fmt::format("Invalid vocal morpher waveform: {}",
+    throw std::runtime_error{std::format("Invalid vocal morpher waveform: {}",
         int{al::to_underlying(type)})};
 }
 
@@ -140,7 +141,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps VmorpherEffectProps(genDefaultProps());
 
-void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props, ALenum param, int val)
+void VmorpherEffectHandler::SetParami(al::Context *context, VmorpherProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -186,9 +187,9 @@ void VmorpherEffectHandler::SetParami(ALCcontext *context, VmorpherProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::SetParamiv(ALCcontext *context, VmorpherProps &props, ALenum param, const int *vals)
+void VmorpherEffectHandler::SetParamiv(al::Context *context, VmorpherProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void VmorpherEffectHandler::SetParamf(ALCcontext *context, VmorpherProps &props, ALenum param, float val)
+void VmorpherEffectHandler::SetParamf(al::Context *context, VmorpherProps &props, ALenum param, float val)
 {
     switch(param)
     {
@@ -202,10 +203,10 @@ void VmorpherEffectHandler::SetParamf(ALCcontext *context, VmorpherProps &props,
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::SetParamfv(ALCcontext *context, VmorpherProps &props, ALenum param, const float *vals)
+void VmorpherEffectHandler::SetParamfv(al::Context *context, VmorpherProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void VmorpherEffectHandler::GetParami(ALCcontext *context, const VmorpherProps &props, ALenum param, int* val)
+void VmorpherEffectHandler::GetParami(al::Context *context, const VmorpherProps &props, ALenum param, int* val)
 {
     switch(param)
     {
@@ -219,9 +220,9 @@ void VmorpherEffectHandler::GetParami(ALCcontext *context, const VmorpherProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher integer property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::GetParamiv(ALCcontext *context, const VmorpherProps &props, ALenum param, int *vals)
+void VmorpherEffectHandler::GetParamiv(al::Context *context, const VmorpherProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void VmorpherEffectHandler::GetParamf(ALCcontext *context, const VmorpherProps &props, ALenum param, float *val)
+void VmorpherEffectHandler::GetParamf(al::Context *context, const VmorpherProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -231,7 +232,7 @@ void VmorpherEffectHandler::GetParamf(ALCcontext *context, const VmorpherProps &
     context->throw_error(AL_INVALID_ENUM, "Invalid vocal morpher float property {:#04x}",
         as_unsigned(param));
 }
-void VmorpherEffectHandler::GetParamfv(ALCcontext *context, const VmorpherProps &props, ALenum param, float *vals)
+void VmorpherEffectHandler::GetParamfv(al::Context *context, const VmorpherProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
@@ -320,7 +321,7 @@ struct AllValidator {
 
 } // namespace
 
-template<>
+template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 struct VocalMorpherCommitter::Exception : public EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
@@ -331,7 +332,7 @@ template<> [[noreturn]]
 void VocalMorpherCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
+auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

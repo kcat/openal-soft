@@ -17,7 +17,6 @@
 #include <utility>
 
 #include "AL/al.h"
-#include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "almalloc.h"
@@ -35,6 +34,9 @@
 #include "eax/utils.h"
 #endif // ALSOFT_EAX
 
+namespace al {
+struct Context;
+} // namespace al
 struct ALbuffer;
 struct ALeffectslot;
 enum class Resampler : uint8_t;
@@ -56,6 +58,7 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 
 
 #if ALSOFT_EAX
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxSourceException : public EaxException {
 public:
     explicit EaxSourceException(const std::string_view message)
@@ -167,19 +170,19 @@ struct ALsource {
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
 
-    static void SetName(gsl::not_null<ALCcontext*> context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 
 #if ALSOFT_EAX
 public:
-    void eaxInitialize(gsl::not_null<ALCcontext*> context) noexcept;
+    void eaxInitialize(gsl::not_null<al::Context*> context) noexcept;
     void eaxDispatch(const EaxCall& call) { call.is_get() ? eax_get(call) : eax_set(call); }
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static auto EaxLookupSource(ALCcontext& al_context LIFETIMEBOUND, ALuint source_id) noexcept
-        -> ALsource*;
+    static auto EaxLookupSource(gsl::not_null<al::Context*> al_context LIFETIMEBOUND,
+        ALuint source_id) noexcept -> ALsource*;
 
 private:
     using Exception = EaxSourceException;
@@ -244,7 +247,7 @@ private:
         Eax5Props d; // Deferred.
     };
 
-    ALCcontext* mEaxAlContext{};
+    al::Context *mEaxAlContext{};
     EaxFxSlotIndex mEaxPrimaryFxSlotId{};
     EaxActiveFxSlots mEaxActiveFxSlots;
     int mEaxVersion{};
@@ -1013,7 +1016,7 @@ private:
 #endif // ALSOFT_EAX
 };
 
-void UpdateAllSourceProps(ALCcontext *context);
+void UpdateAllSourceProps(gsl::not_null<al::Context*> context);
 
 struct SourceSubList {
     uint64_t FreeMask{~0_u64};

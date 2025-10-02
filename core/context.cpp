@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <functional>
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -23,7 +22,7 @@
 static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "atomic<bitset> isn't lock-free");
 #endif
 
-ContextBase::ContextBase(DeviceBase *device) : mDevice{device}
+ContextBase::ContextBase(gsl::not_null<DeviceBase*> device) : mDevice{device}
 { Expects(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()
@@ -130,14 +129,14 @@ void ContextBase::allocEffectSlotProps()
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
-EffectSlot *ContextBase::getEffectSlot()
+auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlot*>
 {
     for(auto &clusterptr : mEffectSlotClusters)
     {
         const auto cluster = std::span{*clusterptr};
         if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlot::InUse);
             iter != cluster.end())
-            return std::to_address(iter);
+            return gsl::make_not_null(std::to_address(iter));
     }
 
     auto clusterptr = std::make_unique<EffectSlotCluster::element_type>();
@@ -147,7 +146,7 @@ EffectSlot *ContextBase::getEffectSlot()
     TRACE("Increasing allocated effect slots to {}", totalcount);
 
     mEffectSlotClusters.emplace_back(std::move(clusterptr));
-    return mEffectSlotClusters.back()->data();
+    return gsl::make_not_null(mEffectSlotClusters.back()->data());
 }
 
 

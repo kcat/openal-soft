@@ -1,9 +1,8 @@
 #ifndef EAX_UTILS_INCLUDED
 #define EAX_UTILS_INCLUDED
 
+#include <format>
 #include <string_view>
-
-#include "fmt/core.h"
 
 
 struct EaxAlLowPassParam {
@@ -20,7 +19,7 @@ void eax_validate_range(std::string_view value_name, const TValue& value, const 
     if(value >= min_value && value <= max_value) [[likely]]
         return;
 
-    const auto message = fmt::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
+    const auto message = std::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
         value, min_value, max_value);
     throw TException{message.c_str()};
 }

@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstdint>
 #include <deque>
+#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -25,7 +26,7 @@
 #include "al/listener.h"
 #include "althreads.h"
 #include "core/context.h"
-#include "fmt/core.h"
+#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -76,19 +77,22 @@ struct DebugLogEntry {
 };
 
 
+struct ALCcontext { };
+
 namespace al {
 struct Device;
-} // namespace al
+struct Context;
 
-struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
-    const al::intrusive_ptr<al::Device> mALDevice;
+struct ContextDeleter { void operator()(gsl::owner<Context*> context) const noexcept; };
+struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>, ContextBase {
+    const gsl::not_null<intrusive_ptr<Device>> mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
 
     std::mutex mPropLock;
 
-    al::tss<ALenum> mLastThreadError{AL_NO_ERROR};
+    tss<ALenum> mLastThreadError{AL_NO_ERROR};
 
     const ContextFlagBitset mContextFlags;
     std::atomic<bool> mDebugEnabled{false};
@@ -130,16 +134,9 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
     std::unordered_map<ALuint,std::string> mSourceNames;
     std::unordered_map<ALuint,std::string> mEffectSlotNames;
 
-    ALCcontext(al::intrusive_ptr<al::Device> device, ContextFlagBitset flags);
-    ALCcontext(const ALCcontext&) = delete;
-    ALCcontext& operator=(const ALCcontext&) = delete;
-    ~ALCcontext() final;
-
-    void init();
     /**
-     * Removes the context from its device and removes it from being current on
-     * the running thread or globally. Stops device playback if this was the
-     * last context on its device.
+     * Removes the context from being current on the running thread or
+     * globally, and stops the event thread.
      */
     void deinit();
 
@@ -166,18 +163,18 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
      */
     void applyAllUpdates();
 
-    void setErrorImpl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args);
+    void setErrorImpl(ALenum errorCode, const std::string_view fmt, std::format_args args);
 
     template<typename ...Args>
-    void setError(ALenum errorCode, fmt::format_string<Args...> msg, Args&& ...args)
-    { setErrorImpl(errorCode, msg, fmt::make_format_args(args...)); }
+    void setError(ALenum errorCode, std::format_string<Args...> msg, Args&& ...args)
+    { setErrorImpl(errorCode, msg.get(), std::make_format_args(args...)); }
 
     [[noreturn]]
-    void throw_error_impl(ALenum errorCode, const fmt::string_view fmt, fmt::format_args args);
+    void throw_error_impl(ALenum errorCode, const std::string_view fmt, std::format_args args);
 
     template<typename ...Args> [[noreturn]]
-    void throw_error(ALenum errorCode, fmt::format_string<Args...> fmt, Args&&... args)
-    { throw_error_impl(errorCode, fmt, fmt::make_format_args(args...)); }
+    void throw_error(ALenum errorCode, std::format_string<Args...> fmt, Args&&... args)
+    { throw_error_impl(errorCode, fmt.get(), std::make_format_args(args...)); }
 
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
         DebugType type, ALuint id, DebugSeverity severity, std::string_view message);
@@ -191,13 +188,23 @@ struct ALCcontext final : public al::intrusive_ref<ALCcontext>, ContextBase {
         sendDebugMessage(debuglock, source, type, id, severity, message);
     }
 
+    static auto Create(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
+        -> intrusive_ptr<Context>;
+
     /* Process-wide current context */
     static std::atomic<bool> sGlobalContextLock;
-    static std::atomic<ALCcontext*> sGlobalContext;
+    static std::atomic<Context*> sGlobalContext;
+
+protected:
+    ~Context();
 
 private:
+    Context(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags);
+
+    void init();
+
     /* Thread-local current context. */
-    static inline thread_local ALCcontext *sLocalContext{};
+    static inline thread_local Context *sLocalContext{};
 
     /* Thread-local context handling. This handles attempting to release the
      * context which may have been left current when the thread is destroyed.
@@ -215,14 +222,16 @@ private:
          * clear sLocalContext (which isn't a member variable to make read
          * access efficient).
          */
-        void set(ALCcontext *ctx) const noexcept { sLocalContext = ctx; }
+        void set(Context *ctx) const noexcept { sLocalContext = ctx; }
         /* NOLINTEND(readability-convert-member-functions-to-static) */
     };
     static thread_local ThreadCtx sThreadContext;
 
+    friend ContextDeleter;
+
 public:
-    static ALCcontext *getThreadContext() noexcept { return sLocalContext; }
-    static void setThreadContext(ALCcontext *context) noexcept { sThreadContext.set(context); }
+    static Context *getThreadContext() noexcept { return sLocalContext; }
+    static void setThreadContext(Context *context) noexcept { sThreadContext.set(context); }
 
     /* Default effect that applies to sources that don't have an effect on send 0. */
     static ALeffect sDefaultEffect;
@@ -256,8 +265,7 @@ public:
     bool eaxNeedsCommit() const noexcept { return mEaxNeedsCommit; }
     void eaxCommit();
 
-    void eaxCommitFxSlots()
-    { mEaxFxSlots.commit(); }
+    void eaxCommitFxSlots() const { mEaxFxSlots.commit(); }
 
 private:
     enum {
@@ -283,6 +291,7 @@ private:
         Eax5Props d; // Deferred.
     };
 
+    /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
     class ContextException final : public EaxException {
     public:
         explicit ContextException(const std::string_view message)
@@ -494,7 +503,7 @@ private:
     void eax_ensure_no_default_effect_slot() const;
     bool eax_has_enough_aux_sends() const noexcept;
     void eax_ensure_enough_aux_sends() const;
-    void eax_ensure_compatibility();
+    void eax_ensure_compatibility() const;
 
     unsigned long eax_detect_speaker_configuration() const;
     void eax_update_speaker_configuration();
@@ -519,8 +528,8 @@ private:
     void eax_context_commit_primary_fx_slot_id();
     void eax_context_commit_distance_factor();
     void eax_context_commit_air_absorption_hf();
-    void eax_context_commit_hf_reference();
-    void eax_context_commit_macro_fx_factor();
+    static void eax_context_commit_hf_reference();
+    static void eax_context_commit_macro_fx_factor();
 
     void eax_initialize_fx_slots();
 
@@ -539,11 +548,13 @@ private:
 #endif // ALSOFT_EAX
 };
 
-using ContextRef = al::intrusive_ptr<ALCcontext>;
+} // namespace al
+
+using ContextRef = al::intrusive_ptr<al::Context>;
 
 ContextRef GetContextRef() noexcept;
 
-void UpdateContextProps(ALCcontext *context);
+void UpdateContextProps(al::Context *context);
 
 
 inline bool TrapALError{false};

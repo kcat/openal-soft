@@ -496,8 +496,6 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
     }
     else
     {
-        double weight;
-
         // If coverage weighting is not used, the weights still need to be
         // averaged by the number of existing HRIRs.
         count = hData->mIrCount;
@@ -506,7 +504,7 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
             for(size_t ei{0};ei < hData->mFds[fi].mEvStart;++ei)
                 count -= static_cast<uint>(hData->mFds[fi].mEvs[ei].mAzs.size());
         }
-        weight = 1.0 / count;
+        auto const weight = 1.0 / count;
 
         for(size_t fi{0};fi < hData->mFds.size();++fi)
         {

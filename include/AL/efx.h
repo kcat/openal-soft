@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-30 20:10:51.862150+00:00
+ * Last regenerated: 2025-10-02 16:35:23.638228+00:00
  */
 
 /* NOLINTBEGIN */
@@ -16,8 +16,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifndef ALC_EXT_EFX
-#define ALC_EXT_EFX 1
 #define ALC_EXT_EFX_NAME                         "ALC_EXT_EFX"
 
 #define ALC_EFX_MAJOR_VERSION                    0x20001
@@ -744,7 +742,6 @@ void AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALi
 void AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
 
-#endif
 #endif
 
 #ifdef __cplusplus

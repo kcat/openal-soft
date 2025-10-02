@@ -15,8 +15,19 @@ A purpose-built Khronos-style XML parser for al.xml and C header generator for t
 built to minimise changes to the shipping headers. Full compatibility, completeness, and correctness with the official
 Khronos scripts is an explicit non-goal. It is also expected that this script will not be adaptable to non-OpenAL uses.
 The code is also very crude. Have fun!
-"""
 
+How it works:
+
+1. An instance of the Registry class is constructed using a parsed XML ElementTree. This uses XPaths to read all of the
+   XML APIs and convert them to C snippets (TODO: we should probably make dedicated classes so we can do this
+   just-in-time instead of ahead-of-time, otherwise it makes it quite hard to modify/reuse the parser for other
+   contexts). These snippets are then stored in the `apis` dictionary in the Registry object (where the key is the API
+   name), and the features/extensions are stored in the `sets` dictionary (where the key is the extension/feature name).
+2. We then render that Registry object into a header, according to the configuration in the Header class below. This
+   essentially involves going through each matching ApiSet and, for each API that is used in that feature/extension,
+   taking our C snippets out of the Registry `apis` dictionary and outputting it as a string. We're just using Python
+   string formatting at the moment, relatively dumb...
+"""
 
 @dataclasses.dataclass
 class Header:
@@ -178,10 +189,11 @@ class ApiSet:
     comment: typing.Optional[str] = None
 
     def render(
-        self, registry: "Registry", current_header: Header
+        self, registry: "Registry", current_header: Header, include_guard: bool = True
     ) -> typing.Generator[str]:
-        yield f"#ifndef {self.name}"
-        yield f"#define {self.name} 1"
+        if include_guard:
+            yield f"#ifndef {self.name}"
+            yield f"#define {self.name} 1"
         if self.comment is not None:
             doclines = self.comment.splitlines()
             if len(doclines) == 1:
@@ -227,13 +239,15 @@ class ApiSet:
                                     current_header.exclude,
                                     preamble,
                                 ),
+                                False,
                             )
                         ),
                         date=datetime.datetime.now(datetime.timezone.utc),
                     )
                 )
             yield f'#include "{self.header}"'
-            yield "#endif"
+            if include_guard:
+                yield "#endif"
             yield ""
             return
         passes = (
@@ -323,7 +337,8 @@ class ApiSet:
                     yield "#endif"
                 if pass_no != 2:
                     yield ""
-        yield "#endif"
+        if include_guard:
+            yield "#endif"
         yield ""
         for requirement in self.require:
             for api in requirement.apis:

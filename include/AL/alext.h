@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-09-30 20:10:51.862618+00:00
+ * Last regenerated: 2025-10-02 16:35:23.638707+00:00
  */
 
 /* NOLINTBEGIN */

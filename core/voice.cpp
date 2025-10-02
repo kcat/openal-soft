@@ -486,9 +486,9 @@ void LoadSamples(const std::span<float> dstSamples, const SampleVariant &src,
     const size_t srcChan, const size_t srcOffset, const size_t srcStep,
     const size_t samplesPerBlock) noexcept
 {
-    std::visit([&](auto&& splvec)
+    std::visit([&]<typename T>(T&& splvec)
     {
-        using sample_t = std::remove_cvref_t<decltype(splvec)>::value_type;
+        using sample_t = std::remove_cvref_t<T>::value_type;
         LoadSamples<sample_t>(dstSamples, splvec, srcChan, srcOffset, srcStep, samplesPerBlock);
     }, src);
 }
@@ -1229,10 +1229,10 @@ void Voice::prepare(DeviceBase *device)
 
     mDecoder = nullptr;
     mDecoderPadding = 0;
-    static constexpr auto init_decoder = [](auto arg)
+    static constexpr auto init_decoder = []<typename T>(T arg [[maybe_unused]])
         -> std::pair<std::unique_ptr<DecoderBase>, uint>
     {
-        using decoder_t = typename decltype(arg)::decoder_t;
+        using decoder_t = T::decoder_t;
         return {std::make_unique<decoder_t>(), decoder_t::sInputPadding};
     };
     if(mFmtChannels == FmtSuperStereo)

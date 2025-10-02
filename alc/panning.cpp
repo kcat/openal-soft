@@ -1335,10 +1335,10 @@ void aluInitRenderer(al::Device *device, int hrtf_id, std::optional<StereoEncodi
 
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
     {
-        static constexpr auto init_encoder = [](auto arg)
+        static constexpr auto init_encoder = []<typename T>(T arg [[maybe_unused]])
             -> std::pair<std::unique_ptr<UhjEncoderBase>, std::string_view>
         {
-            using encoder_t = typename decltype(arg)::encoder_t;
+            using encoder_t = T::encoder_t;
             return {std::make_unique<encoder_t>(), encoder_t::TypeName()};
         };
 

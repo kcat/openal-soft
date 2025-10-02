@@ -172,9 +172,9 @@ void ModulatorState::process(const size_t samplesToDo,
 {
     ASSUME(samplesToDo > 0);
 
-    std::visit([this,samplesToDo](auto&& type)
+    std::visit([this,samplesToDo]<typename T>(T&& type [[maybe_unused]])
     {
-        using Modulator = std::remove_cvref_t<decltype(type)>;
+        using Modulator = std::remove_cvref_t<T>;
         const auto range = mRange;
         const auto scale = mIndexScale;
         auto index = mIndex;

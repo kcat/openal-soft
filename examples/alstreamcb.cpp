@@ -459,9 +459,9 @@ auto StreamPlayer::update() -> bool
         /* Read samples from the file according to the type of samples
          * being buffered, and get the number of bytes buffered.
          */
-        const auto read_bytes = std::visit([this,woffset,writable](auto&& data) -> size_t
+        const auto read_bytes = std::visit([this,woffset,writable]<typename T>(T&& data) -> size_t
         {
-            using sample_t = typename std::remove_cvref_t<decltype(data)>::value_type;
+            using sample_t = std::remove_cvref_t<T>::value_type;
             if constexpr(std::is_same_v<sample_t, short>)
             {
                 const auto num_frames = sf_readf_short(mSndfile, &data[woffset/sizeof(short)],

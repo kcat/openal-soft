@@ -102,9 +102,9 @@ inline void LoadSampleArray(const std::span<float> dstSamples,
 void LoadSamples(const std::span<float> dstSamples, const SampleVariant &src, const size_t channel,
     const size_t srcstep) noexcept
 {
-    std::visit([&](auto&& splvec)
+    std::visit([&]<typename T>(T&& splvec)
     {
-        using span_t = std::remove_cvref_t<decltype(splvec)>;
+        using span_t = std::remove_cvref_t<T>;
         using sample_t = span_t::value_type;
         if constexpr(!std::is_same_v<sample_t,IMA4Data> && !std::is_same_v<sample_t,MSADPCMData>)
             LoadSampleArray<sample_t>(dstSamples, splvec, channel, srcstep);

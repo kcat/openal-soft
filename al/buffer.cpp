@@ -371,9 +371,10 @@ void LoadData(gsl::not_null<al::Context*> context, gsl::not_null<ALbuffer*> ALBu
 #endif
 
     const auto newsize = size_t{blocks} * bytesPerBlock;
-    const auto needRealloc = std::visit([ALBuf,DstType,newsize,access](auto &datavec) -> bool
+    const auto needRealloc = std::visit([ALBuf,DstType,newsize,access]<typename T>(T &datavec)
+        -> bool
     {
-        using vector_t = std::remove_cvref_t<decltype(datavec)>;
+        using vector_t = std::remove_cvref_t<T>;
         using sample_t = typename vector_t::value_type;
 
         /* A new sample type must reallocate. */
@@ -393,12 +394,10 @@ void LoadData(gsl::not_null<al::Context*> context, gsl::not_null<ALbuffer*> ALBu
     }, ALBuf->mDataStorage);
     if(needRealloc)
     {
-        auto do_realloc = [ALBuf,newsize](auto value)
+        auto do_realloc = [ALBuf,newsize]<typename T>(T value)
         {
-            using sample_t = decltype(value);
-            using vector_t = al::vector<sample_t,16>;
-            auto &newdata = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(sample_t), value);
-            ALBuf->mData = newdata;
+            using vector_t = al::vector<T,16>;
+            ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
         };
         switch(DstType)
         {
@@ -478,12 +477,10 @@ void PrepareCallback(gsl::not_null<al::Context*> context, gsl::not_null<ALbuffer
     const auto line_blocks = (line_size + samplesPerBlock-1u) / samplesPerBlock;
 
     const auto newsize = line_blocks * bytesPerBlock;
-    auto do_realloc = [ALBuf,newsize](auto value)
+    auto do_realloc = [ALBuf,newsize]<typename T>(T value)
     {
-        using sample_t = decltype(value);
-        using vector_t = al::vector<sample_t,16>;
-        auto &newdata = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(sample_t), value);
-        ALBuf->mData = newdata;
+        using vector_t = al::vector<T,16>;
+        ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
     };
     switch(DstType)
     {
@@ -589,11 +586,10 @@ void PrepareUserPtr(gsl::not_null<al::Context*> context [[maybe_unused]],
     }
 #endif
 
-    auto do_realloc = [ALBuf,usrdata,usrdatalen](auto value)
+    auto do_realloc = [ALBuf,usrdata,usrdatalen]<typename T>(T value [[maybe_unused]])
     {
-        using sample_t = decltype(value);
-        ALBuf->mDataStorage.emplace<al::vector<sample_t,16>>();
-        ALBuf->mData = std::span{static_cast<sample_t*>(usrdata), usrdatalen/sizeof(sample_t)};
+        ALBuf->mDataStorage.emplace<al::vector<T,16>>();
+        ALBuf->mData = std::span{static_cast<T*>(usrdata), usrdatalen/sizeof(T)};
     };
     switch(DstType)
     {

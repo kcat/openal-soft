@@ -1473,8 +1473,8 @@ NOINLINE void SetProperty(const gsl::not_null<ALsource*> Source,
     const gsl::not_null<al::Context*> Context, const SourceProp prop,
     const std::span<const T> values)
 {
-    static constexpr auto is_finite = [](auto&& v) -> bool
-    { return std::isfinite(gsl::narrow_cast<float>(std::forward<decltype(v)>(v))); };
+    static constexpr auto is_finite = []<typename U>(U&& v) -> bool
+    { return std::isfinite(gsl::narrow_cast<float>(std::forward<U>(v))); };
     auto [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
     auto const device = al::get_not_null(Context->mALDevice);
 

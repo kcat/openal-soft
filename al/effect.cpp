@@ -307,9 +307,9 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.SetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -335,9 +335,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.SetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -356,9 +356,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.SetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -377,9 +377,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.SetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -402,9 +402,9 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.GetParami(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -430,9 +430,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.GetParamiv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }
@@ -451,9 +451,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,value](auto &arg)
+    std::visit([context,aleffect,param,value]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.GetParamf(context, std::get<PropType>(aleffect->Props), param, value);
     }, aleffect->PropsVariant);
 }
@@ -472,9 +472,9 @@ try {
     auto const aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,aleffect,param,values](auto &arg)
+    std::visit([context,aleffect,param,values]<typename T>(T &arg)
     {
-        using PropType = typename std::remove_cvref_t<decltype(arg)>::prop_type;
+        using PropType = T::prop_type;
         return arg.GetParamfv(context, std::get<PropType>(aleffect->Props), param, values);
     }, aleffect->PropsVariant);
 }

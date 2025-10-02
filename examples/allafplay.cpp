@@ -469,9 +469,9 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
 
         const auto step = size_t{mNumEnabled};
         Expects(idx < step);
-        return std::visit([count,idx,step,src=std::span{mSampleChunk}](auto &dst)
+        return std::visit([count,idx,step,src=std::span{mSampleChunk}]<typename T>(T &dst)
         {
-            using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
+            using sample_t = T::value_type;
             auto inptr = src.begin();
             std::advance(inptr, idx*SampleInfo<sample_t>::SrcSize);
             auto output = std::span{dst}.first(count);
@@ -486,9 +486,9 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
     }
 
     /* If the track is disabled, provide silence. */
-    return std::visit([todo](auto &dst)
+    return std::visit([todo]<typename T>(T &dst)
     {
-        using sample_t = typename std::remove_cvref_t<decltype(dst)>::value_type;
+        using sample_t = T::value_type;
         std::ranges::fill(dst, sample_t{});
         return std::as_writable_bytes(std::span{dst}.first(todo));
     }, mSampleLine);

@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -239,6 +238,8 @@ public:
     auto Create(std::size_t sz, std::size_t elem_sz, bool limit_writes)
         -> std::unique_ptr<RingBuffer>
     {
+        if(sz > std::numeric_limits<std::size_t>::max()>>1)
+            throw std::overflow_error{"Ring buffer size too large"};
         auto power_of_two = 0_uz;
         if(sz > 0)
         {
@@ -248,13 +249,11 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-#if SIZE_MAX > UINT32_MAX
-            power_of_two |= power_of_two>>32;
-#endif
+            if constexpr(sizeof(size_t) > sizeof(std::uint32_t))
+                power_of_two |= (power_of_two>>16) >> 16;
         }
         ++power_of_two;
-        if(power_of_two < sz || power_of_two > std::numeric_limits<std::size_t>::max()>>1
-            || power_of_two > std::numeric_limits<std::size_t>::max()/elem_sz)
+        if(power_of_two > std::numeric_limits<std::size_t>::max()/elem_sz)
             throw std::overflow_error{"Ring buffer size overflow"};
 
         const auto numvals = power_of_two * elem_sz;
@@ -533,6 +532,8 @@ public:
     [[nodiscard]] NOINLINE static
     auto Create(std::size_t count, bool limit_writes) -> std::unique_ptr<FifoBuffer,Deleter>
     {
+        if(count > std::numeric_limits<std::size_t>::max()>>1)
+            throw std::overflow_error{"FIFO buffer size too large"};
         auto power_of_two = 0_uz;
         if(count > 0)
         {
@@ -542,13 +543,11 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-#if SIZE_MAX > UINT32_MAX
-            power_of_two |= power_of_two>>32;
-#endif
+            if constexpr(sizeof(size_t) > sizeof(std::uint32_t))
+                power_of_two |= (power_of_two>>16) >> 16;
         }
         ++power_of_two;
-        if(power_of_two < count || power_of_two > std::numeric_limits<std::size_t>::max()>>1
-            || power_of_two > std::numeric_limits<std::size_t>::max()/sizeof(T))
+        if(power_of_two > std::numeric_limits<std::size_t>::max()/sizeof(T) - sizeof(FifoBuffer))
             throw std::overflow_error{"FIFO buffer size overflow"};
 
         const auto numbytes = sizeof(FifoBuffer) + power_of_two*sizeof(T);

@@ -16,7 +16,7 @@ namespace al {
 /* Storage for flexible array data. This is trivially destructible if type T is
  * trivially destructible.
  */
-template<typename T, size_t alignment, bool = std::is_trivially_destructible<T>::value>
+template<typename T, size_t alignment, bool = std::is_trivially_destructible_v<T>>
 struct alignas(alignment) FlexArrayStorage : std::span<T> {
     /* NOLINTBEGIN(bugprone-sizeof-expression) clang-tidy warns about the
      * sizeof(T) being suspicious when T is a pointer type, which it will be

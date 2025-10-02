@@ -147,7 +147,7 @@ void MirrorLeftHrirs(const std::span<const HrtfStore::Elevation> elevs,
 template<size_t num_bits, typename T>
 constexpr auto fixsign(T value) noexcept -> T
 {
-    if constexpr(std::is_signed<T>::value && num_bits < sizeof(T)*8)
+    if constexpr(std::is_signed_v<T> && num_bits < sizeof(T)*8)
     {
         constexpr auto signbit = gsl::narrow_cast<T>(1u << (num_bits-1));
         return gsl::narrow_cast<T>((value^signbit) - signbit);

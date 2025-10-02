@@ -1088,7 +1088,7 @@ long ALeffectslot::eax_get_eax_default_lock() const noexcept
     return eax4_fx_slot_is_legacy() ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }
 
-void ALeffectslot::eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) noexcept
+void ALeffectslot::eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) const noexcept
 {
     props.guidLoadEffect = eax_get_eax_default_effect_guid();
     props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
@@ -1096,7 +1096,7 @@ void ALeffectslot::eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) noexc
     props.ulFlags = EAX40FXSLOT_DEFAULTFLAGS;
 }
 
-void ALeffectslot::eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) noexcept
+void ALeffectslot::eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) const noexcept
 {
     props.guidLoadEffect = eax_get_eax_default_effect_guid();
     props.lVolume = EAXFXSLOT_DEFAULTVOLUME;
@@ -1153,7 +1153,7 @@ void ALeffectslot::eax_fx_slot_get(const EaxCall& call) const
     }
 }
 
-bool ALeffectslot::eax_get(const EaxCall& call)
+auto ALeffectslot::eax_get(const EaxCall& call) const -> bool
 {
     switch(call.get_property_set_id())
     {
@@ -1170,7 +1170,7 @@ bool ALeffectslot::eax_get(const EaxCall& call)
     return false;
 }
 
-void ALeffectslot::eax_fx_slot_load_effect(int version, ALenum altype)
+void ALeffectslot::eax_fx_slot_load_effect(int version, ALenum altype) const
 {
     if(!IsValidEffectType(altype))
         altype = AL_EFFECT_NULL;
@@ -1427,7 +1427,7 @@ void ALeffectslot::eax_set_efx_slot_gain(ALfloat gain)
 #undef EAX_PREFIX
 }
 
-void ALeffectslot::EaxDeleter::operator()(gsl::not_null<ALeffectslot*> effect_slot)
+void ALeffectslot::EaxDeleter::operator()(gsl::not_null<ALeffectslot*> effect_slot) const
 {
 #define EAX_PREFIX "[EAX_DELETE_EFFECT_SLOT] "
 

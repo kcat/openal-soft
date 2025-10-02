@@ -283,7 +283,7 @@ template<> [[noreturn]]
 void EqualizerCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props)
+auto EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXEQUALIZERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

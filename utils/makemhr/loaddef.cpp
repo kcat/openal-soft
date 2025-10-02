@@ -1016,7 +1016,7 @@ auto LoadWaveSource(std::istream &istream, SourceRefT *src, const uint hrirRate,
 
 
 struct SofaEasyDeleter {
-    void operator()(gsl::owner<MYSOFA_EASY*> sofa)
+    void operator()(gsl::owner<MYSOFA_EASY*> sofa) const
     {
         if(sofa->neighborhood) mysofa_neighborhood_free(sofa->neighborhood);
         if(sofa->lookup) mysofa_lookup_free(sofa->lookup);

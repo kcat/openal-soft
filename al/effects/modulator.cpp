@@ -194,7 +194,7 @@ template<> [[noreturn]]
 void ModulatorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props)
+auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXRINGMODULATORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

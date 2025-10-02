@@ -121,7 +121,7 @@ thread_local Context::ThreadCtx Context::sThreadContext;
 ALeffect Context::sDefaultEffect;
 
 
-void ContextDeleter::operator()(gsl::owner<Context*> context) noexcept
+void ContextDeleter::operator()(gsl::owner<Context*> context) const noexcept
 { delete context; }
 
 auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
@@ -478,7 +478,7 @@ void Context::eax_ensure_enough_aux_sends() const
         eax_fail("Not enough aux sends.");
 }
 
-void Context::eax_ensure_compatibility()
+void Context::eax_ensure_compatibility() const
 {
     eax_ensure_enough_aux_sends();
 }

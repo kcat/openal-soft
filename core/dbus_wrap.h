@@ -87,7 +87,7 @@ private:
 };
 
 struct ConnectionDeleter {
-    void operator()(DBusConnection *c) { dbus_connection_unref(c); }
+    void operator()(DBusConnection *c) const { dbus_connection_unref(c); }
 };
 using ConnectionPtr = std::unique_ptr<DBusConnection,ConnectionDeleter>;
 

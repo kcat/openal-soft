@@ -1000,21 +1000,21 @@ void EaxReverbCommitter::translate(const EAX20LISTENERPROPERTIES& src, EAXREVERB
     dst.ulFlags = src.dwFlags;
 }
 
-bool EaxReverbCommitter::commit(const EAX_REVERBPROPERTIES &props)
+auto EaxReverbCommitter::commit(const EAX_REVERBPROPERTIES &props) const -> bool
 {
     EAXREVERBPROPERTIES dst{};
     translate(props, dst);
     return commit(dst);
 }
 
-bool EaxReverbCommitter::commit(const EAX20LISTENERPROPERTIES &props)
+auto EaxReverbCommitter::commit(const EAX20LISTENERPROPERTIES &props) const -> bool
 {
     EAXREVERBPROPERTIES dst{};
     translate(props, dst);
     return commit(dst);
 }
 
-bool EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props)
+auto EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXREVERBPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

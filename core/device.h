@@ -373,7 +373,7 @@ struct DeviceBase {
             + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }
 
-    void Process(std::monostate&, const std::size_t) { }
+    static void Process(std::monostate&, const std::size_t) { }
     void Process(AmbiDecPostProcess &proc, const std::size_t SamplesToDo) const;
     void Process(HrtfPostProcess &proc, const std::size_t SamplesToDo);
     void Process(UhjPostProcess &proc, const std::size_t SamplesToDo);

@@ -193,14 +193,14 @@ public:
 struct DualBiquad {
     BiquadFilter &f0, &f1;
 
-    void process(const std::span<const float> src, const std::span<float> dst)
+    void process(const std::span<const float> src, const std::span<float> dst) const
     { f0.dualProcess(f1, src, dst); }
 };
 
 struct DualBiquadInterp {
     BiquadInterpFilter &f0, &f1;
 
-    void process(const std::span<const float> src, const std::span<float> dst)
+    void process(const std::span<const float> src, const std::span<float> dst) const
     { f0.dualProcess(f1, src, dst); }
 };
 

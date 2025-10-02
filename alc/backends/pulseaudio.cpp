@@ -506,7 +506,7 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     }
 
 
-    void setEventHandler()
+    void setEventHandler() const
     {
         auto *context = mutex()->mContext;
 
@@ -546,14 +546,14 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     }
 
 
-    void contextStateCallback(pa_context *context) noexcept
+    void contextStateCallback(pa_context *context) const noexcept
     {
         const auto state = pa_context_get_state(context);
         if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
             mutex()->signal();
     }
 
-    void streamStateCallback(pa_stream *stream) noexcept
+    void streamStateCallback(pa_stream *stream) const noexcept
     {
         const auto state = pa_stream_get_state(stream);
         if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
@@ -690,8 +690,8 @@ struct PulsePlayback final : public BackendBase {
     ~PulsePlayback() override;
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
-    void streamStateCallback(pa_stream *stream) noexcept;
-    void streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept;
+    void streamStateCallback(pa_stream *stream) const noexcept;
+    void streamWriteCallback(pa_stream *stream, size_t nbytes) const noexcept;
     void sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
@@ -730,7 +730,7 @@ void PulsePlayback::bufferAttrCallback(pa_stream *stream) noexcept
     TRACE("minreq={}, tlength={}, prebuf={}", mAttr.minreq, mAttr.tlength, mAttr.prebuf);
 }
 
-void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
+void PulsePlayback::streamStateCallback(pa_stream *stream) const noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
@@ -740,7 +740,7 @@ void PulsePlayback::streamStateCallback(pa_stream *stream) noexcept
     mMainloop.signal();
 }
 
-void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) noexcept
+void PulsePlayback::streamWriteCallback(pa_stream *stream, size_t nbytes) const noexcept
 {
     do {
         auto free_func = pa_free_cb_t{nullptr};
@@ -1117,7 +1117,7 @@ struct PulseCapture final : public BackendBase {
     explicit PulseCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~PulseCapture() override;
 
-    void streamStateCallback(pa_stream *stream) noexcept;
+    void streamStateCallback(pa_stream *stream) const noexcept;
     void sourceNameCallback(pa_context *context, const pa_source_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
 
@@ -1149,7 +1149,7 @@ PulseCapture::~PulseCapture()
 { if(mStream) mMainloop.close(mStream); }
 
 
-void PulseCapture::streamStateCallback(pa_stream *stream) noexcept
+void PulseCapture::streamStateCallback(pa_stream *stream) const noexcept
 {
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {

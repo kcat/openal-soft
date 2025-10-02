@@ -193,7 +193,7 @@ template<> [[noreturn]]
 void FrequencyShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props)
+auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXFREQUENCYSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

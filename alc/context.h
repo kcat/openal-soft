@@ -83,7 +83,7 @@ namespace al {
 struct Device;
 struct Context;
 
-struct ContextDeleter { void operator()(gsl::owner<Context*> context) noexcept; };
+struct ContextDeleter { void operator()(gsl::owner<Context*> context) const noexcept; };
 struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>, ContextBase {
     const gsl::not_null<intrusive_ptr<Device>> mALDevice;
 
@@ -265,8 +265,7 @@ public:
     bool eaxNeedsCommit() const noexcept { return mEaxNeedsCommit; }
     void eaxCommit();
 
-    void eaxCommitFxSlots()
-    { mEaxFxSlots.commit(); }
+    void eaxCommitFxSlots() const { mEaxFxSlots.commit(); }
 
 private:
     enum {
@@ -504,7 +503,7 @@ private:
     void eax_ensure_no_default_effect_slot() const;
     bool eax_has_enough_aux_sends() const noexcept;
     void eax_ensure_enough_aux_sends() const;
-    void eax_ensure_compatibility();
+    void eax_ensure_compatibility() const;
 
     unsigned long eax_detect_speaker_configuration() const;
     void eax_update_speaker_configuration();
@@ -529,8 +528,8 @@ private:
     void eax_context_commit_primary_fx_slot_id();
     void eax_context_commit_distance_factor();
     void eax_context_commit_air_absorption_hf();
-    void eax_context_commit_hf_reference();
-    void eax_context_commit_macro_fx_factor();
+    static void eax_context_commit_hf_reference();
+    static void eax_context_commit_macro_fx_factor();
 
     void eax_initialize_fx_slots();
 

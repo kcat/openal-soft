@@ -125,7 +125,7 @@ template<> [[noreturn]]
 void PitchShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props)
+auto EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXPITCHSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

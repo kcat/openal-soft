@@ -341,7 +341,7 @@ struct BSincFilterArray {
         Ensures(idx == hdr.total_size);
     }
 
-    [[nodiscard]] constexpr auto getHeader() const noexcept -> const BSincHeader& { return hdr; }
+    [[nodiscard]] static constexpr auto getHeader() noexcept -> const BSincHeader& { return hdr; }
     [[nodiscard]] constexpr auto getTable() const noexcept { return std::span{mTable}; }
 };
 

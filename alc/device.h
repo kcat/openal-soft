@@ -37,7 +37,7 @@ struct ALCdevice { };
 namespace al {
 struct Device;
 
-struct DeviceDeleter { void operator()(gsl::owner<Device*> device) noexcept; };
+struct DeviceDeleter { void operator()(gsl::owner<Device*> device) const noexcept; };
 struct Device final : public ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase {
     /* This lock protects the device state (format, update size, etc) from
      * being from being changed in multiple threads, or being accessed while
@@ -103,11 +103,11 @@ struct Device final : public ALCdevice, intrusive_ref<Device,DeviceDeleter>, Dev
 
     void enumerateHrtfs();
 
-    bool getConfigValueBool(const std::string_view block, const std::string_view key, bool def)
+    auto getConfigValueBool(const std::string_view block, const std::string_view key, bool def) const -> bool
     { return GetConfigValueBool(mDeviceName, block, key, def); }
 
     template<typename T>
-    auto configValue(const std::string_view block, const std::string_view key) -> std::optional<T> = delete;
+    auto configValue(const std::string_view block, const std::string_view key) const -> std::optional<T> = delete;
 
     static auto Create(DeviceType type) -> al::intrusive_ptr<al::Device>;
 
@@ -131,19 +131,19 @@ private:
 };
 
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<std::string>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<std::string>
 { return ConfigValueStr(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<int>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<int>
 { return ConfigValueInt(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<uint>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<uint>
 { return ConfigValueUInt(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<float>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<float>
 { return ConfigValueFloat(mDeviceName, block, key); }
 template<> inline
-auto Device::configValue(const std::string_view block, const std::string_view key) -> std::optional<bool>
+auto Device::configValue(const std::string_view block, const std::string_view key) const -> std::optional<bool>
 { return ConfigValueBool(mDeviceName, block, key); }
 
 } // namespace al

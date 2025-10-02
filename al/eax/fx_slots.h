@@ -18,7 +18,7 @@ public:
     void initialize(gsl::not_null<al::Context*> al_context);
     void uninitialize() noexcept;
 
-    void commit()
+    void commit() const
     {
         for(auto& fx_slot : fx_slots_)
             fx_slot->eax_commit();

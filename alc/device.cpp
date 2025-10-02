@@ -35,7 +35,7 @@ using voidp = void*;
 
 namespace al {
 
-void DeviceDeleter::operator()(gsl::owner<Device*> device) noexcept
+void DeviceDeleter::operator()(gsl::owner<Device*> device) const noexcept
 { delete device; }
 
 auto Device::Create(DeviceType type) -> al::intrusive_ptr<al::Device>

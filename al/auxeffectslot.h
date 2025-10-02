@@ -301,8 +301,8 @@ private:
     [[nodiscard]] auto eax_get_eax_default_effect_guid() const noexcept -> const GUID&;
     [[nodiscard]] auto eax_get_eax_default_lock() const noexcept -> long;
 
-    void eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) noexcept;
-    void eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) noexcept;
+    void eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) const noexcept;
+    void eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) const noexcept;
     void eax4_fx_slot_set_current_defaults(const EAX40FXSLOTPROPERTIES& props) noexcept;
     void eax5_fx_slot_set_current_defaults(const EAX50FXSLOTPROPERTIES& props) noexcept;
     void eax_fx_slot_set_current_defaults();
@@ -312,9 +312,9 @@ private:
     static void eax5_fx_slot_get(const EaxCall& call, const EAX50FXSLOTPROPERTIES& props);
     void eax_fx_slot_get(const EaxCall& call) const;
     // Returns `true` if all sources should be updated, or `false` otherwise.
-    bool eax_get(const EaxCall& call);
+    auto eax_get(const EaxCall& call) const -> bool;
 
-    void eax_fx_slot_load_effect(int version, ALenum altype);
+    void eax_fx_slot_load_effect(int version, ALenum altype) const;
     void eax_fx_slot_set_volume();
     void eax_fx_slot_set_environment_flag();
     void eax_fx_slot_set_flags();
@@ -358,7 +358,7 @@ private:
 public:
     class EaxDeleter {
     public:
-        void operator()(gsl::not_null<ALeffectslot*> effect_slot);
+        void operator()(gsl::not_null<ALeffectslot*> effect_slot) const;
     };
 #endif // ALSOFT_EAX
 };

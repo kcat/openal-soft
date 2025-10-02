@@ -581,7 +581,7 @@ template<> [[noreturn]]
 void ChorusCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props)
+auto EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props) const -> bool
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
@@ -615,7 +615,7 @@ template<> [[noreturn]]
 void FlangerCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
+auto EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props) const -> bool
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());

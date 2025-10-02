@@ -542,7 +542,7 @@ void MainWindow::showAboutPage()
 }
 
 
-QStringList MainWindow::collectHrtfs()
+auto MainWindow::collectHrtfs() const -> QStringList
 {
     QStringList ret;
     QStringList processed;
@@ -1299,7 +1299,7 @@ void MainWindow::removeHrtfFile()
     }
 }
 
-void MainWindow::updateHrtfRemoveButton()
+void MainWindow::updateHrtfRemoveButton() const
 {
     ui->hrtfRemoveButton->setEnabled(!ui->hrtfFileList->selectedItems().empty());
 }

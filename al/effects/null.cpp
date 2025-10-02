@@ -81,7 +81,7 @@ template<> [[noreturn]]
 void NullCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxNullCommitter::commit(const std::monostate &props)
+auto EaxNullCommitter::commit(const std::monostate &props) const -> bool
 {
     const bool ret{std::holds_alternative<std::monostate>(mEaxProps)};
     mEaxProps = props;

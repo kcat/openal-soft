@@ -47,7 +47,7 @@ using namespace std::string_view_literals;
 struct NullBackend final : public BackendBase {
     explicit NullBackend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
 
-    int mixerProc();
+    void mixerProc() const;
 
     void open(std::string_view name) override;
     bool reset() override;
@@ -58,7 +58,7 @@ struct NullBackend final : public BackendBase {
     std::thread mThread;
 };
 
-int NullBackend::mixerProc()
+void NullBackend::mixerProc() const
 {
     const milliseconds restTime{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
 
@@ -98,8 +98,6 @@ int NullBackend::mixerProc()
             done -= mDevice->mSampleRate*s.count();
         }
     }
-
-    return 0;
 }
 
 

@@ -100,7 +100,7 @@ template<> [[noreturn]]
 void CompressorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props)
+auto EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXAGCCOMPRESSORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

@@ -1418,7 +1418,7 @@ auto make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e use_f32p) -> sp
 }
 
 class PipeWirePlayback final : public BackendBase {
-    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) noexcept;
+    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) const noexcept;
     void ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept;
     void outputCallback() noexcept;
 
@@ -1448,7 +1448,7 @@ public:
 };
 
 
-void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) noexcept
+void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) const noexcept
 { mLoop.signal(false); }
 
 void PipeWirePlayback::ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept
@@ -1918,8 +1918,8 @@ auto PipeWirePlayback::getClockLatency() -> ClockLatency
 
 
 class PipeWireCapture final : public BackendBase {
-    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) noexcept;
-    void inputCallback() noexcept;
+    void stateChangedCallback(pw_stream_state old, pw_stream_state state, const char *error) const noexcept;
+    void inputCallback() const noexcept;
 
     void open(std::string_view name) override;
     void start() override;
@@ -1942,10 +1942,10 @@ public:
 };
 
 
-void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) noexcept
+void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) const noexcept
 { mLoop.signal(false); }
 
-void PipeWireCapture::inputCallback() noexcept
+void PipeWireCapture::inputCallback() const noexcept
 {
     pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
     if(!pw_buf) [[unlikely]] return;

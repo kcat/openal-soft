@@ -185,7 +185,7 @@ template<> [[noreturn]]
 void DistortionCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props)
+auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXDISTORTIONPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

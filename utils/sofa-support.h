@@ -9,7 +9,7 @@
 
 
 struct MySofaDeleter {
-    void operator()(MYSOFA_HRTF *sofa) { mysofa_free(sofa); }
+    void operator()(MYSOFA_HRTF *sofa) const { mysofa_free(sofa); }
 };
 using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaDeleter>;
 

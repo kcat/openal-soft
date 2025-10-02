@@ -45,7 +45,7 @@ private Q_SLOTS:
     void addHrtfFile();
     void removeHrtfFile();
 
-    void updateHrtfRemoveButton();
+    void updateHrtfRemoveButton() const;
 
     void showEnabledBackendMenu(QPoint pt);
     void showDisabledBackendMenu(QPoint pt);
@@ -78,7 +78,7 @@ private:
 
     void selectDecoderFile(QLineEdit *line, const char *caption);
 
-    QStringList collectHrtfs();
+    auto collectHrtfs() const -> QStringList;
 
     void loadConfig(const QString &fname);
     void saveConfig(const QString &fname) const;

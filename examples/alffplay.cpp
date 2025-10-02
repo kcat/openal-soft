@@ -443,7 +443,7 @@ struct AudioState {
 
     auto bufferCallback(const std::span<ALubyte> data) noexcept -> ALsizei;
 
-    [[nodiscard]] auto getClockNoLock() -> nanoseconds;
+    [[nodiscard]] auto getClockNoLock() const -> nanoseconds;
     [[nodiscard]] auto getClock() -> nanoseconds
     {
         const auto lock = std::lock_guard{mSrcMutex};
@@ -555,7 +555,7 @@ struct MovieState {
 };
 
 
-auto AudioState::getClockNoLock() -> nanoseconds
+auto AudioState::getClockNoLock() const -> nanoseconds
 {
     /* The audio clock is the timestamp of the sample currently being heard. */
     if(mStartPts == nanoseconds::min())

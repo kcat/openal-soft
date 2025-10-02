@@ -332,7 +332,7 @@ template<> [[noreturn]]
 void VocalMorpherCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
-bool EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props)
+auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;

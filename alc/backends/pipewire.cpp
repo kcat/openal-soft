@@ -1997,8 +1997,8 @@ void PipeWireCapture::open(std::string_view name)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
         auto&& devlist = EventManager::GetDeviceList();
-        const auto prefix = GetMonitorPrefix();
-        const auto suffix = GetMonitorSuffix();
+        constexpr auto prefix = GetMonitorPrefix();
+        constexpr auto suffix = GetMonitorSuffix();
 
         auto match = std::ranges::find_if(devlist, [name](const DeviceNode &n) -> bool
         { return n.mType != NodeType::Sink && n.mName == name; });

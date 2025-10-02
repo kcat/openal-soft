@@ -269,7 +269,7 @@ auto GetProcBinary() -> const PathNamePair&
 #ifndef __SWITCH__
         if(pathname.empty())
         {
-            const auto SelfLinkNames = std::array{
+            constexpr auto SelfLinkNames = std::array{
                 "/proc/self/exe"sv,
                 "/proc/self/file"sv,
                 "/proc/curproc/exe"sv,

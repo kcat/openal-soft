@@ -558,7 +558,7 @@ void OSScapture::open(std::string_view name)
     auto frameSize = numChannels * mDevice->bytesFromFmt();
     auto ossSpeed = mDevice->mSampleRate;
     /* according to the OSS spec, 16 bytes are the minimum */
-    const auto periods = 4u;
+    constexpr auto periods = 4u;
     const auto log2FragmentSize = std::max(log2i(mDevice->mBufferSize * frameSize / periods), 4u);
     auto numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 

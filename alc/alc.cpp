@@ -743,7 +743,7 @@ void ProbeAllDevicesList()
     else
     {
         alcAllDevicesArray = PlaybackFactory->enumerate(BackendType::Playback);
-        if(const auto prefix = GetDevicePrefix(); !prefix.empty())
+        if constexpr(constexpr auto prefix = GetDevicePrefix(); !prefix.empty())
             std::ranges::for_each(alcAllDevicesArray,
                 [prefix](std::string &name) { name.insert(0, prefix); });
 
@@ -770,7 +770,7 @@ void ProbeCaptureDeviceList()
     else
     {
         alcCaptureDeviceArray = CaptureFactory->enumerate(BackendType::Capture);
-        if(const auto prefix = GetDevicePrefix(); !prefix.empty())
+        if constexpr(constexpr auto prefix = GetDevicePrefix(); !prefix.empty())
             std::ranges::for_each(alcCaptureDeviceArray,
                 [prefix](std::string &name) { name.insert(0, prefix); });
 
@@ -2974,7 +2974,7 @@ try {
             devname = {};
         else
         {
-            const auto prefix = GetDevicePrefix();
+            constexpr auto prefix = GetDevicePrefix();
             if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }
@@ -3145,7 +3145,7 @@ try {
             devname = {};
         else
         {
-            const auto prefix = GetDevicePrefix();
+            constexpr auto prefix = GetDevicePrefix();
             if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }
@@ -3610,7 +3610,7 @@ try {
             devname = {};
         else
         {
-            const auto prefix = GetDevicePrefix();
+            constexpr auto prefix = GetDevicePrefix();
             if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
                 devname = devname.substr(prefix.size());
         }

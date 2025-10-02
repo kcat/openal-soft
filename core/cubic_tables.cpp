@@ -64,7 +64,7 @@ GaussianTable::GaussianTable() noexcept
         mTable[pi].mDeltas[3] = mTable[pi+1].mCoeffs[3] - mTable[pi].mCoeffs[3];
     }
 
-    const auto pi = CubicPhaseCount - 1_uz;
+    constexpr auto pi = CubicPhaseCount - 1_uz;
     mTable[pi].mDeltas[0] =                 0.0f - mTable[pi].mCoeffs[0];
     mTable[pi].mDeltas[1] = mTable[0].mCoeffs[0] - mTable[pi].mCoeffs[1];
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];

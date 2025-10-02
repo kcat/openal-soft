@@ -349,7 +349,7 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     });
     impulses.clear();
 
-    const auto join_join = std::views::join | std::views::join;
+    constexpr auto join_join = std::views::join | std::views::join;
     std::ignore = std::ranges::transform(tmpres | join_join,
         (mChannels | std::views::transform(&HrtfChannelState::mCoeffs) | join_join).begin(),
         [](const double in) noexcept { return gsl::narrow_cast<float>(in); });

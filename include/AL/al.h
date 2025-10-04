@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-02 16:35:23.637608+00:00
+ * Last regenerated: 2025-10-04 17:34:35.322917+00:00
  */
 
 /* NOLINTBEGIN */
@@ -488,9 +488,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extname) AL_API_
  */
 AL_API void* AL_APIENTRY alGetProcAddress(const ALchar *fname) AL_API_NOEXCEPT;
 
-/**
- * Retrieve the value of an enum. The returned value may be context-specific.
- */
+/** Retrieve the value of an enum. The returned value may be context-specific. */
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *ename) AL_API_NOEXCEPT;
 
 /* Set listener parameters. */

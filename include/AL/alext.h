@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-02 16:35:23.638707+00:00
+ * Last regenerated: 2025-10-04 17:34:35.324610+00:00
  */
 
 /* NOLINTBEGIN */
@@ -88,8 +88,7 @@ extern "C" {
 
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
-/* 
- * Provides support for surround sound buffer formats with 8, 16, and 32-bit
+/* Provides support for surround sound buffer formats with 8, 16, and 32-bit
  * samples.
  * 
  * QUAD8: Unsigned 8-bit, Quadraphonic (Front Left, Front Right, Rear Left,
@@ -113,7 +112,6 @@ extern "C" {
  * LFE, Rear Left, Rear Right, Side Left, Side Right).
  * 71CHN16: Signed 16-bit, 7.1 Surround.
  * 71CHN32: 32-bit float, 7.1 Surround.
- * 
  */
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
@@ -420,8 +418,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
 
 #ifndef AL_EXT_BFORMAT
 #define AL_EXT_BFORMAT 1
-/* 
- * Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
+/* Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
  * and layout).
  * 
  * BFORMAT2D_8: Unsigned 8-bit, 3-channel non-periphonic (WXY).
@@ -430,7 +427,6 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
  * BFORMAT3D_8: Unsigned 8-bit, 4-channel periphonic (WXYZ).
  * BFORMAT3D_16: Signed 16-bit, 4-channel periphonic (WXYZ).
  * BFORMAT3D_FLOAT32: 32-bit float, 4-channel periphonic (WXYZ).
- * 
  */
 #define AL_FORMAT_BFORMAT2D_8                    0x20021
 #define AL_FORMAT_BFORMAT2D_16                   0x20022

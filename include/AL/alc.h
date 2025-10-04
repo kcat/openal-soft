@@ -4,7 +4,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-02 16:35:23.637007+00:00
+ * Last regenerated: 2025-10-04 17:34:35.321950+00:00
  */
 
 /* NOLINTBEGIN */
@@ -65,6 +65,7 @@ extern "C" {
 /* Deprecated macros. */
 #define ALCAPI                                   ALC_API
 #define ALCAPIENTRY                              ALC_APIENTRY
+/** Deprecated enum. */
 #define ALC_INVALID                              0
 
 /** Supported ALC version? */
@@ -263,8 +264,8 @@ typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRING)(ALCdevice *device, ALCenum
 typedef void (ALC_APIENTRY *LPALCGETINTEGERV)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT17;
 #endif
 
-#ifndef ALC_VERISON_1_1
-#define ALC_VERISON_1_1 1
+#ifndef ALC_VERSION_1_1
+#define ALC_VERSION_1_1 1
 /** Context attribute: <int> requested Mono (3D) Sources. */
 #define ALC_MONO_SOURCES                         0x1010
 

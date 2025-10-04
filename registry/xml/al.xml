@@ -32,9 +32,6 @@
         <type category="define">#define <name>OPENAL</name></type>
         <type category="define">#define <name>ALAPI</name>                                    AL_API</type>
         <type category="define">#define <name>ALAPIENTRY</name>                               AL_APIENTRY</type>
-        <type category="define">#define <name>AL_INVALID</name>                               (-1)</type>
-        <type category="define">#define <name>AL_ILLEGAL_ENUM</name>                          AL_INVALID_ENUM</type>
-        <type category="define">#define <name>AL_ILLEGAL_COMMAND</name>                       AL_INVALID_OPERATION</type>
 
         <type category="basetype" comment="8-bit boolean">typedef char <name>ALboolean</name>;</type>
         <!-- NOTE: ALchar doesn't exist in AL_VERSION_1_0, but there's no good way to vary the signatures between the features. -->
@@ -80,7 +77,6 @@ typedef void (AL_APIENTRY*<name>ALEVENTPROCSOFT</name>)(<type>ALenum</type> even
     <types namespace="ALC">
         <type category="define">#define <name>ALCAPI</name>                                   ALC_API</type>
         <type category="define">#define <name>ALCAPIENTRY</name>                              ALC_APIENTRY</type>
-        <type category="define">#define <name>ALC_INVALID</name>                              0</type>
         <type category="define" comment="Supported ALC version?">#define <name>ALC_VERSION_0_1</name>                          1</type>
 
         <type category="basetype" comment="Opaque device handle">typedef struct ALCdevice <name>ALCdevice</name>;</type>
@@ -114,6 +110,9 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0" name="AL_NONE" group="DistanceModel" comment="No distance model or no buffer"/>
         <enum value="0" name="AL_FALSE" group="Boolean,SourceSpatializeSOFT,DirectChannelsSOFT" comment="Boolean False."/>
         <enum value="1" name="AL_TRUE" group="Boolean,SourceSpatializeSOFT" comment="Boolean True."/>
+        <enum value="(-1)" name="AL_INVALID" deprecated="Use -1 instead"/>
+        <enum value="AL_INVALID_ENUM" name="AL_ILLEGAL_ENUM" deprecated="Use AL_INVALID_ENUM instead"/>
+        <enum value="AL_INVALID_OPERATION" name="AL_ILLEGAL_COMMAND" deprecated="Use AL_INVALID_OPERATION instead"/>
     </enums>
 
     <enums namespace="AL">
@@ -1318,6 +1317,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
     </enums>
 
     <enums namespace="ALC">
+        <enum value="0" name="ALC_INVALID" comment="Deprecated enum." deprecated="Use 0 instead"/>
         <enum value="0" name="ALC_FALSE" group="ContextRequestSOFT" comment="Boolean False."/>
         <enum value="1" name="ALC_TRUE" group="ContextRequestSOFT" comment="Boolean True."/>
         <enum value="0x1007" name="ALC_FREQUENCY" group="ContextPName,ContextInteger,ContextAttribute" comment="Context attribute: &lt;int&gt; Hz."/>
@@ -1871,187 +1871,187 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALsizei</ptype> <name>size</name></param>
             <param><ptype>ALsizei</ptype> <name>freq</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGenEffects</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="effect"><ptype>ALuint</ptype> *<name>effects</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDeleteEffects</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="effect">const <ptype>ALuint</ptype> *<name>effects</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALboolean</ptype> <name>alIsEffect</name></proto>
             <param><ptype>ALuint</ptype> <name>effect</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEffecti</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEffectiv</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEffectf</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alEffectfv</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetEffecti</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetEffectiv</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetEffectf</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetEffectfv</name></proto>
             <param class="effect"><ptype>ALuint</ptype> <name>effect</name></param>
             <param group="EffectFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGenFilters</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="filter"><ptype>ALuint</ptype> *<name>filters</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDeleteFilters</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="filter">const <ptype>ALuint</ptype> *<name>filters</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALboolean</ptype> <name>alIsFilter</name></proto>
             <param><ptype>ALuint</ptype> <name>filter</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alFilteri</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alFilteriv</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alFilterf</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alFilterfv</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetFilteri</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetFilteriv</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetFilterf</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetFilterfv</name></proto>
             <param class="filter"><ptype>ALuint</ptype> <name>filter</name></param>
             <param group="FilterFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGenAuxiliaryEffectSlots</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="auxiliary effect slot"><ptype>ALuint</ptype> *<name>effectslots</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alDeleteAuxiliaryEffectSlots</name></proto>
             <param><ptype>ALsizei</ptype> <name>n</name></param>
             <param len="n" class="auxiliary effect slot">const <ptype>ALuint</ptype> *<name>effectslots</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto><ptype>ALboolean</ptype> <name>alIsAuxiliaryEffectSlot</name></proto>
             <param><ptype>ALuint</ptype> <name>effectslot</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alAuxiliaryEffectSloti</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> <name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alAuxiliaryEffectSlotiv</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alAuxiliaryEffectSlotf</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> <name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alAuxiliaryEffectSlotfv</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param>const <ptype>ALfloat</ptype> *<name>pflValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetAuxiliaryEffectSloti</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>iValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetAuxiliaryEffectSlotiv</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotInteger"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALint</ptype> *<name>piValues</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetAuxiliaryEffectSlotf</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
             <param><ptype>ALfloat</ptype> *<name>flValue</name></param>
         </command>
-        <command>
+        <command export="al">
             <proto>void <name>alGetAuxiliaryEffectSlotfv</name></proto>
             <param class="auxiliary effect slot"><ptype>ALuint</ptype> <name>effectslot</name></param>
             <param group="AuxiliaryEffectSlotFloat"><ptype>ALenum</ptype> <name>param</name></param>
@@ -3524,9 +3524,9 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <type name="OPENAL"/>
             <type name="ALAPI"/>
             <type name="ALAPIENTRY"/>
-            <type name="AL_INVALID"/>
-            <type name="AL_ILLEGAL_ENUM"/>
-            <type name="AL_ILLEGAL_COMMAND"/>
+            <enum name="AL_INVALID"/>
+            <enum name="AL_ILLEGAL_ENUM"/>
+            <enum name="AL_ILLEGAL_COMMAND"/>
         </require>
         <require>
             <type name="ALboolean"/>
@@ -3752,7 +3752,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <require comment="Deprecated macros.">
             <type name="ALCAPI"/>
             <type name="ALCAPIENTRY"/>
-            <type name="ALC_INVALID"/>
+            <enum name="ALC_INVALID"/>
         </require>
         <require>
             <!-- For compatibility... -->
@@ -3825,7 +3825,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <command name="alcGetIntegerv"/>
         </require>
     </feature>
-    <feature api="alc" name="ALC_VERISON_1_1" number="1.1">
+    <feature api="alc" name="ALC_VERSION_1_1" number="1.1">
         <require>
             <enum name="ALC_MONO_SOURCES"/>
             <enum name="ALC_STEREO_SOURCES"/>
@@ -3974,7 +3974,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
                 <command name="alBufferDataStatic"/>
             </require>
         </extension>
-        <extension name="ALC_EXT_EFX" supported="al|alc" header="efx.h">
+        <extension name="ALC_EXT_EFX" supported="al|alc" annex="efx">
             <require api="al">
                <type name="float.h"/>
             </require>

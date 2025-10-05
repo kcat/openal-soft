@@ -537,6 +537,7 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
         return_type = type[: type.index("(")].strip()
         if return_type != "void":
             type = f"auto {type[type.index('('):]} -> {return_type}"
+        type = type.replace("NOEXCEPT17", "NOEXCEPT")
         return f"{reg.render_doc_comment(api.doc, registry)}using {api.name} = {type};"
 
     raise TypeError

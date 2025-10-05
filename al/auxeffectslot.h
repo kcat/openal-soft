@@ -312,6 +312,7 @@ private:
     static void eax5_fx_slot_get(const EaxCall& call, const EAX50FXSLOTPROPERTIES& props);
     void eax_fx_slot_get(const EaxCall& call) const;
     // Returns `true` if all sources should be updated, or `false` otherwise.
+    [[nodiscard]]
     auto eax_get(const EaxCall& call) const -> bool;
 
     void eax_fx_slot_load_effect(int version, ALenum altype) const;

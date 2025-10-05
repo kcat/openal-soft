@@ -71,7 +71,7 @@ private:
     int mVersion{};
     EaxFxSlotIndex mFxSlotIndex{};
     EaxCallPropertySetId mPropertySetId{EaxCallPropertySetId::none};
-    bool mIsDeferred;
+    bool mIsDeferred{};
 
     const ALuint mPropertyId;
     const ALuint mPropertySourceId;

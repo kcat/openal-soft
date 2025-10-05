@@ -250,7 +250,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) ALC_API_NOEXCEP
 /** Remove a context from its device and destroys it. */
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) ALC_API_NOEXCEPT;
 /** Returns the currently active context. */
-ALC_API auto ALC_APIENTRY alcGetCurrentContext(void) ALC_API_NOEXCEPT -> ALCcontext*;
+ALC_API auto ALC_APIENTRY alcGetCurrentContext() ALC_API_NOEXCEPT -> ALCcontext*;
 /** Returns the device that a particular context is attached to. */
 ALC_API auto ALC_APIENTRY alcGetContextsDevice(ALCcontext *context) ALC_API_NOEXCEPT -> ALCdevice*;
 
@@ -316,7 +316,7 @@ using LPALCMAKECONTEXTCURRENT = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_AP
 using LPALCPROCESSCONTEXT =     void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
 using LPALCSUSPENDCONTEXT =     void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
 using LPALCDESTROYCONTEXT =     void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
-using LPALCGETCURRENTCONTEXT =  auto (ALC_APIENTRY*)(void) ALC_API_NOEXCEPT -> ALCcontext*;
+using LPALCGETCURRENTCONTEXT =  auto (ALC_APIENTRY*)() ALC_API_NOEXCEPT -> ALCcontext*;
 using LPALCGETCONTEXTSDEVICE =  auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> ALCdevice*;
 using LPALCOPENDEVICE =  auto (ALC_APIENTRY*)(const ALCchar *devicename) ALC_API_NOEXCEPT -> ALCdevice*;
 using LPALCCLOSEDEVICE = auto (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT -> ALCboolean;

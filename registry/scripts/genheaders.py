@@ -365,7 +365,7 @@ CONFIGURATION = [
         ["al", "alc"],
         True,
         include=["ALC_EXT_EFX"],
-        preamble="\n#include <array>\n"
+        preamble="\n#include <array>\n#include <cfloat>\n"
         + PLATFORM_MODULE_PREAMBLE.format(ns="AL", mod="efx")
         + "\nimport openal.std;\n",
     ),

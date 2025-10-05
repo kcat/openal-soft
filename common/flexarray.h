@@ -76,8 +76,8 @@ struct FlexArray {
     static constexpr std::size_t StorageAlign{std::max(alignof(T), Align)};
     using Storage_t_ = FlexArrayStorage<element_type,std::max(alignof(std::span<T>),StorageAlign)>;
 
-    using iterator = typename Storage_t_::iterator;
-    using reverse_iterator = typename Storage_t_::reverse_iterator;
+    using iterator = Storage_t_::iterator;
+    using reverse_iterator = Storage_t_::reverse_iterator;
 
     const Storage_t_ mStore;
 

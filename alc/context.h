@@ -184,7 +184,7 @@ struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>,
     {
         if(!mDebugEnabled.load(std::memory_order_relaxed)) [[likely]]
             return;
-        std::unique_lock<std::mutex> debuglock{mDebugCbLock};
+        auto debuglock = std::unique_lock{mDebugCbLock};
         sendDebugMessage(debuglock, source, type, id, severity, message);
     }
 

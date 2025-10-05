@@ -726,7 +726,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     MyAssert(laf->mMode == Mode::Channels || (laf->mSampleRate%FramesPerPos) == 0);
 
     std::ranges::generate(laf->mPosTracks, [length=laf->mSampleRate*2_uz]
-    { return std::vector<float>(length, 0.0f); });
+    { return std::vector(length, 0.0f); });
 
     laf->mSampleChunk.resize(laf->mSampleRate*BytesFromQuality(laf->mQuality)*laf->mNumTracks);
     switch(laf->mQuality)

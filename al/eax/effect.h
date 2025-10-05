@@ -297,7 +297,7 @@ template<> struct CommitterFromProps<EAXPITCHSHIFTERPROPERTIES> { using type = E
 template<> struct CommitterFromProps<EAXVOCALMORPHERPROPERTIES> { using type = EaxVocalMorpherCommitter; };
 
 template<typename T>
-using CommitterFor = typename CommitterFromProps<std::remove_cvref_t<T>>::type;
+using CommitterFor = CommitterFromProps<std::remove_cvref_t<T>>::type;
 
 
 class EaxEffect {

@@ -393,9 +393,9 @@ struct EaxFlangerTraits {
 template<typename TTraits>
 struct ChorusFlangerEffect {
     using Traits = TTraits;
-    using EaxProps = typename Traits::EaxProps;
-    using Committer = typename Traits::Committer;
-    using Exception = typename Committer::Exception;
+    using EaxProps = Traits::EaxProps;
+    using Committer = Traits::Committer;
+    using Exception = Committer::Exception;
 
     struct WaveformValidator {
         void operator()(unsigned long ulWaveform) const

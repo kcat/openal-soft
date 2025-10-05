@@ -369,7 +369,7 @@ struct PodInfo<SPA_TYPE_Id> {
 };
 
 template<uint32_t T>
-using Pod_t = typename PodInfo<T>::Type;
+using Pod_t = PodInfo<T>::Type;
 
 template<uint32_t T>
 auto get_array_span(const spa_pod *pod) -> std::span<const Pod_t<T>>
@@ -1511,7 +1511,7 @@ void PipeWirePlayback::outputCallback() noexcept
 
 void PipeWirePlayback::open(std::string_view name)
 {
-    static auto OpenCount = std::atomic<uint>{0u};
+    static auto OpenCount = std::atomic{0u};
 
     auto targetid = uint64_t{PwIdAny};
     auto devname = std::string{};
@@ -1963,7 +1963,7 @@ void PipeWireCapture::inputCallback() const noexcept
 
 void PipeWireCapture::open(std::string_view name)
 {
-    static auto OpenCount = std::atomic<uint>{0u};
+    static auto OpenCount = std::atomic{0u};
 
     auto targetid = uint64_t{PwIdAny};
     auto devname = std::string{};

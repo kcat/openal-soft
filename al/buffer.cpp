@@ -375,7 +375,7 @@ void LoadData(gsl::not_null<al::Context*> context, gsl::not_null<ALbuffer*> ALBu
         -> bool
     {
         using vector_t = std::remove_cvref_t<T>;
-        using sample_t = typename vector_t::value_type;
+        using sample_t = vector_t::value_type;
 
         /* A new sample type must reallocate. */
         if(DstType != SampleInfo<sample_t>::format())

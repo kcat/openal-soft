@@ -2532,7 +2532,7 @@ void StartSources(const gsl::not_null<al::Context*> context,
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            for(const gsl::not_null<ALsource*> source : srchandles)
+            for(const gsl::not_null source : srchandles)
             {
                 /* TODO: Send state change event? */
                 source->Offset = 0.0;
@@ -3828,7 +3828,7 @@ void ALsource::eax4_set_defaults() noexcept
 
 void ALsource::eax5_set_source_defaults(EAX50SOURCEPROPERTIES& props) noexcept
 {
-    eax3_set_defaults(static_cast<EAX30SOURCEPROPERTIES&>(props));
+    eax3_set_defaults(props);
     props.flMacroFXFactor = EAXSOURCE_DEFAULTMACROFXFACTOR;
 }
 

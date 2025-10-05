@@ -262,7 +262,7 @@ void CalcHrirMagnitude(const uint points, std::span<complex_d> h, const std::spa
 bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType delayType,
     const uint outRate)
 {
-    std::atomic<uint> loaded_count{0u};
+    auto loaded_count = std::atomic{0u};
 
     auto load_proc = [sofaHrtf,hData,delayType,outRate,&loaded_count]() -> bool
     {

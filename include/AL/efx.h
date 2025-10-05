@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:24:42.383129+00:00
+ * Last regenerated: 2025-10-05 15:29:44.000556+00:00
  */
 
 #ifndef AL_EFX_H
@@ -38,10 +38,6 @@
 
 #include "alc.h"
 #include "al.h"
-#include "al.cppm"
-#include "alc.cppm"
-#include "alext.cppm"
-#include "efx.cppm"
 
 #ifdef __cplusplus
 extern "C" {

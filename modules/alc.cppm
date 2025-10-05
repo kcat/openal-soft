@@ -27,10 +27,49 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:24:42.383129+00:00
+ * Last regenerated: 2025-10-05 15:29:44.000556+00:00
  */
 
 module;
+
+/* The ALC module provides core functionality of the device/system ALC API,
+ * without any non-standard extensions.
+ *
+ * There are some limitations with the ALC module. Stuff like ALC_API and
+ * ALC_APIENTRY can't be used by code importing it since macros can't be
+ * exported from modules, and there's no way to make aliases for these
+ * properties that can be exported. Luckily ALC_API isn't typically needed by
+ * user code since it's used to indicate functions as being imported from the
+ * library, which is only relevant to the declarations made in the module
+ * itself.
+ *
+ * ALC_APIENTRY is similarly typically only needed for specifying the calling
+ * convention for functions and function pointers declared in the module.
+ * However, some extensions use callbacks that need user code to define
+ * functions with the same calling convention. Currently this is set to use the
+ * platform's default calling convention (that is, it's defined to nothing),
+ * except on Windows where it's defined to __cdecl. Interestingly, capture-less
+ * lambdas seem to generate conversion operators that match function pointers
+ * of any calling convention, but short of that, the user will be responsible
+ * for ensuring callbacks use the cdecl calling convention on Windows and the
+ * default for other OSs.
+ *
+ * Additionally, enums are declared as global inline constexpr ints. This
+ * should generally be fine as long as user code doesn't try to use them in
+ * the preprocessor, which will no longer recognize or expand them to integer
+ * literals. Being global ints also defines them as actual objects stored in
+ * memory, lvalues whose addresses can be taken, instead of as integer literals
+ * or prvalues, which may have subtle implications. An unnamed enum would be
+ * better here, since the enumerators associate a value with a name and don't
+ * become referenceable objects in memory, except that gives the name a new
+ * type (e.g. typeid(ALC_NO_ERROR) != typeid(int)) which could create problems
+ * for type deduction.
+ *
+ * Note that defining AL_LIBTYPE_STATIC, AL_DISABLE_NOEXCEPT, and/or
+ * ALC_NO_PROTOTYPES does still influence the function and function pointer
+ * type declarations, but only when compiling the module. The user-defined
+ * macros have no effect when importing the module.
+ */
 
 #ifndef ALC_API
  #if defined(AL_LIBTYPE_STATIC)

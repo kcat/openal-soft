@@ -533,7 +533,10 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
             raise ValueError(
                 "Could not identify name component of function pointer type"
             )
-        type = type.replace(api.name, "")
+        type = type.replace(api.name, "").rstrip(";")
+        return_type = type[: type.index("(")].strip()
+        if return_type != "void":
+            type = f"auto {type[type.index('('):]} -> {return_type}"
         return f"{reg.render_doc_comment(api.doc, registry)}using {api.name} = {type};"
 
     raise TypeError

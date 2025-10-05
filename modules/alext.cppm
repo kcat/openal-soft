@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:29:44.000556+00:00
+ * Last regenerated: 2025-10-05 15:34:08.972379+00:00
  */
 
 module;
@@ -206,7 +206,7 @@ ENUMDCL AL_FOLDBACK_EVENT_START =                0x4111;
 ENUMDCL AL_FOLDBACK_EVENT_STOP =                 0x4113;
 ENUMDCL AL_FOLDBACK_MODE_MONO =                  0x4101;
 ENUMDCL AL_FOLDBACK_MODE_STEREO =                0x4102;
-using LPALFOLDBACKCALLBACK = void (AL_APIENTRY*)(ALenum,ALsizei) AL_API_NOEXCEPT17;;
+using LPALFOLDBACKCALLBACK = void (AL_APIENTRY*)(ALenum,ALsizei) AL_API_NOEXCEPT17;
 using LPALREQUESTFOLDBACKSTART = void (AL_APIENTRY*)(ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
 using LPALREQUESTFOLDBACKSTOP = void (AL_APIENTRY*)() AL_API_NOEXCEPT;
 #ifdef AL_ALEXT_PROTOTYPES
@@ -509,7 +509,7 @@ ENUMDCL AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT =    0x19A4;
 ENUMDCL AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT = 0x19A5;
 ENUMDCL AL_EVENT_TYPE_DISCONNECTED_SOFT =        0x19A6;
 using ALEVENTPROCSOFT = void (AL_APIENTRY*)(ALenum eventType, ALuint object, ALuint param,
-    ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;;
+    ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
 
 using LPALEVENTCONTROLSOFT = void (AL_APIENTRY*)(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT;
 using LPALEVENTCALLBACKSOFT = void (AL_APIENTRY*)(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT;
@@ -531,7 +531,7 @@ auto ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceNa
 /*** AL_SOFT_callback_buffer ***/
 ENUMDCL AL_BUFFER_CALLBACK_FUNCTION_SOFT =       0x19A0;
 ENUMDCL AL_BUFFER_CALLBACK_USER_PARAM_SOFT =     0x19A1;
-using ALBUFFERCALLBACKTYPESOFT = ALsizei (AL_APIENTRY*)(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) AL_API_NOEXCEPT17;;
+using ALBUFFERCALLBACKTYPESOFT = auto (AL_APIENTRY*)(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) AL_API_NOEXCEPT17 -> ALsizei;
 using LPALBUFFERCALLBACKSOFT = void (AL_APIENTRY*)(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT;
 using LPALGETBUFFERPTRSOFT = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
 using LPALGETBUFFER3PTRSOFT = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT;
@@ -632,7 +632,7 @@ ENUMDCL AL_FILTER_EXT =                          0x19D1;
 ENUMDCL AL_EFFECT_EXT =                          0x19D2;
 ENUMDCL AL_AUXILIARY_EFFECT_SLOT_EXT =           0x19D3;
 
-using ALDEBUGPROCEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;;
+using ALDEBUGPROCEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
 using LPALDEBUGMESSAGECALLBACKEXT = void (AL_APIENTRY*)(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
 using LPALDEBUGMESSAGEINSERTEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
 using LPALDEBUGMESSAGECONTROLEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT;
@@ -665,7 +665,7 @@ ENUMDCL ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT =     0x19D8;
 ENUMDCL ALC_EVENT_SUPPORTED_SOFT =               0x19D9;
 ENUMDCL ALC_EVENT_NOT_SUPPORTED_SOFT =           0x19DA;
 using ALCEVENTPROCTYPESOFT = void (ALC_APIENTRY*)(ALCenum eventType, ALCenum deviceType,
-    ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;;
+    ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
 
 using LPALCEVENTISSUPPORTEDSOFT = auto (ALC_APIENTRY*)(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT -> ALCenum;
 using LPALCEVENTCONTROLSOFT = auto (ALC_APIENTRY*)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT -> ALCboolean;

@@ -1511,7 +1511,7 @@ void PipeWirePlayback::outputCallback() noexcept
 
 void PipeWirePlayback::open(std::string_view name)
 {
-    static auto OpenCount = std::atomic<uint>{0u};
+    static auto OpenCount = std::atomic{0u};
 
     auto targetid = uint64_t{PwIdAny};
     auto devname = std::string{};
@@ -1963,7 +1963,7 @@ void PipeWireCapture::inputCallback() const noexcept
 
 void PipeWireCapture::open(std::string_view name)
 {
-    static auto OpenCount = std::atomic<uint>{0u};
+    static auto OpenCount = std::atomic{0u};
 
     auto targetid = uint64_t{PwIdAny};
     auto devname = std::string{};

@@ -2532,7 +2532,7 @@ void StartSources(const gsl::not_null<al::Context*> context,
     {
         if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
         {
-            for(const gsl::not_null<ALsource*> source : srchandles)
+            for(const gsl::not_null source : srchandles)
             {
                 /* TODO: Send state change event? */
                 source->Offset = 0.0;

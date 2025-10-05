@@ -68,7 +68,7 @@ struct SegmentedFilter {
         /* To set up the filter, we first need to generate the desired
          * response (not reversed).
          */
-        auto tmpBuffer = std::vector<double>(FilterSize, 0.0);
+        auto tmpBuffer = std::vector(FilterSize, 0.0);
         for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
             const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);

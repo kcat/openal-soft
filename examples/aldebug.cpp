@@ -222,7 +222,7 @@ auto main(std::span<std::string_view> args) -> int
 
     for(auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT);numlogs > 0;--numlogs)
     {
-        auto message = std::vector<char>(gsl::narrow<ALuint>(maxloglength), '\0');
+        auto message = std::vector(gsl::narrow<ALuint>(maxloglength), '\0');
         auto source = ALenum{};
         auto type = ALenum{};
         auto id = ALuint{};

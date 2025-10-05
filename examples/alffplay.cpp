@@ -1244,7 +1244,7 @@ void AudioState::handler()
              * ordering and normalization, so a custom matrix is needed to
              * scale and reorder the source from AmbiX.
              */
-            auto mtx = std::vector<double>(64_uz*64_uz, 0.0);
+            auto mtx = std::vector(64_uz*64_uz, 0.0);
             mtx[0 + 0*64] = std::sqrt(0.5);
             mtx[3 + 1*64] = 1.0;
             mtx[1 + 2*64] = 1.0;

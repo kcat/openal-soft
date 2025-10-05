@@ -68,7 +68,7 @@ auto EventThread(al::Context *context) -> void
                 [](AsyncKillThread&) { },
                 [](AsyncEffectReleaseEvent &evt)
                 {
-                    al::intrusive_ptr<EffectState>{evt.mEffectState};
+                    al::intrusive_ptr{evt.mEffectState};
                 },
                 [context,enabledevts](AsyncSourceStateEvent &evt)
                 {

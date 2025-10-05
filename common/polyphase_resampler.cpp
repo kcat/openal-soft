@@ -179,7 +179,7 @@ void PPhaseResampler::process(const std::span<const double> in, const std::span<
         work = workspace;
     }
 
-    const auto f = std::span<const double>{mF};
+    const auto f = std::span{mF};
     const auto p = size_t{mP};
     const auto q = size_t{mQ};
     const auto m = size_t{mM};

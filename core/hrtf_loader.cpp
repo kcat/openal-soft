@@ -234,8 +234,8 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
             elevs.back().azCount, MinAzCount, MaxAzCount)};
     }
 
-    auto coeffs = std::vector<HrirArray>(irCount, HrirArray{});
-    auto delays = std::vector<ubyte2>(irCount);
+    auto coeffs = std::vector(irCount, HrirArray{});
+    auto delays = std::vector(irCount, ubyte2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
@@ -302,8 +302,8 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
         elevs[i].irOffset = gsl::narrow_cast<ushort>(elevs[i-1].irOffset + elevs[i-1].azCount);
     const auto irCount = gsl::narrow_cast<ushort>(elevs.back().irOffset + elevs.back().azCount);
 
-    auto coeffs = std::vector<HrirArray>(irCount, HrirArray{});
-    auto delays = std::vector<ubyte2>(irCount);
+    auto coeffs = std::vector(irCount, HrirArray{});
+    auto delays = std::vector(irCount, ubyte2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
@@ -422,8 +422,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
     });
     const auto irTotal = gsl::narrow_cast<ushort>(elevs.back().azCount + elevs.back().irOffset);
 
-    auto coeffs = std::vector<HrirArray>(irTotal, HrirArray{});
-    auto delays = std::vector<ubyte2>(irTotal);
+    auto coeffs = std::vector(irTotal, HrirArray{});
+    auto delays = std::vector(irTotal, ubyte2{});
     if(channelType == ChanType_LeftOnly)
     {
         if(sampleType == SampleType_S16)
@@ -656,8 +656,8 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     });
     const auto irTotal = gsl::narrow_cast<ushort>(elevs.back().azCount + elevs.back().irOffset);
 
-    auto coeffs = std::vector<HrirArray>(irTotal, HrirArray{});
-    auto delays = std::vector<ubyte2>(irTotal);
+    auto coeffs = std::vector(irTotal, HrirArray{});
+    auto delays = std::vector(irTotal, ubyte2{});
     if(channelType == ChanType_LeftOnly)
     {
         std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)

@@ -1517,7 +1517,7 @@ auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) ->
 #ifndef PFFFT_SIMD_DISABLE
     if constexpr(SimdSize > 1)
     {
-        auto e = std::vector<float>(s->e.size()*SimdSize, 0.0f);
+        auto e = std::vector(s->e.size()*SimdSize, 0.0f);
         for(auto k = 0_uz;k < s->Ncvec;++k)
         {
             const auto i = k / SimdSize;

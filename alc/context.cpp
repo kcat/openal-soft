@@ -52,7 +52,7 @@ using voidp = void*;
 /* Default context extensions */
 auto getContextExtensions() noexcept -> std::vector<std::string_view>
 {
-    return std::vector<std::string_view>{
+    return std::vector({
         "AL_EXT_ALAW"sv,
         "AL_EXT_BFORMAT"sv,
         "AL_EXT_debug"sv,
@@ -96,7 +96,7 @@ auto getContextExtensions() noexcept -> std::vector<std::string_view>
         "AL_SOFT_source_start_delay"sv,
         "AL_SOFT_UHJ"sv,
         "AL_SOFT_UHJ_ex"sv,
-    };
+    });
 }
 
 } // namespace

@@ -176,7 +176,7 @@ auto LoadSound(ALCcontext *context, const std::string_view filename) -> ALuint
             sample_format = FormatType::Int16;
         else
         {
-            auto fmtbuf = std::vector<ALubyte>(inf.datalen, ALubyte{0});
+            auto fmtbuf = std::vector(inf.datalen, ALubyte{0});
             inf.data = fmtbuf.data();
             if(sf_get_chunk_data(iter, &inf) != SF_ERR_NO_ERROR)
                 sample_format = FormatType::Int16;

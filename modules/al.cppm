@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:34:08.972379+00:00
+ * Last regenerated: 2025-10-05 16:03:07.043235+00:00
  */
 
 module;
@@ -99,11 +99,6 @@ export module openal.al;
 
 export extern "C" {
 /*** AL_VERSION_1_0 ***/
-/* Deprecated macros. */
-ENUMDCL AL_INVALID [[deprecated("Use -1 instead")]]  = (-1);
-ENUMDCL AL_ILLEGAL_ENUM [[deprecated("Use AL_INVALID_ENUM instead")]]  = AL_INVALID_ENUM;
-ENUMDCL AL_ILLEGAL_COMMAND [[deprecated("Use AL_INVALID_OPERATION instead")]]  = AL_INVALID_OPERATION;
-
 /** 8-bit boolean */
 using ALboolean = char;
 
@@ -480,6 +475,11 @@ ENUMDCL AL_DOPPLER_VELOCITY =                    0xC001;
  * distance calculated is clamped between the reference and max distances.
  */
 ENUMDCL AL_DISTANCE_MODEL =                      0xD000;
+
+/* Deprecated macros. */
+ENUMDCL AL_INVALID [[deprecated("Use -1 instead")]]  = (-1);
+ENUMDCL AL_ILLEGAL_ENUM [[deprecated("Use AL_INVALID_ENUM instead")]]  = AL_INVALID_ENUM;
+ENUMDCL AL_ILLEGAL_COMMAND [[deprecated("Use AL_INVALID_OPERATION instead")]]  = AL_INVALID_OPERATION;
 
 /* Distance model values. */
 ENUMDCL AL_INVERSE_DISTANCE =                    0xD001;

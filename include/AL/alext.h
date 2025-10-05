@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:34:08.972379+00:00
+ * Last regenerated: 2025-10-05 16:03:07.043235+00:00
  */
 
 #ifndef AL_ALEXT_H

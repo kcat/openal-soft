@@ -3520,14 +3520,6 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
     </commands>
 
     <feature api="al" name="AL_VERSION_1_0" number="1.0">
-        <require comment="Deprecated macros.">
-            <type name="OPENAL"/>
-            <type name="ALAPI"/>
-            <type name="ALAPIENTRY"/>
-            <enum name="AL_INVALID"/>
-            <enum name="AL_ILLEGAL_ENUM"/>
-            <enum name="AL_ILLEGAL_COMMAND"/>
-        </require>
         <require>
             <type name="ALboolean"/>
             <type name="ALchar"/>
@@ -3601,6 +3593,14 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <enum name="AL_DOPPLER_FACTOR"/>
             <enum name="AL_DOPPLER_VELOCITY"/>
             <enum name="AL_DISTANCE_MODEL"/>
+        </require>
+        <require comment="Deprecated macros.">
+            <type name="OPENAL"/>
+            <type name="ALAPI"/>
+            <type name="ALAPIENTRY"/>
+            <enum name="AL_INVALID"/>
+            <enum name="AL_ILLEGAL_ENUM"/>
+            <enum name="AL_ILLEGAL_COMMAND"/>
         </require>
         <require comment="Distance model values.">
             <enum name="AL_INVERSE_DISTANCE"/>

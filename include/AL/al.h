@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:34:08.972379+00:00
+ * Last regenerated: 2025-10-05 16:03:07.043235+00:00
  */
 
 #ifndef AL_AL_H
@@ -88,14 +88,6 @@ extern "C" {
 
 #ifndef AL_VERSION_1_0
 #define AL_VERSION_1_0 1
-/* Deprecated macros. */
-#define OPENAL
-#define ALAPI                                    AL_API
-#define ALAPIENTRY                               AL_APIENTRY
-#define AL_INVALID                               (-1)
-#define AL_ILLEGAL_ENUM                          AL_INVALID_ENUM
-#define AL_ILLEGAL_COMMAND                       AL_INVALID_OPERATION
-
 /** 8-bit boolean */
 typedef char ALboolean;
 
@@ -472,6 +464,14 @@ typedef void ALvoid;
  * distance calculated is clamped between the reference and max distances.
  */
 #define AL_DISTANCE_MODEL                        0xD000
+
+/* Deprecated macros. */
+#define OPENAL
+#define ALAPI                                    AL_API
+#define ALAPIENTRY                               AL_APIENTRY
+#define AL_INVALID                               (-1)
+#define AL_ILLEGAL_ENUM                          AL_INVALID_ENUM
+#define AL_ILLEGAL_COMMAND                       AL_INVALID_OPERATION
 
 /* Distance model values. */
 #define AL_INVERSE_DISTANCE                      0xD001

@@ -257,6 +257,8 @@ class Verbatim:
         A category string. Note that "basetype" is handled as a Typedef, see that class for more info.
     repr : str
         The verbatim C code.
+    namespace : str
+        The namespace (AL or ALC) in which the type was declared.
     doc : list of str, optional
         A list of documentation lines for this definition.
     deprecated : str, optional
@@ -266,6 +268,7 @@ class Verbatim:
     name: str
     category: str
     repr: str
+    namespace: str
     doc: typing.Optional[typing.List[str]] = None
     deprecated: typing.Optional[str] = None
 
@@ -363,35 +366,44 @@ class Registry:
 
         self.apis = {}
         # Get all the <type> declarations using XPath.
-        for type in registry.findall(".//types/type"):
-            # Find name
-            name = type.attrib.get("name") or type.find("name")
-            if name is None:
-                print(f"Skipping: {type}")
-                continue
-            category = type.attrib.get("category")
-            if category == "include":
-                self.apis[name] = Include(name)
-                continue
-            if category == "basetype":
-                type_deffed = innertext(type, lambda x: x.tag != "name").strip()
-                if type_deffed.startswith("typedef"):
-                    type_deffed = type_deffed[len("typedef") :].strip()
-                self.apis[name] = Typedef(
-                    type_deffed,
+        for types in registry.findall(".//types"):
+            namespace = types.attrib["namespace"]
+            for type in types:
+                if type.tag != "type":
+                    continue
+                # Find name
+                name = type.attrib.get("name") or type.find("name")
+                if name is None:
+                    print(f"Skipping: {type}")
+                    continue
+                if not isinstance(name, str):
+                    name = name.text
+                name = name.strip()
+                category = type.attrib.get("category")
+                if category == "include":
+                    self.apis[name] = Include(name)
+                    continue
+                if category == "basetype":
+                    type_deffed = innertext(type, lambda x: x.tag != "name").strip()
+                    if type_deffed.startswith("typedef"):
+                        type_deffed = type_deffed[len("typedef") :].strip()
+                    self.apis[name] = Typedef(
+                        type_deffed,
+                        name,
+                        innertext(type),
+                        doc_from_element(type),
+                        type.attrib.get("deprecated"),
+                    )
+                    continue
+                # Types are verbatim
+                self.apis[name] = Verbatim(
                     name,
-                    innertext(type),
+                    category,
+                    innertext(type).strip(),
+                    namespace,
                     doc_from_element(type),
                     type.attrib.get("deprecated"),
                 )
-            # Types are verbatim
-            self.apis[name.text.strip()] = Verbatim(
-                name,
-                category,
-                innertext(type).strip(),
-                doc_from_element(type),
-                type.attrib.get("deprecated"),
-            )
 
         # Get all the <commands> objects - we do nested iteration because we need to get the namespace attribute!
         for commands in registry.findall(".//commands"):

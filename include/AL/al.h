@@ -1,11 +1,37 @@
-#ifndef AL_AL_H
-#define AL_AL_H
+/* This is free and unencumbered software released into the public domain.
+ *
+ * Anyone is free to copy, modify, publish, use, compile, sell, or
+ * distribute this software, either in source code form or as a compiled
+ * binary, for any purpose, commercial or non-commercial, and by any
+ * means.
+ *
+ * In jurisdictions that recognize copyright laws, the author or authors
+ * of this software dedicate any and all copyright interest in the
+ * software to the public domain. We make this dedication for the benefit
+ * of the public at large and to the detriment of our heirs and
+ * successors. We intend this dedication to be an overt act of
+ * relinquishment in perpetuity of all present and future rights to this
+ * software under copyright law.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * For more information, please refer to <http://unlicense.org/>
+ */
 
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-04 17:34:35.322917+00:00
+ * Last regenerated: 2025-10-05 15:14:05.617838+00:00
  */
+
+#ifndef AL_AL_H
+#define AL_AL_H
 
 /* NOLINTBEGIN */
 #ifdef __cplusplus
@@ -72,42 +98,56 @@ extern "C" {
 
 /** 8-bit boolean */
 typedef char ALboolean;
+        
+        
 
 /** character */
 typedef char ALchar;
+        
 
 /** signed 8-bit integer */
 typedef signed char ALbyte;
+        
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALubyte;
+        
 
 /** signed 16-bit integer */
 typedef short ALshort;
+        
 
 /** unsigned 16-bit integer */
 typedef unsigned short ALushort;
+        
 
 /** signed 32-bit integer */
 typedef int ALint;
+        
 
 /** unsigned 32-bit integer */
 typedef unsigned int ALuint;
+        
 
 /** non-negative 32-bit integer size */
 typedef int ALsizei;
+        
 
 /** 32-bit enumeration value */
 typedef int ALenum;
+        
 
 /** 32-bit IEEE-754 floating-point */
 typedef float ALfloat;
+        
 
 /** 64-bit IEEE-754 floating-point */
 typedef double ALdouble;
+        
 
 /** void type (opaque pointers only) */
 typedef void ALvoid;
+        
 
 /** No distance model or no buffer */
 #define AL_NONE                                  0

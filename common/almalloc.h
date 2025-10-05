@@ -112,7 +112,7 @@ auto out_ptr(SP &res, Args&& ...args)
     static_assert(sizeof...(args) == 0);
     if constexpr(std::is_same_v<T,void>)
     {
-        using ptype = typename SP::element_type*;
+        using ptype = SP::element_type*;
         return out_ptr_t<SP,ptype,Args...>{res};
     }
     else
@@ -152,7 +152,7 @@ auto inout_ptr(SP &res, Args&& ...args)
     static_assert(sizeof...(args) == 0);
     if constexpr(std::is_same_v<T,void>)
     {
-        using ptype = typename SP::element_type*;
+        using ptype = SP::element_type*;
         return inout_ptr_t<SP,ptype,Args...>{res};
     }
     else

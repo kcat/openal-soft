@@ -101,7 +101,7 @@ template<>
 struct DevFmtTypeTraits<DevFmtFloat> { using Type = float; };
 
 template<DevFmtType T>
-using DevFmtType_t = typename DevFmtTypeTraits<T>::Type;
+using DevFmtType_t = DevFmtTypeTraits<T>::Type;
 
 
 uint BytesFromDevFmt(DevFmtType type) noexcept;

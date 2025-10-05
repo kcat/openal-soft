@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:14:05.617838+00:00
+ * Last regenerated: 2025-10-05 15:23:18.584506+00:00
  */
 
 module;
@@ -74,6 +74,8 @@ export module openal.ext;
 export import openal.efx;
 
 import openal.std;
+
+extern "C" struct _GUID; /* NOLINT(*-reserved-identifier) */
 
 export extern "C" {
 /*** AL_LOKI_IMA_ADPCM_format ***/
@@ -177,10 +179,10 @@ ENUMDCL ALC_CONNECTED =                          0x313;
 
 /*** ALC_EXT_thread_local_context ***/
 using PFNALCSETTHREADCONTEXTPROC = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> ALCboolean;
-using PFNALCGETTHREADCONTEXTPROC = auto (ALC_APIENTRY*)(void) ALC_API_NOEXCEPT -> ALCcontext*;
+using PFNALCGETTHREADCONTEXTPROC = auto (ALC_APIENTRY*)() ALC_API_NOEXCEPT -> ALCcontext*;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API auto ALC_APIENTRY alcSetThreadContext(ALCcontext *context) ALC_API_NOEXCEPT -> ALCboolean;
-ALC_API auto ALC_APIENTRY alcGetThreadContext(void) ALC_API_NOEXCEPT -> ALCcontext*;
+ALC_API auto ALC_APIENTRY alcGetThreadContext() ALC_API_NOEXCEPT -> ALCcontext*;
 #endif
 
 /*** AL_EXT_source_distance_model ***/
@@ -206,10 +208,10 @@ ENUMDCL AL_FOLDBACK_MODE_MONO =                  0x4101;
 ENUMDCL AL_FOLDBACK_MODE_STEREO =                0x4102;
 using LPALFOLDBACKCALLBACK = void (AL_APIENTRY*)(ALenum,ALsizei) AL_API_NOEXCEPT17;;
 using LPALREQUESTFOLDBACKSTART = void (AL_APIENTRY*)(ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
-using LPALREQUESTFOLDBACKSTOP = void (AL_APIENTRY*)(void) AL_API_NOEXCEPT;
+using LPALREQUESTFOLDBACKSTOP = void (AL_APIENTRY*)() AL_API_NOEXCEPT;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alRequestFoldbackStart(ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alRequestFoldbackStop(void) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alRequestFoldbackStop() AL_API_NOEXCEPT;
 #endif
 
 /*** ALC_EXT_DEDICATED ***/
@@ -355,11 +357,11 @@ ENUMDCL ALC_DEFAULT_FILTER_ORDER =               0x1100;
 
 /*** AL_SOFT_deferred_updates ***/
 ENUMDCL AL_DEFERRED_UPDATES_SOFT =               0xC002;
-using LPALDEFERUPDATESSOFT = void (AL_APIENTRY*)(void) AL_API_NOEXCEPT;
-using LPALPROCESSUPDATESSOFT = void (AL_APIENTRY*)(void) AL_API_NOEXCEPT;
+using LPALDEFERUPDATESSOFT = void (AL_APIENTRY*)() AL_API_NOEXCEPT;
+using LPALPROCESSUPDATESSOFT = void (AL_APIENTRY*)() AL_API_NOEXCEPT;
 #ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alDeferUpdatesSOFT(void) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDeferUpdatesSOFT() AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alProcessUpdatesSOFT() AL_API_NOEXCEPT;
 #endif
 
 /*** AL_SOFT_block_alignment ***/
@@ -635,7 +637,7 @@ using LPALDEBUGMESSAGECALLBACKEXT = void (AL_APIENTRY*)(ALDEBUGPROCEXT callback,
 using LPALDEBUGMESSAGEINSERTEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
 using LPALDEBUGMESSAGECONTROLEXT = void (AL_APIENTRY*)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT;
 using LPALPUSHDEBUGGROUPEXT = void (AL_APIENTRY*)(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
-using LPALPOPDEBUGGROUPEXT = void (AL_APIENTRY*)(void) AL_API_NOEXCEPT;
+using LPALPOPDEBUGGROUPEXT = void (AL_APIENTRY*)() AL_API_NOEXCEPT;
 using LPALGETDEBUGMESSAGELOGEXT = auto (AL_APIENTRY*)(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT -> ALuint;
 using LPALOBJECTLABELEXT = void (AL_APIENTRY*)(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
 using LPALGETOBJECTLABELEXT = void (AL_APIENTRY*)(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
@@ -646,7 +648,7 @@ void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userPa
 void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
 void AL_APIENTRY alDebugMessageControlEXT(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT;
 void AL_APIENTRY alPushDebugGroupEXT(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
-void AL_APIENTRY alPopDebugGroupEXT(void) AL_API_NOEXCEPT;
+void AL_APIENTRY alPopDebugGroupEXT() AL_API_NOEXCEPT;
 auto AL_APIENTRY alGetDebugMessageLogEXT(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT -> ALuint;
 void AL_APIENTRY alObjectLabelEXT(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetObjectLabelEXT(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT;
@@ -675,7 +677,6 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #endif
 
 /*** AL_EXT_direct_context ***/
-using _GUID = struct;
 using LPALCGETPROCADDRESS2 = auto (ALC_APIENTRY*)(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT -> ALCvoid*;
 
 using LPALENABLEDIRECT = void (AL_APIENTRY*)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;

@@ -383,14 +383,15 @@ class Registry:
                 if category == "include":
                     self.apis[name] = Include(name)
                     continue
-                if category == "basetype":
+                repr = innertext(type).strip()
+                if category == "basetype" and repr.startswith("typedef"):
                     type_deffed = innertext(type, lambda x: x.tag != "name").strip()
                     if type_deffed.startswith("typedef"):
                         type_deffed = type_deffed[len("typedef") :].strip()
                     self.apis[name] = Typedef(
                         type_deffed,
                         name,
-                        innertext(type),
+                        repr,
                         doc_from_element(type),
                         type.attrib.get("deprecated"),
                     )
@@ -399,7 +400,7 @@ class Registry:
                 self.apis[name] = Verbatim(
                     name,
                     category,
-                    innertext(type).strip(),
+                    repr,
                     namespace,
                     doc_from_element(type),
                     type.attrib.get("deprecated"),

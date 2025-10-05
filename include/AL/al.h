@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:14:05.617838+00:00
+ * Last regenerated: 2025-10-05 15:23:18.584506+00:00
  */
 
 #ifndef AL_AL_H
@@ -98,56 +98,42 @@ extern "C" {
 
 /** 8-bit boolean */
 typedef char ALboolean;
-        
-        
 
 /** character */
 typedef char ALchar;
-        
 
 /** signed 8-bit integer */
 typedef signed char ALbyte;
-        
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALubyte;
-        
 
 /** signed 16-bit integer */
 typedef short ALshort;
-        
 
 /** unsigned 16-bit integer */
 typedef unsigned short ALushort;
-        
 
 /** signed 32-bit integer */
 typedef int ALint;
-        
 
 /** unsigned 32-bit integer */
 typedef unsigned int ALuint;
-        
 
 /** non-negative 32-bit integer size */
 typedef int ALsizei;
-        
 
 /** 32-bit enumeration value */
 typedef int ALenum;
-        
 
 /** 32-bit IEEE-754 floating-point */
 typedef float ALfloat;
-        
 
 /** 64-bit IEEE-754 floating-point */
 typedef double ALdouble;
-        
 
 /** void type (opaque pointers only) */
 typedef void ALvoid;
-        
 
 /** No distance model or no buffer */
 #define AL_NONE                                  0

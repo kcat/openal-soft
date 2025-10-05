@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:14:05.617838+00:00
+ * Last regenerated: 2025-10-05 15:23:18.584506+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -361,12 +361,7 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #define AL_SAMPLE_OFFSET_LATENCY_SOFT            0x1200
 #define AL_SEC_OFFSET_LATENCY_SOFT               0x1201
 typedef _alsoft_int64_t ALint64SOFT;
-        
-
 typedef _alsoft_uint64_t ALuint64SOFT;
-
-        
-
 typedef void (AL_APIENTRY *LPALSOURCEDSOFT)(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCE3DSOFT)(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCEDVSOFT)(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT17;
@@ -526,12 +521,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index) A
 #ifndef ALC_SOFT_device_clock
 #define ALC_SOFT_device_clock 1
 typedef _alsoft_int64_t ALCint64SOFT;
-        
-
 typedef _alsoft_uint64_t ALCuint64SOFT;
-
-        
-
 #define ALC_DEVICE_CLOCK_SOFT                    0x1600
 #define ALC_DEVICE_LATENCY_SOFT                  0x1601
 #define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
@@ -785,12 +775,6 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #ifndef AL_EXT_direct_context
 #define AL_EXT_direct_context 1
 struct _GUID;
-
-        
-
-        
-        
-
 typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALENABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;

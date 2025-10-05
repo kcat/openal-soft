@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:14:05.617838+00:00
+ * Last regenerated: 2025-10-05 15:23:18.584506+00:00
  */
 
 #ifndef AL_ALC_H
@@ -99,65 +99,48 @@ extern "C" {
 
 /** Opaque device handle */
 typedef struct ALCdevice ALCdevice;
-        
 
 /** Opaque context handle */
 typedef struct ALCcontext ALCcontext;
-        
 
 /** 8-bit boolean */
 typedef char ALCboolean;
-        
-        
 
 /** character */
 typedef char ALCchar;
-        
 
 /** signed 8-bit integer */
 typedef signed char ALCbyte;
-        
 
 /** unsigned 8-bit integer */
 typedef unsigned char ALCubyte;
-        
 
 /** signed 16-bit integer */
 typedef short ALCshort;
-        
 
 /** unsigned 16-bit integer */
 typedef unsigned short ALCushort;
-        
 
 /** signed 32-bit integer */
 typedef int ALCint;
-        
 
 /** unsigned 32-bit integer */
 typedef unsigned int ALCuint;
-        
 
 /** non-negative 32-bit integer size */
 typedef int ALCsizei;
-        
 
 /** 32-bit enumeration value */
 typedef int ALCenum;
-        
 
 /** 32-bit IEEE-754 floating-point */
 typedef float ALCfloat;
-        
 
 /** 64-bit IEEE-754 floating-point */
 typedef double ALCdouble;
-        
 
 /** void type (for opaque pointers only) */
 typedef void ALCvoid;
-
-        
 
 /** Boolean False. */
 #define ALC_FALSE                                0

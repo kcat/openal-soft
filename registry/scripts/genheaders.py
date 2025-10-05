@@ -254,6 +254,8 @@ export module openal.ext;
 export import openal.efx;
 
 import openal.std;
+
+extern "C" struct _GUID; /* NOLINT(*-reserved-identifier) */
 """
 
 
@@ -416,7 +418,7 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
     """
     if isinstance(api, reg.Command):
         if len(api.parameters) == 0:
-            params = "(void)"
+            params = "(void)" if header else "()"
         else:
             params = f"({', '.join(x.repr.strip() for x in api.parameters)})"
         is_void = api.return_type.strip() == "void"
@@ -464,6 +466,9 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
             f"{reg.render_doc_comment(api.doc, registry)}using {api.name} = {api.type};"
         )
     elif isinstance(api, reg.Verbatim):
+        if api.category == "basetype":
+            print(f"Warning: verbatim basetype not being handled for modules today, define {api.name} in preamble")
+            return ""
         if api.category != "funcpointer":
             # Is it a string constant?
             define = api.repr.replace(f" {api.name} ", "").strip()

@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 15:14:05.617838+00:00
+ * Last regenerated: 2025-10-05 15:23:18.584506+00:00
  */
 
 module;
@@ -511,7 +511,7 @@ AL_API auto AL_APIENTRY alGetDouble(ALenum param) AL_API_NOEXCEPT -> ALdouble;
  * Obtain the first error generated in the AL context since the last call to
  * this function.
  */
-AL_API auto AL_APIENTRY alGetError(void) AL_API_NOEXCEPT -> ALenum;
+AL_API auto AL_APIENTRY alGetError() AL_API_NOEXCEPT -> ALenum;
 
 /** Query for the presence of an extension on the AL context. */
 AL_API auto AL_APIENTRY alIsExtensionPresent(const ALchar *extname) AL_API_NOEXCEPT -> ALboolean;
@@ -649,7 +649,7 @@ using LPALGETINTEGER = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALin
 using LPALGETFLOAT = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALfloat;
 using LPALGETDOUBLE = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALdouble;
 
-using LPALGETERROR = auto (AL_APIENTRY*)(void) AL_API_NOEXCEPT -> ALenum;
+using LPALGETERROR = auto (AL_APIENTRY*)() AL_API_NOEXCEPT -> ALenum;
 using LPALISEXTENSIONPRESENT = auto (AL_APIENTRY*)(const ALchar *extname) AL_API_NOEXCEPT -> ALboolean;
 using LPALGETPROCADDRESS = auto (AL_APIENTRY*)(const ALchar *fname) AL_API_NOEXCEPT -> void*;
 using LPALGETENUMVALUE = auto (AL_APIENTRY*)(const ALchar *ename) AL_API_NOEXCEPT -> ALenum;

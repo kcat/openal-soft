@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-05 19:19:37.372489+00:00
+ * Last regenerated: 2025-10-06 17:35:20.700564+00:00
  */
 
 module;
@@ -66,10 +66,10 @@ module;
 
 #define ENUMDCL inline constexpr auto
 
+export module openal.ext;
+
 typedef std::int64_t _alsoft_int64_t;
 typedef std::uint64_t _alsoft_uint64_t;
-
-export module openal.ext;
 
 export import openal.efx;
 

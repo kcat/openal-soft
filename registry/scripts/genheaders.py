@@ -287,10 +287,10 @@ EXT_MODULE_PREAMBLE = """
 
 #define ENUMDCL inline constexpr auto
 
+export module openal.ext;
+
 typedef std::int64_t _alsoft_int64_t;
 typedef std::uint64_t _alsoft_uint64_t;
-
-export module openal.ext;
 
 export import openal.efx;
 

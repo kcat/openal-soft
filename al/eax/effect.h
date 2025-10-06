@@ -395,9 +395,8 @@ public:
 
     static void call_set(const EaxCall &call, EaxEffectProps &props)
     {
-        return std::visit([&](auto &arg)
-        { return CommitterFor<decltype(arg)>::Set(call, arg); },
-        props);
+        return std::visit([&]<typename T>(T &arg) { return CommitterFor<T>::Set(call, arg); },
+            props);
     }
 
     void set(const EaxCall &call)
@@ -416,9 +415,8 @@ public:
 
     static void call_get(const EaxCall &call, const EaxEffectProps &props)
     {
-        return std::visit([&](auto &arg)
-        { return CommitterFor<decltype(arg)>::Get(call, arg); },
-        props);
+        return std::visit([&]<typename T>(T &arg) { return CommitterFor<T>::Get(call, arg); },
+            props);
     }
 
     void get(const EaxCall &call) const
@@ -436,9 +434,9 @@ public:
 
     bool call_commit(const EaxEffectProps &props)
     {
-        return std::visit([&](auto &arg)
-        { return CommitterFor<decltype(arg)>{props_, al_effect_props_}.commit(arg); },
-        props);
+        return std::visit([&]<typename T>(T &arg)
+            { return CommitterFor<T>{props_, al_effect_props_}.commit(arg); },
+            props);
     }
 
     bool commit(int eax_version)

@@ -24,13 +24,17 @@
 #include "opthelpers.h"
 
 
-consteval auto operator "" _i64(unsigned long long n) noexcept { return gsl::narrow<std::int64_t>(n); }
-consteval auto operator "" _u64(unsigned long long n) noexcept { return gsl::narrow<std::uint64_t>(n); }
+[[nodiscard]] consteval
+auto operator ""_i64(unsigned long long n) noexcept { return gsl::narrow<std::int64_t>(n); }
+[[nodiscard]] consteval
+auto operator ""_u64(unsigned long long n) noexcept { return gsl::narrow<std::uint64_t>(n); }
 
-consteval auto operator "" _z(unsigned long long n) noexcept
-{ return gsl::narrow<std::make_signed_t<std::size_t>>(n); }
-consteval auto operator "" _uz(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
-consteval auto operator "" _zu(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
+[[nodiscard]] consteval
+auto operator ""_z(unsigned long long n) noexcept { return gsl::narrow<std::make_signed_t<std::size_t>>(n); }
+[[nodiscard]] consteval
+auto operator ""_uz(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
+[[nodiscard]] consteval
+auto operator ""_zu(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
 
 
 namespace al {

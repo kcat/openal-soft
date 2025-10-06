@@ -322,8 +322,7 @@ auto Sdl3Backend::reset() -> bool
         mDevice->mBufferSize = mDevice->mUpdateSize*2u;
 
         mBuffer.resize(size_t{mDevice->mUpdateSize} * mFrameSize);
-        std::fill(mBuffer.begin(), mBuffer.end(), (mDevice->FmtType == DevFmtUByte)
-            ? std::byte{0x80} : std::byte{});
+        std::ranges::fill(mBuffer, mDevice->FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});
     }
     else
         ERR("Invalid update size from SDL stream: {}", update_size);

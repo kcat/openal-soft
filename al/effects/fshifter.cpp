@@ -183,7 +183,7 @@ struct AllValidator {
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct FrequencyShifterCommitter::Exception : public EaxException {
+struct FrequencyShifterCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
     { }

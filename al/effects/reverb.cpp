@@ -963,7 +963,7 @@ struct EnvironmentSizeDeferrer3 {
 
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxReverbCommitter::Exception : public EaxReverbEffectException {
+struct EaxReverbCommitter::Exception final : EaxReverbEffectException {
     using EaxReverbEffectException::EaxReverbEffectException;
 };
 

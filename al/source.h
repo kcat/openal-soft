@@ -59,7 +59,7 @@ struct ALbufferQueueItem : public VoiceBufferItem {
 
 #if ALSOFT_EAX
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-class EaxSourceException : public EaxException {
+class EaxSourceException final : public EaxException {
 public:
     explicit EaxSourceException(const std::string_view message)
         : EaxException{"EAX_SOURCE", message}

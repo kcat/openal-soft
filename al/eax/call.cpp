@@ -11,7 +11,7 @@ namespace {
 constexpr auto deferred_flag = 0x80000000U;
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-class EaxCallException : public EaxException {
+class EaxCallException final : public EaxException {
 public:
     explicit EaxCallException(const std::string_view message) : EaxException{"EAX_CALL", message}
     { }

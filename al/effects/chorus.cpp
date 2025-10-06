@@ -526,7 +526,7 @@ using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct ChorusCommitter::Exception : public EaxException {
+struct ChorusCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
     { }
 };
@@ -560,7 +560,7 @@ void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
 }
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct FlangerCommitter::Exception : public EaxException {
+struct FlangerCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_FLANGER_EFFECT",message}
     { }
 };

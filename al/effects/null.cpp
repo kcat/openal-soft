@@ -72,7 +72,7 @@ using NullCommitter = EaxCommitter<EaxNullCommitter>;
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct NullCommitter::Exception : public EaxException {
+struct NullCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_NULL_EFFECT", message}
     { }
 };

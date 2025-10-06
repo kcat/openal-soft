@@ -264,8 +264,6 @@ struct EaxChorusTraits {
     using EaxProps = EAXCHORUSPROPERTIES;
     using Committer = EaxChorusCommitter;
 
-    static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
-
     static constexpr auto eax_none_param_id() { return EAXCHORUS_NONE; }
     static constexpr auto eax_allparameters_param_id() { return EAXCHORUS_ALLPARAMETERS; }
     static constexpr auto eax_waveform_param_id() { return EAXCHORUS_WAVEFORM; }
@@ -296,27 +294,6 @@ struct EaxChorusTraits {
     static constexpr auto eax_default_feedback() { return EAXCHORUS_DEFAULTFEEDBACK; }
     static constexpr auto eax_default_delay() { return EAXCHORUS_DEFAULTDELAY; }
 
-    static constexpr auto efx_min_waveform() { return AL_CHORUS_MIN_WAVEFORM; }
-    static constexpr auto efx_min_phase() { return AL_CHORUS_MIN_PHASE; }
-    static constexpr auto efx_min_rate() { return AL_CHORUS_MIN_RATE; }
-    static constexpr auto efx_min_depth() { return AL_CHORUS_MIN_DEPTH; }
-    static constexpr auto efx_min_feedback() { return AL_CHORUS_MIN_FEEDBACK; }
-    static constexpr auto efx_min_delay() { return AL_CHORUS_MIN_DELAY; }
-
-    static constexpr auto efx_max_waveform() { return AL_CHORUS_MAX_WAVEFORM; }
-    static constexpr auto efx_max_phase() { return AL_CHORUS_MAX_PHASE; }
-    static constexpr auto efx_max_rate() { return AL_CHORUS_MAX_RATE; }
-    static constexpr auto efx_max_depth() { return AL_CHORUS_MAX_DEPTH; }
-    static constexpr auto efx_max_feedback() { return AL_CHORUS_MAX_FEEDBACK; }
-    static constexpr auto efx_max_delay() { return AL_CHORUS_MAX_DELAY; }
-
-    static constexpr auto efx_default_waveform() { return AL_CHORUS_DEFAULT_WAVEFORM; }
-    static constexpr auto efx_default_phase() { return AL_CHORUS_DEFAULT_PHASE; }
-    static constexpr auto efx_default_rate() { return AL_CHORUS_DEFAULT_RATE; }
-    static constexpr auto efx_default_depth() { return AL_CHORUS_DEFAULT_DEPTH; }
-    static constexpr auto efx_default_feedback() { return AL_CHORUS_DEFAULT_FEEDBACK; }
-    static constexpr auto efx_default_delay() { return AL_CHORUS_DEFAULT_DELAY; }
-
     static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
     {
         if(type == EAX_CHORUS_SINUSOID) return ChorusWaveform::Sinusoid;
@@ -328,8 +305,6 @@ struct EaxChorusTraits {
 struct EaxFlangerTraits {
     using EaxProps = EAXFLANGERPROPERTIES;
     using Committer = EaxFlangerCommitter;
-
-    static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
     static constexpr auto eax_none_param_id() { return EAXFLANGER_NONE; }
     static constexpr auto eax_allparameters_param_id() { return EAXFLANGER_ALLPARAMETERS; }
@@ -360,27 +335,6 @@ struct EaxFlangerTraits {
     static constexpr auto eax_default_depth() { return EAXFLANGER_DEFAULTDEPTH; }
     static constexpr auto eax_default_feedback() { return EAXFLANGER_DEFAULTFEEDBACK; }
     static constexpr auto eax_default_delay() { return EAXFLANGER_DEFAULTDELAY; }
-
-    static constexpr auto efx_min_waveform() { return AL_FLANGER_MIN_WAVEFORM; }
-    static constexpr auto efx_min_phase() { return AL_FLANGER_MIN_PHASE; }
-    static constexpr auto efx_min_rate() { return AL_FLANGER_MIN_RATE; }
-    static constexpr auto efx_min_depth() { return AL_FLANGER_MIN_DEPTH; }
-    static constexpr auto efx_min_feedback() { return AL_FLANGER_MIN_FEEDBACK; }
-    static constexpr auto efx_min_delay() { return AL_FLANGER_MIN_DELAY; }
-
-    static constexpr auto efx_max_waveform() { return AL_FLANGER_MAX_WAVEFORM; }
-    static constexpr auto efx_max_phase() { return AL_FLANGER_MAX_PHASE; }
-    static constexpr auto efx_max_rate() { return AL_FLANGER_MAX_RATE; }
-    static constexpr auto efx_max_depth() { return AL_FLANGER_MAX_DEPTH; }
-    static constexpr auto efx_max_feedback() { return AL_FLANGER_MAX_FEEDBACK; }
-    static constexpr auto efx_max_delay() { return AL_FLANGER_MAX_DELAY; }
-
-    static constexpr auto efx_default_waveform() { return AL_FLANGER_DEFAULT_WAVEFORM; }
-    static constexpr auto efx_default_phase() { return AL_FLANGER_DEFAULT_PHASE; }
-    static constexpr auto efx_default_rate() { return AL_FLANGER_DEFAULT_RATE; }
-    static constexpr auto efx_default_depth() { return AL_FLANGER_DEFAULT_DEPTH; }
-    static constexpr auto efx_default_feedback() { return AL_FLANGER_DEFAULT_FEEDBACK; }
-    static constexpr auto efx_default_delay() { return AL_FLANGER_DEFAULT_DELAY; }
 
     static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
     {

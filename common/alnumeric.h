@@ -24,17 +24,51 @@
 #include "opthelpers.h"
 
 
-[[nodiscard]] consteval
-auto operator ""_i64(unsigned long long n) noexcept { return gsl::narrow<std::int64_t>(n); }
-[[nodiscard]] consteval
-auto operator ""_u64(unsigned long long n) noexcept { return gsl::narrow<std::uint64_t>(n); }
+using i8 = std::int8_t;
+using u8 = std::uint8_t;
+using i16 = std::int16_t;
+using u16 = std::uint16_t;
+using i32 = std::int32_t;
+using u32 = std::uint32_t;
+using i64 = std::int64_t;
+using u64 = std::uint64_t;
+using isize = std::make_signed_t<std::size_t>;
+using usize = std::size_t;
+using f32 = float;
+using f64 = double;
+
 
 [[nodiscard]] consteval
-auto operator ""_z(unsigned long long n) noexcept { return gsl::narrow<std::make_signed_t<std::size_t>>(n); }
+auto operator ""_i8(unsigned long long n) noexcept { return gsl::narrow<i8>(n); }
 [[nodiscard]] consteval
-auto operator ""_uz(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
+auto operator ""_u8(unsigned long long n) noexcept { return gsl::narrow<u8>(n); }
+
 [[nodiscard]] consteval
-auto operator ""_zu(unsigned long long n) noexcept { return gsl::narrow<std::size_t>(n); }
+auto operator ""_i16(unsigned long long n) noexcept { return gsl::narrow<i16>(n); }
+[[nodiscard]] consteval
+auto operator ""_u16(unsigned long long n) noexcept { return gsl::narrow<u16>(n); }
+
+[[nodiscard]] consteval
+auto operator ""_i32(unsigned long long n) noexcept { return gsl::narrow<i32>(n); }
+[[nodiscard]] consteval
+auto operator ""_u32(unsigned long long n) noexcept { return gsl::narrow<u32>(n); }
+
+[[nodiscard]] consteval
+auto operator ""_i64(unsigned long long n) noexcept { return gsl::narrow<i64>(n); }
+[[nodiscard]] consteval
+auto operator ""_u64(unsigned long long n) noexcept { return gsl::narrow<u64>(n); }
+
+[[nodiscard]] consteval
+auto operator ""_z(unsigned long long n) noexcept { return gsl::narrow<isize>(n); }
+[[nodiscard]] consteval
+auto operator ""_uz(unsigned long long n) noexcept { return gsl::narrow<usize>(n); }
+[[nodiscard]] consteval
+auto operator ""_zu(unsigned long long n) noexcept { return gsl::narrow<usize>(n); }
+
+[[nodiscard]] consteval
+auto operator ""_f32(long double n) noexcept { return static_cast<f32>(n); }
+[[nodiscard]] consteval
+auto operator ""_f64(long double n) noexcept { return static_cast<f64>(n); }
 
 
 namespace al {
@@ -120,7 +154,7 @@ constexpr auto as_signed(T value) noexcept
 
 
 [[nodiscard]]
-constexpr auto GetCounterSuffix(size_t count) noexcept -> std::string_view
+constexpr auto GetCounterSuffix(usize count) noexcept -> std::string_view
 {
     using namespace std::string_view_literals;
     return (((count%100)/10) == 1) ? "th"sv :
@@ -137,7 +171,7 @@ constexpr auto lerpf(float val1, float val2, float mu) noexcept -> float
 
 /** Find the next power-of-2 for non-power-of-2 numbers. */
 [[nodiscard]]
-constexpr auto NextPowerOf2(uint32_t value) noexcept -> uint32_t
+constexpr auto NextPowerOf2(u32 value) noexcept -> u32
 {
     if(value > 0)
     {

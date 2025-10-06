@@ -25,7 +25,7 @@ struct Context;
 } // namespace al
 
 #if ALSOFT_EAX
-enum class EaxStorage : uint8_t {
+enum class EaxStorage : u8 {
     Automatic,
     Accessible,
     Hardware
@@ -36,34 +36,34 @@ enum class EaxStorage : uint8_t {
 struct ALbuffer : public BufferStorage {
     ALbitfieldSOFT Access{0u};
 
-    std::variant<al::vector<uint8_t,16>,
-        al::vector<int16_t,16>,
-        al::vector<int32_t,16>,
-        al::vector<float,16>,
-        al::vector<double,16>,
-        al::vector<MulawSample,16>,
-        al::vector<AlawSample,16>,
-        al::vector<IMA4Data,16>,
-        al::vector<MSADPCMData,16>> mDataStorage;
+    std::variant<al::vector<u8, 16>,
+        al::vector<i16, 16>,
+        al::vector<i32, 16>,
+        al::vector<f32, 16>,
+        al::vector<f64, 16>,
+        al::vector<MulawSample, 16>,
+        al::vector<AlawSample, 16>,
+        al::vector<IMA4Data, 16>,
+        al::vector<MSADPCMData, 16>> mDataStorage;
 
-    ALuint OriginalSize{0};
+    u32 OriginalSize{0_u32};
 
-    ALuint UnpackAlign{0};
-    ALuint PackAlign{0};
-    ALuint UnpackAmbiOrder{1};
+    u32 UnpackAlign{0_u32};
+    u32 PackAlign{0_u32};
+    u32 UnpackAmbiOrder{1_u32};
 
-    ALbitfieldSOFT MappedAccess{0u};
-    ALsizei MappedOffset{0};
-    ALsizei MappedSize{0};
+    u32 MappedAccess{0_u32};
+    i32 MappedOffset{0_i32};
+    i32 MappedSize{0_i32};
 
-    ALuint mLoopStart{0u};
-    ALuint mLoopEnd{0u};
+    u32 mLoopStart{0_u32};
+    u32 mLoopEnd{0_u32};
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
-    std::atomic<ALuint> mRef{0u};
+    std::atomic<u32> mRef{0_u32};
 
     /* Self ID */
-    ALuint id{0};
+    u32 id{0_u32};
 
     auto inc_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
     auto dec_ref() noexcept { return mRef.fetch_sub(1, std::memory_order_acq_rel)-1; }
@@ -73,7 +73,7 @@ struct ALbuffer : public BufferStorage {
         return al::intrusive_ptr{this};
     }
 
-    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, u32 id, std::string_view name);
 
     DISABLE_ALLOC
 
@@ -84,7 +84,7 @@ struct ALbuffer : public BufferStorage {
 };
 
 struct BufferSubList {
-    uint64_t FreeMask{~0_u64};
+    u64 FreeMask{~0_u64};
     gsl::owner<std::array<ALbuffer,64>*> Buffers{nullptr};
 
     BufferSubList() noexcept = default;

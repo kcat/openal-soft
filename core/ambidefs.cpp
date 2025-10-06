@@ -23,9 +23,9 @@ static_assert(AmbiIndex::FromFuMa.size() == MaxAmbiChannels);
 static_assert(AmbiIndex::FromFuMa2D.size() == MaxAmbi2DChannels);
 
 
-using AmbiChannelFloatArray = std::array<float,MaxAmbiChannels>;
+using AmbiChannelFloatArray = std::array<f32, MaxAmbiChannels>;
 
-constexpr auto inv_sqrt3f = gsl::narrow_cast<float>(1.0/std::numbers::sqrt3);
+constexpr auto inv_sqrt3f = gsl::narrow_cast<f32>(1.0/std::numbers::sqrt3);
 
 
 /* These HF gains are derived from the same 32-point speaker array. The scale
@@ -282,11 +282,11 @@ constexpr auto Order4Enc2D = std::array{
 static_assert(Order4Dec2D.size() == Order4Enc2D.size(), "Fourth-order 2D mismatch");
 
 
-template<size_t N, size_t M>
-constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decoder,
-    const std::array<AmbiChannelFloatArray,M> &encoder) noexcept
+template<usize N, usize M>
+constexpr auto CalcAmbiUpsampler(const std::array<std::array<f32, N>, M> &decoder,
+    const std::array<AmbiChannelFloatArray, M> &encoder) noexcept
 {
-    auto res = std::array<AmbiChannelFloatArray,N>{};
+    auto res = std::array<AmbiChannelFloatArray, N>{};
 
     for(const auto i : std::views::iota(0_uz, decoder[0].size()))
     {
@@ -294,8 +294,8 @@ constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decode
         {
             auto sum = 0.0;
             for(const auto k : std::views::iota(0_uz, decoder.size()))
-                sum += double{decoder[k][i]} * encoder[k][j];
-            res[i][j] = gsl::narrow_cast<float>(sum);
+                sum += f64{decoder[k][i]} * encoder[k][j];
+            res[i][j] = gsl::narrow_cast<f32>(sum);
         }
     }
 
@@ -305,20 +305,20 @@ constexpr auto CalcAmbiUpsampler(const std::array<std::array<float,N>,M> &decode
 } // namespace
 
 namespace AmbiScale {
-constinit const UpsamplerArrays<4> FirstOrderUp{CalcAmbiUpsampler(Order1Dec, Order1Enc)};
-constinit const UpsamplerArrays<4> FirstOrder2DUp{CalcAmbiUpsampler(Order1Dec2D, Order1Enc2D)};
-constinit const UpsamplerArrays<9> SecondOrderUp{CalcAmbiUpsampler(Order2Dec, Order2Enc)};
-constinit const UpsamplerArrays<9> SecondOrder2DUp{CalcAmbiUpsampler(Order2Dec2D, Order2Enc2D)};
-constinit const UpsamplerArrays<16> ThirdOrderUp{CalcAmbiUpsampler(Order3Dec, Order3Enc)};
-constinit const UpsamplerArrays<16> ThirdOrder2DUp{CalcAmbiUpsampler(Order3Dec2D, Order3Enc2D)};
-constinit const UpsamplerArrays<25> FourthOrder2DUp{CalcAmbiUpsampler(Order4Dec2D, Order4Enc2D)};
+constinit UpsamplerArrays<4> const FirstOrderUp{CalcAmbiUpsampler(Order1Dec, Order1Enc)};
+constinit UpsamplerArrays<4> const FirstOrder2DUp{CalcAmbiUpsampler(Order1Dec2D, Order1Enc2D)};
+constinit UpsamplerArrays<9> const SecondOrderUp{CalcAmbiUpsampler(Order2Dec, Order2Enc)};
+constinit UpsamplerArrays<9> const SecondOrder2DUp{CalcAmbiUpsampler(Order2Dec2D, Order2Enc2D)};
+constinit UpsamplerArrays<16> const ThirdOrderUp{CalcAmbiUpsampler(Order3Dec, Order3Enc)};
+constinit UpsamplerArrays<16> const ThirdOrder2DUp{CalcAmbiUpsampler(Order3Dec2D, Order3Enc2D)};
+constinit UpsamplerArrays<25> const FourthOrder2DUp{CalcAmbiUpsampler(Order4Dec2D, Order4Enc2D)};
 
-auto GetHFOrderScales(const uint src_order, const uint dev_order, const bool horizontalOnly)
-    noexcept -> std::array<float,MaxAmbiOrder+1>
+auto GetHFOrderScales(u32 const src_order, u32 const dev_order, bool const horizontalOnly)
+    noexcept -> std::array<f32, MaxAmbiOrder+1>
 {
-    auto res = std::array<float,MaxAmbiOrder+1>{};
+    auto res = std::array<f32, MaxAmbiOrder+1>{};
 
-    const auto scales = horizontalOnly ? std::span{HFScales2D} : std::span{HFScales};
+    auto const scales = horizontalOnly ? std::span{HFScales2D} : std::span{HFScales};
     std::ranges::transform(scales[src_order], scales[dev_order], res.begin(), std::divides{});
 
     return res;

@@ -270,7 +270,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             </comment>
         </enum>
         <enum value="0x1024" name="AL_SEC_OFFSET" group="SourcePName,SourceInteger,SourceFloat" comment="Source buffer offset, in seconds.">
-            <property on="source" type="ALint" range="0.."/>
+            <property on="source" type="ALfloat,ALint" range="0.."/>
         </enum>
         <enum value="0x1025" name="AL_SAMPLE_OFFSET" group="SourcePName,SourceInteger,SourceFloat" comment="Source buffer offset, in sample frames.">
             <property on="source" type="ALint" range="0.."/>
@@ -759,336 +759,336 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x0001" name="AL_FILTER_LOWPASS" group="FilterType"/>
         <enum value="0x0002" name="AL_FILTER_HIGHPASS" group="FilterType"/>
         <enum value="0x0003" name="AL_FILTER_BANDPASS" group="FilterType"/>
-        <enum value="(0.0f)" name="AL_LOWPASS_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_LOWPASS_MAX_GAIN"/>
-        <enum value="(1.0f)" name="AL_LOWPASS_DEFAULT_GAIN"/>
-        <enum value="(0.0f)" name="AL_LOWPASS_MIN_GAINHF"/>
-        <enum value="(1.0f)" name="AL_LOWPASS_MAX_GAINHF"/>
-        <enum value="(1.0f)" name="AL_LOWPASS_DEFAULT_GAINHF"/>
-        <enum value="(0.0f)" name="AL_HIGHPASS_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_HIGHPASS_MAX_GAIN"/>
-        <enum value="(1.0f)" name="AL_HIGHPASS_DEFAULT_GAIN"/>
-        <enum value="(0.0f)" name="AL_HIGHPASS_MIN_GAINLF"/>
-        <enum value="(1.0f)" name="AL_HIGHPASS_MAX_GAINLF"/>
-        <enum value="(1.0f)" name="AL_HIGHPASS_DEFAULT_GAINLF"/>
-        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAIN"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAIN"/>
-        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAINHF"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAINHF"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAINHF"/>
-        <enum value="(0.0f)" name="AL_BANDPASS_MIN_GAINLF"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_MAX_GAINLF"/>
-        <enum value="(1.0f)" name="AL_BANDPASS_DEFAULT_GAINLF"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_DENSITY"/>
-        <enum value="(1.0f)" name="AL_REVERB_MAX_DENSITY"/>
-        <enum value="(1.0f)" name="AL_REVERB_DEFAULT_DENSITY"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_DIFFUSION"/>
-        <enum value="(1.0f)" name="AL_REVERB_MAX_DIFFUSION"/>
-        <enum value="(1.0f)" name="AL_REVERB_DEFAULT_DIFFUSION"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_REVERB_MAX_GAIN"/>
-        <enum value="(0.32f)" name="AL_REVERB_DEFAULT_GAIN"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_GAINHF"/>
-        <enum value="(1.0f)" name="AL_REVERB_MAX_GAINHF"/>
-        <enum value="(0.89f)" name="AL_REVERB_DEFAULT_GAINHF"/>
-        <enum value="(0.1f)" name="AL_REVERB_MIN_DECAY_TIME"/>
-        <enum value="(20.0f)" name="AL_REVERB_MAX_DECAY_TIME"/>
-        <enum value="(1.49f)" name="AL_REVERB_DEFAULT_DECAY_TIME"/>
-        <enum value="(0.1f)" name="AL_REVERB_MIN_DECAY_HFRATIO"/>
-        <enum value="(2.0f)" name="AL_REVERB_MAX_DECAY_HFRATIO"/>
-        <enum value="(0.83f)" name="AL_REVERB_DEFAULT_DECAY_HFRATIO"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_REFLECTIONS_GAIN"/>
-        <enum value="(3.16f)" name="AL_REVERB_MAX_REFLECTIONS_GAIN"/>
-        <enum value="(0.05f)" name="AL_REVERB_DEFAULT_REFLECTIONS_GAIN"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_REFLECTIONS_DELAY"/>
-        <enum value="(0.3f)" name="AL_REVERB_MAX_REFLECTIONS_DELAY"/>
-        <enum value="(0.007f)" name="AL_REVERB_DEFAULT_REFLECTIONS_DELAY"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_LATE_REVERB_GAIN"/>
-        <enum value="(10.0f)" name="AL_REVERB_MAX_LATE_REVERB_GAIN"/>
-        <enum value="(1.26f)" name="AL_REVERB_DEFAULT_LATE_REVERB_GAIN"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_LATE_REVERB_DELAY"/>
-        <enum value="(0.1f)" name="AL_REVERB_MAX_LATE_REVERB_DELAY"/>
-        <enum value="(0.011f)" name="AL_REVERB_DEFAULT_LATE_REVERB_DELAY"/>
-        <enum value="(0.892f)" name="AL_REVERB_MIN_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(1.0f)" name="AL_REVERB_MAX_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(0.994f)" name="AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(0.0f)" name="AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(10.0f)" name="AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(0.0f)" name="AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_LOWPASS_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_LOWPASS_MAX_GAIN"/>
+        <enum value="1.0f" name="AL_LOWPASS_DEFAULT_GAIN"/>
+        <enum value="0.0f" name="AL_LOWPASS_MIN_GAINHF"/>
+        <enum value="1.0f" name="AL_LOWPASS_MAX_GAINHF"/>
+        <enum value="1.0f" name="AL_LOWPASS_DEFAULT_GAINHF"/>
+        <enum value="0.0f" name="AL_HIGHPASS_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_HIGHPASS_MAX_GAIN"/>
+        <enum value="1.0f" name="AL_HIGHPASS_DEFAULT_GAIN"/>
+        <enum value="0.0f" name="AL_HIGHPASS_MIN_GAINLF"/>
+        <enum value="1.0f" name="AL_HIGHPASS_MAX_GAINLF"/>
+        <enum value="1.0f" name="AL_HIGHPASS_DEFAULT_GAINLF"/>
+        <enum value="0.0f" name="AL_BANDPASS_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_BANDPASS_MAX_GAIN"/>
+        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAIN"/>
+        <enum value="0.0f" name="AL_BANDPASS_MIN_GAINHF"/>
+        <enum value="1.0f" name="AL_BANDPASS_MAX_GAINHF"/>
+        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAINHF"/>
+        <enum value="0.0f" name="AL_BANDPASS_MIN_GAINLF"/>
+        <enum value="1.0f" name="AL_BANDPASS_MAX_GAINLF"/>
+        <enum value="1.0f" name="AL_BANDPASS_DEFAULT_GAINLF"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_DENSITY"/>
+        <enum value="1.0f" name="AL_REVERB_MAX_DENSITY"/>
+        <enum value="1.0f" name="AL_REVERB_DEFAULT_DENSITY"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_DIFFUSION"/>
+        <enum value="1.0f" name="AL_REVERB_MAX_DIFFUSION"/>
+        <enum value="1.0f" name="AL_REVERB_DEFAULT_DIFFUSION"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_REVERB_MAX_GAIN"/>
+        <enum value="0.32f" name="AL_REVERB_DEFAULT_GAIN"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_GAINHF"/>
+        <enum value="1.0f" name="AL_REVERB_MAX_GAINHF"/>
+        <enum value="0.89f" name="AL_REVERB_DEFAULT_GAINHF"/>
+        <enum value="0.1f" name="AL_REVERB_MIN_DECAY_TIME"/>
+        <enum value="20.0f" name="AL_REVERB_MAX_DECAY_TIME"/>
+        <enum value="1.49f" name="AL_REVERB_DEFAULT_DECAY_TIME"/>
+        <enum value="0.1f" name="AL_REVERB_MIN_DECAY_HFRATIO"/>
+        <enum value="2.0f" name="AL_REVERB_MAX_DECAY_HFRATIO"/>
+        <enum value="0.83f" name="AL_REVERB_DEFAULT_DECAY_HFRATIO"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_REFLECTIONS_GAIN"/>
+        <enum value="3.16f" name="AL_REVERB_MAX_REFLECTIONS_GAIN"/>
+        <enum value="0.05f" name="AL_REVERB_DEFAULT_REFLECTIONS_GAIN"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_REFLECTIONS_DELAY"/>
+        <enum value="0.3f" name="AL_REVERB_MAX_REFLECTIONS_DELAY"/>
+        <enum value="0.007f" name="AL_REVERB_DEFAULT_REFLECTIONS_DELAY"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_LATE_REVERB_GAIN"/>
+        <enum value="10.0f" name="AL_REVERB_MAX_LATE_REVERB_GAIN"/>
+        <enum value="1.26f" name="AL_REVERB_DEFAULT_LATE_REVERB_GAIN"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_LATE_REVERB_DELAY"/>
+        <enum value="0.1f" name="AL_REVERB_MAX_LATE_REVERB_DELAY"/>
+        <enum value="0.011f" name="AL_REVERB_DEFAULT_LATE_REVERB_DELAY"/>
+        <enum value="0.892f" name="AL_REVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+        <enum value="1.0f" name="AL_REVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+        <enum value="0.994f" name="AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+        <enum value="0.0f" name="AL_REVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="10.0f" name="AL_REVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
         <enum value="AL_FALSE" name="AL_REVERB_MIN_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_REVERB_MAX_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_REVERB_DEFAULT_DECAY_HFLIMIT"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_DENSITY"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_DENSITY"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DENSITY"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_DIFFUSION"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_DIFFUSION"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DIFFUSION"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAIN"/>
-        <enum value="(0.32f)" name="AL_EAXREVERB_DEFAULT_GAIN"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAINHF"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAINHF"/>
-        <enum value="(0.89f)" name="AL_EAXREVERB_DEFAULT_GAINHF"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_GAINLF"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_GAINLF"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_GAINLF"/>
-        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_TIME"/>
-        <enum value="(20.0f)" name="AL_EAXREVERB_MAX_DECAY_TIME"/>
-        <enum value="(1.49f)" name="AL_EAXREVERB_DEFAULT_DECAY_TIME"/>
-        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_HFRATIO"/>
-        <enum value="(2.0f)" name="AL_EAXREVERB_MAX_DECAY_HFRATIO"/>
-        <enum value="(0.83f)" name="AL_EAXREVERB_DEFAULT_DECAY_HFRATIO"/>
-        <enum value="(0.1f)" name="AL_EAXREVERB_MIN_DECAY_LFRATIO"/>
-        <enum value="(2.0f)" name="AL_EAXREVERB_MAX_DECAY_LFRATIO"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_DEFAULT_DECAY_LFRATIO"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_REFLECTIONS_GAIN"/>
-        <enum value="(3.16f)" name="AL_EAXREVERB_MAX_REFLECTIONS_GAIN"/>
-        <enum value="(0.05f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_REFLECTIONS_DELAY"/>
-        <enum value="(0.3f)" name="AL_EAXREVERB_MAX_REFLECTIONS_DELAY"/>
-        <enum value="(0.007f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_LATE_REVERB_GAIN"/>
-        <enum value="(10.0f)" name="AL_EAXREVERB_MAX_LATE_REVERB_GAIN"/>
-        <enum value="(1.26f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_LATE_REVERB_DELAY"/>
-        <enum value="(0.1f)" name="AL_EAXREVERB_MAX_LATE_REVERB_DELAY"/>
-        <enum value="(0.011f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ"/>
-        <enum value="(0.075f)" name="AL_EAXREVERB_MIN_ECHO_TIME"/>
-        <enum value="(0.25f)" name="AL_EAXREVERB_MAX_ECHO_TIME"/>
-        <enum value="(0.25f)" name="AL_EAXREVERB_DEFAULT_ECHO_TIME"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_ECHO_DEPTH"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_ECHO_DEPTH"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_ECHO_DEPTH"/>
-        <enum value="(0.04f)" name="AL_EAXREVERB_MIN_MODULATION_TIME"/>
-        <enum value="(4.0f)" name="AL_EAXREVERB_MAX_MODULATION_TIME"/>
-        <enum value="(0.25f)" name="AL_EAXREVERB_DEFAULT_MODULATION_TIME"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_MODULATION_DEPTH"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_MODULATION_DEPTH"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_MODULATION_DEPTH"/>
-        <enum value="(0.892f)" name="AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(1.0f)" name="AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(0.994f)" name="AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
-        <enum value="(1000.0f)" name="AL_EAXREVERB_MIN_HFREFERENCE"/>
-        <enum value="(20000.0f)" name="AL_EAXREVERB_MAX_HFREFERENCE"/>
-        <enum value="(5000.0f)" name="AL_EAXREVERB_DEFAULT_HFREFERENCE"/>
-        <enum value="(20.0f)" name="AL_EAXREVERB_MIN_LFREFERENCE"/>
-        <enum value="(1000.0f)" name="AL_EAXREVERB_MAX_LFREFERENCE"/>
-        <enum value="(250.0f)" name="AL_EAXREVERB_DEFAULT_LFREFERENCE"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(10.0f)" name="AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(0.0f)" name="AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_DENSITY"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_DENSITY"/>
+        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DENSITY"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_DIFFUSION"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_DIFFUSION"/>
+        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DIFFUSION"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAIN"/>
+        <enum value="0.32f" name="AL_EAXREVERB_DEFAULT_GAIN"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAINHF"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAINHF"/>
+        <enum value="0.89f" name="AL_EAXREVERB_DEFAULT_GAINHF"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_GAINLF"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_GAINLF"/>
+        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_GAINLF"/>
+        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_TIME"/>
+        <enum value="20.0f" name="AL_EAXREVERB_MAX_DECAY_TIME"/>
+        <enum value="1.49f" name="AL_EAXREVERB_DEFAULT_DECAY_TIME"/>
+        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_HFRATIO"/>
+        <enum value="2.0f" name="AL_EAXREVERB_MAX_DECAY_HFRATIO"/>
+        <enum value="0.83f" name="AL_EAXREVERB_DEFAULT_DECAY_HFRATIO"/>
+        <enum value="0.1f" name="AL_EAXREVERB_MIN_DECAY_LFRATIO"/>
+        <enum value="2.0f" name="AL_EAXREVERB_MAX_DECAY_LFRATIO"/>
+        <enum value="1.0f" name="AL_EAXREVERB_DEFAULT_DECAY_LFRATIO"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_REFLECTIONS_GAIN"/>
+        <enum value="3.16f" name="AL_EAXREVERB_MAX_REFLECTIONS_GAIN"/>
+        <enum value="0.05f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_REFLECTIONS_DELAY"/>
+        <enum value="0.3f" name="AL_EAXREVERB_MAX_REFLECTIONS_DELAY"/>
+        <enum value="0.007f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY"/>
+        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_LATE_REVERB_GAIN"/>
+        <enum value="10.0f" name="AL_EAXREVERB_MAX_LATE_REVERB_GAIN"/>
+        <enum value="1.26f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_LATE_REVERB_DELAY"/>
+        <enum value="0.1f" name="AL_EAXREVERB_MAX_LATE_REVERB_DELAY"/>
+        <enum value="0.011f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY"/>
+        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ"/>
+        <enum value="0.075f" name="AL_EAXREVERB_MIN_ECHO_TIME"/>
+        <enum value="0.25f" name="AL_EAXREVERB_MAX_ECHO_TIME"/>
+        <enum value="0.25f" name="AL_EAXREVERB_DEFAULT_ECHO_TIME"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_ECHO_DEPTH"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_ECHO_DEPTH"/>
+        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_ECHO_DEPTH"/>
+        <enum value="0.04f" name="AL_EAXREVERB_MIN_MODULATION_TIME"/>
+        <enum value="4.0f" name="AL_EAXREVERB_MAX_MODULATION_TIME"/>
+        <enum value="0.25f" name="AL_EAXREVERB_DEFAULT_MODULATION_TIME"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_MODULATION_DEPTH"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_MODULATION_DEPTH"/>
+        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_MODULATION_DEPTH"/>
+        <enum value="0.892f" name="AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF"/>
+        <enum value="1.0f" name="AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF"/>
+        <enum value="0.994f" name="AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF"/>
+        <enum value="1000.0f" name="AL_EAXREVERB_MIN_HFREFERENCE"/>
+        <enum value="20000.0f" name="AL_EAXREVERB_MAX_HFREFERENCE"/>
+        <enum value="5000.0f" name="AL_EAXREVERB_DEFAULT_HFREFERENCE"/>
+        <enum value="20.0f" name="AL_EAXREVERB_MIN_LFREFERENCE"/>
+        <enum value="1000.0f" name="AL_EAXREVERB_MAX_LFREFERENCE"/>
+        <enum value="250.0f" name="AL_EAXREVERB_DEFAULT_LFREFERENCE"/>
+        <enum value="0.0f" name="AL_EAXREVERB_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="10.0f" name="AL_EAXREVERB_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
         <enum value="AL_FALSE" name="AL_EAXREVERB_MIN_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_EAXREVERB_MAX_DECAY_HFLIMIT"/>
         <enum value="AL_TRUE" name="AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT"/>
-        <enum value="(0)" name="AL_CHORUS_WAVEFORM_SINUSOID" group="ChorusWaveform"/>
-        <enum value="(1)" name="AL_CHORUS_WAVEFORM_TRIANGLE" group="ChorusWaveform"/>
-        <enum value="(0)" name="AL_CHORUS_MIN_WAVEFORM"/>
-        <enum value="(1)" name="AL_CHORUS_MAX_WAVEFORM"/>
-        <enum value="(1)" name="AL_CHORUS_DEFAULT_WAVEFORM"/>
-        <enum value="(-180)" name="AL_CHORUS_MIN_PHASE"/>
-        <enum value="(180)" name="AL_CHORUS_MAX_PHASE"/>
-        <enum value="(90)" name="AL_CHORUS_DEFAULT_PHASE"/>
-        <enum value="(0.0f)" name="AL_CHORUS_MIN_RATE"/>
-        <enum value="(10.0f)" name="AL_CHORUS_MAX_RATE"/>
-        <enum value="(1.1f)" name="AL_CHORUS_DEFAULT_RATE"/>
-        <enum value="(0.0f)" name="AL_CHORUS_MIN_DEPTH"/>
-        <enum value="(1.0f)" name="AL_CHORUS_MAX_DEPTH"/>
-        <enum value="(0.1f)" name="AL_CHORUS_DEFAULT_DEPTH"/>
-        <enum value="(-1.0f)" name="AL_CHORUS_MIN_FEEDBACK"/>
-        <enum value="(1.0f)" name="AL_CHORUS_MAX_FEEDBACK"/>
-        <enum value="(0.25f)" name="AL_CHORUS_DEFAULT_FEEDBACK"/>
-        <enum value="(0.0f)" name="AL_CHORUS_MIN_DELAY"/>
-        <enum value="(0.016f)" name="AL_CHORUS_MAX_DELAY"/>
-        <enum value="(0.016f)" name="AL_CHORUS_DEFAULT_DELAY"/>
-        <enum value="(0.0f)" name="AL_DISTORTION_MIN_EDGE"/>
-        <enum value="(1.0f)" name="AL_DISTORTION_MAX_EDGE"/>
-        <enum value="(0.2f)" name="AL_DISTORTION_DEFAULT_EDGE"/>
-        <enum value="(0.01f)" name="AL_DISTORTION_MIN_GAIN"/>
-        <enum value="(1.0f)" name="AL_DISTORTION_MAX_GAIN"/>
-        <enum value="(0.05f)" name="AL_DISTORTION_DEFAULT_GAIN"/>
-        <enum value="(80.0f)" name="AL_DISTORTION_MIN_LOWPASS_CUTOFF"/>
-        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_LOWPASS_CUTOFF"/>
-        <enum value="(8000.0f)" name="AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF"/>
-        <enum value="(80.0f)" name="AL_DISTORTION_MIN_EQCENTER"/>
-        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_EQCENTER"/>
-        <enum value="(3600.0f)" name="AL_DISTORTION_DEFAULT_EQCENTER"/>
-        <enum value="(80.0f)" name="AL_DISTORTION_MIN_EQBANDWIDTH"/>
-        <enum value="(24000.0f)" name="AL_DISTORTION_MAX_EQBANDWIDTH"/>
-        <enum value="(3600.0f)" name="AL_DISTORTION_DEFAULT_EQBANDWIDTH"/>
-        <enum value="(0.0f)" name="AL_ECHO_MIN_DELAY"/>
-        <enum value="(0.207f)" name="AL_ECHO_MAX_DELAY"/>
-        <enum value="(0.1f)" name="AL_ECHO_DEFAULT_DELAY"/>
-        <enum value="(0.0f)" name="AL_ECHO_MIN_LRDELAY"/>
-        <enum value="(0.404f)" name="AL_ECHO_MAX_LRDELAY"/>
-        <enum value="(0.1f)" name="AL_ECHO_DEFAULT_LRDELAY"/>
-        <enum value="(0.0f)" name="AL_ECHO_MIN_DAMPING"/>
-        <enum value="(0.99f)" name="AL_ECHO_MAX_DAMPING"/>
-        <enum value="(0.5f)" name="AL_ECHO_DEFAULT_DAMPING"/>
-        <enum value="(0.0f)" name="AL_ECHO_MIN_FEEDBACK"/>
-        <enum value="(1.0f)" name="AL_ECHO_MAX_FEEDBACK"/>
-        <enum value="(0.5f)" name="AL_ECHO_DEFAULT_FEEDBACK"/>
-        <enum value="(-1.0f)" name="AL_ECHO_MIN_SPREAD"/>
-        <enum value="(1.0f)" name="AL_ECHO_MAX_SPREAD"/>
-        <enum value="(-1.0f)" name="AL_ECHO_DEFAULT_SPREAD"/>
-        <enum value="(0)" name="AL_FLANGER_WAVEFORM_SINUSOID" group="FlangerWaveform"/>
-        <enum value="(1)" name="AL_FLANGER_WAVEFORM_TRIANGLE" group="FlangerWaveform"/>
-        <enum value="(0)" name="AL_FLANGER_MIN_WAVEFORM"/>
-        <enum value="(1)" name="AL_FLANGER_MAX_WAVEFORM"/>
-        <enum value="(1)" name="AL_FLANGER_DEFAULT_WAVEFORM"/>
-        <enum value="(-180)" name="AL_FLANGER_MIN_PHASE"/>
-        <enum value="(180)" name="AL_FLANGER_MAX_PHASE"/>
-        <enum value="(0)" name="AL_FLANGER_DEFAULT_PHASE"/>
-        <enum value="(0.0f)" name="AL_FLANGER_MIN_RATE"/>
-        <enum value="(10.0f)" name="AL_FLANGER_MAX_RATE"/>
-        <enum value="(0.27f)" name="AL_FLANGER_DEFAULT_RATE"/>
-        <enum value="(0.0f)" name="AL_FLANGER_MIN_DEPTH"/>
-        <enum value="(1.0f)" name="AL_FLANGER_MAX_DEPTH"/>
-        <enum value="(1.0f)" name="AL_FLANGER_DEFAULT_DEPTH"/>
-        <enum value="(-1.0f)" name="AL_FLANGER_MIN_FEEDBACK"/>
-        <enum value="(1.0f)" name="AL_FLANGER_MAX_FEEDBACK"/>
-        <enum value="(-0.5f)" name="AL_FLANGER_DEFAULT_FEEDBACK"/>
-        <enum value="(0.0f)" name="AL_FLANGER_MIN_DELAY"/>
-        <enum value="(0.004f)" name="AL_FLANGER_MAX_DELAY"/>
-        <enum value="(0.002f)" name="AL_FLANGER_DEFAULT_DELAY"/>
-        <enum value="(0.0f)" name="AL_FREQUENCY_SHIFTER_MIN_FREQUENCY"/>
-        <enum value="(24000.0f)" name="AL_FREQUENCY_SHIFTER_MAX_FREQUENCY"/>
-        <enum value="(0.0f)" name="AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY"/>
-        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION"/>
-        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION"/>
-        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION"/>
-        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DIRECTION_DOWN" group="FrequencyShifterDirection"/>
-        <enum value="(1)" name="AL_FREQUENCY_SHIFTER_DIRECTION_UP" group="FrequencyShifterDirection"/>
-        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_DIRECTION_OFF" group="FrequencyShifterDirection"/>
-        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION"/>
-        <enum value="(2)" name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
-        <enum value="(0)" name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
-        <enum value="(29)" name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
-        <enum value="(-24)" name="AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING"/>
-        <enum value="(24)" name="AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_PHONEMEB"/>
-        <enum value="(29)" name="AL_VOCAL_MORPHER_MAX_PHONEMEB"/>
-        <enum value="(10)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB"/>
-        <enum value="(-24)" name="AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING"/>
-        <enum value="(24)" name="AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_PHONEME_A" group="VocalMorpherPhoneme"/>
-        <enum value="(1)" name="AL_VOCAL_MORPHER_PHONEME_E" group="VocalMorpherPhoneme"/>
-        <enum value="(2)" name="AL_VOCAL_MORPHER_PHONEME_I" group="VocalMorpherPhoneme"/>
-        <enum value="(3)" name="AL_VOCAL_MORPHER_PHONEME_O" group="VocalMorpherPhoneme"/>
-        <enum value="(4)" name="AL_VOCAL_MORPHER_PHONEME_U" group="VocalMorpherPhoneme"/>
-        <enum value="(5)" name="AL_VOCAL_MORPHER_PHONEME_AA" group="VocalMorpherPhoneme"/>
-        <enum value="(6)" name="AL_VOCAL_MORPHER_PHONEME_AE" group="VocalMorpherPhoneme"/>
-        <enum value="(7)" name="AL_VOCAL_MORPHER_PHONEME_AH" group="VocalMorpherPhoneme"/>
-        <enum value="(8)" name="AL_VOCAL_MORPHER_PHONEME_AO" group="VocalMorpherPhoneme"/>
-        <enum value="(9)" name="AL_VOCAL_MORPHER_PHONEME_EH" group="VocalMorpherPhoneme"/>
-        <enum value="(10)" name="AL_VOCAL_MORPHER_PHONEME_ER" group="VocalMorpherPhoneme"/>
-        <enum value="(11)" name="AL_VOCAL_MORPHER_PHONEME_IH" group="VocalMorpherPhoneme"/>
-        <enum value="(12)" name="AL_VOCAL_MORPHER_PHONEME_IY" group="VocalMorpherPhoneme"/>
-        <enum value="(13)" name="AL_VOCAL_MORPHER_PHONEME_UH" group="VocalMorpherPhoneme"/>
-        <enum value="(14)" name="AL_VOCAL_MORPHER_PHONEME_UW" group="VocalMorpherPhoneme"/>
-        <enum value="(15)" name="AL_VOCAL_MORPHER_PHONEME_B" group="VocalMorpherPhoneme"/>
-        <enum value="(16)" name="AL_VOCAL_MORPHER_PHONEME_D" group="VocalMorpherPhoneme"/>
-        <enum value="(17)" name="AL_VOCAL_MORPHER_PHONEME_F" group="VocalMorpherPhoneme"/>
-        <enum value="(18)" name="AL_VOCAL_MORPHER_PHONEME_G" group="VocalMorpherPhoneme"/>
-        <enum value="(19)" name="AL_VOCAL_MORPHER_PHONEME_J" group="VocalMorpherPhoneme"/>
-        <enum value="(20)" name="AL_VOCAL_MORPHER_PHONEME_K" group="VocalMorpherPhoneme"/>
-        <enum value="(21)" name="AL_VOCAL_MORPHER_PHONEME_L" group="VocalMorpherPhoneme"/>
-        <enum value="(22)" name="AL_VOCAL_MORPHER_PHONEME_M" group="VocalMorpherPhoneme"/>
-        <enum value="(23)" name="AL_VOCAL_MORPHER_PHONEME_N" group="VocalMorpherPhoneme"/>
-        <enum value="(24)" name="AL_VOCAL_MORPHER_PHONEME_P" group="VocalMorpherPhoneme"/>
-        <enum value="(25)" name="AL_VOCAL_MORPHER_PHONEME_R" group="VocalMorpherPhoneme"/>
-        <enum value="(26)" name="AL_VOCAL_MORPHER_PHONEME_S" group="VocalMorpherPhoneme"/>
-        <enum value="(27)" name="AL_VOCAL_MORPHER_PHONEME_T" group="VocalMorpherPhoneme"/>
-        <enum value="(28)" name="AL_VOCAL_MORPHER_PHONEME_V" group="VocalMorpherPhoneme"/>
-        <enum value="(29)" name="AL_VOCAL_MORPHER_PHONEME_Z" group="VocalMorpherPhoneme"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_WAVEFORM_SINUSOID" group="VocalMorpherWaveform"/>
-        <enum value="(1)" name="AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE" group="VocalMorpherWaveform"/>
-        <enum value="(2)" name="AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH" group="VocalMorpherWaveform"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_MIN_WAVEFORM"/>
-        <enum value="(2)" name="AL_VOCAL_MORPHER_MAX_WAVEFORM"/>
-        <enum value="(0)" name="AL_VOCAL_MORPHER_DEFAULT_WAVEFORM"/>
-        <enum value="(0.0f)" name="AL_VOCAL_MORPHER_MIN_RATE"/>
-        <enum value="(10.0f)" name="AL_VOCAL_MORPHER_MAX_RATE"/>
-        <enum value="(1.41f)" name="AL_VOCAL_MORPHER_DEFAULT_RATE"/>
-        <enum value="(-12)" name="AL_PITCH_SHIFTER_MIN_COARSE_TUNE"/>
-        <enum value="(12)" name="AL_PITCH_SHIFTER_MAX_COARSE_TUNE"/>
-        <enum value="(12)" name="AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE"/>
-        <enum value="(-50)" name="AL_PITCH_SHIFTER_MIN_FINE_TUNE"/>
-        <enum value="(50)" name="AL_PITCH_SHIFTER_MAX_FINE_TUNE"/>
-        <enum value="(0)" name="AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE"/>
-        <enum value="(0.0f)" name="AL_RING_MODULATOR_MIN_FREQUENCY"/>
-        <enum value="(8000.0f)" name="AL_RING_MODULATOR_MAX_FREQUENCY"/>
-        <enum value="(440.0f)" name="AL_RING_MODULATOR_DEFAULT_FREQUENCY"/>
-        <enum value="(0.0f)" name="AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF"/>
-        <enum value="(24000.0f)" name="AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF"/>
-        <enum value="(800.0f)" name="AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF"/>
-        <enum value="(0)" name="AL_RING_MODULATOR_SINUSOID" group="RingModulatorWaveform"/>
-        <enum value="(1)" name="AL_RING_MODULATOR_SAWTOOTH" group="RingModulatorWaveform"/>
-        <enum value="(2)" name="AL_RING_MODULATOR_SQUARE" group="RingModulatorWaveform"/>
-        <enum value="(0)" name="AL_RING_MODULATOR_MIN_WAVEFORM"/>
-        <enum value="(2)" name="AL_RING_MODULATOR_MAX_WAVEFORM"/>
-        <enum value="(0)" name="AL_RING_MODULATOR_DEFAULT_WAVEFORM"/>
-        <enum value="(0.0001f)" name="AL_AUTOWAH_MIN_ATTACK_TIME"/>
-        <enum value="(1.0f)" name="AL_AUTOWAH_MAX_ATTACK_TIME"/>
-        <enum value="(0.06f)" name="AL_AUTOWAH_DEFAULT_ATTACK_TIME"/>
-        <enum value="(0.0001f)" name="AL_AUTOWAH_MIN_RELEASE_TIME"/>
-        <enum value="(1.0f)" name="AL_AUTOWAH_MAX_RELEASE_TIME"/>
-        <enum value="(0.06f)" name="AL_AUTOWAH_DEFAULT_RELEASE_TIME"/>
-        <enum value="(2.0f)" name="AL_AUTOWAH_MIN_RESONANCE"/>
-        <enum value="(1000.0f)" name="AL_AUTOWAH_MAX_RESONANCE"/>
-        <enum value="(1000.0f)" name="AL_AUTOWAH_DEFAULT_RESONANCE"/>
-        <enum value="(0.00003f)" name="AL_AUTOWAH_MIN_PEAK_GAIN"/>
-        <enum value="(31621.0f)" name="AL_AUTOWAH_MAX_PEAK_GAIN"/>
-        <enum value="(11.22f)" name="AL_AUTOWAH_DEFAULT_PEAK_GAIN"/>
-        <enum value="(0)" name="AL_COMPRESSOR_MIN_ONOFF"/>
-        <enum value="(1)" name="AL_COMPRESSOR_MAX_ONOFF"/>
-        <enum value="(1)" name="AL_COMPRESSOR_DEFAULT_ONOFF"/>
-        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_LOW_GAIN"/>
-        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_LOW_GAIN"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_LOW_GAIN"/>
-        <enum value="(50.0f)" name="AL_EQUALIZER_MIN_LOW_CUTOFF"/>
-        <enum value="(800.0f)" name="AL_EQUALIZER_MAX_LOW_CUTOFF"/>
-        <enum value="(200.0f)" name="AL_EQUALIZER_DEFAULT_LOW_CUTOFF"/>
-        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_MID1_GAIN"/>
-        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_MID1_GAIN"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID1_GAIN"/>
-        <enum value="(200.0f)" name="AL_EQUALIZER_MIN_MID1_CENTER"/>
-        <enum value="(3000.0f)" name="AL_EQUALIZER_MAX_MID1_CENTER"/>
-        <enum value="(500.0f)" name="AL_EQUALIZER_DEFAULT_MID1_CENTER"/>
-        <enum value="(0.01f)" name="AL_EQUALIZER_MIN_MID1_WIDTH"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_MAX_MID1_WIDTH"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID1_WIDTH"/>
-        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_MID2_GAIN"/>
-        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_MID2_GAIN"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID2_GAIN"/>
-        <enum value="(1000.0f)" name="AL_EQUALIZER_MIN_MID2_CENTER"/>
-        <enum value="(8000.0f)" name="AL_EQUALIZER_MAX_MID2_CENTER"/>
-        <enum value="(3000.0f)" name="AL_EQUALIZER_DEFAULT_MID2_CENTER"/>
-        <enum value="(0.01f)" name="AL_EQUALIZER_MIN_MID2_WIDTH"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_MAX_MID2_WIDTH"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_MID2_WIDTH"/>
-        <enum value="(0.126f)" name="AL_EQUALIZER_MIN_HIGH_GAIN"/>
-        <enum value="(7.943f)" name="AL_EQUALIZER_MAX_HIGH_GAIN"/>
-        <enum value="(1.0f)" name="AL_EQUALIZER_DEFAULT_HIGH_GAIN"/>
-        <enum value="(4000.0f)" name="AL_EQUALIZER_MIN_HIGH_CUTOFF"/>
-        <enum value="(16000.0f)" name="AL_EQUALIZER_MAX_HIGH_CUTOFF"/>
-        <enum value="(6000.0f)" name="AL_EQUALIZER_DEFAULT_HIGH_CUTOFF"/>
-        <enum value="(0.0f)" name="AL_MIN_AIR_ABSORPTION_FACTOR"/>
-        <enum value="(10.0f)" name="AL_MAX_AIR_ABSORPTION_FACTOR"/>
-        <enum value="(0.0f)" name="AL_DEFAULT_AIR_ABSORPTION_FACTOR"/>
-        <enum value="(0.0f)" name="AL_MIN_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(10.0f)" name="AL_MAX_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(0.0f)" name="AL_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
-        <enum value="(0.0f)" name="AL_MIN_CONE_OUTER_GAINHF"/>
-        <enum value="(1.0f)" name="AL_MAX_CONE_OUTER_GAINHF"/>
-        <enum value="(1.0f)" name="AL_DEFAULT_CONE_OUTER_GAINHF"/>
+        <enum value="0" name="AL_CHORUS_WAVEFORM_SINUSOID" group="ChorusWaveform"/>
+        <enum value="1" name="AL_CHORUS_WAVEFORM_TRIANGLE" group="ChorusWaveform"/>
+        <enum value="0" name="AL_CHORUS_MIN_WAVEFORM"/>
+        <enum value="1" name="AL_CHORUS_MAX_WAVEFORM"/>
+        <enum value="1" name="AL_CHORUS_DEFAULT_WAVEFORM"/>
+        <enum value="-180" name="AL_CHORUS_MIN_PHASE"/>
+        <enum value="180" name="AL_CHORUS_MAX_PHASE"/>
+        <enum value="90" name="AL_CHORUS_DEFAULT_PHASE"/>
+        <enum value="0.0f" name="AL_CHORUS_MIN_RATE"/>
+        <enum value="10.0f" name="AL_CHORUS_MAX_RATE"/>
+        <enum value="1.1f" name="AL_CHORUS_DEFAULT_RATE"/>
+        <enum value="0.0f" name="AL_CHORUS_MIN_DEPTH"/>
+        <enum value="1.0f" name="AL_CHORUS_MAX_DEPTH"/>
+        <enum value="0.1f" name="AL_CHORUS_DEFAULT_DEPTH"/>
+        <enum value="-1.0f" name="AL_CHORUS_MIN_FEEDBACK"/>
+        <enum value="1.0f" name="AL_CHORUS_MAX_FEEDBACK"/>
+        <enum value="0.25f" name="AL_CHORUS_DEFAULT_FEEDBACK"/>
+        <enum value="0.0f" name="AL_CHORUS_MIN_DELAY"/>
+        <enum value="0.016f" name="AL_CHORUS_MAX_DELAY"/>
+        <enum value="0.016f" name="AL_CHORUS_DEFAULT_DELAY"/>
+        <enum value="0.0f" name="AL_DISTORTION_MIN_EDGE"/>
+        <enum value="1.0f" name="AL_DISTORTION_MAX_EDGE"/>
+        <enum value="0.2f" name="AL_DISTORTION_DEFAULT_EDGE"/>
+        <enum value="0.01f" name="AL_DISTORTION_MIN_GAIN"/>
+        <enum value="1.0f" name="AL_DISTORTION_MAX_GAIN"/>
+        <enum value="0.05f" name="AL_DISTORTION_DEFAULT_GAIN"/>
+        <enum value="80.0f" name="AL_DISTORTION_MIN_LOWPASS_CUTOFF"/>
+        <enum value="24000.0f" name="AL_DISTORTION_MAX_LOWPASS_CUTOFF"/>
+        <enum value="8000.0f" name="AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF"/>
+        <enum value="80.0f" name="AL_DISTORTION_MIN_EQCENTER"/>
+        <enum value="24000.0f" name="AL_DISTORTION_MAX_EQCENTER"/>
+        <enum value="3600.0f" name="AL_DISTORTION_DEFAULT_EQCENTER"/>
+        <enum value="80.0f" name="AL_DISTORTION_MIN_EQBANDWIDTH"/>
+        <enum value="24000.0f" name="AL_DISTORTION_MAX_EQBANDWIDTH"/>
+        <enum value="3600.0f" name="AL_DISTORTION_DEFAULT_EQBANDWIDTH"/>
+        <enum value="0.0f" name="AL_ECHO_MIN_DELAY"/>
+        <enum value="0.207f" name="AL_ECHO_MAX_DELAY"/>
+        <enum value="0.1f" name="AL_ECHO_DEFAULT_DELAY"/>
+        <enum value="0.0f" name="AL_ECHO_MIN_LRDELAY"/>
+        <enum value="0.404f" name="AL_ECHO_MAX_LRDELAY"/>
+        <enum value="0.1f" name="AL_ECHO_DEFAULT_LRDELAY"/>
+        <enum value="0.0f" name="AL_ECHO_MIN_DAMPING"/>
+        <enum value="0.99f" name="AL_ECHO_MAX_DAMPING"/>
+        <enum value="0.5f" name="AL_ECHO_DEFAULT_DAMPING"/>
+        <enum value="0.0f" name="AL_ECHO_MIN_FEEDBACK"/>
+        <enum value="1.0f" name="AL_ECHO_MAX_FEEDBACK"/>
+        <enum value="0.5f" name="AL_ECHO_DEFAULT_FEEDBACK"/>
+        <enum value="-1.0f" name="AL_ECHO_MIN_SPREAD"/>
+        <enum value="1.0f" name="AL_ECHO_MAX_SPREAD"/>
+        <enum value="-1.0f" name="AL_ECHO_DEFAULT_SPREAD"/>
+        <enum value="0" name="AL_FLANGER_WAVEFORM_SINUSOID" group="FlangerWaveform"/>
+        <enum value="1" name="AL_FLANGER_WAVEFORM_TRIANGLE" group="FlangerWaveform"/>
+        <enum value="0" name="AL_FLANGER_MIN_WAVEFORM"/>
+        <enum value="1" name="AL_FLANGER_MAX_WAVEFORM"/>
+        <enum value="1" name="AL_FLANGER_DEFAULT_WAVEFORM"/>
+        <enum value="-180" name="AL_FLANGER_MIN_PHASE"/>
+        <enum value="180" name="AL_FLANGER_MAX_PHASE"/>
+        <enum value="0" name="AL_FLANGER_DEFAULT_PHASE"/>
+        <enum value="0.0f" name="AL_FLANGER_MIN_RATE"/>
+        <enum value="10.0f" name="AL_FLANGER_MAX_RATE"/>
+        <enum value="0.27f" name="AL_FLANGER_DEFAULT_RATE"/>
+        <enum value="0.0f" name="AL_FLANGER_MIN_DEPTH"/>
+        <enum value="1.0f" name="AL_FLANGER_MAX_DEPTH"/>
+        <enum value="1.0f" name="AL_FLANGER_DEFAULT_DEPTH"/>
+        <enum value="-1.0f" name="AL_FLANGER_MIN_FEEDBACK"/>
+        <enum value="1.0f" name="AL_FLANGER_MAX_FEEDBACK"/>
+        <enum value="-0.5f" name="AL_FLANGER_DEFAULT_FEEDBACK"/>
+        <enum value="0.0f" name="AL_FLANGER_MIN_DELAY"/>
+        <enum value="0.004f" name="AL_FLANGER_MAX_DELAY"/>
+        <enum value="0.002f" name="AL_FLANGER_DEFAULT_DELAY"/>
+        <enum value="0.0f" name="AL_FREQUENCY_SHIFTER_MIN_FREQUENCY"/>
+        <enum value="24000.0f" name="AL_FREQUENCY_SHIFTER_MAX_FREQUENCY"/>
+        <enum value="0.0f" name="AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY"/>
+        <enum value="0" name="AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION"/>
+        <enum value="2" name="AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION"/>
+        <enum value="0" name="AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION"/>
+        <enum value="0" name="AL_FREQUENCY_SHIFTER_DIRECTION_DOWN" group="FrequencyShifterDirection"/>
+        <enum value="1" name="AL_FREQUENCY_SHIFTER_DIRECTION_UP" group="FrequencyShifterDirection"/>
+        <enum value="2" name="AL_FREQUENCY_SHIFTER_DIRECTION_OFF" group="FrequencyShifterDirection"/>
+        <enum value="0" name="AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION"/>
+        <enum value="2" name="AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION"/>
+        <enum value="0" name="AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_MIN_PHONEMEA"/>
+        <enum value="29" name="AL_VOCAL_MORPHER_MAX_PHONEMEA"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA"/>
+        <enum value="-24" name="AL_VOCAL_MORPHER_MIN_PHONEMEA_COARSE_TUNING"/>
+        <enum value="24" name="AL_VOCAL_MORPHER_MAX_PHONEMEA_COARSE_TUNING"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_MIN_PHONEMEB"/>
+        <enum value="29" name="AL_VOCAL_MORPHER_MAX_PHONEMEB"/>
+        <enum value="10" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB"/>
+        <enum value="-24" name="AL_VOCAL_MORPHER_MIN_PHONEMEB_COARSE_TUNING"/>
+        <enum value="24" name="AL_VOCAL_MORPHER_MAX_PHONEMEB_COARSE_TUNING"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_PHONEME_A" group="VocalMorpherPhoneme"/>
+        <enum value="1" name="AL_VOCAL_MORPHER_PHONEME_E" group="VocalMorpherPhoneme"/>
+        <enum value="2" name="AL_VOCAL_MORPHER_PHONEME_I" group="VocalMorpherPhoneme"/>
+        <enum value="3" name="AL_VOCAL_MORPHER_PHONEME_O" group="VocalMorpherPhoneme"/>
+        <enum value="4" name="AL_VOCAL_MORPHER_PHONEME_U" group="VocalMorpherPhoneme"/>
+        <enum value="5" name="AL_VOCAL_MORPHER_PHONEME_AA" group="VocalMorpherPhoneme"/>
+        <enum value="6" name="AL_VOCAL_MORPHER_PHONEME_AE" group="VocalMorpherPhoneme"/>
+        <enum value="7" name="AL_VOCAL_MORPHER_PHONEME_AH" group="VocalMorpherPhoneme"/>
+        <enum value="8" name="AL_VOCAL_MORPHER_PHONEME_AO" group="VocalMorpherPhoneme"/>
+        <enum value="9" name="AL_VOCAL_MORPHER_PHONEME_EH" group="VocalMorpherPhoneme"/>
+        <enum value="10" name="AL_VOCAL_MORPHER_PHONEME_ER" group="VocalMorpherPhoneme"/>
+        <enum value="11" name="AL_VOCAL_MORPHER_PHONEME_IH" group="VocalMorpherPhoneme"/>
+        <enum value="12" name="AL_VOCAL_MORPHER_PHONEME_IY" group="VocalMorpherPhoneme"/>
+        <enum value="13" name="AL_VOCAL_MORPHER_PHONEME_UH" group="VocalMorpherPhoneme"/>
+        <enum value="14" name="AL_VOCAL_MORPHER_PHONEME_UW" group="VocalMorpherPhoneme"/>
+        <enum value="15" name="AL_VOCAL_MORPHER_PHONEME_B" group="VocalMorpherPhoneme"/>
+        <enum value="16" name="AL_VOCAL_MORPHER_PHONEME_D" group="VocalMorpherPhoneme"/>
+        <enum value="17" name="AL_VOCAL_MORPHER_PHONEME_F" group="VocalMorpherPhoneme"/>
+        <enum value="18" name="AL_VOCAL_MORPHER_PHONEME_G" group="VocalMorpherPhoneme"/>
+        <enum value="19" name="AL_VOCAL_MORPHER_PHONEME_J" group="VocalMorpherPhoneme"/>
+        <enum value="20" name="AL_VOCAL_MORPHER_PHONEME_K" group="VocalMorpherPhoneme"/>
+        <enum value="21" name="AL_VOCAL_MORPHER_PHONEME_L" group="VocalMorpherPhoneme"/>
+        <enum value="22" name="AL_VOCAL_MORPHER_PHONEME_M" group="VocalMorpherPhoneme"/>
+        <enum value="23" name="AL_VOCAL_MORPHER_PHONEME_N" group="VocalMorpherPhoneme"/>
+        <enum value="24" name="AL_VOCAL_MORPHER_PHONEME_P" group="VocalMorpherPhoneme"/>
+        <enum value="25" name="AL_VOCAL_MORPHER_PHONEME_R" group="VocalMorpherPhoneme"/>
+        <enum value="26" name="AL_VOCAL_MORPHER_PHONEME_S" group="VocalMorpherPhoneme"/>
+        <enum value="27" name="AL_VOCAL_MORPHER_PHONEME_T" group="VocalMorpherPhoneme"/>
+        <enum value="28" name="AL_VOCAL_MORPHER_PHONEME_V" group="VocalMorpherPhoneme"/>
+        <enum value="29" name="AL_VOCAL_MORPHER_PHONEME_Z" group="VocalMorpherPhoneme"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_WAVEFORM_SINUSOID" group="VocalMorpherWaveform"/>
+        <enum value="1" name="AL_VOCAL_MORPHER_WAVEFORM_TRIANGLE" group="VocalMorpherWaveform"/>
+        <enum value="2" name="AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH" group="VocalMorpherWaveform"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_MIN_WAVEFORM"/>
+        <enum value="2" name="AL_VOCAL_MORPHER_MAX_WAVEFORM"/>
+        <enum value="0" name="AL_VOCAL_MORPHER_DEFAULT_WAVEFORM"/>
+        <enum value="0.0f" name="AL_VOCAL_MORPHER_MIN_RATE"/>
+        <enum value="10.0f" name="AL_VOCAL_MORPHER_MAX_RATE"/>
+        <enum value="1.41f" name="AL_VOCAL_MORPHER_DEFAULT_RATE"/>
+        <enum value="-12" name="AL_PITCH_SHIFTER_MIN_COARSE_TUNE"/>
+        <enum value="12" name="AL_PITCH_SHIFTER_MAX_COARSE_TUNE"/>
+        <enum value="12" name="AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE"/>
+        <enum value="-50" name="AL_PITCH_SHIFTER_MIN_FINE_TUNE"/>
+        <enum value="50" name="AL_PITCH_SHIFTER_MAX_FINE_TUNE"/>
+        <enum value="0" name="AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE"/>
+        <enum value="0.0f" name="AL_RING_MODULATOR_MIN_FREQUENCY"/>
+        <enum value="8000.0f" name="AL_RING_MODULATOR_MAX_FREQUENCY"/>
+        <enum value="440.0f" name="AL_RING_MODULATOR_DEFAULT_FREQUENCY"/>
+        <enum value="0.0f" name="AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF"/>
+        <enum value="24000.0f" name="AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF"/>
+        <enum value="800.0f" name="AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF"/>
+        <enum value="0" name="AL_RING_MODULATOR_SINUSOID" group="RingModulatorWaveform"/>
+        <enum value="1" name="AL_RING_MODULATOR_SAWTOOTH" group="RingModulatorWaveform"/>
+        <enum value="2" name="AL_RING_MODULATOR_SQUARE" group="RingModulatorWaveform"/>
+        <enum value="0" name="AL_RING_MODULATOR_MIN_WAVEFORM"/>
+        <enum value="2" name="AL_RING_MODULATOR_MAX_WAVEFORM"/>
+        <enum value="0" name="AL_RING_MODULATOR_DEFAULT_WAVEFORM"/>
+        <enum value="0.0001f" name="AL_AUTOWAH_MIN_ATTACK_TIME"/>
+        <enum value="1.0f" name="AL_AUTOWAH_MAX_ATTACK_TIME"/>
+        <enum value="0.06f" name="AL_AUTOWAH_DEFAULT_ATTACK_TIME"/>
+        <enum value="0.0001f" name="AL_AUTOWAH_MIN_RELEASE_TIME"/>
+        <enum value="1.0f" name="AL_AUTOWAH_MAX_RELEASE_TIME"/>
+        <enum value="0.06f" name="AL_AUTOWAH_DEFAULT_RELEASE_TIME"/>
+        <enum value="2.0f" name="AL_AUTOWAH_MIN_RESONANCE"/>
+        <enum value="1000.0f" name="AL_AUTOWAH_MAX_RESONANCE"/>
+        <enum value="1000.0f" name="AL_AUTOWAH_DEFAULT_RESONANCE"/>
+        <enum value="0.00003f" name="AL_AUTOWAH_MIN_PEAK_GAIN"/>
+        <enum value="31621.0f" name="AL_AUTOWAH_MAX_PEAK_GAIN"/>
+        <enum value="11.22f" name="AL_AUTOWAH_DEFAULT_PEAK_GAIN"/>
+        <enum value="0" name="AL_COMPRESSOR_MIN_ONOFF"/>
+        <enum value="1" name="AL_COMPRESSOR_MAX_ONOFF"/>
+        <enum value="1" name="AL_COMPRESSOR_DEFAULT_ONOFF"/>
+        <enum value="0.126f" name="AL_EQUALIZER_MIN_LOW_GAIN"/>
+        <enum value="7.943f" name="AL_EQUALIZER_MAX_LOW_GAIN"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_LOW_GAIN"/>
+        <enum value="50.0f" name="AL_EQUALIZER_MIN_LOW_CUTOFF"/>
+        <enum value="800.0f" name="AL_EQUALIZER_MAX_LOW_CUTOFF"/>
+        <enum value="200.0f" name="AL_EQUALIZER_DEFAULT_LOW_CUTOFF"/>
+        <enum value="0.126f" name="AL_EQUALIZER_MIN_MID1_GAIN"/>
+        <enum value="7.943f" name="AL_EQUALIZER_MAX_MID1_GAIN"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID1_GAIN"/>
+        <enum value="200.0f" name="AL_EQUALIZER_MIN_MID1_CENTER"/>
+        <enum value="3000.0f" name="AL_EQUALIZER_MAX_MID1_CENTER"/>
+        <enum value="500.0f" name="AL_EQUALIZER_DEFAULT_MID1_CENTER"/>
+        <enum value="0.01f" name="AL_EQUALIZER_MIN_MID1_WIDTH"/>
+        <enum value="1.0f" name="AL_EQUALIZER_MAX_MID1_WIDTH"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID1_WIDTH"/>
+        <enum value="0.126f" name="AL_EQUALIZER_MIN_MID2_GAIN"/>
+        <enum value="7.943f" name="AL_EQUALIZER_MAX_MID2_GAIN"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID2_GAIN"/>
+        <enum value="1000.0f" name="AL_EQUALIZER_MIN_MID2_CENTER"/>
+        <enum value="8000.0f" name="AL_EQUALIZER_MAX_MID2_CENTER"/>
+        <enum value="3000.0f" name="AL_EQUALIZER_DEFAULT_MID2_CENTER"/>
+        <enum value="0.01f" name="AL_EQUALIZER_MIN_MID2_WIDTH"/>
+        <enum value="1.0f" name="AL_EQUALIZER_MAX_MID2_WIDTH"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_MID2_WIDTH"/>
+        <enum value="0.126f" name="AL_EQUALIZER_MIN_HIGH_GAIN"/>
+        <enum value="7.943f" name="AL_EQUALIZER_MAX_HIGH_GAIN"/>
+        <enum value="1.0f" name="AL_EQUALIZER_DEFAULT_HIGH_GAIN"/>
+        <enum value="4000.0f" name="AL_EQUALIZER_MIN_HIGH_CUTOFF"/>
+        <enum value="16000.0f" name="AL_EQUALIZER_MAX_HIGH_CUTOFF"/>
+        <enum value="6000.0f" name="AL_EQUALIZER_DEFAULT_HIGH_CUTOFF"/>
+        <enum value="0.0f" name="AL_MIN_AIR_ABSORPTION_FACTOR"/>
+        <enum value="10.0f" name="AL_MAX_AIR_ABSORPTION_FACTOR"/>
+        <enum value="0.0f" name="AL_DEFAULT_AIR_ABSORPTION_FACTOR"/>
+        <enum value="0.0f" name="AL_MIN_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="10.0f" name="AL_MAX_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_DEFAULT_ROOM_ROLLOFF_FACTOR"/>
+        <enum value="0.0f" name="AL_MIN_CONE_OUTER_GAINHF"/>
+        <enum value="1.0f" name="AL_MAX_CONE_OUTER_GAINHF"/>
+        <enum value="1.0f" name="AL_DEFAULT_CONE_OUTER_GAINHF"/>
         <enum value="AL_FALSE" name="AL_MIN_DIRECT_FILTER_GAINHF_AUTO"/>
         <enum value="AL_TRUE" name="AL_MAX_DIRECT_FILTER_GAINHF_AUTO"/>
         <enum value="AL_TRUE" name="AL_DEFAULT_DIRECT_FILTER_GAINHF_AUTO"/>
@@ -1100,7 +1100,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="AL_TRUE" name="AL_DEFAULT_AUXILIARY_SEND_FILTER_GAINHF_AUTO"/>
         <enum value="FLT_MIN" name="AL_MIN_METERS_PER_UNIT"/>
         <enum value="FLT_MAX" name="AL_MAX_METERS_PER_UNIT"/>
-        <enum value="(1.0f)" name="AL_DEFAULT_METERS_PER_UNIT"/>
+        <enum value="1.0f" name="AL_DEFAULT_METERS_PER_UNIT"/>
         <enum value="0x200" name="AL_SOURCE_DISTANCE_MODEL" group="EnableCap"/>
         <enum value="0x1031" name="AL_BYTE_RW_OFFSETS_SOFT" group="SourceFloat,SourcePName">
             <property on="source" type="ALfloat" range="0.0.."/>

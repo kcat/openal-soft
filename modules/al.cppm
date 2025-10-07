@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-07 09:37:06.955495+00:00
+ * Last regenerated: 2025-10-07 13:36:17.594757+00:00
  */
 
 module;
@@ -721,7 +721,7 @@ using LPALGETBUFFERIV = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *
 /*** AL_VERSION_1_1 ***/
 /**
  * Source buffer offset, in seconds.
- * Type:  ALint
+ * Type:  ALfloat, ALint
  * Range: [0 - ]
  */
 ENUMDCL AL_SEC_OFFSET =                          0x1024;

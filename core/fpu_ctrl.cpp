@@ -15,8 +15,8 @@
 
 #if HAVE_SSE && !defined(_MM_DENORMALS_ZERO_MASK)
 /* Some headers seem to be missing these? */
-#define _MM_DENORMALS_ZERO_MASK 0x0040u
-#define _MM_DENORMALS_ZERO_ON 0x0040u
+#define _MM_DENORMALS_ZERO_MASK 0x0040u  /* NOLINT(*-reserved-identifier) */
+#define _MM_DENORMALS_ZERO_ON 0x0040u  /* NOLINT(*-reserved-identifier) */
 #endif
 
 #if !HAVE_SSE_INTRINSICS && HAVE_SSE

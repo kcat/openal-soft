@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-07 04:44:53.573500+00:00
+ * Last regenerated: 2025-10-07 09:37:06.955495+00:00
  */
 
 module;
@@ -72,8 +72,8 @@ export import openal.efx;
 
 import openal.std;
 
-using _alsoft_int64_t = std::int64_t;
-using _alsoft_uint64_t = std::uint64_t;
+using alsoft_impl_int64_t = std::int64_t;
+using alsoft_impl_uint64_t = std::uint64_t;
 
 extern "C" struct _GUID; /* NOLINT(*-reserved-identifier) */
 
@@ -323,8 +323,8 @@ ENUMDCL AL_SOURCE_RADIUS =                       0x1031;
 /*** AL_SOFT_source_latency ***/
 ENUMDCL AL_SAMPLE_OFFSET_LATENCY_SOFT =          0x1200;
 ENUMDCL AL_SEC_OFFSET_LATENCY_SOFT =             0x1201;
-using ALint64SOFT = _alsoft_int64_t;
-using ALuint64SOFT = _alsoft_uint64_t;
+using ALint64SOFT = alsoft_impl_int64_t;
+using ALuint64SOFT = alsoft_impl_uint64_t;
 using LPALSOURCEDSOFT = void (AL_APIENTRY*)(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT;
 using LPALSOURCE3DSOFT = void (AL_APIENTRY*)(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT;
 using LPALSOURCEDVSOFT = void (AL_APIENTRY*)(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT;
@@ -453,8 +453,8 @@ ENUMDCL AL_AUTO_SOFT =                           0x0002;
 ENUMDCL ALC_OUTPUT_LIMITER_SOFT =                0x199A;
 
 /*** ALC_SOFT_device_clock ***/
-using ALCint64SOFT = _alsoft_int64_t;
-using ALCuint64SOFT = _alsoft_uint64_t;
+using ALCint64SOFT = alsoft_impl_int64_t;
+using ALCuint64SOFT = alsoft_impl_uint64_t;
 ENUMDCL ALC_DEVICE_CLOCK_SOFT =                  0x1600;
 ENUMDCL ALC_DEVICE_LATENCY_SOFT =                0x1601;
 ENUMDCL ALC_DEVICE_CLOCK_LATENCY_SOFT =          0x1602;

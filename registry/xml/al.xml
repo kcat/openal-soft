@@ -61,8 +61,8 @@
         <type category="define" comment="Capture extension">#define <name>ALC_EXT_CAPTURE</name> 1</type>
         <type category="define" comment="Enumerate All extension">#define <name>ALC_ENUMERATE_ALL_EXT</name> 1</type>
 
-        <type category="basetype">typedef _alsoft_int64_t <name>ALint64SOFT</name>;</type>
-        <type category="basetype">typedef _alsoft_uint64_t <name>ALuint64SOFT</name>;</type>
+        <type category="basetype">typedef alsoft_impl_int64_t <name>ALint64SOFT</name>;</type>
+        <type category="basetype">typedef alsoft_impl_uint64_t <name>ALuint64SOFT</name>;</type>
 
         <type category="define">#define <name>AL_EXT_FOLDBACK_NAME</name>                     "AL_EXT_FOLDBACK"</type>
         <type category="funcpointer">typedef void (AL_APIENTRY*<name>LPALFOLDBACKCALLBACK</name>)(<type>ALenum</type>,<type>ALsizei</type>) AL_API_NOEXCEPT17;</type>
@@ -96,8 +96,8 @@ typedef void (AL_APIENTRY*<name>ALEVENTPROCSOFT</name>)(<type>ALenum</type> even
         <type category="basetype" comment="64-bit IEEE-754 floating-point">typedef double <name>ALCdouble</name>;</type>
         <type category="basetype" comment="void type (for opaque pointers only)">typedef void <name>ALCvoid</name>;</type>
 
-        <type category="basetype">typedef _alsoft_int64_t <name>ALCint64SOFT</name>;</type>
-        <type category="basetype">typedef _alsoft_uint64_t <name>ALCuint64SOFT</name>;</type>
+        <type category="basetype">typedef alsoft_impl_int64_t <name>ALCint64SOFT</name>;</type>
+        <type category="basetype">typedef alsoft_impl_uint64_t <name>ALCuint64SOFT</name>;</type>
 
         <type category="define">#define <name>ALC_EXT_EFX_NAME</name>                         "ALC_EXT_EFX"</type>
         <type category="funcpointer">

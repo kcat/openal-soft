@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-07 04:44:53.573500+00:00
+ * Last regenerated: 2025-10-07 09:37:06.955495+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -39,16 +39,16 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||             \
     (defined(__cplusplus) && __cplusplus >= 201103L)
 #include <stdint.h>
-typedef int64_t _alsoft_int64_t;
-typedef uint64_t _alsoft_uint64_t;
+typedef int64_t alsoft_impl_int64_t;
+typedef uint64_t alsoft_impl_uint64_t;
 #elif defined(_WIN32)
-typedef __int64 _alsoft_int64_t;
-typedef unsigned __int64 _alsoft_uint64_t;
+typedef __int64 alsoft_impl_int64_t;
+typedef unsigned __int64 alsoft_impl_uint64_t;
 #else
 /* Fallback if nothing above works */
 #include <stdint.h>
-typedef int64_t _alsoft_int64_t;
-typedef uint64_t _alsoft_uint64_t;
+typedef int64_t alsoft_impl_int64_t;
+typedef uint64_t alsoft_impl_uint64_t;
 #endif
 
 #include "alc.h"
@@ -360,8 +360,8 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #define AL_SOFT_source_latency 1
 #define AL_SAMPLE_OFFSET_LATENCY_SOFT            0x1200
 #define AL_SEC_OFFSET_LATENCY_SOFT               0x1201
-typedef _alsoft_int64_t ALint64SOFT;
-typedef _alsoft_uint64_t ALuint64SOFT;
+typedef alsoft_impl_int64_t ALint64SOFT;
+typedef alsoft_impl_uint64_t ALuint64SOFT;
 typedef void (AL_APIENTRY *LPALSOURCEDSOFT)(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCE3DSOFT)(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCEDVSOFT)(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT17;
@@ -520,8 +520,8 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index) A
 
 #ifndef ALC_SOFT_device_clock
 #define ALC_SOFT_device_clock 1
-typedef _alsoft_int64_t ALCint64SOFT;
-typedef _alsoft_uint64_t ALCuint64SOFT;
+typedef alsoft_impl_int64_t ALCint64SOFT;
+typedef alsoft_impl_uint64_t ALCuint64SOFT;
 #define ALC_DEVICE_CLOCK_SOFT                    0x1600
 #define ALC_DEVICE_LATENCY_SOFT                  0x1601
 #define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602

@@ -1789,12 +1789,12 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate) -> b
                 src.mChannel = 0;
             }
 
-            MYSOFA_EASY *sofa{LoadSofaFile(&src, hData->mIrRate, hData->mIrPoints)};
+            auto const *const sofa = LoadSofaFile(&src, hData->mIrRate, hData->mIrPoints);
             if(!sofa) return false;
 
             const auto srcPosValues = std::span{sofa->hrtf->SourcePosition.values,
                 sofa->hrtf->M*3_uz};
-            for(uint si{0};si < sofa->hrtf->M;++si)
+            for(auto const si : std::views::iota(0u, sofa->hrtf->M))
             {
                 fmt::print("\rLoading sources... {} of {}", si+1, sofa->hrtf->M);
                 std::cout.flush();

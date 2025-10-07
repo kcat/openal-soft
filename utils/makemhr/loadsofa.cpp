@@ -50,6 +50,13 @@
 
 #include "mysofa.h"
 
+#if HAVE_CXXMODULES
+import gsl;
+#else
+#include "gsl/gsl"
+#endif
+
+
 namespace {
 
 using namespace std::string_view_literals;
@@ -99,12 +106,12 @@ auto PrepareLayout(const std::span<const float> xyzs, HrirDataT *hData) -> bool
     return PrepareHrirData(std::span{distances}.first(fi), evCounts, azs, hData);
 }
 
-float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
+auto GetSampleRate(MYSOFA_HRTF const *const sofaHrtf) -> f32
 {
-    const char *srate_dim{nullptr};
-    const char *srate_units{nullptr};
-    MYSOFA_ARRAY *srate_array{&sofaHrtf->DataSamplingRate};
-    MYSOFA_ATTRIBUTE *srate_attrs{srate_array->attributes};
+    auto *srate_dim = gsl::czstring{};
+    auto *srate_units = gsl::czstring{};
+    auto const &srate_array = sofaHrtf->DataSamplingRate;
+    auto const *srate_attrs = srate_array.attributes;
     while(srate_attrs)
     {
         if("DIMENSION_LIST"sv == srate_attrs->name)
@@ -151,7 +158,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
         return 0.0f;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
-    const auto values = std::span{srate_array->values, sofaHrtf->I};
+    auto const values = std::span{srate_array.values, sofaHrtf->I};
     if(values[0] < float{MIN_RATE} || values[0] > float{MAX_RATE})
     {
         fmt::println(std::cerr, "Sample rate out of range: {:f} (expected {} to {})", values[0],
@@ -161,16 +168,15 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
     return values[0];
 }
 
-enum class DelayType : uint8_t {
+enum class DelayType : u8 {
     None,
     I_R, /* [1][Channels] */
     M_R, /* [HRIRs][Channels] */
 };
-auto PrepareDelay(MYSOFA_HRTF *sofaHrtf) -> std::optional<DelayType>
+auto PrepareDelay(MYSOFA_HRTF const *const sofaHrtf) -> std::optional<DelayType>
 {
-    const char *delay_dim{nullptr};
-    MYSOFA_ARRAY *delay_array{&sofaHrtf->DataDelay};
-    MYSOFA_ATTRIBUTE *delay_attrs{delay_array->attributes};
+    auto *delay_dim = gsl::czstring{};
+    auto const *delay_attrs = sofaHrtf->DataDelay.attributes;
     while(delay_attrs)
     {
         if("DIMENSION_LIST"sv == delay_attrs->name)
@@ -201,11 +207,10 @@ auto PrepareDelay(MYSOFA_HRTF *sofaHrtf) -> std::optional<DelayType>
     return std::nullopt;
 }
 
-bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
+auto CheckIrData(MYSOFA_HRTF const *const sofaHrtf) -> bool
 {
-    const char *ir_dim{nullptr};
-    MYSOFA_ARRAY *ir_array{&sofaHrtf->DataIR};
-    MYSOFA_ATTRIBUTE *ir_attrs{ir_array->attributes};
+    auto *ir_dim = gsl::czstring{};
+    auto const *ir_attrs = sofaHrtf->DataIR.attributes;
     while(ir_attrs)
     {
         if("DIMENSION_LIST"sv == ir_attrs->name)

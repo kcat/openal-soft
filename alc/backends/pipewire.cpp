@@ -999,7 +999,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         if(auto *serial_str = spa_dict_lookup(info->props, PW_KEY_OBJECT_SERIAL))
         {
             errno = 0;
-            char *serial_end{};
+            auto *serial_end = gsl::zstring{};
             serial_id = std::strtoull(serial_str, &serial_end, 0);
             if(*serial_end != '\0' || errno == ERANGE)
             {
@@ -1947,13 +1947,13 @@ void PipeWireCapture::stateChangedCallback(pw_stream_state, pw_stream_state, con
 
 void PipeWireCapture::inputCallback() const noexcept
 {
-    pw_buffer *pw_buf{pw_stream_dequeue_buffer(mStream.get())};
+    auto *const pw_buf = pw_stream_dequeue_buffer(mStream.get());
     if(!pw_buf) [[unlikely]] return;
 
-    spa_data *bufdata{pw_buf->buffer->datas};
-    const uint offset{bufdata->chunk->offset % bufdata->maxsize};
-    const auto input = std::span{static_cast<const std::byte*>(bufdata->data), bufdata->maxsize}
-        .subspan(offset, std::min(bufdata->chunk->size, bufdata->maxsize - offset));
+    auto const *const bufdata = pw_buf->buffer->datas;
+    auto const offset = bufdata->chunk->offset % bufdata->maxsize;
+    auto const input = std::span{static_cast<std::byte const*>(bufdata->data), bufdata->maxsize}
+        | std::views::drop(offset) | std::views::take(bufdata->chunk->size);
 
     std::ignore = mRing->write(input);
 

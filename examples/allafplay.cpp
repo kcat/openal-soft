@@ -908,10 +908,10 @@ try {
             alcGetInteger64vSOFT(device, ALC_DEVICE_LATENCY_SOFT, 1, &latency);
             std::ignore = alcGetError(device);
 
-            leadIn = latency * RenderSampleRate / 1'000'000'000
-                * gsl::narrow_cast<int>(framesize);
-            leadOut = (latency*RenderSampleRate + 999'999'999) / 1'000'000'000
-                * gsl::narrow_cast<int>(framesize);
+            leadIn = gsl::narrow<isize>(latency * RenderSampleRate / 1'000'000'000)
+                * gsl::narrow_cast<i32>(framesize);
+            leadOut = gsl::narrow<isize>((latency*RenderSampleRate + 999'999'999) / 1'000'000'000)
+                * gsl::narrow_cast<i32>(framesize);
         }
 
         auto outname = fs::path(al::char_as_u8(fname)).stem();

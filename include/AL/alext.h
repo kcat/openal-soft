@@ -1,3 +1,35 @@
+/* This is free and unencumbered software released into the public domain.
+ *
+ * Anyone is free to copy, modify, publish, use, compile, sell, or
+ * distribute this software, either in source code form or as a compiled
+ * binary, for any purpose, commercial or non-commercial, and by any
+ * means.
+ *
+ * In jurisdictions that recognize copyright laws, the author or authors
+ * of this software dedicate any and all copyright interest in the
+ * software to the public domain. We make this dedication for the benefit
+ * of the public at large and to the detriment of our heirs and
+ * successors. We intend this dedication to be an overt act of
+ * relinquishment in perpetuity of all present and future rights to this
+ * software under copyright law.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * For more information, please refer to <http://unlicense.org/>
+ */
+
+/* This file is auto-generated! Please do not edit it manually.
+ * Instead, modify the API in al.xml and regenerate using genheaders.py.
+ *
+ * Last regenerated: 2025-10-06 17:35:20.700564+00:00
+ */
+
 #ifndef AL_ALEXT_H
 #define AL_ALEXT_H
 
@@ -26,7 +58,6 @@ typedef uint64_t _alsoft_uint64_t;
 extern "C" {
 #endif
 
-struct _GUID;
 
 #ifndef AL_LOKI_IMA_ADPCM_format
 #define AL_LOKI_IMA_ADPCM_format 1
@@ -85,26 +116,26 @@ struct _GUID;
 #define AL_EXT_MCFORMATS 1
 /* Provides support for surround sound buffer formats with 8, 16, and 32-bit
  * samples.
- *
+ * 
  * QUAD8: Unsigned 8-bit, Quadraphonic (Front Left, Front Right, Rear Left,
- *        Rear Right).
+ * Rear Right).
  * QUAD16: Signed 16-bit, Quadraphonic.
  * QUAD32: 32-bit float, Quadraphonic.
  * REAR8: Unsigned 8-bit, Rear Stereo (Rear Left, Rear Right).
  * REAR16: Signed 16-bit, Rear Stereo.
  * REAR32: 32-bit float, Rear Stereo.
  * 51CHN8: Unsigned 8-bit, 5.1 Surround (Front Left, Front Right, Front Center,
- *         LFE, Side Left, Side Right). Note that some audio systems may label
- *         5.1's Side channels as Rear or Surround; they are equivalent for the
- *         purposes of this extension.
+ * LFE, Side Left, Side Right). Note that some audio systems may label
+ * 5.1's Side channels as Rear or Surround; they are equivalent for the
+ * purposes of this extension.
  * 51CHN16: Signed 16-bit, 5.1 Surround.
  * 51CHN32: 32-bit float, 5.1 Surround.
  * 61CHN8: Unsigned 8-bit, 6.1 Surround (Front Left, Front Right, Front Center,
- *         LFE, Rear Center, Side Left, Side Right).
+ * LFE, Rear Center, Side Left, Side Right).
  * 61CHN16: Signed 16-bit, 6.1 Surround.
  * 61CHN32: 32-bit float, 6.1 Surround.
  * 71CHN8: Unsigned 8-bit, 7.1 Surround (Front Left, Front Right, Front Center,
- *         LFE, Rear Left, Rear Right, Side Left, Side Right).
+ * LFE, Rear Left, Rear Right, Side Left, Side Right).
  * 71CHN16: Signed 16-bit, 7.1 Surround.
  * 71CHN32: 32-bit float, 7.1 Surround.
  */
@@ -144,7 +175,7 @@ struct _GUID;
 
 #ifndef AL_EXT_STATIC_BUFFER
 #define AL_EXT_STATIC_BUFFER 1
-typedef void (AL_APIENTRY*PFNALBUFFERDATASTATICPROC)(const ALuint,ALenum,ALvoid*,ALsizei,ALsizei) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *PFNALBUFFERDATASTATICPROC)(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
 #endif
@@ -162,10 +193,10 @@ void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *
 
 #ifndef ALC_EXT_thread_local_context
 #define ALC_EXT_thread_local_context 1
-typedef ALCboolean  (ALC_APIENTRY*PFNALCSETTHREADCONTEXTPROC)(ALCcontext *context) ALC_API_NOEXCEPT17;
-typedef ALCcontext* (ALC_APIENTRY*PFNALCGETTHREADCONTEXTPROC)(void) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *PFNALCSETTHREADCONTEXTPROC)(ALCcontext *context) ALC_API_NOEXCEPT17;
+typedef ALCcontext* (ALC_APIENTRY *PFNALCGETTHREADCONTEXTPROC)(void) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCboolean  ALC_APIENTRY alcSetThreadContext(ALCcontext *context) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context) ALC_API_NOEXCEPT;
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) ALC_API_NOEXCEPT;
 #endif
 #endif
@@ -179,9 +210,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void) ALC_API_NOEXCEPT;
 #define AL_SOFT_buffer_sub_data 1
 #define AL_BYTE_RW_OFFSETS_SOFT                  0x1031
 #define AL_SAMPLE_RW_OFFSETS_SOFT                0x1032
-typedef void (AL_APIENTRY*PFNALBUFFERSUBDATASOFTPROC)(ALuint,ALenum,const ALvoid*,ALsizei,ALsizei) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *PFNALBUFFERSUBDATASOFTPROC)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const ALvoid *data,ALsizei offset,ALsizei length) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT;
 #endif
 #endif
 
@@ -199,10 +230,10 @@ AL_API void AL_APIENTRY alBufferSubDataSOFT(ALuint buffer,ALenum format,const AL
 #define AL_FOLDBACK_MODE_MONO                    0x4101
 #define AL_FOLDBACK_MODE_STEREO                  0x4102
 typedef void (AL_APIENTRY*LPALFOLDBACKCALLBACK)(ALenum,ALsizei) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALREQUESTFOLDBACKSTART)(ALenum,ALsizei,ALsizei,ALfloat*,LPALFOLDBACKCALLBACK) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALREQUESTFOLDBACKSTOP)(void) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTART)(ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTOP)(void) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alRequestFoldbackStart(ALenum mode,ALsizei count,ALsizei length,ALfloat *mem,LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alRequestFoldbackStart(ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alRequestFoldbackStop(void) AL_API_NOEXCEPT;
 #endif
 #endif
@@ -266,10 +297,10 @@ AL_API void AL_APIENTRY alRequestFoldbackStop(void) AL_API_NOEXCEPT;
 #define AL_SAMPLE_LENGTH_SOFT                    0x200A
 #define AL_SEC_LENGTH_SOFT                       0x200B
 
-typedef void (AL_APIENTRY*LPALBUFFERSAMPLESSOFT)(ALuint,ALuint,ALenum,ALsizei,ALenum,ALenum,const ALvoid*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALBUFFERSUBSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,const ALvoid*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETBUFFERSAMPLESSOFT)(ALuint,ALsizei,ALsizei,ALenum,ALenum,ALvoid*) AL_API_NOEXCEPT17;
-typedef ALboolean (AL_APIENTRY*LPALISBUFFERFORMATSUPPORTEDSOFT)(ALenum) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERSAMPLESSOFT)(ALuint buffer, ALuint samplerate, ALenum internalformat, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERSUBSAMPLESSOFT)(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERSAMPLESSOFT)(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, ALvoid *data) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISBUFFERFORMATSUPPORTEDSOFT)(ALenum format) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer, ALuint samplerate, ALenum internalformat, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer, ALsizei offset, ALsizei samples, ALenum channels, ALenum type, const ALvoid *data) AL_API_NOEXCEPT;
@@ -305,13 +336,13 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format) AL_API
 #define ALC_6POINT1_SOFT                         0x1505
 #define ALC_7POINT1_SOFT                         0x1506
 
-typedef ALCdevice* (ALC_APIENTRY*LPALCLOOPBACKOPENDEVICESOFT)(const ALCchar*) ALC_API_NOEXCEPT17;
-typedef ALCboolean (ALC_APIENTRY*LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice*,ALCsizei,ALCenum,ALCenum) ALC_API_NOEXCEPT17;
-typedef void (ALC_APIENTRY*LPALCRENDERSAMPLESSOFT)(ALCdevice*,ALCvoid*,ALCsizei) ALC_API_NOEXCEPT17;
+typedef ALCdevice* (ALC_APIENTRY *LPALCLOOPBACKOPENDEVICESOFT)(const ALCchar *deviceName) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCISRENDERFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCRENDERSAMPLESSOFT)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) AL_API_NOEXCEPT;
-ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) AL_API_NOEXCEPT;
-ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) AL_API_NOEXCEPT;
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName) ALC_API_NOEXCEPT;
+ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type) ALC_API_NOEXCEPT;
+ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
 #endif
 #endif
 
@@ -331,18 +362,18 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
 #define AL_SEC_OFFSET_LATENCY_SOFT               0x1201
 typedef _alsoft_int64_t ALint64SOFT;
 typedef _alsoft_uint64_t ALuint64SOFT;
-typedef void (AL_APIENTRY*LPALSOURCEDSOFT)(ALuint,ALenum,ALdouble) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCE3DSOFT)(ALuint,ALenum,ALdouble,ALdouble,ALdouble) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCEDVSOFT)(ALuint,ALenum,const ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCEDSOFT)(ALuint,ALenum,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCE3DSOFT)(ALuint,ALenum,ALdouble*,ALdouble*,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCEDVSOFT)(ALuint,ALenum,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCEI64SOFT)(ALuint,ALenum,ALint64SOFT) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCE3I64SOFT)(ALuint,ALenum,ALint64SOFT,ALint64SOFT,ALint64SOFT) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCEI64VSOFT)(ALuint,ALenum,const ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCEI64SOFT)(ALuint,ALenum,ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCE3I64SOFT)(ALuint,ALenum,ALint64SOFT*,ALint64SOFT*,ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETSOURCEI64VSOFT)(ALuint,ALenum,ALint64SOFT*) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEDSOFT)(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3DSOFT)(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEDVSOFT)(ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEDSOFT)(ALuint source, ALenum param, ALdouble *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3DSOFT)(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEDVSOFT)(ALuint source, ALenum param, ALdouble *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEI64SOFT)(ALuint source, ALenum param, ALint64SOFT value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3I64SOFT)(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEI64VSOFT)(ALuint source, ALenum param, const ALint64SOFT *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEI64SOFT)(ALuint source, ALenum param, ALint64SOFT *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3I64SOFT)(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEI64VSOFT)(ALuint source, ALenum param, ALint64SOFT *values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT;
@@ -367,8 +398,8 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
 #ifndef AL_SOFT_deferred_updates
 #define AL_SOFT_deferred_updates 1
 #define AL_DEFERRED_UPDATES_SOFT                 0xC002
-typedef void (AL_APIENTRY*LPALDEFERUPDATESSOFT)(void) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALPROCESSUPDATESSOFT)(void) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEFERUPDATESSOFT)(void) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALPROCESSUPDATESSOFT)(void) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alDeferUpdatesSOFT(void) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
@@ -403,8 +434,8 @@ AL_API void AL_APIENTRY alProcessUpdatesSOFT(void) AL_API_NOEXCEPT;
 
 #ifndef ALC_SOFT_pause_device
 #define ALC_SOFT_pause_device 1
-typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
-typedef void (ALC_APIENTRY*LPALCDEVICERESUMESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCDEVICEPAUSESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCDEVICERESUMESOFT)(ALCdevice *device) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device) ALC_API_NOEXCEPT;
 ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEPT;
@@ -415,7 +446,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
 #define AL_EXT_BFORMAT 1
 /* Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
  * and layout).
- *
+ * 
  * BFORMAT2D_8: Unsigned 8-bit, 3-channel non-periphonic (WXY).
  * BFORMAT2D_16: Signed 16-bit, 3-channel non-periphonic (WXY).
  * BFORMAT2D_FLOAT32: 32-bit float, 3-channel non-periphonic (WXY).
@@ -451,8 +482,8 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) ALC_API_NOEXCEP
 #define ALC_NUM_HRTF_SPECIFIERS_SOFT             0x1994
 #define ALC_HRTF_SPECIFIER_SOFT                  0x1995
 #define ALC_HRTF_ID_SOFT                         0x1996
-typedef const ALCchar* (ALC_APIENTRY*LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index) ALC_API_NOEXCEPT17;
-typedef ALCboolean (ALC_APIENTRY*LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT17;
+typedef const ALCchar* (ALC_APIENTRY *LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index) ALC_API_NOEXCEPT;
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) ALC_API_NOEXCEPT;
@@ -465,25 +496,25 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
 #endif
 
 #ifndef AL_SOFT_source_resampler
-#define AL_SOFT_source_resampler
+#define AL_SOFT_source_resampler 1
 #define AL_NUM_RESAMPLERS_SOFT                   0x1210
 #define AL_DEFAULT_RESAMPLER_SOFT                0x1211
 #define AL_SOURCE_RESAMPLER_SOFT                 0x1212
 #define AL_RESAMPLER_NAME_SOFT                   0x1213
-typedef const ALchar* (AL_APIENTRY*LPALGETSTRINGISOFT)(ALenum pname, ALsizei index) AL_API_NOEXCEPT17;
+typedef const ALchar* (AL_APIENTRY *LPALGETSTRINGISOFT)(ALenum pname, ALsizei index) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index) AL_API_NOEXCEPT;
 #endif
 #endif
 
 #ifndef AL_SOFT_source_spatialize
-#define AL_SOFT_source_spatialize
+#define AL_SOFT_source_spatialize 1
 #define AL_SOURCE_SPATIALIZE_SOFT                0x1214
 #define AL_AUTO_SOFT                             0x0002
 #endif
 
 #ifndef ALC_SOFT_output_limiter
-#define ALC_SOFT_output_limiter
+#define ALC_SOFT_output_limiter 1
 #define ALC_OUTPUT_LIMITER_SOFT                  0x199A
 #endif
 
@@ -494,9 +525,11 @@ typedef _alsoft_uint64_t ALCuint64SOFT;
 #define ALC_DEVICE_CLOCK_SOFT                    0x1600
 #define ALC_DEVICE_LATENCY_SOFT                  0x1601
 #define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
+
 #define AL_SAMPLE_OFFSET_CLOCK_SOFT              0x1202
 #define AL_SEC_OFFSET_CLOCK_SOFT                 0x1203
-typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT17;
+
+typedef void (ALC_APIENTRY *LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values) ALC_API_NOEXCEPT;
 #endif
@@ -518,7 +551,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define AL_ACN_SOFT                              0x0001
 
 /* Ambisonic scalings (normalization) */
-/*#define AL_FUMA_SOFT*/
 #define AL_SN3D_SOFT                             0x0001
 #define AL_N3D_SOFT                              0x0002
 #endif
@@ -537,13 +569,12 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define ALC_ACN_SOFT                             0x0001
 
 /* Ambisonic scalings (normalization) */
-/*#define ALC_FUMA_SOFT*/
 #define ALC_SN3D_SOFT                            0x0001
 #define ALC_N3D_SOFT                             0x0002
 #endif
 
 #ifndef AL_SOFT_effect_target
-#define AL_SOFT_effect_target
+#define AL_SOFT_effect_target 1
 #define AL_EFFECTSLOT_TARGET_SOFT                0x199C
 #endif
 
@@ -556,10 +587,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x19A6
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
     ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT17;
-typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY *LPALGETPOINTERSOFT)(ALenum pname) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETPOINTERVSOFT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT;
@@ -569,24 +601,22 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values) AL_API_NO
 #endif
 
 #ifndef ALC_SOFT_reopen_device
-#define ALC_SOFT_reopen_device
-typedef ALCboolean (ALC_APIENTRY*LPALCREOPENDEVICESOFT)(ALCdevice *device,
-    const ALCchar *deviceName, const ALCint *attribs) ALC_API_NOEXCEPT17;
+#define ALC_SOFT_reopen_device 1
+typedef ALCboolean (ALC_APIENTRY *LPALCREOPENDEVICESOFT)(ALCdevice *device, const ALCchar *deviceName, const ALCint *attribs) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
-    const ALCint *attribs) ALC_API_NOEXCEPT;
+ALCboolean ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName, const ALCint *attribs) ALC_API_NOEXCEPT;
 #endif
 #endif
 
 #ifndef AL_SOFT_callback_buffer
-#define AL_SOFT_callback_buffer
+#define AL_SOFT_callback_buffer 1
 #define AL_BUFFER_CALLBACK_FUNCTION_SOFT         0x19A0
 #define AL_BUFFER_CALLBACK_USER_PARAM_SOFT       0x19A1
 typedef ALsizei (AL_APIENTRY*ALBUFFERCALLBACKTYPESOFT)(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALBUFFERCALLBACKSOFT)(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERPTRSOFT)(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFER3PTRSOFT)(ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERPTRVSOFT)(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alBufferCallbackSOFT(ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT;
 AL_API void AL_APIENTRY alGetBufferPtrSOFT(ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT;
@@ -596,7 +626,7 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #endif
 
 #ifndef AL_SOFT_UHJ
-#define AL_SOFT_UHJ
+#define AL_SOFT_UHJ 1
 #define AL_FORMAT_UHJ2CHN8_SOFT                  0x19A2
 #define AL_FORMAT_UHJ2CHN16_SOFT                 0x19A3
 #define AL_FORMAT_UHJ2CHN_FLOAT32_SOFT           0x19A4
@@ -614,7 +644,7 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #endif
 
 #ifndef AL_SOFT_UHJ_ex
-#define AL_SOFT_UHJ_ex
+#define AL_SOFT_UHJ_ex 1
 #define AL_FORMAT_UHJ2CHN_MULAW_SOFT             0x19B3
 #define AL_FORMAT_UHJ2CHN_ALAW_SOFT              0x19B4
 #define AL_FORMAT_UHJ2CHN_IMA4_SOFT              0x19B5
@@ -626,7 +656,7 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #endif
 
 #ifndef ALC_SOFT_output_mode
-#define ALC_SOFT_output_mode
+#define ALC_SOFT_output_mode 1
 #define ALC_OUTPUT_MODE_SOFT                     0x19AC
 #define ALC_ANY_SOFT                             0x19AD
 /*#define ALC_MONO_SOFT                            0x1500*/
@@ -641,9 +671,9 @@ AL_API void AL_APIENTRY alGetBufferPtrvSOFT(ALuint buffer, ALenum param, ALvoid 
 #endif
 
 #ifndef AL_SOFT_source_start_delay
-#define AL_SOFT_source_start_delay
-typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT17;
+#define AL_SOFT_source_start_delay 1
+typedef void (AL_APIENTRY *LPALSOURCEPLAYATTIMESOFT)(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEPLAYATTIMEVSOFT)(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT;
 void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT;
@@ -651,13 +681,13 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 #endif
 
 #ifndef ALC_EXT_debug
-#define ALC_EXT_debug
+#define ALC_EXT_debug 1
 #define ALC_CONTEXT_FLAGS_EXT                    0x19CF
 #define ALC_CONTEXT_DEBUG_BIT_EXT                0x0001
 #endif
 
 #ifndef AL_EXT_debug
-#define AL_EXT_debug
+#define AL_EXT_debug 1
 #define AL_DONT_CARE_EXT                         0x0002
 #define AL_DEBUG_OUTPUT_EXT                      0x19B2
 #define AL_DEBUG_CALLBACK_FUNCTION_EXT           0x19B3
@@ -689,23 +719,23 @@ void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint
 #define AL_STACK_OVERFLOW_EXT                    0x19CD
 #define AL_STACK_UNDERFLOW_EXT                   0x19CE
 #define AL_CONTEXT_FLAGS_EXT                     0x19CF
-#define AL_BUFFER_EXT                            0x1009 /* Same as AL_BUFFER */
+#define AL_BUFFER_EXT                            0x1009
 #define AL_SOURCE_EXT                            0x19D0
 #define AL_FILTER_EXT                            0x19D1
 #define AL_EFFECT_EXT                            0x19D2
 #define AL_AUXILIARY_EFFECT_SLOT_EXT             0x19D3
 
 typedef void (AL_APIENTRY*ALDEBUGPROCEXT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message, void *userParam) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKEXT)(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGEINSERTEXT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGECONTROLEXT)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALPUSHDEBUGGROUPEXT)(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALPOPDEBUGGROUPEXT)(void) AL_API_NOEXCEPT17;
-typedef ALuint (AL_APIENTRY*LPALGETDEBUGMESSAGELOGEXT)(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
-typedef void* (AL_APIENTRY*LPALGETPOINTEREXT)(ALenum pname) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETPOINTERVEXT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGECALLBACKEXT)(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGEINSERTEXT)(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGECONTROLEXT)(ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALPUSHDEBUGGROUPEXT)(ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALPOPDEBUGGROUPEXT)(void) AL_API_NOEXCEPT17;
+typedef ALuint (AL_APIENTRY *LPALGETDEBUGMESSAGELOGEXT)(ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETOBJECTLABELEXT)(ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY *LPALGETPOINTEREXT)(ALenum pname) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETPOINTERVEXT)(ALenum pname, void **values) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 void AL_APIENTRY alDebugMessageCallbackEXT(ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT;
 void AL_APIENTRY alDebugMessageInsertEXT(ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT;
@@ -721,7 +751,7 @@ void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #endif
 
 #ifndef ALC_SOFT_system_events
-#define ALC_SOFT_system_events
+#define ALC_SOFT_system_events 1
 #define ALC_PLAYBACK_DEVICE_SOFT                 0x19D4
 #define ALC_CAPTURE_DEVICE_SOFT                  0x19D5
 #define ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT 0x19D6
@@ -731,9 +761,10 @@ void AL_APIENTRY alGetPointervEXT(ALenum pname, void **values) AL_API_NOEXCEPT;
 #define ALC_EVENT_NOT_SUPPORTED_SOFT             0x19DA
 typedef void (ALC_APIENTRY*ALCEVENTPROCTYPESOFT)(ALCenum eventType, ALCenum deviceType,
     ALCdevice *device, ALCsizei length, const ALCchar *message, void *userParam) ALC_API_NOEXCEPT17;
-typedef ALCenum (ALC_APIENTRY*LPALCEVENTISSUPPORTEDSOFT)(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT17;
-typedef ALCboolean (ALC_APIENTRY*LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
-typedef void (ALC_APIENTRY*LPALCEVENTCALLBACKSOFT)(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT17;
+
+typedef ALCenum (ALC_APIENTRY *LPALCEVENTISSUPPORTEDSOFT)(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT17;
+typedef ALCboolean (ALC_APIENTRY *LPALCEVENTCONTROLSOFT)(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT17;
+typedef void (ALC_APIENTRY *LPALCEVENTCALLBACKSOFT)(ALCEVENTPROCTYPESOFT callback, void *userParam) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALCenum ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum deviceType) ALC_API_NOEXCEPT;
 ALCboolean ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events, ALCboolean enable) ALC_API_NOEXCEPT;
@@ -742,15 +773,18 @@ void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *user
 #endif
 
 #ifndef AL_EXT_direct_context
-#define AL_EXT_direct_context
-typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcname) AL_API_NOEXCEPT17;
+#define AL_EXT_direct_context 1
+struct _GUID;
+typedef ALCvoid* (ALC_APIENTRY *LPALCGETPROCADDRESS2)(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT17;
 
 typedef void (AL_APIENTRY *LPALENABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDISABLEDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISENABLEDDIRECT)(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALDOPPLERFACTORDIRECT)(ALCcontext *context, ALfloat value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSPEEDOFSOUNDDIRECT)(ALCcontext *context, ALfloat value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDISTANCEMODELDIRECT)(ALCcontext *context, ALenum distanceModel) AL_API_NOEXCEPT17;
+
 typedef const ALchar* (AL_APIENTRY *LPALGETSTRINGDIRECT)(ALCcontext *context, ALenum param) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETBOOLEANVDIRECT)(ALCcontext *context, ALenum param, ALboolean *values) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETINTEGERVDIRECT)(ALCcontext *context, ALenum param, ALint *values) AL_API_NOEXCEPT17;
@@ -760,10 +794,12 @@ typedef ALboolean (AL_APIENTRY *LPALGETBOOLEANDIRECT)(ALCcontext *context, ALenu
 typedef ALint (AL_APIENTRY *LPALGETINTEGERDIRECT)(ALCcontext *context, ALenum param) AL_API_NOEXCEPT17;
 typedef ALfloat (AL_APIENTRY *LPALGETFLOATDIRECT)(ALCcontext *context, ALenum param) AL_API_NOEXCEPT17;
 typedef ALdouble (AL_APIENTRY *LPALGETDOUBLEDIRECT)(ALCcontext *context, ALenum param) AL_API_NOEXCEPT17;
+
 typedef ALenum (AL_APIENTRY *LPALGETERRORDIRECT)(ALCcontext *context) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISEXTENSIONPRESENTDIRECT)(ALCcontext *context, const ALchar *extname) AL_API_NOEXCEPT17;
 typedef void* (AL_APIENTRY *LPALGETPROCADDRESSDIRECT)(ALCcontext *context, const ALchar *fname) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPALGETENUMVALUEDIRECT)(ALCcontext *context, const ALchar *ename) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALLISTENERFDIRECT)(ALCcontext *context, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALLISTENER3FDIRECT)(ALCcontext *context, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALLISTENERFVDIRECT)(ALCcontext *context, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
@@ -776,6 +812,7 @@ typedef void (AL_APIENTRY *LPALGETLISTENERFVDIRECT)(ALCcontext *context, ALenum 
 typedef void (AL_APIENTRY *LPALGETLISTENERIDIRECT)(ALCcontext *context, ALenum param, ALint *value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETLISTENER3IDIRECT)(ALCcontext *context, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETLISTENERIVDIRECT)(ALCcontext *context, ALenum param, ALint *values) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALGENSOURCESDIRECT)(ALCcontext *context, ALsizei n, ALuint *sources) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDELETESOURCESDIRECT)(ALCcontext *context, ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISSOURCEDIRECT)(ALCcontext *context, ALuint source) AL_API_NOEXCEPT17;
@@ -801,6 +838,7 @@ typedef void (AL_APIENTRY *LPALSOURCEREWINDVDIRECT)(ALCcontext *context, ALsizei
 typedef void (AL_APIENTRY *LPALSOURCEPAUSEVDIRECT)(ALCcontext *context, ALsizei n, const ALuint *sources) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCEQUEUEBUFFERSDIRECT)(ALCcontext *context, ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCEUNQUEUEBUFFERSDIRECT)(ALCcontext *context, ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALGENBUFFERSDIRECT)(ALCcontext *context, ALsizei n, ALuint *buffers) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDELETEBUFFERSDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISBUFFERDIRECT)(ALCcontext *context, ALuint buffer) AL_API_NOEXCEPT17;
@@ -817,96 +855,98 @@ typedef void (AL_APIENTRY *LPALGETBUFFERFVDIRECT)(ALCcontext *context, ALuint bu
 typedef void (AL_APIENTRY *LPALGETBUFFERIDIRECT)(ALCcontext *context, ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETBUFFER3IDIRECT)(ALCcontext *context, ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETBUFFERIVDIRECT)(ALCcontext *context, ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT17;
-/* ALC_EXT_EFX */
+
 typedef void (AL_APIENTRY *LPALGENEFFECTSDIRECT)(ALCcontext *context, ALsizei n, ALuint *effects) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDELETEEFFECTSDIRECT)(ALCcontext *context, ALsizei n, const ALuint *effects) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISEFFECTDIRECT)(ALCcontext *context, ALuint effect) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTIDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTIVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTFDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTFVDIRECT)(ALCcontext *context, ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALGENFILTERSDIRECT)(ALCcontext *context, ALsizei n, ALuint *filters) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDELETEFILTERSDIRECT)(ALCcontext *context, ALsizei n, const ALuint *filters) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISFILTERDIRECT)(ALCcontext *context, ALuint filter) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERIDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERIVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERFDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERFVDIRECT)(ALCcontext *context, ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALGENAUXILIARYEFFECTSLOTSDIRECT)(ALCcontext *context, ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALDELETEAUXILIARYEFFECTSLOTSDIRECT)(ALCcontext *context, ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPALISAUXILIARYEFFECTSLOTDIRECT)(ALCcontext *context, ALuint effectslot) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALfloat *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *values) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *values) AL_API_NOEXCEPT17;
-/* AL_EXT_BUFFER_DATA_STATIC */
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFVDIRECT)(ALCcontext *context, ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALBUFFERDATASTATICDIRECT)(ALCcontext *context, ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
-/* AL_EXT_debug */
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGECALLBACKDIRECTEXT)(ALCcontext *context, ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGEINSERTDIRECTEXT)(ALCcontext *context, ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALDEBUGMESSAGECONTROLDIRECTEXT)(ALCcontext *context, ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALPUSHDEBUGGROUPDIRECTEXT)(ALCcontext *context, ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALPOPDEBUGGROUPDIRECTEXT)(ALCcontext *context) AL_API_NOEXCEPT17;
-typedef ALuint (AL_APIENTRY*LPALGETDEBUGMESSAGELOGDIRECTEXT)(ALCcontext *context, ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
-typedef void* (AL_APIENTRY*LPALGETPOINTERDIRECTEXT)(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY*LPALGETPOINTERVDIRECTEXT)(ALCcontext *context, ALenum pname, void **values) AL_API_NOEXCEPT17;
-/* AL_EXT_FOLDBACK */
+
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGECALLBACKDIRECTEXT)(ALCcontext *context, ALDEBUGPROCEXT callback, void *userParam) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGEINSERTDIRECTEXT)(ALCcontext *context, ALenum source, ALenum type, ALuint id, ALenum severity, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDEBUGMESSAGECONTROLDIRECTEXT)(ALCcontext *context, ALenum source, ALenum type, ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALPUSHDEBUGGROUPDIRECTEXT)(ALCcontext *context, ALenum source, ALuint id, ALsizei length, const ALchar *message) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALPOPDEBUGGROUPDIRECTEXT)(ALCcontext *context) AL_API_NOEXCEPT17;
+typedef ALuint (AL_APIENTRY *LPALGETDEBUGMESSAGELOGDIRECTEXT)(ALCcontext *context, ALuint count, ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths, ALchar *logBuf) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei length, const ALchar *label) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETOBJECTLABELDIRECTEXT)(ALCcontext *context, ALenum identifier, ALuint name, ALsizei bufSize, ALsizei *length, ALchar *label) AL_API_NOEXCEPT17;
+typedef void* (AL_APIENTRY *LPALGETPOINTERDIRECTEXT)(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETPOINTERVDIRECTEXT)(ALCcontext *context, ALenum pname, void **values) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTARTDIRECT)(ALCcontext *context, ALenum mode, ALsizei count, ALsizei length, ALfloat *mem, LPALFOLDBACKCALLBACK callback) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALREQUESTFOLDBACKSTOPDIRECT)(ALCcontext *context) AL_API_NOEXCEPT17;
-/* AL_SOFT_buffer_sub_data */
+
 typedef void (AL_APIENTRY *LPALBUFFERSUBDATADIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length) AL_API_NOEXCEPT17;
-/* AL_SOFT_source_latency */
-typedef void (AL_APIENTRY *LPALSOURCEDDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALdouble) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALSOURCE3DDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALdouble,ALdouble,ALdouble) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALSOURCEDVDIRECTSOFT)(ALCcontext*,ALuint,ALenum,const ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCEDDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCE3DDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALdouble*,ALdouble*,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCEDVDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALdouble*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALSOURCEI64DIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALint64SOFT) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALSOURCE3I64DIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALint64SOFT,ALint64SOFT,ALint64SOFT) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALSOURCEI64VDIRECTSOFT)(ALCcontext*,ALuint,ALenum,const ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCEI64DIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCE3I64DIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALint64SOFT*,ALint64SOFT*,ALint64SOFT*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETSOURCEI64VDIRECTSOFT)(ALCcontext*,ALuint,ALenum,ALint64SOFT*) AL_API_NOEXCEPT17;
-/* AL_SOFT_deferred_updates */
+
+typedef void (AL_APIENTRY *LPALSOURCEDDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALdouble value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3DDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEDVDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, const ALdouble *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEDDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALdouble *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3DDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEDVDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALdouble *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEI64DIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCE3I64DIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALSOURCEI64VDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, const ALint64SOFT *values) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEI64DIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *value) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCE3I64DIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETSOURCEI64VDIRECTSOFT)(ALCcontext *context, ALuint source, ALenum param, ALint64SOFT *values) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALDEFERUPDATESDIRECTSOFT)(ALCcontext *context) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALPROCESSUPDATESDIRECTSOFT)(ALCcontext *context) AL_API_NOEXCEPT17;
-/* AL_SOFT_source_resampler */
+
 typedef const ALchar* (AL_APIENTRY *LPALGETSTRINGIDIRECTSOFT)(ALCcontext *context, ALenum pname, ALsizei index) AL_API_NOEXCEPT17;
-/* AL_SOFT_events */
+
 typedef void (AL_APIENTRY *LPALEVENTCONTROLDIRECTSOFT)(ALCcontext *context, ALsizei count, const ALenum *types, ALboolean enable) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALEVENTCALLBACKDIRECTSOFT)(ALCcontext *context, ALEVENTPROCSOFT callback, void *userParam) AL_API_NOEXCEPT17;
 typedef void* (AL_APIENTRY *LPALGETPOINTERDIRECTSOFT)(ALCcontext *context, ALenum pname) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALGETPOINTERVDIRECTSOFT)(ALCcontext *context, ALenum pname, void **values) AL_API_NOEXCEPT17;
-/* AL_SOFT_callback_buffer */
+
 typedef void (AL_APIENTRY *LPALBUFFERCALLBACKDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum format, ALsizei freq, ALBUFFERCALLBACKTYPESOFT callback, ALvoid *userptr) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETBUFFERPTRDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **value) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETBUFFER3PTRDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **value1, ALvoid **value2, ALvoid **value3) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETBUFFERPTRVDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **values) AL_API_NOEXCEPT17;
-/* AL_SOFT_source_start_delay */
+typedef void (AL_APIENTRY *LPALGETBUFFERPTRDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFER3PTRDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **ptr0, ALvoid **ptr1, ALvoid **ptr2) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETBUFFERPTRVDIRECTSOFT)(ALCcontext *context, ALuint buffer, ALenum param, ALvoid **ptr) AL_API_NOEXCEPT17;
+
 typedef void (AL_APIENTRY *LPALSOURCEPLAYATTIMEDIRECTSOFT)(ALCcontext *context, ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT17;
 typedef void (AL_APIENTRY *LPALSOURCEPLAYATTIMEVDIRECTSOFT)(ALCcontext *context, ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT17;
-/* EAX */
+
 typedef ALenum (AL_APIENTRY *LPEAXSETDIRECT)(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETDIRECT)(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT17;
 typedef ALboolean (AL_APIENTRY *LPEAXSETBUFFERMODEDIRECT)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT17;
 typedef ALenum (AL_APIENTRY *LPEAXGETBUFFERMODEDIRECT)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) AL_API_NOEXCEPT;
+ALCvoid* ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) ALC_API_NOEXCEPT;
 
 void AL_APIENTRY alEnableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
 void AL_APIENTRY alDisableDirect(ALCcontext *context, ALenum capability) AL_API_NOEXCEPT;
@@ -956,9 +996,9 @@ void AL_APIENTRY alSourceivDirect(ALCcontext *context, ALuint source, ALenum par
 void AL_APIENTRY alGetSourcefDirect(ALCcontext *context, ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetSource3fDirect(ALCcontext *context, ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetSourcefvDirect(ALCcontext *context, ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint source,  ALenum param, ALint *value) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetSourceiDirect(ALCcontext *context, ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT;
 void AL_APIENTRY alGetSource3iDirect(ALCcontext *context, ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint source,  ALenum param, ALint *values) AL_API_NOEXCEPT;
+void AL_APIENTRY alGetSourceivDirect(ALCcontext *context, ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT;
 void AL_APIENTRY alSourcePlayDirect(ALCcontext *context, ALuint source) AL_API_NOEXCEPT;
 void AL_APIENTRY alSourceStopDirect(ALCcontext *context, ALuint source) AL_API_NOEXCEPT;
 void AL_APIENTRY alSourceRewindDirect(ALCcontext *context, ALuint source) AL_API_NOEXCEPT;
@@ -1080,13 +1120,13 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 #endif
 
 #ifndef AL_SOFT_bformat_hoa
-#define AL_SOFT_bformat_hoa
+#define AL_SOFT_bformat_hoa 1
 #define AL_UNPACK_AMBISONIC_ORDER_SOFT           0x199D
 #endif
 
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif
 /* NOLINTEND */
 
-#endif
+#endif /* AL_ALEXT_H */

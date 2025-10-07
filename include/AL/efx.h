@@ -1,3 +1,35 @@
+/* This is free and unencumbered software released into the public domain.
+ *
+ * Anyone is free to copy, modify, publish, use, compile, sell, or
+ * distribute this software, either in source code form or as a compiled
+ * binary, for any purpose, commercial or non-commercial, and by any
+ * means.
+ *
+ * In jurisdictions that recognize copyright laws, the author or authors
+ * of this software dedicate any and all copyright interest in the
+ * software to the public domain. We make this dedication for the benefit
+ * of the public at large and to the detriment of our heirs and
+ * successors. We intend this dedication to be an overt act of
+ * relinquishment in perpetuity of all present and future rights to this
+ * software under copyright law.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * For more information, please refer to <http://unlicense.org/>
+ */
+
+/* This file is auto-generated! Please do not edit it manually.
+ * Instead, modify the API in al.xml and regenerate using genheaders.py.
+ *
+ * Last regenerated: 2025-10-06 17:35:20.700564+00:00
+ */
+
 #ifndef AL_EFX_H
 #define AL_EFX_H
 
@@ -10,15 +42,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #define ALC_EXT_EFX_NAME                         "ALC_EXT_EFX"
 
 #define ALC_EFX_MAJOR_VERSION                    0x20001
 #define ALC_EFX_MINOR_VERSION                    0x20002
 #define ALC_MAX_AUXILIARY_SENDS                  0x20003
 
-
-/* Listener properties. */
+/* Listener properties */
 #define AL_METERS_PER_UNIT                       0x20004
 
 /* Source properties. */
@@ -30,9 +60,6 @@ extern "C" {
 #define AL_DIRECT_FILTER_GAINHF_AUTO             0x2000A
 #define AL_AUXILIARY_SEND_FILTER_GAIN_AUTO       0x2000B
 #define AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO     0x2000C
-
-
-/* Effect properties. */
 
 /* Reverb effect parameters */
 #define AL_REVERB_DENSITY                        0x0001
@@ -176,9 +203,6 @@ extern "C" {
 /* NULL Auxiliary Slot ID to disable a source send. */
 #define AL_EFFECTSLOT_NULL                       0x0000
 
-
-/* Filter properties. */
-
 /* Lowpass filter parameters */
 #define AL_LOWPASS_GAIN                          0x0001
 #define AL_LOWPASS_GAINHF                        0x0002
@@ -202,86 +226,6 @@ extern "C" {
 #define AL_FILTER_LOWPASS                        0x0001
 #define AL_FILTER_HIGHPASS                       0x0002
 #define AL_FILTER_BANDPASS                       0x0003
-
-
-/* Effect object function types. */
-typedef void (AL_APIENTRY *LPALGENEFFECTS)(ALsizei, ALuint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALDELETEEFFECTS)(ALsizei, const ALuint*) AL_API_NOEXCEPT17;
-typedef ALboolean (AL_APIENTRY *LPALISEFFECT)(ALuint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTI)(ALuint, ALenum, ALint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTIV)(ALuint, ALenum, const ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTF)(ALuint, ALenum, ALfloat) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALEFFECTFV)(ALuint, ALenum, const ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTI)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTIV)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTF)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETEFFECTFV)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-
-/* Filter object function types. */
-typedef void (AL_APIENTRY *LPALGENFILTERS)(ALsizei, ALuint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALDELETEFILTERS)(ALsizei, const ALuint*) AL_API_NOEXCEPT17;
-typedef ALboolean (AL_APIENTRY *LPALISFILTER)(ALuint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERI)(ALuint, ALenum, ALint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERIV)(ALuint, ALenum, const ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERF)(ALuint, ALenum, ALfloat) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALFILTERFV)(ALuint, ALenum, const ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERI)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERIV)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERF)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETFILTERFV)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-
-/* Auxiliary Effect Slot object function types. */
-typedef void (AL_APIENTRY *LPALGENAUXILIARYEFFECTSLOTS)(ALsizei, ALuint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALDELETEAUXILIARYEFFECTSLOTS)(ALsizei, const ALuint*) AL_API_NOEXCEPT17;
-typedef ALboolean (AL_APIENTRY *LPALISAUXILIARYEFFECTSLOT)(ALuint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTI)(ALuint, ALenum, ALint) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIV)(ALuint, ALenum, const ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTF)(ALuint, ALenum, ALfloat) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFV)(ALuint, ALenum, const ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTI)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIV)(ALuint, ALenum, ALint*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTF)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFV)(ALuint, ALenum, ALfloat*) AL_API_NOEXCEPT17;
-
-#ifdef AL_ALEXT_PROTOTYPES
-AL_API void AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT;
-AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
-
-AL_API void AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT;
-AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
-
-AL_API void AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT;
-AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *piValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *pflValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
-#endif
-
-/* Filter ranges and defaults. */
 
 /* Lowpass filter */
 #define AL_LOWPASS_MIN_GAIN                      (0.0f)
@@ -313,9 +257,6 @@ AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum par
 #define AL_BANDPASS_MIN_GAINLF                   (0.0f)
 #define AL_BANDPASS_MAX_GAINLF                   (1.0f)
 #define AL_BANDPASS_DEFAULT_GAINLF               (1.0f)
-
-
-/* Effect parameter ranges and defaults. */
 
 /* Standard reverb effect */
 #define AL_REVERB_MIN_DENSITY                    (0.0f)
@@ -459,7 +400,6 @@ AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum par
 #define AL_EAXREVERB_MAX_DECAY_HFLIMIT           AL_TRUE
 #define AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT       AL_TRUE
 
-/* Chorus effect */
 #define AL_CHORUS_WAVEFORM_SINUSOID              (0)
 #define AL_CHORUS_WAVEFORM_TRIANGLE              (1)
 
@@ -723,7 +663,6 @@ AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum par
 #define AL_EQUALIZER_MAX_HIGH_CUTOFF             (16000.0f)
 #define AL_EQUALIZER_DEFAULT_HIGH_CUTOFF         (6000.0f)
 
-
 /* Source parameter value ranges and defaults. */
 #define AL_MIN_AIR_ABSORPTION_FACTOR             (0.0f)
 #define AL_MAX_AIR_ABSORPTION_FACTOR             (10.0f)
@@ -749,15 +688,90 @@ AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum par
 #define AL_MAX_AUXILIARY_SEND_FILTER_GAINHF_AUTO AL_TRUE
 #define AL_DEFAULT_AUXILIARY_SEND_FILTER_GAINHF_AUTO AL_TRUE
 
-
-/* Listener parameter value ranges and defaults. */
+/* Listener parameter value ranges and defaults */
 #define AL_MIN_METERS_PER_UNIT                   FLT_MIN
 #define AL_MAX_METERS_PER_UNIT                   FLT_MAX
 #define AL_DEFAULT_METERS_PER_UNIT               (1.0f)
+typedef void (AL_APIENTRY *LPALGENEFFECTS)(ALsizei n, ALuint *effects) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDELETEEFFECTS)(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISEFFECT)(ALuint effect) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTI)(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTIV)(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTF)(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALEFFECTFV)(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTI)(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTIV)(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTF)(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETEFFECTFV)(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
 
+typedef void (AL_APIENTRY *LPALGENFILTERS)(ALsizei n, ALuint *filters) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDELETEFILTERS)(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISFILTER)(ALuint filter) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERI)(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERIV)(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERF)(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALFILTERFV)(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERI)(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERIV)(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERF)(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETFILTERFV)(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
+
+typedef void (AL_APIENTRY *LPALGENAUXILIARYEFFECTSLOTS)(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALDELETEAUXILIARYEFFECTSLOTS)(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT17;
+typedef ALboolean (AL_APIENTRY *LPALISAUXILIARYEFFECTSLOT)(ALuint effectslot) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTI)(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTIV)(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTF)(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALAUXILIARYEFFECTSLOTFV)(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTI)(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTIV)(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTF)(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *LPALGETAUXILIARYEFFECTSLOTFV)(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT17;
+
+#ifdef AL_ALEXT_PROTOTYPES
+/* Effect object function types. */
+AL_API void AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT;
+AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+
+/* Filter object function types. */
+AL_API void AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT;
+AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+
+/* Auxiliary Effect Slot object function types. */
+AL_API void AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT;
+AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
+AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+
+#endif
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif
 /* NOLINTEND */
 

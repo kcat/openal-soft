@@ -683,7 +683,7 @@ def render_set(
                         else:
                             yield "#ifdef AL_ALEXT_PROTOTYPES"
                     elif pass_name == "command-pfn" and api_set.is_feature:
-                        yield "/* Pointer-to-function types, useful for storing dynamically loaded AL entry"
+                        yield f"/* Pointer-to-function types, useful for storing dynamically loaded {api.namespace} entry"
                         yield " * points."
                         yield " */"
                     written_preamble = True

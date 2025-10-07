@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-07 04:40:44.559476+00:00
+ * Last regenerated: 2025-10-07 04:44:53.573500+00:00
  */
 
 module;
@@ -272,7 +272,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 
 #endif /* ALC_NO_PROTOTYPES */
 
-/* Pointer-to-function types, useful for storing dynamically loaded AL entry
+/* Pointer-to-function types, useful for storing dynamically loaded ALC entry
  * points.
  */
 using LPALCCREATECONTEXT = auto (ALC_APIENTRY*)(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCcontext*;
@@ -348,7 +348,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 
 #endif /* ALC_NO_PROTOTYPES */
 
-/* Pointer-to-function types, useful for storing dynamically loaded AL entry
+/* Pointer-to-function types, useful for storing dynamically loaded ALC entry
  * points.
  */
 using LPALCCAPTUREOPENDEVICE = auto (ALC_APIENTRY*)(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize) ALC_API_NOEXCEPT -> ALCdevice*;

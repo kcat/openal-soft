@@ -387,7 +387,7 @@ struct LafStream {
     auto isAtEnd() const noexcept -> bool { return mCurrentSample >= mSampleCount; }
 
     [[nodiscard]]
-    auto readChunk() -> uint32_t;
+    auto readChunk() -> u32;
 
     [[nodiscard]]
     auto prepareTrack(size_t trackidx, size_t count) -> std::span<std::byte>;
@@ -397,9 +397,9 @@ struct LafStream {
     void convertPositions(const std::span<float> dst) const;
 };
 
-auto LafStream::readChunk() -> uint32_t
+auto LafStream::readChunk() -> u32
 {
-    auto enableTrackBits = std::array<char,std::tuple_size_v<decltype(mEnabledTracks)>>{};
+    auto enableTrackBits = std::array<char, std::tuple_size_v<decltype(mEnabledTracks)>>{};
     auto &infile = mInFile.is_open() ? mInFile : std::cin;
     if(!infile.read(enableTrackBits.data(), gsl::narrow<std::streamsize>((mNumTracks+7u)>>3u)))
          [[unlikely]]
@@ -412,42 +412,47 @@ auto LafStream::readChunk() -> uint32_t
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)", mCurrentSample,
                 mSampleCount);
         mSampleCount = mCurrentSample;
-        return 0u;
+        return 0_u32;
     }
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = gsl::narrow<unsigned>(std::accumulate(mEnabledTracks.cbegin(),
-        mEnabledTracks.cend(), 0, [](const int val, const uint8_t in) -> int
+        mEnabledTracks.cend(), 0, [](int const val, u8 const in) -> int
     { return val + std::popcount(in); }));
 
     /* Make sure enable bits aren't set for non-existent tracks. */
-    if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= (1u<<(mNumTracks&7)))
+    if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= 1u<<(mNumTracks&7))
         throw std::runtime_error{"Invalid channel enable bits"};
 
     /* Each chunk is exactly one second long, with samples interleaved for each
      * enabled track. The last chunk may be shorter if there isn't enough time
      * remaining for a full second.
      */
-    const auto numsamples = std::min(uint64_t{mSampleRate}, mSampleCount-mCurrentSample);
+    const auto numsamples = std::min(u64{mSampleRate}, mSampleCount-mCurrentSample);
 
-    const auto toread = gsl::narrow<std::streamsize>(numsamples * BytesFromQuality(mQuality)
+    /* Choose the smaller of std::streamsize or isize, to ensure neither the
+     * read size or range drop size get truncated.
+     */
+    using readsize_t = std::conditional_t<(sizeof(std::streamsize) > sizeof(isize)), isize,
+        std::streamsize>;
+    const auto toread = gsl::narrow<readsize_t>(numsamples * BytesFromQuality(mQuality)
         * mNumEnabled);
     if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
         const auto framesize = BytesFromQuality(mQuality) * mNumEnabled;
-        const auto samplesread = al::saturate_cast<uint64_t>(infile.gcount()) / framesize;
+        const auto samplesread = al::saturate_cast<u64>(infile.gcount()) / framesize;
         mCurrentSample += samplesread;
         if(mSampleCount < ~0_u64)
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
                 mCurrentSample, mSampleCount);
         mSampleCount = mCurrentSample;
         std::ranges::fill(mSampleChunk | std::views::drop(numsamples*framesize), char{});
-        return gsl::narrow<uint32_t>(samplesread);
+        return gsl::narrow<u32>(samplesread);
     }
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
     mCurrentSample += numsamples;
-    return gsl::narrow<uint32_t>(numsamples);
+    return gsl::narrow<u32>(numsamples);
 }
 
 auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::span<std::byte>

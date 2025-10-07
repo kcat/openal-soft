@@ -216,7 +216,8 @@ auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
     auto slidx = std::countr_zero(sublist->FreeMask);
     ASSUME(slidx < 64);
 
-    auto const buffer = gsl::make_not_null(std::construct_at(sublist->Buffers->begin() + slidx));
+    auto const buffer = gsl::make_not_null(std::construct_at(
+        std::to_address(sublist->Buffers->begin() + slidx)));
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = gsl::narrow_cast<u32>((lidx<<6) | slidx) + 1;

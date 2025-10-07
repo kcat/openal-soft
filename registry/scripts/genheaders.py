@@ -289,12 +289,12 @@ EXT_MODULE_PREAMBLE = """
 
 export module openal.ext;
 
-typedef std::int64_t _alsoft_int64_t;
-typedef std::uint64_t _alsoft_uint64_t;
-
 export import openal.efx;
 
 import openal.std;
+
+using _alsoft_int64_t = std::int64_t;
+using _alsoft_uint64_t = std::uint64_t;
 
 extern "C" struct _GUID; /* NOLINT(*-reserved-identifier) */
 """

@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-06 17:35:20.700564+00:00
+ * Last regenerated: 2025-10-07 04:40:44.559476+00:00
  */
 
 module;
@@ -68,12 +68,12 @@ module;
 
 export module openal.ext;
 
-typedef std::int64_t _alsoft_int64_t;
-typedef std::uint64_t _alsoft_uint64_t;
-
 export import openal.efx;
 
 import openal.std;
+
+using _alsoft_int64_t = std::int64_t;
+using _alsoft_uint64_t = std::uint64_t;
 
 extern "C" struct _GUID; /* NOLINT(*-reserved-identifier) */
 

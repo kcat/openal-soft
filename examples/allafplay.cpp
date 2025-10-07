@@ -1394,8 +1394,8 @@ auto main(std::span<std::string_view> args) -> int
         }
 
         almgr.close();
-        almgr.device = loopbackDev.release();
-        almgr.context = loopbackCtx.release();
+        almgr.mDevice = loopbackDev.release();
+        almgr.mContext = loopbackCtx.release();
     }
 
     /* Automate effect cleanup at end of scope (before almgr destructs). */
@@ -1409,8 +1409,8 @@ auto main(std::span<std::string_view> args) -> int
         }
     });
 
-    if(alcIsExtensionPresent(almgr.device, "ALC_EXT_EFX")
-        && alcIsExtensionPresent(almgr.device, "ALC_EXT_DEDICATED"))
+    if(alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX")
+        && alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_DEDICATED"))
     {
         static constexpr auto load_proc = []<typename T>(T &func, gsl::czstring funcname)
         {
@@ -1477,7 +1477,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
+    auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

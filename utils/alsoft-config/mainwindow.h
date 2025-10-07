@@ -78,6 +78,7 @@ private:
 
     void selectDecoderFile(QLineEdit *line, const char *caption);
 
+    [[nodiscard]]
     auto collectHrtfs() const -> QStringList;
 
     void loadConfig(const QString &fname);

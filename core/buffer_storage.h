@@ -4,14 +4,12 @@
 #include <span>
 #include <variant>
 
-#include "ambidefs.h"
+#include "alnumeric.h"
 #include "fmt_traits.h"
 #include "storage_formats.h"
 
 
-using uint = unsigned int;
-
-constexpr bool IsBFormat(FmtChannels chans) noexcept
+constexpr auto IsBFormat(FmtChannels const chans) noexcept -> bool
 { return chans == FmtBFormat2D || chans == FmtBFormat3D; }
 
 /* Super Stereo is considered part of the UHJ family here, since it goes
@@ -19,27 +17,27 @@ constexpr bool IsBFormat(FmtChannels chans) noexcept
  * needs the same consideration as BHJ (three channel result with only two
  * channel input).
  */
-constexpr bool IsUHJ(FmtChannels chans) noexcept
+constexpr auto IsUHJ(FmtChannels const chans) noexcept -> bool
 { return chans == FmtUHJ2 || chans == FmtUHJ3 || chans == FmtUHJ4 || chans == FmtSuperStereo; }
 
 /** Ambisonic formats are either B-Format or UHJ formats. */
-constexpr bool IsAmbisonic(FmtChannels chans) noexcept
+constexpr auto IsAmbisonic(FmtChannels const chans) noexcept -> bool
 { return IsBFormat(chans) || IsUHJ(chans); }
 
-constexpr bool Is2DAmbisonic(FmtChannels chans) noexcept
+constexpr auto Is2DAmbisonic(FmtChannels const chans) noexcept -> bool
 {
     return chans == FmtBFormat2D || chans == FmtUHJ2 || chans == FmtUHJ3
         || chans == FmtSuperStereo;
 }
 
 
-using CallbackType = int(*)(void*, void*, int) noexcept;
+using CallbackType = auto(*)(void*, void*, i32) noexcept -> i32;
 
-using SampleVariant = std::variant<std::span<uint8_t>,
-    std::span<int16_t>,
-    std::span<int32_t>,
-    std::span<float>,
-    std::span<double>,
+using SampleVariant = std::variant<std::span<u8>,
+    std::span<i16>,
+    std::span<i32>,
+    std::span<f32>,
+    std::span<f64>,
     std::span<MulawSample>,
     std::span<AlawSample>,
     std::span<IMA4Data>,
@@ -51,23 +49,23 @@ struct BufferStorage {
 
     SampleVariant mData;
 
-    uint mSampleRate{0u};
+    u32 mSampleRate{0_u32};
     FmtChannels mChannels{FmtMono};
     FmtType mType{FmtShort};
-    uint mSampleLen{0u};
-    uint mBlockAlign{0u};
+    u32 mSampleLen{0_u32};
+    u32 mBlockAlign{0_u32};
 
     AmbiLayout mAmbiLayout{AmbiLayout::FuMa};
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
-    uint mAmbiOrder{0u};
+    u32 mAmbiOrder{0_u32};
 
-    [[nodiscard]] auto bytesFromFmt() const noexcept -> uint { return BytesFromFmt(mType); }
-    [[nodiscard]] auto channelsFromFmt() const noexcept -> uint
+    [[nodiscard]] auto bytesFromFmt() const noexcept -> u32 { return BytesFromFmt(mType); }
+    [[nodiscard]] auto channelsFromFmt() const noexcept -> u32
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
-    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> uint
+    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> u32
     { return channelsFromFmt() * bytesFromFmt(); }
 
-    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> uint
+    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> u32
     {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
         if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();

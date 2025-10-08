@@ -341,12 +341,12 @@ struct DeviceBase {
          */
         ~MixLock() { self->mMixCount.store(mEndVal, std::memory_order_release); }
     };
-    auto getWriteMixLock() noexcept -> MixLock
+    [[nodiscard]] auto getWriteMixLock() noexcept -> MixLock
     {
         /* Increment the mix count at the start of mixing and writing clock
          * info (lsb should be 1).
          */
-        const auto oldCount = mMixCount.fetch_add(1u, std::memory_order_acq_rel);
+        auto const oldCount = mMixCount.fetch_add(1u, std::memory_order_acq_rel);
         return MixLock{this, oldCount+2};
     }
 
@@ -373,15 +373,15 @@ struct DeviceBase {
             + mClockBaseSec.load(std::memory_order_relaxed) + ns;
     }
 
-    static void Process(std::monostate&, const std::size_t) { }
-    void Process(AmbiDecPostProcess &proc, const std::size_t SamplesToDo) const;
-    void Process(HrtfPostProcess &proc, const std::size_t SamplesToDo);
-    void Process(UhjPostProcess &proc, const std::size_t SamplesToDo);
-    void Process(StablizerPostProcess &proc, const std::size_t SamplesToDo);
-    void Process(Bs2bPostProcess &proc, const std::size_t SamplesToDo);
+    static void Process(std::monostate const&, usize const) { }
+    void Process(AmbiDecPostProcess const &proc, usize SamplesToDo) const;
+    void Process(HrtfPostProcess const &proc, usize SamplesToDo);
+    void Process(UhjPostProcess const &proc, usize SamplesToDo);
+    void Process(StablizerPostProcess const &proc, usize SamplesToDo);
+    void Process(Bs2bPostProcess const &proc, usize SamplesToDo);
 
-    void renderSamples(const std::span<void*> outBuffers, const uint numSamples);
-    void renderSamples(void *outBuffer, const uint numSamples, const std::size_t frameStep);
+    void renderSamples(std::span<void*const> outBuffers, u32 numSamples);
+    void renderSamples(void *outBuffer, u32 numSamples, usize frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
     void doDisconnect(std::string&& msg);
@@ -391,7 +391,8 @@ struct DeviceBase {
     { doDisconnect(std::format(std::move(fmt), std::forward<Args>(args)...)); }
 
 private:
-    uint renderSamples(const uint numSamples);
+    [[nodiscard]]
+    auto renderSamples(u32 numSamples) -> u32;
 
 protected:
     explicit DeviceBase(DeviceType type);

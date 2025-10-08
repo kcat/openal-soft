@@ -718,7 +718,6 @@ set(CORE_OBJS
     core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
-    core/buffer_storage.cpp
     core/buffer_storage.h
     core/context.cpp
     core/context.h

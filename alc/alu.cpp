@@ -103,7 +103,7 @@ struct BSincTag;
 struct FastBSincTag;
 
 
-static_assert(!(MaxResamplerPadding&1), "MaxResamplerPadding is not a multiple of two");
+static_assert((MaxResamplerPadding&1) == 0, "MaxResamplerPadding is not a multiple of two");
 
 
 namespace {

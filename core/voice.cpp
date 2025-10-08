@@ -52,8 +52,8 @@ struct NEONTag;
 
 namespace {
 
-static_assert(!(DeviceBase::MixerLineSize&3), "MixerLineSize must be a multiple of 4");
-static_assert(!(MaxResamplerEdge&3), "MaxResamplerEdge is not a multiple of 4");
+static_assert((DeviceBase::MixerLineSize&3) == 0, "MixerLineSize must be a multiple of 4");
+static_assert((MaxResamplerEdge&3) == 0, "MaxResamplerEdge is not a multiple of 4");
 
 constexpr auto PitchLimit = (std::numeric_limits<i32>::max()-MixerFracMask) / MixerFracOne
     / BufferLineSize;

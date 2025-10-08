@@ -559,7 +559,7 @@ def render_set(
         The API set to render.
     registry : reg.Registry
         The registry to which this API set belongs. Used to lookup value ranges.
-    current_header : Header
+    current_file : Header
         The header currently being generated. This is used to determine whether to include API-specific requirements,
         and also to determine whether an annexed API set header needs to be generated.
     include_guard : bool

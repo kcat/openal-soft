@@ -53,9 +53,10 @@ static_assert(GetMarker02Name().size() == HeaderMarkerSize);
 static_assert(GetMarker03Name().size() == HeaderMarkerSize);
 
 
-auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore::Field> fields,
-    const std::span<const HrtfStore::Elevation> elevs, const std::span<const HrirArray> coeffs,
-    const std::span<const ubyte2> delays) -> std::unique_ptr<HrtfStore>
+auto CreateHrtfStore(u32 const rate, u8 const irSize,
+    std::span<HrtfStore::Field const> const fields,
+    std::span<HrtfStore::Elevation const> const elevs, std::span<HrirArray const> const coeffs,
+    std::span<u8x2 const> const delays) -> std::unique_ptr<HrtfStore>
 {
     static_assert(16 <= alignof(HrtfStore));
     static_assert(alignof(HrtfStore::Field) <= alignof(HrtfStore));
@@ -102,7 +103,7 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     auto coeffs_ = std::span{reinterpret_cast<HrirArray*>(std::to_address(storeiter)), irCount};
     std::advance(storeiter, coeffs.size_bytes());
 
-    auto delays_ = std::span{reinterpret_cast<ubyte2*>(std::to_address(storeiter)), irCount};
+    auto delays_ = std::span{reinterpret_cast<u8x2*>(std::to_address(storeiter)), irCount};
     std::advance(storeiter, delays.size_bytes());
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
@@ -124,8 +125,8 @@ auto CreateHrtfStore(uint rate, uint8_t irSize, const std::span<const HrtfStore:
     return Hrtf;
 }
 
-void MirrorLeftHrirs(const std::span<const HrtfStore::Elevation> elevs,
-    std::span<HrirArray> coeffs, std::span<ubyte2> delays)
+void MirrorLeftHrirs(std::span<HrtfStore::Elevation const> const elevs,
+    std::span<HrirArray> coeffs, std::span<u8x2> delays)
 {
     for(const auto &elev : elevs)
     {
@@ -218,7 +219,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     for(size_t i{1};i < evCount;i++)
     {
-        elevs[i-1].azCount = gsl::narrow_cast<ushort>(elevs[i].irOffset - elevs[i-1].irOffset);
+        elevs[i-1].azCount = gsl::narrow_cast<u16>(elevs[i].irOffset - elevs[i-1].irOffset);
         if(elevs[i-1].azCount < MinAzCount || elevs[i-1].azCount > MaxAzCount)
         {
             throw std::runtime_error{std::format(
@@ -226,7 +227,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MinAzCount, MaxAzCount)};
         }
     }
-    elevs.back().azCount = gsl::narrow_cast<ushort>(irCount - elevs.back().irOffset);
+    elevs.back().azCount = gsl::narrow_cast<u16>(irCount - elevs.back().irOffset);
     if(elevs.back().azCount < MinAzCount || elevs.back().azCount > MaxAzCount)
     {
         throw std::runtime_error{std::format(
@@ -235,7 +236,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     }
 
     auto coeffs = std::vector(irCount, HrirArray{});
-    auto delays = std::vector(irCount, ubyte2{});
+    auto delays = std::vector(irCount, u8x2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
@@ -299,11 +300,11 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     elevs[0].irOffset = 0;
     for(size_t i{1};i < evCount;i++)
-        elevs[i].irOffset = gsl::narrow_cast<ushort>(elevs[i-1].irOffset + elevs[i-1].azCount);
-    const auto irCount = gsl::narrow_cast<ushort>(elevs.back().irOffset + elevs.back().azCount);
+        elevs[i].irOffset = gsl::narrow_cast<u16>(elevs[i-1].irOffset + elevs[i-1].azCount);
+    auto const irCount = gsl::narrow_cast<u16>(elevs.back().irOffset + elevs.back().azCount);
 
     auto coeffs = std::vector(irCount, HrirArray{});
-    auto delays = std::vector(irCount, ubyte2{});
+    auto delays = std::vector(irCount, u8x2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
@@ -332,10 +333,10 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
 auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    static constexpr auto SampleType_S16 = ubyte{0};
-    static constexpr auto SampleType_S24 = ubyte{1};
-    static constexpr auto ChanType_LeftOnly = ubyte{0};
-    static constexpr auto ChanType_LeftRight = ubyte{1};
+    static constexpr auto SampleType_S16 = 0_u8;
+    static constexpr auto SampleType_S24 = 1_u8;
+    static constexpr auto ChanType_LeftOnly = 0_u8;
+    static constexpr auto ChanType_LeftRight = 1_u8;
 
     const auto rate = readle<uint32_t>(data);
     const auto sampleType = readle<uint8_t>(data);
@@ -418,12 +419,12 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
     {
         return HrtfStore::Elevation{cur.azCount,
-            gsl::narrow_cast<ushort>(last.azCount + last.irOffset)};
+            gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
     });
-    const auto irTotal = gsl::narrow_cast<ushort>(elevs.back().azCount + elevs.back().irOffset);
+    auto const irTotal = gsl::narrow_cast<u16>(elevs.back().azCount + elevs.back().irOffset);
 
     auto coeffs = std::vector(irTotal, HrirArray{});
-    auto delays = std::vector(irTotal, ubyte2{});
+    auto delays = std::vector(irTotal, u8x2{});
     if(channelType == ChanType_LeftOnly)
     {
         if(sampleType == SampleType_S16)
@@ -448,7 +449,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto invdelay = std::ranges::find_if(ldelays, [](const ubyte delay) noexcept
+        auto const invdelay = std::ranges::find_if(ldelays, [](u8 const delay) noexcept
         { return delay > MaxHrirDelay; });
         if(invdelay != ldelays.end())
         {
@@ -457,8 +458,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MaxHrirDelay)};
         }
 
-        std::ranges::transform(ldelays, ldelays.begin(), [](const ubyte delay) -> ubyte
-        { return gsl::narrow_cast<ubyte>(delay << HrirDelayFracBits); });
+        std::ranges::transform(ldelays, ldelays.begin(), [](u8 const delay) -> u8
+        { return gsl::narrow_cast<u8>(delay << HrirDelayFracBits); });
 
         /* Mirror the left ear responses to the right ear. */
         MirrorLeftHrirs(elevs, coeffs, delays);
@@ -487,7 +488,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto invdelay = std::ranges::find_if(joined_delays, [](const ubyte delay) noexcept
+        auto const invdelay = std::ranges::find_if(joined_delays, [](u8 const delay) noexcept
         { return delay > MaxHrirDelay; });
         if(invdelay != joined_delays.end())
         {
@@ -496,8 +497,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 *invdelay, MaxHrirDelay)};
         }
 
-        std::ranges::transform(joined_delays, joined_delays.begin(), [](const ubyte delay) -> ubyte
-        { return gsl::narrow_cast<ubyte>(delay << HrirDelayFracBits); });
+        std::ranges::transform(joined_delays, joined_delays.begin(), [](u8 const delay) -> u8
+        { return gsl::narrow_cast<u8>(delay << HrirDelayFracBits); });
     }
 
     if(fdCount > 1)
@@ -505,7 +506,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         auto fields_ = std::vector<HrtfStore::Field>(fields.size());
         auto elevs_ = std::vector<HrtfStore::Elevation>(elevs.size());
         auto coeffs_ = std::vector<HrirArray>(coeffs.size());
-        auto delays_ = std::vector<ubyte2>(delays.size());
+        auto delays_ = std::vector<u8x2>(delays.size());
 
         /* Simple reverse for the per-field elements. */
         std::ranges::reverse_copy(fields, fields_.begin());
@@ -533,7 +534,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 -> HrtfStore::Elevation
         {
             return HrtfStore::Elevation{cur.azCount,
-                gsl::narrow_cast<ushort>(last.azCount + last.irOffset)};
+                gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
         });
 
         /* Reverse the order of each field's group of IRs. */
@@ -571,8 +572,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
 auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    static constexpr auto ChanType_LeftOnly = ubyte{0};
-    static constexpr auto ChanType_LeftRight = ubyte{1};
+    static constexpr auto ChanType_LeftOnly = 0_u8;
+    static constexpr auto ChanType_LeftRight = 1_u8;
 
     const auto rate = readle<uint32_t>(data);
     const auto channelType = readle<uint8_t>(data);
@@ -652,12 +653,12 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
     {
         return HrtfStore::Elevation{cur.azCount,
-            gsl::narrow_cast<ushort>(last.azCount + last.irOffset)};
+            gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
     });
-    const auto irTotal = gsl::narrow_cast<ushort>(elevs.back().azCount + elevs.back().irOffset);
+    auto const irTotal = gsl::narrow_cast<u16>(elevs.back().azCount + elevs.back().irOffset);
 
     auto coeffs = std::vector(irTotal, HrirArray{});
-    auto delays = std::vector(irTotal, ubyte2{});
+    auto delays = std::vector(irTotal, u8x2{});
     if(channelType == ChanType_LeftOnly)
     {
         std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
@@ -671,7 +672,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto invdelay = std::ranges::find_if(ldelays, [](const ubyte delay) noexcept
+        auto const invdelay = std::ranges::find_if(ldelays, [](u8 const delay) noexcept
         { return delay > MaxHrirDelay<<HrirDelayFracBits; });
         if(invdelay != ldelays.end())
         {
@@ -696,7 +697,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto invdelay = std::ranges::find_if(joined_delays, [](const ubyte delay) noexcept
+        auto const invdelay = std::ranges::find_if(joined_delays, [](u8 const delay) noexcept
         { return delay > MaxHrirDelay<<HrirDelayFracBits; });
         if(invdelay != joined_delays.end())
         {

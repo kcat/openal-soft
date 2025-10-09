@@ -12,11 +12,11 @@
 #include "opthelpers.h"
 
 
-using ApplyCoeffsT = void(*)(std::span<float2> Values, usize irSize, ConstHrirSpan Coeffs,
+using ApplyCoeffsT = void(*)(std::span<f32x2> Values, usize irSize, ConstHrirSpan Coeffs,
     f32 left, f32 right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-void MixHrtfBase(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+void MixHrtfBase(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     usize const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -42,7 +42,7 @@ void MixHrtfBase(std::span<f32 const> const InSamples, std::span<float2> const A
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     usize const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
@@ -90,7 +90,7 @@ void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<float2> co
 
 template<ApplyCoeffsT ApplyCoeffs>
 void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
-    std::span<FloatBufferLine const> const InSamples, std::span<float2> const AccumSamples,
+    std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChannelState,
     usize const IrSize, usize const SamplesToDo)
 {
@@ -129,7 +129,7 @@ void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const Righ
      */
     auto const accum_inprog = AccumSamples.subspan(SamplesToDo, HrirLength);
     auto const accum_iter = std::ranges::copy(accum_inprog, AccumSamples.begin()).out;
-    std::fill_n(accum_iter, SamplesToDo, float2{});
+    std::fill_n(accum_iter, SamplesToDo, f32x2{});
 }
 
 #endif /* CORE_MIXER_HRTFBASE_H */

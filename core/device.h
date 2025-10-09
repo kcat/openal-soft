@@ -282,7 +282,7 @@ struct DeviceBase {
     alignas(16) std::array<float,BufferLineSize+HrtfHistoryLength> ExtraSampleData{};
 
     /* Persistent storage for HRTF mixing. */
-    alignas(16) std::array<float2,BufferLineSize+HrirLength> HrtfAccumData{};
+    alignas(16) std::array<f32x2,BufferLineSize+HrirLength> HrtfAccumData{};
 
     /* Mixing buffer used by the Dry mix and Real output. */
     al::vector<FloatBufferLine, 16> MixBuffer;

@@ -63,7 +63,7 @@ inline auto set_f4(f32 const l0, f32 const l1, f32 const l2, f32 const l3) -> fl
     return ret;
 }
 
-inline void ApplyCoeffs(std::span<float2> const Values, usize const IrSize,
+inline void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize,
     ConstHrirSpan const Coeffs, f32 const left, f32 const right)
 {
     ASSUME(IrSize >= MinIrLength);
@@ -438,13 +438,13 @@ void Resample_<FastBSincTag,NEONTag>(InterpState const *const state,
 
 
 template<>
-void MixHrtf_<NEONTag>(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+void MixHrtf_<NEONTag>(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 template<>
 void MixHrtfBlend_<NEONTag>(std::span<f32 const> const InSamples,
-    std::span<float2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
+    std::span<f32x2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
     MixHrtfFilter const *const newparams, usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
@@ -453,7 +453,7 @@ void MixHrtfBlend_<NEONTag>(std::span<f32 const> const InSamples,
 
 template<>
 void MixDirectHrtf_<NEONTag>(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
-    std::span<FloatBufferLine const> const InSamples, std::span<float2> const AccumSamples,
+    std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
 {

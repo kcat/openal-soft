@@ -14,7 +14,7 @@ struct HrtfChannelState;
 struct HrtfFilter;
 struct MixHrtfFilter;
 
-using float2 = std::array<f32, 2>;
+using f32x2 = std::array<f32, 2>;
 
 
 inline constexpr auto MixerFracBits = 16_i32;
@@ -84,14 +84,14 @@ void Mix_(std::span<f32 const> InSamples, std::span<f32> OutBuffer, f32 &Current
     f32 TargetGain, usize Counter);
 
 template<typename InstTag>
-void MixHrtf_(std::span<f32 const> InSamples, std::span<float2> AccumSamples, u32 IrSize,
+void MixHrtf_(std::span<f32 const> InSamples, std::span<f32x2> AccumSamples, u32 IrSize,
     MixHrtfFilter const *hrtfparams, usize SamplesToDo);
 template<typename InstTag>
-void MixHrtfBlend_(std::span<f32 const> InSamples, std::span<float2> AccumSamples, u32 IrSize,
+void MixHrtfBlend_(std::span<f32 const> InSamples, std::span<f32x2> AccumSamples, u32 IrSize,
     HrtfFilter const *oldparams, MixHrtfFilter const *newparams, usize SamplesToDo);
 template<typename InstTag>
 void MixDirectHrtf_(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,
-    std::span<FloatBufferLine const> InSamples, std::span<float2> AccumSamples,
+    std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,
     std::span<f32, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState, usize IrSize,
     usize SamplesToDo);
 

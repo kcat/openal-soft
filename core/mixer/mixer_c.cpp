@@ -138,15 +138,15 @@ void DoResample(U const istate, std::span<f32 const> const src, u32 frac, u32 co
     });
 }
 
-void ApplyCoeffs(std::span<float2> const Values, usize const IrSize, ConstHrirSpan const Coeffs,
+void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize, ConstHrirSpan const Coeffs,
     f32 const left, f32 const right) noexcept
 {
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
 
     std::ranges::transform(Values | std::views::take(IrSize), Coeffs, Values.begin(),
-        [left,right](float2 const &value, float2 const &coeff) noexcept -> float2
-    { return float2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
+        [left,right](f32x2 const &value, f32x2 const &coeff) noexcept -> f32x2
+    { return f32x2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
 }
 
 force_inline void MixLine(std::span<f32 const> InSamples, std::span<f32> const dst,
@@ -229,13 +229,13 @@ void Resample_<BSincTag,CTag>(InterpState const *const state, std::span<f32 cons
 
 
 template<>
-void MixHrtf_<CTag>(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+void MixHrtf_<CTag>(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 template<>
 void MixHrtfBlend_<CTag>(std::span<f32 const> const InSamples,
-    std::span<float2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
+    std::span<f32x2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
     MixHrtfFilter const *const newparams, usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
@@ -244,7 +244,7 @@ void MixHrtfBlend_<CTag>(std::span<f32 const> const InSamples,
 
 template<>
 void MixDirectHrtf_<CTag>(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
-    std::span<FloatBufferLine const> const InSamples, std::span<float2> const AccumSamples,
+    std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
 {

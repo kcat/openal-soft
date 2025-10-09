@@ -19,36 +19,36 @@
 
 
 struct HrtfStore {
-    alignas(16) std::atomic<uint> mRef;
+    alignas(16) std::atomic<u32> mRef;
 
-    uint mSampleRate : 24;
-    uint mIrSize : 8;
+    u32 mSampleRate : 24;
+    u32 mIrSize : 8;
 
     struct Field {
-        float distance;
-        ubyte evCount;
+        f32 distance;
+        u8 evCount;
     };
     /* NOTE: Fields are stored *backwards*. mFields.front() is the farthest
      * field, and mFields.back() is the nearest.
      */
-    std::span<const Field> mFields;
+    std::span<Field const> mFields;
 
     struct Elevation {
-        ushort azCount;
-        ushort irOffset;
+        u16 azCount;
+        u16 irOffset;
     };
     std::span<Elevation> mElev;
-    std::span<const HrirArray> mCoeffs;
-    std::span<const ubyte2> mDelays;
+    std::span<HrirArray const> mCoeffs;
+    std::span<u8x2 const> mDelays;
 
-    void getCoeffs(float elevation, float azimuth, float distance, float spread,
-        const HrirSpan coeffs, const std::span<uint,2> delays) const;
+    void getCoeffs(f32 elevation, f32 azimuth, f32 distance, f32 spread,
+        HrirSpan coeffs, std::span<u32, 2> delays) const;
 
     void inc_ref() noexcept;
     void dec_ref() noexcept;
 
-    auto operator new(size_t) -> void* = delete;
-    auto operator new[](size_t) -> void* = delete;
+    auto operator new(usize) -> void* = delete;
+    auto operator new[](usize) -> void* = delete;
     void operator delete[](void*) noexcept = delete;
 
     void operator delete(gsl::owner<void*> block, void*) noexcept
@@ -61,20 +61,20 @@ using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 /* Data set limits must be the same as or more flexible than those defined in
  * the makemhr utility.
  */
-constexpr inline auto MaxHrirDelay = uint{HrtfHistoryLength} - 1u;
+constexpr inline auto MaxHrirDelay = u32{HrtfHistoryLength - 1};
 
-constexpr inline auto HrirDelayFracBits = 2u;
-constexpr inline auto HrirDelayFracOne = 1u << HrirDelayFracBits;
-constexpr inline auto HrirDelayFracHalf = HrirDelayFracOne >> 1u;
+constexpr inline auto HrirDelayFracBits = 2_u32;
+constexpr inline auto HrirDelayFracOne = 1_u32 << HrirDelayFracBits;
+constexpr inline auto HrirDelayFracHalf = HrirDelayFracOne >> 1_u32;
 
 /* The sample rate is stored as a 24-bit integer, so 16MHz is the largest
  * supported.
  */
-constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ffu;
+constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ff_u32;
 
 
-struct EvRadians { float value; };
-struct AzRadians { float value; };
+struct EvRadians { f32 value; };
+struct AzRadians { f32 value; };
 struct AngularPoint {
     EvRadians Elev;
     AzRadians Azim;
@@ -82,13 +82,13 @@ struct AngularPoint {
 
 
 class DirectHrtfState {
-    explicit DirectHrtfState(size_t numchans) : mChannels{numchans} { }
+    explicit DirectHrtfState(usize const numchans) : mChannels{numchans} { }
 
 public:
-    std::array<float,BufferLineSize> mTemp{};
+    std::array<f32, BufferLineSize> mTemp{};
 
     /* HRTF filter state for dry buffer content */
-    uint mIrSize{0u};
+    u32 mIrSize{0};
     al::FlexArray<HrtfChannelState> mChannels;
 
     /**
@@ -97,18 +97,18 @@ public:
      * high-frequency gains for the decoder. The calculated impulse responses
      * are ordered and scaled according to the matrix input.
      */
-    void build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
-        const std::span<const AngularPoint> AmbiPoints,
-        const std::span<const std::array<float,MaxAmbiChannels>> AmbiMatrix,
-        const float XOverFreq, const std::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain);
+    void build(HrtfStore const *Hrtf, u32 irSize, bool perHrirMin,
+        std::span<AngularPoint const> AmbiPoints,
+        std::span<std::array<f32, MaxAmbiChannels> const> AmbiMatrix, f32 XOverFreq,
+        std::span<f32 const, MaxAmbiOrder+1> AmbiOrderHFGain);
 
-    static auto Create(size_t num_chans) -> std::unique_ptr<DirectHrtfState>;
+    static auto Create(usize num_chans) -> std::unique_ptr<DirectHrtfState>;
 
     DEF_FAM_NEWDEL(DirectHrtfState, mChannels)
 };
 
 
 auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::string>;
-auto GetLoadedHrtf(const std::string_view name, const uint devrate) -> HrtfStorePtr;
+auto GetLoadedHrtf(std::string_view name, u32 devrate) -> HrtfStorePtr;
 
 #endif /* CORE_HRTF_H */

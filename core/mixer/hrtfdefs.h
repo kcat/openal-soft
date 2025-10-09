@@ -8,12 +8,9 @@
 #include "core/filters/splitter.h"
 
 
-using float2 = std::array<f32, 2>;
-using ubyte = u8;
-using ubyte2 = std::array<ubyte,2>;
-using ushort = u16;
-using uint = u32;
-using uint2 = std::array<u32, 2>;
+using u8x2 = std::array<u8, 2>;
+using u32x2 = std::array<u32, 2>;
+using f32x2 = std::array<f32, 2>;
 
 constexpr auto HrtfHistoryBits = 6_u32;
 constexpr auto HrtfHistoryLength = 1_u32 << HrtfHistoryBits;
@@ -25,20 +22,20 @@ constexpr auto HrirMask = HrirLength - 1_u32;
 
 constexpr auto MinIrLength = 8_u32;
 
-using HrirArray = std::array<float2, HrirLength>;
-using HrirSpan = std::span<float2, HrirLength>;
-using ConstHrirSpan = std::span<float2 const, HrirLength>;
+using HrirArray = std::array<f32x2, HrirLength>;
+using HrirSpan = std::span<f32x2, HrirLength>;
+using ConstHrirSpan = std::span<f32x2 const, HrirLength>;
 
 struct MixHrtfFilter {
     ConstHrirSpan const Coeffs;
-    uint2 Delay;
+    u32x2 Delay;
     f32 Gain;
     f32 GainStep;
 };
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
-    uint2 Delay;
+    u32x2 Delay;
     f32 Gain;
 };
 

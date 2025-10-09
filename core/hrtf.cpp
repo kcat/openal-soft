@@ -8,7 +8,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <format>
@@ -58,11 +57,11 @@ struct HrtfEntry {
 
 struct LoadedHrtf {
     std::string mFilename;
-    uint mSampleRate{};
+    u32 mSampleRate{};
     std::unique_ptr<HrtfStore> mEntry;
 
     template<typename T, typename U>
-    LoadedHrtf(T&& name, uint srate, U&& entry)
+    LoadedHrtf(T&& name, u32 const srate, U&& entry)
         : mFilename{std::forward<T>(name)}, mSampleRate{srate}, mEntry{std::forward<U>(entry)}
     { }
     LoadedHrtf(LoadedHrtf&&) = default;
@@ -75,7 +74,7 @@ struct LoadedHrtf {
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr auto PassthruCoeff = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
+constexpr auto PassthruCoeff = gsl::narrow_cast<f32>(1.0/std::numbers::sqrt2);
 
 auto LoadedHrtfLock = std::mutex{};
 auto LoadedHrtfs = std::vector<LoadedHrtf>{};
@@ -92,8 +91,8 @@ auto EnumeratedHrtfs = std::vector<HrtfEntry>{};
 class databuf final : public std::streambuf {
     auto underflow() -> int_type final { return traits_type::eof(); }
 
-    auto seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode)
-        -> pos_type final
+    auto seekoff(off_type const offset, std::ios_base::seekdir const whence,
+        std::ios_base::openmode const mode) -> pos_type final
     {
         if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
             return traits_type::eof();
@@ -126,7 +125,7 @@ class databuf final : public std::streambuf {
         return gptr() - eback();
     }
 
-    auto seekpos(pos_type pos, std::ios_base::openmode mode) -> pos_type final
+    auto seekpos(pos_type const pos, std::ios_base::openmode const mode) -> pos_type final
     {
         // Simplified version of seekoff
         if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
@@ -135,12 +134,12 @@ class databuf final : public std::streambuf {
         if(pos < 0 || pos > egptr()-eback())
             return traits_type::eof();
 
-        setg(eback(), eback()+gsl::narrow_cast<size_t>(pos), egptr());
+        setg(eback(), eback()+gsl::narrow_cast<usize>(pos), egptr());
         return pos;
     }
 
 public:
-    explicit databuf(const std::span<char_type> data) noexcept
+    explicit databuf(std::span<char_type> const data) noexcept
     {
         setg(data.data(), data.data(), std::to_address(data.end()));
     }
@@ -156,27 +155,27 @@ public:
 };
 
 
-struct IdxBlend { uint idx; float blend; };
+struct IdxBlend { u32 idx; f32 blend; };
 /* Calculate the elevation index given the polar elevation in radians. This
  * will return an index between 0 and (evcount - 1).
  */
-auto CalcEvIndex(uint evcount, float ev) -> IdxBlend
+auto CalcEvIndex(u32 evcount, f32 ev) -> IdxBlend
 {
-    ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * gsl::narrow_cast<float>(evcount-1);
+    ev = (std::numbers::inv_pi_v<f32>*ev + 0.5f) * gsl::narrow_cast<f32>(evcount-1);
 
     const auto idx = float2uint(ev);
-    return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<float>(idx)};
+    return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<f32>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1).
  */
-auto CalcAzIndex(uint azcount, float az) -> IdxBlend
+auto CalcAzIndex(u32 azcount, f32 az) -> IdxBlend
 {
-    az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * gsl::narrow_cast<float>(azcount);
+    az = (std::numbers::inv_pi_v<f32>*0.5f*az + 1.0f) * gsl::narrow_cast<f32>(azcount);
 
     const auto idx = float2uint(az);
-    return IdxBlend{idx%azcount, az-gsl::narrow_cast<float>(idx)};
+    return IdxBlend{idx%azcount, az-gsl::narrow_cast<f32>(idx)};
 }
 
 } // namespace
@@ -185,14 +184,14 @@ auto CalcAzIndex(uint azcount, float az) -> IdxBlend
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float spread,
-    const HrirSpan coeffs, const std::span<uint,2> delays) const
+void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const distance,
+    f32 const spread, HrirSpan const coeffs, std::span<u32, 2> const delays) const
 {
-    const auto dirfact = 1.0f - (std::numbers::inv_pi_v<float>/2.0f * spread);
+    auto const dirfact = 1.0f - (std::numbers::inv_pi_v<f32>/2.0f * spread);
 
     auto ebase = 0_uz;
-    const auto field = std::ranges::find_if(mFields | std::views::take(mFields.size()-1),
-        [&ebase,distance](const Field &fd) noexcept -> bool
+    auto const field = std::ranges::find_if(mFields | std::views::take(mFields.size()-1),
+        [&ebase,distance](Field const &fd) noexcept -> bool
     {
         if(distance >= fd.distance)
             return true;
@@ -201,17 +200,17 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
     });
 
     /* Calculate the elevation indices. */
-    const auto elev0 = CalcEvIndex(field->evCount, elevation);
-    const auto elev1_idx = size_t{std::min(elev0.idx+1u, field->evCount-1u)};
-    const auto ir0offset = size_t{mElev[ebase + elev0.idx].irOffset};
-    const auto ir1offset = size_t{mElev[ebase + elev1_idx].irOffset};
+    auto const elev0 = CalcEvIndex(field->evCount, elevation);
+    auto const elev1_idx = usize{std::min(elev0.idx+1u, field->evCount-1u)};
+    auto const ir0offset = usize{mElev[ebase + elev0.idx].irOffset};
+    auto const ir1offset = usize{mElev[ebase + elev1_idx].irOffset};
 
     /* Calculate azimuth indices. */
-    const auto az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount, azimuth);
-    const auto az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount, azimuth);
+    auto const az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount, azimuth);
+    auto const az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount, azimuth);
 
     /* Calculate the HRIR indices to blend. */
-    const auto idx = std::array{
+    auto const idx = std::array{
         ir0offset + az0.idx,
         ir0offset + ((az0.idx+1) % mElev[ebase + elev0.idx].azCount),
         ir1offset + az1.idx,
@@ -220,24 +219,24 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
-    const auto blend = std::array{
+    auto const blend = std::array{
         (1.0f-elev0.blend) * (1.0f-az0.blend) * dirfact,
         (1.0f-elev0.blend) * (     az0.blend) * dirfact,
         (     elev0.blend) * (1.0f-az1.blend) * dirfact,
         (     elev0.blend) * (     az1.blend) * dirfact};
 
     /* Calculate the blended HRIR delays. */
-    auto d = gsl::narrow_cast<float>(mDelays[idx[0]][0])*blend[0]
-        + gsl::narrow_cast<float>(mDelays[idx[1]][0])*blend[1]
-        + gsl::narrow_cast<float>(mDelays[idx[2]][0])*blend[2]
-        + gsl::narrow_cast<float>(mDelays[idx[3]][0])*blend[3];
-    delays[0] = fastf2u(d * float{1.0f/HrirDelayFracOne});
+    auto d = gsl::narrow_cast<f32>(mDelays[idx[0]][0])*blend[0]
+        + gsl::narrow_cast<f32>(mDelays[idx[1]][0])*blend[1]
+        + gsl::narrow_cast<f32>(mDelays[idx[2]][0])*blend[2]
+        + gsl::narrow_cast<f32>(mDelays[idx[3]][0])*blend[3];
+    delays[0] = fastf2u(d * f32{1.0f/HrirDelayFracOne});
 
-    d = gsl::narrow_cast<float>(mDelays[idx[0]][1])*blend[0]
-        + gsl::narrow_cast<float>(mDelays[idx[1]][1])*blend[1]
-        + gsl::narrow_cast<float>(mDelays[idx[2]][1])*blend[2]
-        + gsl::narrow_cast<float>(mDelays[idx[3]][1])*blend[3];
-    delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
+    d = gsl::narrow_cast<f32>(mDelays[idx[0]][1])*blend[0]
+        + gsl::narrow_cast<f32>(mDelays[idx[1]][1])*blend[1]
+        + gsl::narrow_cast<f32>(mDelays[idx[2]][1])*blend[2]
+        + gsl::narrow_cast<f32>(mDelays[idx[3]][1])*blend[3];
+    delays[1] = fastf2u(d * f32{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
@@ -247,7 +246,7 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
     {
         const auto joined_coeffs = coeffs | std::views::join;
         std::ranges::transform(mCoeffs[idx[c]] | std::views::join, joined_coeffs,
-            joined_coeffs.begin(), [mult = blend[c]](const float src, const float coeff) -> float
+            joined_coeffs.begin(), [mult = blend[c]](f32 const src, f32 const coeff) -> f32
         {
             return src*mult + coeff;
         });
@@ -255,50 +254,50 @@ void HrtfStore::getCoeffs(float elevation, float azimuth, float distance, float 
 }
 
 
-auto DirectHrtfState::Create(size_t num_chans) -> std::unique_ptr<DirectHrtfState>
+auto DirectHrtfState::Create(usize const num_chans) -> std::unique_ptr<DirectHrtfState>
 { return std::unique_ptr<DirectHrtfState>{new(FamCount{num_chans}) DirectHrtfState{num_chans}}; }
 
-void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
-    const std::span<const AngularPoint> AmbiPoints,
-    const std::span<const std::array<float,MaxAmbiChannels>> AmbiMatrix,
-    const float XOverFreq, const std::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
+void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool const perHrirMin,
+    std::span<AngularPoint const> const AmbiPoints,
+    std::span<std::array<f32, MaxAmbiChannels> const> const AmbiMatrix,
+    f32 const XOverFreq, std::span<f32 const, MaxAmbiOrder+1> const AmbiOrderHFGain)
 {
-    using double2 = std::array<double,2>;
+    using f64x2 = std::array<f64, 2>;
     struct ImpulseResponse {
         ConstHrirSpan hrir;
-        uint ldelay, rdelay;
+        u32 ldelay, rdelay;
     };
 
-    const auto xover_norm = double{XOverFreq} / Hrtf->mSampleRate;
-    mChannels[0].mSplitter.init(gsl::narrow_cast<float>(xover_norm));
+    auto const xover_norm = f64{XOverFreq} / Hrtf->mSampleRate;
+    mChannels[0].mSplitter.init(gsl::narrow_cast<f32>(xover_norm));
     std::ranges::fill(mChannels | std::views::transform(&HrtfChannelState::mSplitter)
         | std::views::drop(1), mChannels[0].mSplitter);
 
     std::ranges::transform(std::views::iota(0_uz, mChannels.size()), (mChannels
         | std::views::transform(&HrtfChannelState::mHfScale)).begin(),
-        [AmbiOrderHFGain](const size_t idx)
+        [AmbiOrderHFGain](usize const idx)
     {
-        const auto order = AmbiIndex::OrderFromChannel[idx];
+        auto const order = AmbiIndex::OrderFromChannel[idx];
         return AmbiOrderHFGain[order];
     });
 
-    auto min_delay = uint{HrtfHistoryLength*HrirDelayFracOne};
-    auto max_delay = 0u;
+    auto min_delay = u32{HrtfHistoryLength * HrirDelayFracOne};
+    auto max_delay = 0_u32;
     auto impulses = std::vector<ImpulseResponse>{};
     impulses.reserve(AmbiPoints.size());
     std::ranges::transform(AmbiPoints, std::back_inserter(impulses),
-        [Hrtf,&max_delay,&min_delay](const AngularPoint &pt) -> ImpulseResponse
+        [Hrtf,&max_delay,&min_delay](AngularPoint const &pt) -> ImpulseResponse
     {
-        auto &field = Hrtf->mFields[0];
-        const auto elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
-        const auto elev1_idx = std::min(elev0.idx+1_uz, field.evCount-1_uz);
-        const auto ir0offset = Hrtf->mElev[elev0.idx].irOffset;
-        const auto ir1offset = Hrtf->mElev[elev1_idx].irOffset;
+        auto const &field = Hrtf->mFields[0];
+        auto const elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
+        auto const elev1_idx = std::min(elev0.idx+1_uz, field.evCount-1_uz);
+        auto const ir0offset = Hrtf->mElev[elev0.idx].irOffset;
+        auto const ir1offset = Hrtf->mElev[elev1_idx].irOffset;
 
-        const auto az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount, pt.Azim.value);
-        const auto az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount, pt.Azim.value);
+        auto const az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount, pt.Azim.value);
+        auto const az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount, pt.Azim.value);
 
-        const auto idx = std::array{
+        auto const idx = std::array{
             ir0offset + az0.idx,
             ir0offset + ((az0.idx+1) % Hrtf->mElev[elev0.idx].azCount),
             ir1offset + az1.idx,
@@ -316,33 +315,33 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     });
 
     TRACE("Min delay: {:.2f}, max delay: {:.2f}, FIR length: {}",
-        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
+        min_delay/f64{HrirDelayFracOne}, max_delay/f64{HrirDelayFracOne}, irSize);
 
-    static constexpr auto hrir_delay_round = [](const uint d) noexcept -> uint
+    static constexpr auto hrir_delay_round = [](u32 const d) noexcept -> u32
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
 
-    auto tmpres = std::vector<std::array<double2,HrirLength>>(mChannels.size());
+    auto tmpres = std::vector<std::array<f64x2, HrirLength>>(mChannels.size());
     max_delay = 0;
     std::ignore = std::ranges::mismatch(impulses, AmbiMatrix,
-        [perHrirMin,min_delay,&max_delay,&tmpres](const ImpulseResponse &impulse,
-            const std::span<const float,MaxAmbiChannels> matrixline)
+        [perHrirMin,min_delay,&max_delay,&tmpres](ImpulseResponse const &impulse,
+            std::span<f32 const, MaxAmbiChannels> const matrixline)
     {
-        const auto hrir = impulse.hrir;
-        const auto base_delay = perHrirMin ? std::min(impulse.ldelay, impulse.rdelay) : min_delay;
-        const auto ldelay = hrir_delay_round(impulse.ldelay - base_delay);
-        const auto rdelay = hrir_delay_round(impulse.rdelay - base_delay);
+        auto const hrir = impulse.hrir;
+        auto const base_delay = perHrirMin ? std::min(impulse.ldelay, impulse.rdelay) : min_delay;
+        auto const ldelay = hrir_delay_round(impulse.ldelay - base_delay);
+        auto const rdelay = hrir_delay_round(impulse.rdelay - base_delay);
         max_delay = std::max(max_delay, std::max(impulse.ldelay, impulse.rdelay) - base_delay);
 
         std::ignore = std::ranges::mismatch(tmpres, matrixline,
-            [hrir,ldelay,rdelay](std::array<double2,HrirLength> &result, const double mult)
+            [hrir,ldelay,rdelay](std::array<f64x2, HrirLength> &result, f64 const mult)
         {
-            const auto lresult = result | std::views::drop(ldelay) | std::views::elements<0>;
+            auto const lresult = result | std::views::drop(ldelay) | std::views::elements<0>;
             std::ranges::transform(hrir | std::views::elements<0>, lresult, lresult.begin(),
-                std::plus{}, [mult](const double coeff) noexcept { return coeff*mult; });
+                std::plus{}, [mult](f64 const coeff) noexcept { return coeff*mult; });
 
-            const auto rresult = result | std::views::drop(rdelay) | std::views::elements<1>;
+            auto const rresult = result | std::views::drop(rdelay) | std::views::elements<1>;
             std::ranges::transform(hrir | std::views::elements<1>, rresult, rresult.begin(),
-                std::plus{}, [mult](const double coeff) noexcept { return coeff*mult; });
+                std::plus{}, [mult](f64 const coeff) noexcept { return coeff*mult; });
             return true;
         });
         return true;
@@ -352,24 +351,24 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     constexpr auto join_join = std::views::join | std::views::join;
     std::ignore = std::ranges::transform(tmpres | join_join,
         (mChannels | std::views::transform(&HrtfChannelState::mCoeffs) | join_join).begin(),
-        [](const double in) noexcept { return gsl::narrow_cast<float>(in); });
+        [](f64 const in) noexcept { return gsl::narrow_cast<f32>(in); });
     tmpres.clear();
 
     const auto max_length = std::min(hrir_delay_round(max_delay) + irSize, HrirLength);
-    TRACE("New max delay: {:.2f}, FIR length: {}", max_delay/double{HrirDelayFracOne}, max_length);
+    TRACE("New max delay: {:.2f}, FIR length: {}", max_delay/f64{HrirDelayFracOne}, max_length);
     mIrSize = max_length;
 }
 
 
 namespace {
 
-auto checkName(const std::string_view name) -> bool
+auto checkName(std::string_view const name) -> bool
 {
     using std::ranges::find;
     return find(EnumeratedHrtfs, name, &HrtfEntry::mDispName) != EnumeratedHrtfs.end();
 }
 
-void AddFileEntry(const std::string_view filename)
+void AddFileEntry(std::string_view const filename)
 {
     /* Check if this file has already been enumerated. */
     if(std::ranges::find(EnumeratedHrtfs, filename,&HrtfEntry::mFilename) != EnumeratedHrtfs.end())
@@ -381,10 +380,10 @@ void AddFileEntry(const std::string_view filename)
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update).
      */
-    const auto namepos = std::max(filename.rfind('/')+1, filename.rfind('\\')+1);
-    const auto extpos = filename.substr(namepos).rfind('.');
+    auto const namepos = std::max(filename.rfind('/')+1, filename.rfind('\\')+1);
+    auto const extpos = filename.substr(namepos).rfind('.');
 
-    const auto basename = (extpos == std::string_view::npos) ?
+    auto const basename = (extpos == std::string_view::npos) ?
         filename.substr(namepos) : filename.substr(namepos, extpos);
 
     auto count = 1;
@@ -392,14 +391,14 @@ void AddFileEntry(const std::string_view filename)
     while(checkName(newname))
         newname = std::format("{} #{}", basename, ++count);
 
-    const auto &entry = EnumeratedHrtfs.emplace_back(newname, filename);
+    auto const &entry = EnumeratedHrtfs.emplace_back(newname, filename);
     TRACE("Adding file entry \"{}\"", entry.mFilename);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(const std::string_view dispname, uint residx)
+void AddBuiltInEntry(std::string_view const dispname, u32 const residx)
 {
     auto filename = std::format("!{}_{}", residx, dispname);
 
@@ -417,14 +416,14 @@ void AddBuiltInEntry(const std::string_view dispname, uint residx)
     while(checkName(newname))
         newname = std::format("{} #{}", dispname, ++count);
 
-    const auto &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
+    auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
     TRACE("Adding built-in entry \"{}\"", entry.mFilename);
 }
 
 } // namespace
 
 
-auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::string>
+auto EnumerateHrtf(std::optional<std::string> const pathopt) -> std::vector<std::string>
 {
     auto enumlock = std::lock_guard{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
@@ -463,17 +462,17 @@ auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::strin
     return list;
 }
 
-auto GetLoadedHrtf(const std::string_view name, const uint devrate) -> HrtfStorePtr
+auto GetLoadedHrtf(std::string_view const name, u32 const devrate) -> HrtfStorePtr
 try {
     if(devrate > MaxHrtfSampleRate)
     {
         WARN("Device sample rate too large for HRTF ({}hz > {}hz)", devrate, MaxHrtfSampleRate);
         return nullptr;
     }
-    const auto fname = std::invoke([name]() -> std::string
+    auto const fname = std::invoke([name]() -> std::string
     {
-        auto enumlock = std::lock_guard{EnumeratedHrtfLock};
-        auto entry_iter = std::ranges::find(EnumeratedHrtfs, name, &HrtfEntry::mDispName);
+        auto const enumlock = std::lock_guard{EnumeratedHrtfLock};
+        auto const entry_iter = std::ranges::find(EnumeratedHrtfs, name, &HrtfEntry::mDispName);
         if(entry_iter == EnumeratedHrtfs.cend())
             return std::string{};
         return entry_iter->mFilename;
@@ -481,9 +480,9 @@ try {
     if(fname.empty())
         return nullptr;
 
-    auto loadlock = std::lock_guard{LoadedHrtfLock};
+    auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](LoadedHrtf &hrtf, const std::string &filename) -> bool
+        [devrate](LoadedHrtf const &hrtf, std::string const &filename) -> bool
     {
         return hrtf.mSampleRate < devrate
             || (hrtf.mSampleRate == devrate && hrtf.mFilename < filename);
@@ -505,7 +504,7 @@ try {
     if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
     {
         TRACE("Loading built-in HRTF {}...", residx);
-        auto res = GetHrtfResource(residx);
+        auto const res = GetHrtfResource(residx);
         if(res.empty())
         {
             ERR("Could not get resource {}, {}", residx, name);
@@ -533,13 +532,13 @@ try {
 
     if(hrtf->mSampleRate != devrate)
     {
-        TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, uint{hrtf->mSampleRate}, devrate);
+        TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, u32{hrtf->mSampleRate}, devrate);
 
         /* Resample all the IRs. */
-        auto inout = std::array<std::array<double,HrirLength>,2>{};
+        auto inout = std::array<std::array<f64, HrirLength>, 2>{};
         auto rs = PPhaseResampler{};
         rs.init(hrtf->mSampleRate, devrate);
-        std::ranges::for_each(hrtf->mCoeffs, [&inout,&rs](const HrirArray &const_coeffs)
+        std::ranges::for_each(hrtf->mCoeffs, [&inout,&rs](HrirArray const &const_coeffs)
         {
             /* NOLINTNEXTLINE(*-const-cast) */
             auto coeffs = std::span{const_cast<HrirArray&>(const_coeffs)};
@@ -548,26 +547,26 @@ try {
             std::ranges::copy(coeffs0, inout[0].begin());
             rs.process(inout[0], inout[1]);
             std::ranges::transform(inout[1], coeffs0.begin(),
-                [](const double d) noexcept { return gsl::narrow_cast<float>(d); });
+                [](f64 const d) noexcept { return gsl::narrow_cast<f32>(d); });
 
             auto coeffs1 = coeffs | std::views::elements<1>;
             std::ranges::copy(coeffs1, inout[0].begin());
             rs.process(inout[0], inout[1]);
             std::ranges::transform(inout[1], coeffs1.begin(),
-                [](const double d) noexcept { return gsl::narrow_cast<float>(d); });
+                [](f64 const d) noexcept { return gsl::narrow_cast<f32>(d); });
         });
         rs = {};
 
         /* Scale the delays for the new sample rate. */
         auto max_delay = 0.0f;
-        auto new_delays = std::vector<float>(hrtf->mDelays.size()*2_uz);
-        const auto rate_scale = gsl::narrow_cast<float>(devrate)
-            / gsl::narrow_cast<float>(uint{hrtf->mSampleRate});
+        auto new_delays = std::vector<f32>(hrtf->mDelays.size()*2_uz);
+        auto const rate_scale = gsl::narrow_cast<f32>(devrate)
+            / gsl::narrow_cast<f32>(u32{hrtf->mSampleRate});
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
-            [&max_delay,rate_scale](const ubyte oldval)
+            [&max_delay,rate_scale](u8 const oldval)
         {
-            const auto ret = std::round(gsl::narrow_cast<float>(oldval) * rate_scale)
-                / float{HrirDelayFracOne};
+            auto const ret = std::round(gsl::narrow_cast<f32>(oldval) * rate_scale)
+                / f32{HrirDelayFracOne};
             max_delay = std::max(max_delay, ret);
             return ret;
         });
@@ -576,26 +575,25 @@ try {
          * shrinking the head radius; not ideal but better than a per-delay
          * clamp).
          */
-        auto delay_scale = float{HrirDelayFracOne};
+        auto delay_scale = f32{HrirDelayFracOne};
         if(max_delay > MaxHrirDelay)
         {
             WARN("Resampled delay exceeds max ({:.2f} > {})", max_delay, MaxHrirDelay);
-            delay_scale *= float{MaxHrirDelay} / max_delay;
+            delay_scale *= f32{MaxHrirDelay} / max_delay;
         }
 
         /* NOLINTNEXTLINE(*-const-cast) */
-        auto delays = std::span{const_cast<ubyte2*>(hrtf->mDelays.data()), hrtf->mDelays.size()};
+        auto const delays = std::span{const_cast<u8x2*>(hrtf->mDelays.data()),
+            hrtf->mDelays.size()};
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
-            [delay_scale](const float fdelay) -> ubyte
-        {
-            return gsl::narrow_cast<ubyte>(float2int(fdelay*delay_scale + 0.5f));
-        });
+            [delay_scale](f32 const fdelay) -> u8
+        { return gsl::narrow_cast<u8>(float2int(fdelay*delay_scale + 0.5f)); });
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        const auto newIrSize = std::round(gsl::narrow_cast<float>(uint{hrtf->mIrSize})*rate_scale);
-        hrtf->mIrSize = gsl::narrow_cast<uint8_t>(std::min(float{HrirLength}, newIrSize));
+        auto const newIrSize = std::round(gsl::narrow_cast<f32>(u32{hrtf->mIrSize})*rate_scale);
+        hrtf->mIrSize = gsl::narrow_cast<u8>(std::min(f32{HrirLength}, newIrSize));
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 
@@ -613,22 +611,22 @@ catch(std::exception& e) {
 
 void HrtfStore::inc_ref() noexcept
 {
-    const auto ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
+    auto const ref = mRef.fetch_add(1, std::memory_order_acq_rel)+1;
     TRACE("HrtfStore {} increasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
 }
 
 void HrtfStore::dec_ref() noexcept
 {
-    const auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
+    auto const ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
     TRACE("HrtfStore {} decreasing refcount to {}", decltype(std::declval<void*>()){this}, ref);
     if(ref == 0)
     {
-        const auto loadlock = std::lock_guard{LoadedHrtfLock};
+        auto const loadlock = std::lock_guard{LoadedHrtfLock};
 
         /* Go through and remove all unused HRTFs. */
         auto iter = std::ranges::remove_if(LoadedHrtfs, [](LoadedHrtf &hrtf) -> bool
         {
-            if(auto *entry = hrtf.mEntry.get(); entry && entry->mRef.load() == 0)
+            if(auto const *const entry = hrtf.mEntry.get(); entry && entry->mRef.load() == 0)
             {
                 TRACE("Unloading unused HRTF {}", hrtf.mFilename);
                 hrtf.mEntry = nullptr;

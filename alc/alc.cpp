@@ -198,7 +198,6 @@ using std::chrono::seconds;
 using std::chrono::nanoseconds;
 
 using voidp = void*;
-using float2 = std::array<float,2>;
 
 
 auto gProcessRunning = true;
@@ -1466,7 +1465,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     device->Limiter = nullptr;
     device->ChannelDelays = nullptr;
 
-    device->HrtfAccumData.fill(float2{});
+    device->HrtfAccumData.fill(f32x2{});
 
     device->Dry.AmbiMap.fill(BFChannelConfig{});
     device->Dry.Buffer = {};

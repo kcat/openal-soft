@@ -138,7 +138,7 @@ auto NfcScale = 1.0f;
 
 
 using HrtfDirectMixerFunc = void(*)(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,
-    std::span<FloatBufferLine const> InSamples, std::span<float2> AccumSamples,
+    std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,
     std::span<f32, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState, usize IrSize,
     usize SamplesToDo);
 

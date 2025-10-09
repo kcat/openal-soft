@@ -34,9 +34,6 @@ using EaxEffectProps = std::variant<std::monostate,
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
-template<typename... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
 {
     return std::visit(overloaded{

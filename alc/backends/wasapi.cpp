@@ -187,9 +187,6 @@ constexpr auto ChannelMask_X7144 = AudioObjectType_FrontLeft | AudioObjectType_F
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
-template<typename... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 
 template<typename T>
 struct CoTaskMemDeleter {

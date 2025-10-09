@@ -422,7 +422,8 @@ auto LafStream::readChunk() -> u32
      * enabled track. The last chunk may be shorter if there isn't enough time
      * remaining for a full second.
      */
-    const auto numsamples = std::min(u64{mSampleRate}, mSampleCount-mCurrentSample);
+    auto const numsamples = gsl::narrow<usize>(std::min(u64{mSampleRate},
+        mSampleCount-mCurrentSample));
 
     /* Choose the smaller of std::streamsize or isize, to ensure neither the
      * read size or range drop size get truncated.

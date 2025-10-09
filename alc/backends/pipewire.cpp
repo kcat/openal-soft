@@ -163,7 +163,7 @@ private:
     std::vector<std::byte> mStorage;
     spa_pod_builder mPod{};
 
-    auto overflow(uint32_t size) noexcept -> int
+    auto overflow(u32 const size) noexcept -> i32
     {
         try {
             mStorage.resize(size);
@@ -178,12 +178,12 @@ private:
     }
 
 public:
-    explicit PodDynamicBuilder(uint32_t initSize=1024)
+    explicit PodDynamicBuilder(u32 const initSize=1024)
         : mStorage(initSize), mPod{make_pod_builder(mStorage.data(), initSize)}
     {
         static constexpr auto callbacks = spa_pod_builder_callbacks{
             .version = SPA_VERSION_POD_BUILDER_CALLBACKS,
-            .overflow = [](void *data, uint32_t size) noexcept
+            .overflow = [](void *data, u32 const size) noexcept
             { return static_cast<PodDynamicBuilder*>(data)->overflow(size); }
         };
 
@@ -205,7 +205,7 @@ using std::chrono::nanoseconds;
 using uint = unsigned int;
 
 
-auto check_version(const char *version) -> bool
+auto check_version(gsl::czstring const version) -> bool
 {
     /* There doesn't seem to be a function to get the version as an integer, so
      * instead we have to parse the string, which hopefully won't break in the
@@ -280,7 +280,7 @@ auto pwire_load() -> bool
         return false;
     }
 
-    static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+    static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
     {
         using func_t = std::remove_reference_t<decltype(func)>;
         auto funcresult = GetSymbol(pwire_handle, name);
@@ -353,28 +353,28 @@ constexpr bool pwire_load() { return true; }
 #endif
 
 /* Helpers for retrieving values from params */
-template<uint32_t T> struct PodInfo { };
+template<u32 T [[maybe_unused]]> struct PodInfo { };
 
 template<>
 struct PodInfo<SPA_TYPE_Int> {
-    using Type = int32_t;
-    static auto get_value(const spa_pod *pod, int32_t *val)
+    using Type = i32;
+    static auto get_value(const spa_pod *pod, i32 *val)
     { return spa_pod_get_int(pod, val); }
 };
 template<>
 struct PodInfo<SPA_TYPE_Id> {
-    using Type = uint32_t;
-    static auto get_value(const spa_pod *pod, uint32_t *val)
+    using Type = u32;
+    static auto get_value(const spa_pod *pod, u32 *val)
     { return spa_pod_get_id(pod, val); }
 };
 
-template<uint32_t T>
+template<u32 T>
 using Pod_t = PodInfo<T>::Type;
 
-template<uint32_t T>
+template<u32 T>
 auto get_array_span(const spa_pod *pod) -> std::span<const Pod_t<T>>
 {
-    auto nvals = uint32_t{};
+    auto nvals = u32{};
     if(auto *v = spa_pod_get_array(pod, &nvals))
     {
         if(get_array_value_type(pod) == T)
@@ -383,7 +383,7 @@ auto get_array_span(const spa_pod *pod) -> std::span<const Pod_t<T>>
     return {};
 }
 
-template<uint32_t T>
+template<u32 T>
 auto get_value(const spa_pod *value) -> std::optional<Pod_t<T>>
 {
     auto val = Pod_t<T>{};
@@ -436,12 +436,14 @@ using PwStreamPtr = std::unique_ptr<pw_stream, decltype([](pw_stream *stream)
     { pw_stream_destroy(stream); })>;
 
 /* NOLINTBEGIN(*EnumCastOutOfRange) Enums for bitflags... again... *sigh* */
-constexpr pw_stream_flags operator|(pw_stream_flags lhs, pw_stream_flags rhs) noexcept
+[[nodiscard]] constexpr
+auto operator|(pw_stream_flags const lhs, pw_stream_flags const rhs) noexcept -> pw_stream_flags
 { return static_cast<pw_stream_flags>(lhs | al::to_underlying(rhs)); }
-/* NOLINTEND(*EnumCastOutOfRange) */
 
-constexpr pw_stream_flags& operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept
+[[nodiscard]]
+constexpr auto operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept -> pw_stream_flags&
 { lhs = lhs | rhs; return lhs; }
+/* NOLINTEND(*EnumCastOutOfRange) */
 
 
 class ThreadMainloop {
@@ -709,7 +711,6 @@ struct EventManager {
 private:
     static inline auto sList = std::vector<DeviceNode>{};
 };
-using EventWatcherUniqueLock = std::unique_lock<EventManager>;
 using EventWatcherLockGuard = std::lock_guard<EventManager>;
 
 auto gEventHandler = EventManager{}; /* NOLINT(cert-err58-cpp) */

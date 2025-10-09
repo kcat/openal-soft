@@ -435,11 +435,11 @@ public:
         if(eventFacility == PA_SUBSCRIPTION_EVENT_SERVER
             && eventType == PA_SUBSCRIPTION_EVENT_CHANGE)
         {
-            static constexpr auto server_cb = [](pa_context *ctx, const pa_server_info *info,
-                void *pdata) noexcept
+            static constexpr auto server_cb = [](pa_context *const ctx,
+                pa_server_info const *const info, void *const pdata) noexcept
             { return static_cast<PulseMainloop*>(pdata)->updateDefaultDevice(ctx, info); };
-            auto *op = pa_context_get_server_info(context, server_cb, this);
-            if(op) pa_operation_unref(op);
+            if(auto *const op = pa_context_get_server_info(context, server_cb, this))
+                pa_operation_unref(op);
         }
 
         if(eventFacility != PA_SUBSCRIPTION_EVENT_SINK
@@ -453,19 +453,22 @@ public:
         {
             if(eventFacility == PA_SUBSCRIPTION_EVENT_SINK)
             {
-                static constexpr auto devcallback = [](pa_context *ctx, const pa_sink_info *info,
-                    int eol, void *pdata) noexcept
+                static constexpr auto devcallback = [](pa_context *const ctx,
+                    pa_sink_info const *const info, int const eol, void *const pdata) noexcept
                 { return static_cast<PulseMainloop*>(pdata)->deviceSinkCallback(ctx, info, eol); };
-                auto *op = pa_context_get_sink_info_by_index(context, idx, devcallback, this);
-                if(op) pa_operation_unref(op);
+                if(auto *op = pa_context_get_sink_info_by_index(context, idx, devcallback, this))
+                    pa_operation_unref(op);
             }
             else
             {
-                static constexpr auto devcallback = [](pa_context *ctx, const pa_source_info *info,
-                    int eol, void *pdata) noexcept
-                { return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx,info,eol); };
-                auto *op = pa_context_get_source_info_by_index(context, idx, devcallback, this);
-                if(op) pa_operation_unref(op);
+                static constexpr auto devcallback = [](pa_context *const ctx,
+                    pa_source_info const *const info, int const eol, void *const pdata) noexcept
+                {
+                    return static_cast<PulseMainloop*>(pdata)->deviceSourceCallback(ctx, info,
+                        eol);
+                };
+                if(auto *op = pa_context_get_source_info_by_index(context, idx, devcallback, this))
+                    pa_operation_unref(op);
             }
         }
         else if(eventType == PA_SUBSCRIPTION_EVENT_REMOVE)
@@ -572,7 +575,6 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
             spec, chanmap, type);
     }
 };
-using MainloopLockGuard = std::lock_guard<PulseMainloop>;
 
 PulseMainloop::~PulseMainloop()
 {

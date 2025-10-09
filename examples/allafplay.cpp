@@ -58,7 +58,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <cstdint>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -161,10 +160,8 @@ auto RenderSamples = ALCenum{};
 auto RenderSampleRate = ALCsizei{};
 auto RenderAmbiOrder = ALCint{};
 
-using ushort = unsigned short;
-using uint = unsigned int;
 
-void fwrite16be(const ushort value, std::ostream &f)
+void fwrite16be(u16 const value, std::ostream &f)
 {
     auto data = std::bit_cast<std::array<char,2>>(value);
     if constexpr(std::endian::native != std::endian::big)
@@ -172,7 +169,7 @@ void fwrite16be(const ushort value, std::ostream &f)
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32be(const uint value, std::ostream &f)
+void fwrite32be(u32 const value, std::ostream &f)
 {
     auto data = std::bit_cast<std::array<char,4>>(value);
     if constexpr(std::endian::native != std::endian::big)
@@ -180,7 +177,7 @@ void fwrite32be(const uint value, std::ostream &f)
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite64be(const uint64_t value, std::ostream &f)
+void fwrite64be(u64 const value, std::ostream &f)
 {
     auto data = std::bit_cast<std::array<char,8>>(value);
     if constexpr(std::endian::native != std::endian::big)
@@ -211,14 +208,14 @@ template<typename... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 
-enum class Quality : std::uint8_t {
+enum class Quality : u8 {
     s8, s16, f32, s24
 };
 enum class Mode : bool {
     Channels, Objects
 };
 
-auto GetQualityName(Quality quality) noexcept -> std::string_view
+auto GetQualityName(Quality const quality) noexcept -> std::string_view
 {
     switch(quality)
     {
@@ -230,7 +227,7 @@ auto GetQualityName(Quality quality) noexcept -> std::string_view
     return "<unknown>"sv;
 }
 
-auto GetModeName(Mode mode) noexcept -> std::string_view
+auto GetModeName(Mode const mode) noexcept -> std::string_view
 {
     switch(mode)
     {
@@ -240,7 +237,7 @@ auto GetModeName(Mode mode) noexcept -> std::string_view
     return "<unknown>"sv;
 }
 
-auto BytesFromQuality(Quality quality) noexcept -> size_t
+auto BytesFromQuality(Quality const quality) noexcept -> usize
 {
     switch(quality)
     {
@@ -260,60 +257,60 @@ template<typename T>
 struct SampleInfo;
 
 template<>
-struct SampleInfo<float> {
+struct SampleInfo<f32> {
     static constexpr auto SrcSize = 4_uz;
 
     [[nodiscard]]
-    static auto read(std::input_iterator auto input) -> float
+    static auto read(std::input_iterator auto input) -> f32
     {
         auto src = std::array<char,4>{};
         if constexpr(std::endian::native == std::endian::little)
             std::ranges::copy(std::views::counted(input, 4), src.begin());
         else
             std::ranges::copy(std::views::counted(input, 4), src.rbegin());
-        return std::bit_cast<float>(src);
+        return std::bit_cast<f32>(src);
     }
 };
 
 template<>
-struct SampleInfo<int32_t> {
+struct SampleInfo<i32> {
     static constexpr auto SrcSize = 3_uz;
 
     [[nodiscard]]
-    static auto read(std::input_iterator auto input) -> int32_t
+    static auto read(std::input_iterator auto input) -> i32
     {
         auto src = std::array<char,4>{};
         if constexpr(std::endian::native == std::endian::little)
             std::ranges::copy(std::views::counted(input, 3), src.begin()+1);
         else
             std::ranges::copy(std::views::counted(input, 3), src.rbegin()+1);
-        return std::bit_cast<int32_t>(src);
+        return std::bit_cast<i32>(src);
     }
 };
 
 template<>
-struct SampleInfo<int16_t> {
+struct SampleInfo<i16> {
     static constexpr auto SrcSize = 2_uz;
 
     [[nodiscard]]
-    static auto read(std::input_iterator auto input) -> int16_t
+    static auto read(std::input_iterator auto input) -> i16
     {
         auto src = std::array<char,2>{};
         if constexpr(std::endian::native == std::endian::little)
             std::ranges::copy(std::views::counted(input, 2), src.begin());
         else
             std::ranges::copy(std::views::counted(input, 2), src.rbegin());
-        return std::bit_cast<int16_t>(src);
+        return std::bit_cast<i16>(src);
     }
 };
 
 template<>
-struct SampleInfo<int8_t> {
+struct SampleInfo<i8> {
     static constexpr auto SrcSize = 1_uz;
 
     [[nodiscard]]
-    static auto read(std::input_iterator auto input) -> int8_t
-    { return std::bit_cast<int8_t>(*input); }
+    static auto read(std::input_iterator auto input) -> i8
+    { return std::bit_cast<i8>(*input); }
 };
 
 
@@ -326,8 +323,8 @@ constexpr auto FramesPerPos = 48_uz;
 struct Channel {
     ALuint mSource{};
     std::array<ALuint,2> mBuffers{};
-    float mAzimuth{};
-    float mElevation{};
+    f32 mAzimuth{};
+    f32 mElevation{};
     bool mIsLfe{};
 
     Channel() = default;
@@ -362,21 +359,21 @@ struct LafStream {
 
     Quality mQuality{};
     Mode mMode{};
-    uint32_t mNumTracks{};
-    uint32_t mSampleRate{};
+    u32 mNumTracks{};
+    u32 mSampleRate{};
     ALenum mALFormat{};
-    uint64_t mSampleCount{};
+    u64 mSampleCount{};
 
-    uint64_t mCurrentSample{};
+    u64 mCurrentSample{};
 
-    std::array<uint8_t,32> mEnabledTracks{};
-    uint32_t mNumEnabled{};
+    std::array<u8, 32> mEnabledTracks{};
+    u32 mNumEnabled{};
     std::vector<char> mSampleChunk;
     template<typename T> using vector = std::vector<T>;
-    std::variant<vector<int8_t>,vector<int16_t>,vector<float>,vector<int32_t>> mSampleLine;
+    std::variant<vector<i8>,vector<i16>,vector<f32>,vector<i32>> mSampleLine;
 
     std::vector<Channel> mChannels;
-    std::vector<std::vector<float>> mPosTracks;
+    std::vector<std::vector<f32>> mPosTracks;
 
     LafStream() = default;
     LafStream(const LafStream&) = delete;
@@ -390,11 +387,11 @@ struct LafStream {
     auto readChunk() -> u32;
 
     [[nodiscard]]
-    auto prepareTrack(size_t trackidx, size_t count) -> std::span<std::byte>;
+    auto prepareTrack(usize trackidx, usize count) -> std::span<std::byte>;
 
-    void convertSamples(const std::span<std::byte> samples) const;
+    void convertSamples(std::span<std::byte> samples) const;
 
-    void convertPositions(const std::span<float> dst) const;
+    void convertPositions(std::span<f32> dst) const;
 };
 
 auto LafStream::readChunk() -> u32
@@ -416,7 +413,7 @@ auto LafStream::readChunk() -> u32
     }
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
-    mNumEnabled = gsl::narrow<unsigned>(std::accumulate(mEnabledTracks.cbegin(),
+    mNumEnabled = gsl::narrow<u32>(std::accumulate(mEnabledTracks.cbegin(),
         mEnabledTracks.cend(), 0, [](int const val, u8 const in) -> int
     { return val + std::popcount(in); }));
 
@@ -455,24 +452,24 @@ auto LafStream::readChunk() -> u32
     return gsl::narrow<u32>(numsamples);
 }
 
-auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::span<std::byte>
+auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::span<std::byte>
 {
-    const auto todo = std::min(size_t{mSampleRate}, count);
+    auto const todo = std::min(usize{mSampleRate}, count);
     if((mEnabledTracks[trackidx>>3] & (1_uz<<(trackidx&7))))
     {
         /* If the track is enabled, get the real index (skipping disabled
          * tracks), and deinterlace it into the mono line.
          */
-        const auto idx = std::invoke([this,trackidx]() -> unsigned int
+        auto const idx = std::invoke([this,trackidx]() -> u32
         {
-            const auto bits = std::span{mEnabledTracks}.first(trackidx>>3);
-            const auto res = std::accumulate(bits.begin(), bits.end(), 0,
-                [](const int val, const uint8_t in) -> int { return val + std::popcount(in); })
+            auto const bits = std::span{mEnabledTracks}.first(trackidx>>3);
+            auto const res = std::accumulate(bits.begin(), bits.end(), 0_i32,
+                [](int const val, u8 const in) -> int { return val + std::popcount(in); })
                 + std::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1));
-            return gsl::narrow_cast<unsigned>(res);
+            return gsl::narrow_cast<u32>(res);
         });
 
-        const auto step = size_t{mNumEnabled};
+        auto const step = usize{mNumEnabled};
         Expects(idx < step);
         return std::visit([count,idx,step,src=std::span{mSampleChunk}]<typename T>(T &dst)
         {
@@ -499,7 +496,7 @@ auto LafStream::prepareTrack(const size_t trackidx, const size_t count) -> std::
     }, mSampleLine);
 }
 
-void LafStream::convertSamples(const std::span<std::byte> samples) const
+void LafStream::convertSamples(std::span<std::byte> const samples) const
 {
     /* OpenAL uses unsigned 8-bit samples (0...255), so signed 8-bit samples
      * (-128...+127) need conversion. The other formats are fine.
@@ -507,32 +504,32 @@ void LafStream::convertSamples(const std::span<std::byte> samples) const
     if(mQuality == Quality::s8)
     {
         std::ranges::transform(samples, samples.begin(),
-            [](const std::byte sample) noexcept -> std::byte
+            [](std::byte const sample) noexcept -> std::byte
         {
             return sample^std::byte{0x80};
         });
     }
 }
 
-void LafStream::convertPositions(const std::span<float> dst) const
+void LafStream::convertPositions(std::span<f32> const dst) const
 {
     std::visit(overloaded {
-        [dst](const vector<int8_t> &src)
+        [dst](vector<i8> const &src)
         {
-            std::ranges::transform(src, dst.begin(), [](const int8_t in) noexcept -> float
-            { return gsl::narrow_cast<float>(in) / 127.0f; });
+            std::ranges::transform(src, dst.begin(), [](i8 const in) noexcept -> f32
+            { return gsl::narrow_cast<f32>(in) / 127.0f; });
         },
-        [dst](const vector<int16_t> &src)
+        [dst](vector<i16> const &src)
         {
-            std::ranges::transform(src, dst.begin(), [](const int16_t in) noexcept -> float
-            { return gsl::narrow_cast<float>(in) / 32767.0f; });
+            std::ranges::transform(src, dst.begin(), [](i16 const in) noexcept -> f32
+            { return gsl::narrow_cast<f32>(in) / 32767.0f; });
         },
-        [dst](const vector<float> &src) { std::ranges::copy(src, dst.begin()); },
-        [dst](const vector<int32_t> &src)
+        [dst](vector<f32> const &src) { std::ranges::copy(src, dst.begin()); },
+        [dst](vector<i32> const &src)
         {
             /* 24-bit samples are converted to 32-bit in copySamples. */
-            std::ranges::transform(src, dst.begin(), [](const int32_t in) noexcept -> float
-            { return gsl::narrow_cast<float>(in>>8) / 8388607.0f; });
+            std::ranges::transform(src, dst.begin(), [](i32 const in) noexcept -> f32
+            { return gsl::narrow_cast<f32>(in>>8) / 8388607.0f; });
         },
     }, mSampleLine);
 }
@@ -615,8 +612,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     laf->mNumTracks = std::invoke([input=std::span{header}.subspan<6,4>()]
     {
-        return uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
-            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
+        return u32{as_unsigned(input[0])} | (u32{as_unsigned(input[1])}<<8)
+            | (u32{as_unsigned(input[2])}<<16) | (u32{as_unsigned(input[3])}<<24);
     });
 
     fmt::println("Filename: {}", al::u8_as_char(fname.u8string()));
@@ -639,8 +636,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         if(laf->mNumTracks < 2)
             throw std::runtime_error{"Not enough tracks"};
 
-        auto numchans = uint32_t{laf->mNumTracks - 1};
-        auto numpostracks = uint32_t{1};
+        auto numchans = usize{laf->mNumTracks - 1};
+        auto numpostracks = 1_uz;
         while(numpostracks*16 < numchans)
         {
             --numchans;
@@ -650,11 +647,11 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         laf->mPosTracks.resize(numpostracks);
     }
 
-    static constexpr auto read_float = [](std::span<char,4> input)
+    static constexpr auto read_float = [](std::span<char,4> const input)
     {
-        const auto value = uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
-            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
-        return std::bit_cast<float>(value);
+        const auto value = u32{as_unsigned(input[0])} | (u32{as_unsigned(input[1])}<<8)
+            | (u32{as_unsigned(input[2])}<<16) | (u32{as_unsigned(input[3])}<<24);
+        return std::bit_cast<f32>(value);
     };
 
     /* C++23 can use chandata | std::views::chunk(9) | std::views::enumerate to
@@ -704,15 +701,15 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
 
     laf->mSampleRate = std::invoke([input=std::span{footer}.first<4>()]
     {
-        return uint32_t{as_unsigned(input[0])} | (uint32_t{as_unsigned(input[1])}<<8u)
-            | (uint32_t{as_unsigned(input[2])}<<16u) | (uint32_t{as_unsigned(input[3])}<<24u);
+        return u32{as_unsigned(input[0])} | (u32{as_unsigned(input[1])}<<8)
+            | (u32{as_unsigned(input[2])}<<16) | (u32{as_unsigned(input[3])}<<24);
     });
     laf->mSampleCount = std::invoke([input=std::span{footer}.last<8>()]
     {
-        return uint64_t{as_unsigned(input[0])} | (uint64_t{as_unsigned(input[1])}<<8)
-            | (uint64_t{as_unsigned(input[2])}<<16u) | (uint64_t{as_unsigned(input[3])}<<24u)
-            | (uint64_t{as_unsigned(input[4])}<<32u) | (uint64_t{as_unsigned(input[5])}<<40u)
-            | (uint64_t{as_unsigned(input[6])}<<48u) | (uint64_t{as_unsigned(input[7])}<<56u);
+        return u64{as_unsigned(input[0])} | (u64{as_unsigned(input[1])}<<8)
+            | (u64{as_unsigned(input[2])}<<16) | (u64{as_unsigned(input[3])}<<24)
+            | (u64{as_unsigned(input[4])}<<32) | (u64{as_unsigned(input[5])}<<40)
+            | (u64{as_unsigned(input[6])}<<48) | (u64{as_unsigned(input[7])}<<56);
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     if(laf->mSampleCount < ~0_u64)
@@ -736,10 +733,10 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     laf->mSampleChunk.resize(laf->mSampleRate*BytesFromQuality(laf->mQuality)*laf->mNumTracks);
     switch(laf->mQuality)
     {
-    case Quality::s8: laf->mSampleLine.emplace<std::vector<int8_t>>(laf->mSampleRate); break;
-    case Quality::s16: laf->mSampleLine.emplace<std::vector<int16_t>>(laf->mSampleRate); break;
-    case Quality::f32: laf->mSampleLine.emplace<std::vector<float>>(laf->mSampleRate); break;
-    case Quality::s24: laf->mSampleLine.emplace<std::vector<int32_t>>(laf->mSampleRate); break;
+    case Quality::s8: laf->mSampleLine.emplace<std::vector<i8>>(laf->mSampleRate); break;
+    case Quality::s16: laf->mSampleLine.emplace<std::vector<i16>>(laf->mSampleRate); break;
+    case Quality::f32: laf->mSampleLine.emplace<std::vector<f32>>(laf->mSampleRate); break;
+    case Quality::s24: laf->mSampleLine.emplace<std::vector<i32>>(laf->mSampleRate); break;
     }
 
     /* Re-disable exceptions since we'll manually check each read. */
@@ -747,7 +744,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     return laf;
 }
 
-void PlayLAF(std::string_view fname)
+void PlayLAF(std::string_view const fname)
 try {
     const auto laf = LoadLAF(fs::path(al::char_as_u8(fname)));
 
@@ -791,9 +788,9 @@ try {
             azi = 0.0f;
         else
         {
-            const auto tmp = gsl::narrow_cast<int>(azi);
-            azi -= gsl::narrow_cast<float>(tmp + (tmp%2));
-            azi *= std::numbers::pi_v<float>;
+            auto const tmp = gsl::narrow_cast<i32>(azi);
+            azi -= gsl::narrow_cast<f32>(tmp + (tmp%2));
+            azi *= std::numbers::pi_v<f32>;
         }
 
         auto elev = channel.mElevation / 180.0f;
@@ -801,14 +798,14 @@ try {
             elev = 0.0f;
         else
         {
-            const auto tmp = gsl::narrow_cast<int>(elev);
-            elev -= gsl::narrow_cast<float>(tmp + (tmp%2));
-            elev *= std::numbers::pi_v<float>;
+            auto const tmp = gsl::narrow_cast<i32>(elev);
+            elev -= gsl::narrow_cast<f32>(tmp + (tmp%2));
+            elev *= std::numbers::pi_v<f32>;
         }
 
-        const auto x = std::sin(azi) * std::cos(elev);
-        const auto y = std::sin(elev);
-        const auto z = -std::cos(azi) * std::cos(elev);
+        auto const x = std::sin(azi) * std::cos(elev);
+        auto const y = std::sin(elev);
+        auto const z = -std::cos(azi) * std::cos(elev);
         alSource3f(channel.mSource, AL_POSITION, x, y, z);
 
         if(channel.mIsLfe)
@@ -845,51 +842,51 @@ try {
     {
         auto *device = alcGetContextsDevice(alcGetCurrentContext());
 
-        const auto chancount = std::invoke([]() -> uint
+        auto const chancount = std::invoke([]() -> u32
         {
             switch(RenderChannels)
             {
-            case ALC_MONO_SOFT: return 1u;
-            case ALC_STEREO_SOFT: return 2u;
-            case ALC_QUAD_SOFT: return 4u;
-            case ALC_SURROUND_5_1_SOFT: return 6u;
-            case ALC_SURROUND_6_1_SOFT: return 7u;
-            case ALC_SURROUND_7_1_SOFT: return 8u;
+            case ALC_MONO_SOFT: return 1_u32;
+            case ALC_STEREO_SOFT: return 2_u32;
+            case ALC_QUAD_SOFT: return 4_u32;
+            case ALC_SURROUND_5_1_SOFT: return 6_u32;
+            case ALC_SURROUND_6_1_SOFT: return 7_u32;
+            case ALC_SURROUND_7_1_SOFT: return 8_u32;
             case ALC_BFORMAT3D_SOFT:
-                return gsl::narrow<uint>((RenderAmbiOrder+1)*(RenderAmbiOrder+1));
+                return gsl::narrow<u32>((RenderAmbiOrder+1)*(RenderAmbiOrder+1));
             default:
                 throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
                     RenderChannels)};
             }
         });
 
-        const auto samplesize = std::invoke([]() -> uint
+        auto const samplesize = std::invoke([]() -> u32
         {
             switch(RenderSamples)
             {
-            case ALC_UNSIGNED_BYTE_SOFT: return 1u;
-            case ALC_BYTE_SOFT: return 1u;
-            case ALC_UNSIGNED_SHORT_SOFT: return 2u;
-            case ALC_SHORT_SOFT: return 2u;
-            case ALC_UNSIGNED_INT_SOFT: return 4u;
-            case ALC_INT_SOFT: return 4u;
-            case ALC_FLOAT_SOFT: return 4u;
+            case ALC_UNSIGNED_BYTE_SOFT: return 1_u32;
+            case ALC_BYTE_SOFT: return 1_u32;
+            case ALC_UNSIGNED_SHORT_SOFT: return 2_u32;
+            case ALC_SHORT_SOFT: return 2_u32;
+            case ALC_UNSIGNED_INT_SOFT: return 4_u32;
+            case ALC_INT_SOFT: return 4_u32;
+            case ALC_FLOAT_SOFT: return 4_u32;
             default:
                 throw std::runtime_error{fmt::format("Unexpected sample type enum: {:#x}",
                     RenderSamples)};
             }
         });
-        const auto framesize = size_t{chancount} * samplesize;
+        auto const framesize = usize{chancount} * samplesize;
         renderbuf.resize(framesize * FramesPerPos);
 
         if(std::cmp_not_equal(RenderSampleRate, laf->mSampleRate))
         {
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            const auto alcResetDeviceSOFT = reinterpret_cast<LPALCRESETDEVICESOFT>(
+            auto const alcResetDeviceSOFT = reinterpret_cast<LPALCRESETDEVICESOFT>(
                 alcGetProcAddress(nullptr, "alcResetDeviceSOFT"));
 
-            const auto attribs = std::to_array<ALCint>({
-                ALC_FREQUENCY, gsl::narrow<int>(laf->mSampleRate),
+            auto const attribs = std::to_array<ALCint>({
+                ALC_FREQUENCY, gsl::narrow<i32>(laf->mSampleRate),
                 ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
                 ALC_FORMAT_TYPE_SOFT, RenderSamples,
                 ALC_OUTPUT_MODE_SOFT, RenderOutMode,
@@ -900,7 +897,7 @@ try {
             if(!alcResetDeviceSOFT(device, attribs.data()))
                 throw std::runtime_error{fmt::format(
                     "Failed to reset loopback device for {}hz rendering", RenderSampleRate)};
-            RenderSampleRate = gsl::narrow_cast<int>(laf->mSampleRate);
+            RenderSampleRate = gsl::narrow_cast<i32>(laf->mSampleRate);
         }
 
         if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
@@ -934,10 +931,10 @@ try {
 
         renderFile.write("desc", 4);
         fwrite64be(32, renderFile);
-        fwrite64be(std::bit_cast<uint64_t>(gsl::narrow_cast<double>(RenderSampleRate)),renderFile);
+        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(RenderSampleRate)),renderFile);
         renderFile.write("lpcm", 4);
 
-        const auto flags = std::invoke([]
+        auto const flags = std::invoke([]
         {
             switch(RenderSamples)
             {
@@ -949,16 +946,16 @@ try {
             case ALC_UNSIGNED_INT_SOFT:
             case ALC_INT_SOFT:
                 if constexpr(std::endian::native == std::endian::little)
-                    return 2u; /* kCAFLinearPCMFormatFlagIsLittleEndian */
+                    return 2_u32; /* kCAFLinearPCMFormatFlagIsLittleEndian */
                 else
                     break;
             case ALC_FLOAT_SOFT:
                 if constexpr(std::endian::native == std::endian::little)
-                    return 3u; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
+                    return 3_u32; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
                 else
-                    return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
+                    return 1_u32; /* kCAFLinearPCMFormatFlagIsFloat */
             }
-            return 0u;
+            return 0_u32;
         });
         fwrite32be(flags, renderFile);
         fwrite32be(samplesize*chancount, renderFile);
@@ -966,7 +963,7 @@ try {
         fwrite32be(chancount, renderFile);
         fwrite32be(samplesize*8, renderFile);
 
-        const auto chanmask = std::invoke([]
+        auto const chanmask = std::invoke([]() -> u32
         {
             switch(RenderChannels)
             {
@@ -1024,14 +1021,14 @@ try {
             if(!laf->mPosTracks.empty())
             {
                 alcSuspendContext(alcGetCurrentContext());
-                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
+                for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
-                    const auto trackidx = i>>4;
+                    auto const trackidx = i>>4;
 
-                    const auto posoffset = gsl::narrow<ALuint>(offset)/FramesPerPos*16_uz + (i&15);
-                    const auto x = laf->mPosTracks[trackidx][posoffset*3 + 0];
-                    const auto y = laf->mPosTracks[trackidx][posoffset*3 + 1];
-                    const auto z = laf->mPosTracks[trackidx][posoffset*3 + 2];
+                    auto const posoffset = gsl::narrow<u32>(offset)/FramesPerPos*16_uz + (i&15);
+                    auto const x = laf->mPosTracks[trackidx][posoffset*3 + 0];
+                    auto const y = laf->mPosTracks[trackidx][posoffset*3 + 1];
+                    auto const z = laf->mPosTracks[trackidx][posoffset*3 + 2];
 
                     /* Convert left-handed coords to right-handed. */
                     alSource3f(laf->mChannels[i].mSource, AL_POSITION, x, y, -z);
@@ -1044,10 +1041,10 @@ try {
              */
             if(processed > 0)
             {
-                const auto numsamples = laf->readChunk();
-                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
+                auto const numsamples = laf->readChunk();
+                for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
-                    const auto samples = laf->prepareTrack(i, numsamples);
+                    auto const samples = laf->prepareTrack(i, numsamples);
                     laf->convertSamples(samples);
 
                     auto bufid = ALuint{};
@@ -1057,7 +1054,7 @@ try {
                         gsl::narrow<ALsizei>(laf->mSampleRate));
                     alSourceQueueBuffers(laf->mChannels[i].mSource, 1, &bufid);
                 }
-                for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
+                for(auto const i : std::views::iota(0_uz, laf->mPosTracks.size()))
                 {
                     std::ranges::copy(laf->mPosTracks[i] | std::views::drop(laf->mSampleRate),
                         laf->mPosTracks[i].begin());
@@ -1074,7 +1071,7 @@ try {
                     leadIn -= std::ssize(renderbuf);
                 else if(leadIn > 0)
                 {
-                    const auto out = renderbuf | std::views::drop(leadIn);
+                    auto const out = renderbuf | std::views::drop(leadIn);
                     renderFile.write(out.data(), std::ssize(out));
                     leadIn = 0;
                 }
@@ -1091,7 +1088,7 @@ try {
              * replay, but all the channels will agree on where they are in the
              * stream and ensure nothing is skipped.
              */
-            auto sources = std::array<ALuint,256_uz>{};
+            auto sources = std::array<ALuint, 256>{};
             std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
             alSourcePlayv(gsl::narrow<ALsizei>(laf->mChannels.size()), sources.data());
         }
@@ -1102,24 +1099,24 @@ try {
              * position vectors).
              */
             auto numsamples = laf->readChunk();
-            for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
+            for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
             {
-                const auto samples = laf->prepareTrack(i, numsamples);
+                auto const samples = laf->prepareTrack(i, numsamples);
                 laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[0], laf->mALFormat, samples.data(),
                     gsl::narrow<ALsizei>(samples.size()),
                     gsl::narrow<ALsizei>(laf->mSampleRate));
             }
-            for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
+            for(auto const i : std::views::iota(0_uz, laf->mPosTracks.size()))
             {
                 std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
                 laf->convertPositions(std::span{laf->mPosTracks[i]}.first(laf->mSampleRate));
             }
 
             numsamples = laf->readChunk();
-            for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
+            for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
             {
-                const auto samples = laf->prepareTrack(i, numsamples);
+                auto const samples = laf->prepareTrack(i, numsamples);
                 laf->convertSamples(samples);
                 alBufferData(laf->mChannels[i].mBuffers[1], laf->mALFormat, samples.data(),
                     gsl::narrow<ALsizei>(samples.size()),
@@ -1128,7 +1125,7 @@ try {
                     gsl::narrow<ALsizei>(laf->mChannels[i].mBuffers.size()),
                     laf->mChannels[i].mBuffers.data());
             }
-            for(const auto i : std::views::iota(0_uz, laf->mPosTracks.size()))
+            for(auto const i : std::views::iota(0_uz, laf->mPosTracks.size()))
             {
                 std::ignore = laf->prepareTrack(laf->mChannels.size()+i, numsamples);
                 laf->convertPositions(std::span{laf->mPosTracks[i]}.last(laf->mSampleRate));
@@ -1139,19 +1136,19 @@ try {
              */
             if(!laf->mPosTracks.empty())
             {
-                for(const auto i : std::views::iota(0_uz, laf->mChannels.size()))
+                for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
                 {
-                    const auto trackidx = i>>4;
+                    auto const trackidx = i>>4;
 
-                    const auto x = laf->mPosTracks[trackidx][(i&15)*3 + 0];
-                    const auto y = laf->mPosTracks[trackidx][(i&15)*3 + 1];
-                    const auto z = laf->mPosTracks[trackidx][(i&15)*3 + 2];
+                    auto const x = laf->mPosTracks[trackidx][(i&15)*3 + 0];
+                    auto const y = laf->mPosTracks[trackidx][(i&15)*3 + 1];
+                    auto const z = laf->mPosTracks[trackidx][(i&15)*3 + 2];
 
                     alSource3f(laf->mChannels[i].mSource, AL_POSITION, x, y, -z);
                 }
             }
 
-            auto sources = std::array<ALuint,256_uz>{};
+            auto sources = std::array<ALuint, 256>{};
             std::ranges::transform(laf->mChannels, sources.begin(), &Channel::mSource);
             alSourcePlayv(gsl::narrow<ALsizei>(laf->mChannels.size()), sources.data());
         }
@@ -1168,14 +1165,14 @@ try {
         if(!laf->mPosTracks.empty())
         {
             alcSuspendContext(alcGetCurrentContext());
-            for(size_t i{0};i < laf->mChannels.size();++i)
+            for(auto const i : std::views::iota(0_uz, laf->mChannels.size()))
             {
-                const auto trackidx = i>>4;
+                auto const trackidx = i>>4;
 
-                const auto posoffset = gsl::narrow<ALuint>(offset)/FramesPerPos*16_uz + (i&15);
-                const auto x = laf->mPosTracks[trackidx][posoffset*3 + 0];
-                const auto y = laf->mPosTracks[trackidx][posoffset*3 + 1];
-                const auto z = laf->mPosTracks[trackidx][posoffset*3 + 2];
+                auto const posoffset = gsl::narrow<u32>(offset)/FramesPerPos*16_uz + (i&15);
+                auto const x = laf->mPosTracks[trackidx][posoffset*3 + 0];
+                auto const y = laf->mPosTracks[trackidx][posoffset*3 + 1];
+                auto const z = laf->mPosTracks[trackidx][posoffset*3 + 2];
 
                 alSource3f(laf->mChannels[i].mSource, AL_POSITION, x, y, -z);
             }
@@ -1189,7 +1186,7 @@ try {
                 leadIn -= std::ssize(renderbuf);
             else if(leadIn > 0)
             {
-                const auto out = renderbuf | std::views::drop(leadIn);
+                auto const out = renderbuf | std::views::drop(leadIn);
                 renderFile.write(out.data(), std::ssize(out));
                 leadIn = 0;
             }
@@ -1206,20 +1203,20 @@ try {
     {
         alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
             renderbuf.data(), FramesPerPos);
-        const auto todo = std::min(std::ssize(renderbuf), leadOut);
+        auto const todo = std::min(std::ssize(renderbuf), leadOut);
         renderFile.write(renderbuf.data(), todo);
         leadOut -= todo;
     }
 
     if(renderStart > 0)
     {
-        const auto renderEnd = std::streamoff{renderFile.tellp()};
+        auto const renderEnd = std::streamoff{renderFile.tellp()};
         if(renderEnd > renderStart)
         {
-            const auto dataLen = renderEnd - renderStart;
+            auto const dataLen = renderEnd - renderStart;
             if(renderFile.seekp(renderStart-8))
             {
-                fwrite64be(gsl::narrow<uint64_t>(dataLen), renderFile);
+                fwrite64be(gsl::narrow<u64>(dataLen), renderFile);
                 renderFile.seekp(0, std::ios_base::end);
             }
         }
@@ -1332,7 +1329,7 @@ auto main(std::span<std::string_view> args) -> int
             return 1;
         }
 
-        RenderSampleRate = 48000;
+        RenderSampleRate = 48'000;
 
         if(!alcIsExtensionPresent(nullptr, "ALC_SOFT_loopback"))
         {
@@ -1341,9 +1338,9 @@ auto main(std::span<std::string_view> args) -> int
         }
 
         /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-        const auto alcLoopbackOpenDevice = reinterpret_cast<LPALCLOOPBACKOPENDEVICESOFT>(
+        auto const alcLoopbackOpenDevice = reinterpret_cast<LPALCLOOPBACKOPENDEVICESOFT>(
             alcGetProcAddress(nullptr, "alcLoopbackOpenDeviceSOFT"));
-        const auto alcIsRenderFormatSupported = reinterpret_cast<LPALCISRENDERFORMATSUPPORTEDSOFT>(
+        auto const alcIsRenderFormatSupported = reinterpret_cast<LPALCISRENDERFORMATSUPPORTEDSOFT>(
             alcGetProcAddress(nullptr, "alcIsRenderFormatSupportedSOFT"));
         alcRenderSamplesSOFT = reinterpret_cast<LPALCRENDERSAMPLESSOFT>(
             alcGetProcAddress(nullptr, "alcRenderSamplesSOFT"));
@@ -1376,7 +1373,7 @@ auto main(std::span<std::string_view> args) -> int
             }
         }
 
-        const auto attribs = std::to_array<ALCint>({
+        auto const attribs = std::to_array<ALCint>({
             ALC_FREQUENCY, RenderSampleRate,
             ALC_FORMAT_CHANNELS_SOFT, RenderChannels,
             ALC_FORMAT_TYPE_SOFT, RenderSamples,
@@ -1412,7 +1409,7 @@ auto main(std::span<std::string_view> args) -> int
     if(alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX")
         && alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_DEDICATED"))
     {
-        static constexpr auto load_proc = []<typename T>(T &func, gsl::czstring funcname)
+        static constexpr auto load_proc = []<typename T>(T &func, gsl::czstring const funcname)
         {
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
             func = reinterpret_cast<T>(alGetProcAddress(funcname));
@@ -1475,7 +1472,7 @@ auto main(std::span<std::string_view> args) -> int
 
 } // namespace
 
-auto main(int argc, char **argv) -> int
+auto main(int const argc, char **const argv) -> int
 {
     auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());

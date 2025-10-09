@@ -11,6 +11,7 @@
 #include <string>
 
 #include "alnumeric.h"
+#include "ambidefs.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
 #include "devformat.h"

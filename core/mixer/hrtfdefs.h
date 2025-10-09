@@ -4,48 +4,48 @@
 #include <array>
 #include <span>
 
-#include "core/ambidefs.h"
+#include "alnumeric.h"
 #include "core/filters/splitter.h"
 
 
-using float2 = std::array<float,2>;
-using ubyte = unsigned char;
+using float2 = std::array<f32, 2>;
+using ubyte = u8;
 using ubyte2 = std::array<ubyte,2>;
-using ushort = unsigned short;
-using uint = unsigned int;
-using uint2 = std::array<uint,2>;
+using ushort = u16;
+using uint = u32;
+using uint2 = std::array<u32, 2>;
 
-constexpr uint HrtfHistoryBits{6};
-constexpr uint HrtfHistoryLength{1 << HrtfHistoryBits};
-constexpr uint HrtfHistoryMask{HrtfHistoryLength - 1};
+constexpr auto HrtfHistoryBits = 6_u32;
+constexpr auto HrtfHistoryLength = 1_u32 << HrtfHistoryBits;
+constexpr auto HrtfHistoryMask = HrtfHistoryLength - 1_u32;
 
-constexpr uint HrirBits{7};
-constexpr uint HrirLength{1 << HrirBits};
-constexpr uint HrirMask{HrirLength - 1};
+constexpr auto HrirBits = 7_u32;
+constexpr auto HrirLength = 1_u32 << HrirBits;
+constexpr auto HrirMask = HrirLength - 1_u32;
 
-constexpr uint MinIrLength{8};
+constexpr auto MinIrLength = 8_u32;
 
-using HrirArray = std::array<float2,HrirLength>;
-using HrirSpan = std::span<float2,HrirLength>;
-using ConstHrirSpan = std::span<const float2,HrirLength>;
+using HrirArray = std::array<float2, HrirLength>;
+using HrirSpan = std::span<float2, HrirLength>;
+using ConstHrirSpan = std::span<float2 const, HrirLength>;
 
 struct MixHrtfFilter {
-    const ConstHrirSpan Coeffs;
+    ConstHrirSpan const Coeffs;
     uint2 Delay;
-    float Gain;
-    float GainStep;
+    f32 Gain;
+    f32 GainStep;
 };
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
     uint2 Delay;
-    float Gain;
+    f32 Gain;
 };
 
 
 struct HrtfChannelState {
     BandSplitter mSplitter;
-    float mHfScale{};
+    f32 mHfScale{};
     alignas(16) HrirArray mCoeffs{};
 };
 

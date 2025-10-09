@@ -12,32 +12,29 @@
 #include "opthelpers.h"
 
 
-using uint = unsigned int;
-
-using ApplyCoeffsT = void(*)(const std::span<float2> Values, const size_t irSize,
-    const ConstHrirSpan Coeffs, const float left, const float right);
+using ApplyCoeffsT = void(*)(std::span<float2> Values, usize irSize, ConstHrirSpan Coeffs,
+    f32 left, f32 right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBase(const std::span<const float> InSamples,
-    const std::span<float2> AccumSamples, const size_t IrSize, const MixHrtfFilter *hrtfparams,
-    const size_t SamplesToDo)
+void MixHrtfBase(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+    usize const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(IrSize <= HrirLength);
 
-    const auto Coeffs = std::span{hrtfparams->Coeffs};
-    const auto gainstep = hrtfparams->GainStep;
-    const auto gain = hrtfparams->Gain;
+    auto const Coeffs = std::span{hrtfparams->Coeffs};
+    auto const gainstep = hrtfparams->GainStep;
+    auto const gain = hrtfparams->Gain;
 
-    auto ldelay = size_t{HrtfHistoryLength} - hrtfparams->Delay[0];
-    auto rdelay = size_t{HrtfHistoryLength} - hrtfparams->Delay[1];
+    auto ldelay = usize{HrtfHistoryLength} - hrtfparams->Delay[0];
+    auto rdelay = usize{HrtfHistoryLength} - hrtfparams->Delay[1];
     auto stepcount = 0.0f;
     for(auto i = 0_uz;i < SamplesToDo;++i)
     {
-        const auto g = gain + gainstep*stepcount;
-        const auto left = InSamples[ldelay++] * g;
-        const auto right = InSamples[rdelay++] * g;
+        auto const g = gain + gainstep*stepcount;
+        auto const left = InSamples[ldelay++] * g;
+        auto const right = InSamples[rdelay++] * g;
         ApplyCoeffs(AccumSamples.subspan(i), IrSize, Coeffs, left, right);
 
         stepcount += 1.0f;
@@ -45,45 +42,45 @@ inline void MixHrtfBase(const std::span<const float> InSamples,
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixHrtfBlendBase(const std::span<const float> InSamples,
-    const std::span<float2> AccumSamples, const size_t IrSize, const HrtfFilter *oldparams,
-    const MixHrtfFilter *newparams, const size_t SamplesToDo)
+void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<float2> const AccumSamples,
+    usize const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(IrSize <= HrirLength);
 
-    const auto OldCoeffs = ConstHrirSpan{oldparams->Coeffs};
-    const auto oldGainStep = oldparams->Gain / gsl::narrow_cast<float>(SamplesToDo);
-    const auto NewCoeffs = ConstHrirSpan{newparams->Coeffs};
-    const auto newGainStep = newparams->GainStep;
+    auto const OldCoeffs = ConstHrirSpan{oldparams->Coeffs};
+    auto const oldGainStep = oldparams->Gain / gsl::narrow_cast<f32>(SamplesToDo);
+    auto const NewCoeffs = ConstHrirSpan{newparams->Coeffs};
+    auto const newGainStep = newparams->GainStep;
 
     if(oldparams->Gain > GainSilenceThreshold) [[likely]]
     {
-        auto ldelay = size_t{HrtfHistoryLength} - oldparams->Delay[0];
-        auto rdelay = size_t{HrtfHistoryLength} - oldparams->Delay[1];
-        auto stepcount = gsl::narrow_cast<float>(SamplesToDo);
+        auto ldelay = usize{HrtfHistoryLength} - oldparams->Delay[0];
+        auto rdelay = usize{HrtfHistoryLength} - oldparams->Delay[1];
+        auto stepcount = gsl::narrow_cast<f32>(SamplesToDo);
         for(auto i = 0_uz;i < SamplesToDo;++i)
         {
-            const auto g = oldGainStep*stepcount;
-            const auto left = InSamples[ldelay++] * g;
-            const auto right = InSamples[rdelay++] * g;
+            auto const g = oldGainStep*stepcount;
+            auto const left = InSamples[ldelay++] * g;
+            auto const right = InSamples[rdelay++] * g;
             ApplyCoeffs(AccumSamples.subspan(i), IrSize, OldCoeffs, left, right);
 
             stepcount -= 1.0f;
         }
     }
 
-    if(newGainStep*gsl::narrow_cast<float>(SamplesToDo) > GainSilenceThreshold) [[likely]]
+    if(newGainStep*gsl::narrow_cast<f32>(SamplesToDo) > GainSilenceThreshold) [[likely]]
     {
-        auto ldelay = size_t{HrtfHistoryLength}+1 - newparams->Delay[0];
-        auto rdelay = size_t{HrtfHistoryLength}+1 - newparams->Delay[1];
+        auto ldelay = usize{HrtfHistoryLength+1} - newparams->Delay[0];
+        auto rdelay = usize{HrtfHistoryLength+1} - newparams->Delay[1];
         auto stepcount = 1.0f;
         for(auto i = 1_uz;i < SamplesToDo;++i)
         {
-            const auto g = newGainStep*stepcount;
-            const auto left = InSamples[ldelay++] * g;
-            const auto right = InSamples[rdelay++] * g;
+            auto const g = newGainStep*stepcount;
+            auto const left = InSamples[ldelay++] * g;
+            auto const right = InSamples[rdelay++] * g;
             ApplyCoeffs(AccumSamples.subspan(i), IrSize, NewCoeffs, left, right);
 
             stepcount += 1.0f;
@@ -92,17 +89,17 @@ inline void MixHrtfBlendBase(const std::span<const float> InSamples,
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSpan RightOut,
-    const std::span<const FloatBufferLine> InSamples, const std::span<float2> AccumSamples,
-    const std::span<float,BufferLineSize> TempBuf, const std::span<HrtfChannelState> ChannelState,
-    const size_t IrSize, const size_t SamplesToDo)
+void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
+    std::span<FloatBufferLine const> const InSamples, std::span<float2> const AccumSamples,
+    std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChannelState,
+    usize const IrSize, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
     ASSUME(IrSize <= HrirLength);
 
     std::ignore = std::ranges::mismatch(InSamples, ChannelState,
-        [&](const FloatConstBufferSpan input, HrtfChannelState &ChanState)
+        [&](FloatConstBufferSpan const input, HrtfChannelState &ChanState)
     {
         /* For dual-band processing, the signal needs extra scaling applied to
          * the high frequency response. The band-splitter applies this scaling
@@ -112,10 +109,10 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
             ChanState.mHfScale);
 
         /* Now apply the HRIR coefficients to this channel. */
-        const auto Coeffs = ConstHrirSpan{ChanState.mCoeffs};
+        auto const Coeffs = ConstHrirSpan{ChanState.mCoeffs};
         for(auto i = 0_uz;i < SamplesToDo;++i)
         {
-            const auto insample = TempBuf[i];
+            auto const insample = TempBuf[i];
             ApplyCoeffs(AccumSamples.subspan(i), IrSize, Coeffs, insample, insample);
         }
         return true;
@@ -130,8 +127,8 @@ inline void MixDirectHrtfBase(const FloatBufferSpan LeftOut, const FloatBufferSp
     /* Copy the new in-progress accumulation values to the front and clear the
      * following samples for the next mix.
      */
-    const auto accum_inprog = AccumSamples.subspan(SamplesToDo, HrirLength);
-    auto accum_iter = std::ranges::copy(accum_inprog, AccumSamples.begin()).out;
+    auto const accum_inprog = AccumSamples.subspan(SamplesToDo, HrirLength);
+    auto const accum_iter = std::ranges::copy(accum_inprog, AccumSamples.begin()).out;
     std::fill_n(accum_iter, SamplesToDo, float2{});
 }
 

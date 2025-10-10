@@ -266,17 +266,26 @@ PWIRE_FUNCS(MAKE_FUNC)
 PWIRE_FUNCS2(MAKE_FUNC)
 #undef MAKE_FUNC
 
+#define PWIRE_LIB "libpipewire-0.3.so.0"
+
+OAL_ELF_NOTE_DLOPEN(
+    "backend-pipewire",
+    "Support for the PipeWire backend",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_RECOMMENDED,
+    PWIRE_LIB
+);
+
 auto pwire_load() -> bool
 {
     if(pwire_handle)
         return true;
 
-    auto *pwire_library = "libpipewire-0.3.so.0";
-    if(auto libresult = LoadLib(pwire_library))
+    const char *pwire_lib = PWIRE_LIB;
+    if(auto libresult = LoadLib(pwire_lib))
         pwire_handle = libresult.value();
     else
     {
-        WARN("Failed to load {}: {}", pwire_library, libresult.error());
+        WARN("Failed to load {}: {}", pwire_lib, libresult.error());
         return false;
     }
 

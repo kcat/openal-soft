@@ -10,16 +10,23 @@
 #include "gsl/gsl"
 #include "logging.h"
 
+#define DBUS_LIB "libdbus-1.so.3"
+
+OAL_ELF_NOTE_DLOPEN(
+    "core-dbus",
+    "RTKit/D-Bus support",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    DBUS_LIB
+);
 
 void PrepareDBus()
 {
-    auto *libname = "libdbus-1.so.3";
-
-    if(auto libresult = LoadLib(libname))
+    const char *dbus_lib = DBUS_LIB;
+    if(auto libresult = LoadLib(dbus_lib))
         dbus_handle = libresult.value();
     else
     {
-        WARN("Failed to load {}: {}", libname, libresult.error());
+        WARN("Failed to load {}: {}", dbus_lib, libresult.error());
         return;
     }
 

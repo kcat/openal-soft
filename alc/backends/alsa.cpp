@@ -1145,17 +1145,26 @@ auto AlsaCapture::getClockLatency() -> ClockLatency
 
 } // namespace
 
+#define ALSA_LIB "libasound.so.2"
+
+OAL_ELF_NOTE_DLOPEN(
+    "backend-alsa",
+    "Support for the ALSA backend",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    ALSA_LIB
+);
 
 auto AlsaBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!alsa_handle)
     {
-        if(auto libresult = LoadLib("libasound.so.2"))
+        const char *alsa_lib = ALSA_LIB;
+        if(auto libresult = LoadLib(alsa_lib))
             alsa_handle = libresult.value();
         else
         {
-            WARN("Failed to load {}: {}", "libasound.so.2", libresult.error());
+            WARN("Failed to load {}: {}", alsa_lib, libresult.error());
             return false;
         }
 

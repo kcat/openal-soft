@@ -412,27 +412,34 @@ void PortCapture::captureSamples(std::span<std::byte> outbuffer)
 
 } // namespace
 
+#ifdef _WIN32
+# define PA_LIB "portaudio.dll"
+#elif defined(__APPLE__) && defined(__MACH__)
+# define PA_LIB "libportaudio.2.dylib"
+#elif defined(__OpenBSD__)
+# define PA_LIB "libportaudio.so"
+#else
+# define PA_LIB "libportaudio.so.2"
+#endif
+
+OAL_ELF_NOTE_DLOPEN(
+    "backend-portaudio",
+    "Support for the PortAudio backend",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    PA_LIB
+);
 
 bool PortBackendFactory::init()
 {
 #if HAVE_DYNLOAD
     if(!pa_handle)
     {
-#ifdef _WIN32
-# define PALIB "portaudio.dll"
-#elif defined(__APPLE__) && defined(__MACH__)
-# define PALIB "libportaudio.2.dylib"
-#elif defined(__OpenBSD__)
-# define PALIB "libportaudio.so"
-#else
-# define PALIB "libportaudio.so.2"
-#endif
-
-        if(auto libresult = LoadLib(PALIB))
+        const char *pa_lib = PA_LIB;
+        if(auto libresult = LoadLib(pa_lib))
             pa_handle = libresult.value();
         else
         {
-            WARN("Failed to load {}: {}", PALIB, libresult.error());
+            WARN("Failed to load {}: {}", pa_lib, libresult.error());
             return false;
         }
 

@@ -33,6 +33,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
     set(ALSOFT_UWP TRUE)
 endif()
 
+# Don't mistake macOS for unix
+if(UNIX AND NOT ANDROID AND NOT APPLE AND NOT RISCOS AND NOT HAIKU)
+  set(UNIX_ELF ON)
+else()
+  set(UNIX_ELF OFF)
+endif()
+
 project(OpenAL
     VERSION 1.24.3
     LANGUAGES C CXX)
@@ -76,6 +83,7 @@ find_package(PkgConfig)
 find_package(SDL3 QUIET)
 
 option(ALSOFT_DLOPEN  "Check for the dlopen API for loading optional libs"  ON)
+option(ALSOFT_DLOPEN_NOTES  "Record dlopen dependencies in .note.dlopen section"  ${UNIX_ELF})
 
 option(ALSOFT_WERROR  "Treat compile warnings as errors"      OFF)
 
@@ -674,6 +682,7 @@ set(COMMON_OBJS
     common/comptr.h
     common/dynload.cpp
     common/dynload.h
+    common/dlopennote.h
     common/expected.hpp
     common/filesystem.cpp
     common/filesystem.h
@@ -1431,6 +1440,26 @@ if(LIBTYPE STREQUAL "STATIC")
             set(PKG_CONFIG_PRIVATE_LIBS "${PKG_CONFIG_PRIVATE_LIBS} -l${FLAG}")
         endif()
     endforeach()
+endif()
+
+if(UNIX_ELF)
+  if(ALSOFT_DLOPEN_NOTES)
+    set(CHECK_ELF_DLNOTES_SRC [==[
+    #ifndef __ELF__
+      ELF DL notes is only supported on ELF platforms
+    #endif
+    __attribute__ ((used,aligned(4),section(".note.dlopen"))) static const struct {
+      struct { int a; int b; int c; } hdr; char name[4]; __attribute__((aligned(4))) char json[24];
+    } dlnote = { { 4, 0x407c0c0aU, 16 }, "FDO", "[\\"a\\":{\\"a\\":\\"1\\",\\"b\\":\\"2\\"}]" };
+    int main(int argc, char *argv[]) {
+      return argc + dlnote.hdr.a;
+    }
+    ]==])
+    check_c_source_compiles("${CHECK_ELF_DLNOTES_SRC}" COMPILER_SUPPORTS_ELFNOTES)
+    if(COMPILER_SUPPORTS_ELFNOTES)
+      set(HAVE_DLOPEN_NOTES TRUE)
+    endif()
+  endif()
 endif()
 
 # End configuration

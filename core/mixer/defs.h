@@ -71,29 +71,68 @@ using ResamplerFunc = void(*)(InterpState const *state, std::span<f32 const> src
 [[nodiscard]]
 auto PrepareResampler(Resampler resampler, u32 increment, InterpState *state) -> ResamplerFunc;
 
+#define DECL_RESAMPLER(T, I)                                                  \
+void Resample_##T##_##I(InterpState const *state, std::span<f32 const> src,   \
+    u32 frac, u32 increment, std::span<f32> dst);
 
-template<typename TypeTag, typename InstTag>
-void Resample_(InterpState const *state, std::span<f32 const> src, u32 frac, u32 increment,
-    std::span<f32> dst);
+#define DECL_MIXER(I)                                                         \
+void Mix_##I(std::span<f32 const> InSamples,                                  \
+    std::span<FloatBufferLine> OutBuffer, std::span<f32> CurrentGains,        \
+    std::span<f32 const> TargetGains, usize Counter, usize OutPos);           \
+void Mix_##I(std::span<f32 const> InSamples, std::span<f32> OutBuffer,        \
+    f32 &CurrentGain, f32 TargetGain, usize Counter);
 
-template<typename InstTag>
-void Mix_(std::span<f32 const> InSamples, std::span<FloatBufferLine> OutBuffer,
-    std::span<f32> CurrentGains, std::span<f32 const> TargetGains, usize Counter, usize OutPos);
-template<typename InstTag>
-void Mix_(std::span<f32 const> InSamples, std::span<f32> OutBuffer, f32 &CurrentGain,
-    f32 TargetGain, usize Counter);
+#define DECL_HRTF_MIXER(I) \
+void MixHrtf_##I(std::span<f32 const> InSamples,                              \
+    std::span<f32x2> AccumSamples, u32 IrSize,                                \
+    MixHrtfFilter const *hrtfparams, usize SamplesToDo);                      \
+void MixHrtfBlend_##I(std::span<f32 const> InSamples,                         \
+    std::span<f32x2> AccumSamples, u32 IrSize, HrtfFilter const *oldparams,   \
+    MixHrtfFilter const *newparams, usize SamplesToDo);                       \
+void MixDirectHrtf_##I(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,     \
+    std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,\
+    std::span<f32, BufferLineSize> TempBuf,                                   \
+    std::span<HrtfChannelState> ChanState, usize IrSize, usize SamplesToDo);
 
-template<typename InstTag>
-void MixHrtf_(std::span<f32 const> InSamples, std::span<f32x2> AccumSamples, u32 IrSize,
-    MixHrtfFilter const *hrtfparams, usize SamplesToDo);
-template<typename InstTag>
-void MixHrtfBlend_(std::span<f32 const> InSamples, std::span<f32x2> AccumSamples, u32 IrSize,
-    HrtfFilter const *oldparams, MixHrtfFilter const *newparams, usize SamplesToDo);
-template<typename InstTag>
-void MixDirectHrtf_(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,
-    std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,
-    std::span<f32, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState, usize IrSize,
-    usize SamplesToDo);
+
+DECL_RESAMPLER(Point, C)
+DECL_RESAMPLER(Linear, C)
+DECL_RESAMPLER(Cubic, C)
+DECL_RESAMPLER(FastBSinc, C)
+DECL_RESAMPLER(BSinc, C)
+
+DECL_MIXER(C)
+DECL_HRTF_MIXER(C)
+
+#if HAVE_SSE
+DECL_RESAMPLER(Cubic, SSE)
+DECL_RESAMPLER(FastBSinc, SSE)
+DECL_RESAMPLER(BSinc, SSE)
+
+DECL_MIXER(SSE)
+DECL_HRTF_MIXER(SSE)
+#endif
+#if HAVE_SSE2
+DECL_RESAMPLER(Linear, SSE2)
+DECL_RESAMPLER(Cubic, SSE2)
+#endif
+#if HAVE_SSE4_1
+DECL_RESAMPLER(Linear, SSE4)
+DECL_RESAMPLER(Cubic, SSE4)
+#endif
+#if HAVE_NEON
+DECL_RESAMPLER(Linear, NEON)
+DECL_RESAMPLER(Cubic, NEON)
+DECL_RESAMPLER(FastBSinc, NEON)
+DECL_RESAMPLER(BSinc, NEON)
+
+DECL_MIXER(NEON)
+DECL_HRTF_MIXER(NEON)
+#endif
+
+#undef DECL_HRTF_MIXER
+#undef DECL_MIXER
+#undef DECL_RESAMPLER
 
 /* Vectorized resampler helpers */
 template<usize N>

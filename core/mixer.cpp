@@ -12,12 +12,6 @@
 #include "device.h"
 #include "mixer/defs.h"
 
-struct CTag;
-
-
-MixerOutFunc MixSamplesOut{Mix_<CTag>};
-MixerOneFunc MixSamplesOne{Mix_<CTag>};
-
 
 auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread)
     -> std::array<float,MaxAmbiChannels>

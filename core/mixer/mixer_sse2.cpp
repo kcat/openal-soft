@@ -35,10 +35,6 @@
 #include "gsl/gsl"
 #include "opthelpers.h"
 
-struct SSE2Tag;
-struct LerpTag;
-struct CubicTag;
-
 
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__)
 #pragma GCC target("sse2")
@@ -55,8 +51,7 @@ force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept
 
 } // namespace
 
-template<>
-void Resample_<LerpTag,SSE2Tag>(InterpState const*, std::span<f32 const> const src, u32 frac,
+void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u32 frac,
     u32 const increment, std::span<f32> const dst)
 {
     ASSUME(frac < MixerFracOne);
@@ -114,9 +109,8 @@ void Resample_<LerpTag,SSE2Tag>(InterpState const*, std::span<f32 const> const s
     }
 }
 
-template<>
-void Resample_<CubicTag,SSE2Tag>(InterpState const *const state, std::span<f32 const> const src,
-    u32 frac, u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_SSE2(InterpState const *const state, std::span<f32 const> const src, u32 frac,
+    u32 const increment, std::span<f32> const dst)
 {
     ASSUME(frac < MixerFracOne);
 

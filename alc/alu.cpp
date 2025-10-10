@@ -83,28 +83,8 @@
 #include "strutils.hpp"
 #include "vecmat.h"
 
-struct CTag;
-#if HAVE_SSE
-struct SSETag;
-#endif
-#if HAVE_SSE2
-struct SSE2Tag;
-#endif
-#if HAVE_SSE4_1
-struct SSE4Tag;
-#endif
-#if HAVE_NEON
-struct NEONTag;
-#endif
-struct PointTag;
-struct LerpTag;
-struct CubicTag;
-struct BSincTag;
-struct FastBSincTag;
-
 
 static_assert((MaxResamplerPadding&1) == 0, "MaxResamplerPadding is not a multiple of two");
-
 
 namespace {
 
@@ -142,21 +122,21 @@ using HrtfDirectMixerFunc = void(*)(FloatBufferSpan LeftOut, FloatBufferSpan Rig
     std::span<f32, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState, usize IrSize,
     usize SamplesToDo);
 
-auto MixDirectHrtf = HrtfDirectMixerFunc{MixDirectHrtf_<CTag>};
+constinit auto MixDirectHrtf = HrtfDirectMixerFunc{MixDirectHrtf_C};
 
 [[nodiscard]]
 auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixDirectHrtf_<NEONTag>;
+        return MixDirectHrtf_NEON;
 #endif
 #if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirectHrtf_<SSETag>;
+        return MixDirectHrtf_SSE;
 #endif
 
-    return MixDirectHrtf_<CTag>;
+    return MixDirectHrtf_C;
 }
 
 
@@ -190,40 +170,40 @@ auto SelectResampler(Resampler const resampler, u32 const increment) -> Resample
     switch(resampler)
     {
     case Resampler::Point:
-        return Resample_<PointTag,CTag>;
+        return Resample_Point_C;
     case Resampler::Linear:
 #if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
-            return Resample_<LerpTag,NEONTag>;
+            return Resample_Linear_NEON;
 #endif
 #if HAVE_SSE4_1
         if((CPUCapFlags&CPU_CAP_SSE4_1))
-            return Resample_<LerpTag,SSE4Tag>;
+            return Resample_Linear_SSE4;
 #endif
 #if HAVE_SSE2
         if((CPUCapFlags&CPU_CAP_SSE2))
-            return Resample_<LerpTag,SSE2Tag>;
+            return Resample_Linear_SSE2;
 #endif
-        return Resample_<LerpTag,CTag>;
+        return Resample_Linear_C;
     case Resampler::Spline:
     case Resampler::Gaussian:
 #if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
-            return Resample_<CubicTag,NEONTag>;
+            return Resample_Cubic_NEON;
 #endif
 #if HAVE_SSE4_1
         if((CPUCapFlags&CPU_CAP_SSE4_1))
-            return Resample_<CubicTag,SSE4Tag>;
+            return Resample_Cubic_SSE4;
 #endif
 #if HAVE_SSE2
         if((CPUCapFlags&CPU_CAP_SSE2))
-            return Resample_<CubicTag,SSE2Tag>;
+            return Resample_Cubic_SSE2;
 #endif
 #if HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
-            return Resample_<CubicTag,SSETag>;
+            return Resample_Cubic_SSE;
 #endif
-        return Resample_<CubicTag,CTag>;
+        return Resample_Cubic_C;
     case Resampler::BSinc12:
     case Resampler::BSinc24:
     case Resampler::BSinc48:
@@ -231,13 +211,13 @@ auto SelectResampler(Resampler const resampler, u32 const increment) -> Resample
         {
 #if HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_<BSincTag,NEONTag>;
+                return Resample_BSinc_NEON;
 #endif
 #if HAVE_SSE
             if((CPUCapFlags&CPU_CAP_SSE))
-                return Resample_<BSincTag,SSETag>;
+                return Resample_BSinc_SSE;
 #endif
-            return Resample_<BSincTag,CTag>;
+            return Resample_BSinc_C;
         }
         [[fallthrough]];
     case Resampler::FastBSinc12:
@@ -245,16 +225,16 @@ auto SelectResampler(Resampler const resampler, u32 const increment) -> Resample
     case Resampler::FastBSinc48:
 #if HAVE_NEON
         if((CPUCapFlags&CPU_CAP_NEON))
-            return Resample_<FastBSincTag,NEONTag>;
+            return Resample_FastBSinc_NEON;
 #endif
 #if HAVE_SSE
         if((CPUCapFlags&CPU_CAP_SSE))
-            return Resample_<FastBSincTag,SSETag>;
+            return Resample_FastBSinc_SSE;
 #endif
-        return Resample_<FastBSincTag,CTag>;
+        return Resample_FastBSinc_C;
     }
 
-    return Resample_<PointTag,CTag>;
+    return Resample_Point_C;
 }
 
 } // namespace

@@ -19,13 +19,6 @@
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
-struct CTag;
-struct NEONTag;
-struct LerpTag;
-struct CubicTag;
-struct BSincTag;
-struct FastBSincTag;
-
 
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__ARM_NEON)
 #pragma GCC target("fpu=neon")
@@ -189,8 +182,7 @@ force_inline void MixLine(std::span<f32 const> const InSamples, std::span<f32> c
 
 } // namespace
 
-template<>
-void Resample_<LerpTag,NEONTag>(InterpState const*, std::span<f32 const> const src, u32 frac,
+void Resample_Linear_NEON(InterpState const*, std::span<f32 const> const src, u32 frac,
     u32 const increment, std::span<f32> const dst)
 {
     ASSUME(frac < MixerFracOne);
@@ -246,9 +238,8 @@ void Resample_<LerpTag,NEONTag>(InterpState const*, std::span<f32 const> const s
     }
 }
 
-template<>
-void Resample_<CubicTag,NEONTag>(InterpState const *const state, std::span<f32 const> const src,
-    u32 frac, u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_NEON(InterpState const *const state, std::span<f32 const> const src, u32 frac,
+    u32 const increment, std::span<f32> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -337,9 +328,54 @@ void Resample_<CubicTag,NEONTag>(InterpState const *const state, std::span<f32 c
     }
 }
 
-template<>
-void Resample_<BSincTag,NEONTag>(InterpState const *const state, std::span<f32 const> const src,
+void Resample_FastBSinc_NEON(InterpState const *const state, std::span<f32 const> const src,
     u32 frac, u32 const increment, std::span<f32> const dst)
+{
+    auto const &bsinc = std::get<BsincState>(*state);
+    auto const m = usize{bsinc.m};
+    ASSUME(m > 0);
+    ASSUME(m <= MaxResamplerPadding);
+    ASSUME(frac < MixerFracOne);
+
+    auto const filter = bsinc.filter.first(2_uz*BSincPhaseCount*m);
+
+    ASSUME(bsinc.l <= MaxResamplerEdge);
+    auto pos = usize{MaxResamplerEdge-bsinc.l};
+    std::ranges::generate(dst, [&pos,&frac,src,increment,m,filter]() -> f32
+    {
+        // Calculate the phase index and factor.
+        auto const pi = frac >> BSincPhaseDiffBits; ASSUME(pi < BSincPhaseCount);
+        auto const pf = static_cast<f32>(frac&BSincPhaseDiffMask) * f32{1.0f/BSincPhaseDiffOne};
+
+        // Apply the phase interpolated filter.
+        auto r4 = vdupq_n_f32(0.0f);
+        {
+            auto const pf4 = vdupq_n_f32(pf);
+            auto const fil = filter.subspan(2_uz*pi*m);
+            auto const phd = fil.subspan(m);
+            auto td = m >> 2_uz;
+            auto j = 0_uz;
+
+            do {
+                /* f = fil + pf*phd */
+                auto const f4 = vmlaq_f32(vld1q_f32(&fil[j]), pf4, vld1q_f32(&phd[j]));
+                /* r += f*src */
+                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[pos+j]));
+                j += 4;
+            } while(--td);
+        }
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        auto const output = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+
+        frac += increment;
+        pos  += frac>>MixerFracBits;
+        frac &= MixerFracMask;
+        return output;
+    });
+}
+
+void Resample_BSinc_NEON(InterpState const *const state, std::span<f32 const> const src, u32 frac,
+    u32 const increment, std::span<f32> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const sf4 = vdupq_n_f32(bsinc.sf);
@@ -389,70 +425,20 @@ void Resample_<BSincTag,NEONTag>(InterpState const *const state, std::span<f32 c
     });
 }
 
-template<>
-void Resample_<FastBSincTag,NEONTag>(InterpState const *const state,
-    std::span<f32 const> const src, u32 frac, u32 const increment, std::span<f32> const dst)
-{
-    auto const &bsinc = std::get<BsincState>(*state);
-    auto const m = usize{bsinc.m};
-    ASSUME(m > 0);
-    ASSUME(m <= MaxResamplerPadding);
-    ASSUME(frac < MixerFracOne);
 
-    auto const filter = bsinc.filter.first(2_uz*BSincPhaseCount*m);
-
-    ASSUME(bsinc.l <= MaxResamplerEdge);
-    auto pos = usize{MaxResamplerEdge-bsinc.l};
-    std::ranges::generate(dst, [&pos,&frac,src,increment,m,filter]() -> f32
-    {
-        // Calculate the phase index and factor.
-        auto const pi = frac >> BSincPhaseDiffBits; ASSUME(pi < BSincPhaseCount);
-        auto const pf = static_cast<f32>(frac&BSincPhaseDiffMask) * f32{1.0f/BSincPhaseDiffOne};
-
-        // Apply the phase interpolated filter.
-        auto r4 = vdupq_n_f32(0.0f);
-        {
-            auto const pf4 = vdupq_n_f32(pf);
-            auto const fil = filter.subspan(2_uz*pi*m);
-            auto const phd = fil.subspan(m);
-            auto td = m >> 2_uz;
-            auto j = 0_uz;
-
-            do {
-                /* f = fil + pf*phd */
-                auto const f4 = vmlaq_f32(vld1q_f32(&fil[j]), pf4, vld1q_f32(&phd[j]));
-                /* r += f*src */
-                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[pos+j]));
-                j += 4;
-            } while(--td);
-        }
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        auto const output = vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
-
-        frac += increment;
-        pos  += frac>>MixerFracBits;
-        frac &= MixerFracMask;
-        return output;
-    });
-}
-
-
-template<>
-void MixHrtf_<NEONTag>(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtf_NEON(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
-template<>
-void MixHrtfBlend_<NEONTag>(std::span<f32 const> const InSamples,
-    std::span<f32x2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
-    MixHrtfFilter const *const newparams, usize const SamplesToDo)
+void MixHrtfBlend_NEON(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+    u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         SamplesToDo);
 }
 
-template<>
-void MixDirectHrtf_<NEONTag>(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
+void MixDirectHrtf_NEON(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
@@ -462,13 +448,12 @@ void MixDirectHrtf_<NEONTag>(FloatBufferSpan const LeftOut, FloatBufferSpan cons
 }
 
 
-template<>
-void Mix_<NEONTag>(std::span<f32 const> const InSamples,
-    std::span<FloatBufferLine> const OutBuffer, std::span<f32> const CurrentGains,
-    std::span<f32 const> const TargetGains, usize const Counter, usize const OutPos)
+void Mix_NEON(std::span<f32 const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
+    std::span<f32> const CurrentGains, std::span<f32 const> const TargetGains, usize const Counter,
+    usize const OutPos)
 {
     if((OutPos&3) != 0) [[unlikely]]
-        return Mix_<CTag>(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
+        return Mix_C(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
 
     auto const delta = (Counter > 0) ? 1.0f / static_cast<f32>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());
@@ -481,13 +466,12 @@ void Mix_<NEONTag>(std::span<f32 const> const InSamples,
             realign_len, Counter);
 }
 
-template<>
-void Mix_<NEONTag>(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
+void Mix_NEON(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
     f32 &CurrentGain, f32 const TargetGain, usize const Counter)
 {
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
-        return Mix_<CTag>(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
+        return Mix_C(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 
     auto const delta = (Counter > 0) ? 1.0f / static_cast<f32>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());

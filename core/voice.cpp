@@ -41,14 +41,6 @@
 #include "vector.h"
 #include "voice_change.h"
 
-struct CTag;
-#if HAVE_SSE
-struct SSETag;
-#endif
-#if HAVE_NEON
-struct NEONTag;
-#endif
-
 
 namespace {
 
@@ -69,59 +61,61 @@ using HrtfMixerFunc = void(*)(std::span<const f32> InSamples, std::span<f32x2> A
 using HrtfMixerBlendFunc = void(*)(std::span<const f32> InSamples, std::span<f32x2> AccumSamples,
     u32 IrSize, HrtfFilter const *oldparams, MixHrtfFilter const *newparams, usize SamplesToDo);
 
-auto MixHrtfSamples = HrtfMixerFunc{MixHrtf_<CTag>};
-auto MixHrtfBlendSamples = HrtfMixerBlendFunc{MixHrtfBlend_<CTag>};
+constinit auto MixHrtfSamples = HrtfMixerFunc{MixHrtf_C};
+constinit auto MixHrtfBlendSamples = HrtfMixerBlendFunc{MixHrtfBlend_C};
 
+[[nodiscard]]
 auto SelectMixer() -> MixerOutFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_<NEONTag>;
+        return Mix_NEON;
 #endif
 #if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_<SSETag>;
+        return Mix_SSE;
 #endif
-    return Mix_<CTag>;
+    return Mix_C;
 }
 
+[[nodiscard]]
 auto SelectMixerOne() -> MixerOneFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_<NEONTag>;
+        return Mix_NEON;
 #endif
 #if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_<SSETag>;
+        return Mix_SSE;
 #endif
-    return Mix_<CTag>;
+    return Mix_C;
 }
 
 auto SelectHrtfMixer() -> HrtfMixerFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtf_<NEONTag>;
+        return MixHrtf_NEON;
 #endif
 #if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_<SSETag>;
+        return MixHrtf_SSE;
 #endif
-    return MixHrtf_<CTag>;
+    return MixHrtf_C;
 }
 
 auto SelectHrtfBlendMixer() -> HrtfMixerBlendFunc
 {
 #if HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtfBlend_<NEONTag>;
+        return MixHrtfBlend_NEON;
 #endif
 #if HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtfBlend_<SSETag>;
+        return MixHrtfBlend_SSE;
 #endif
-    return MixHrtfBlend_<CTag>;
+    return MixHrtfBlend_C;
 }
 
 } // namespace

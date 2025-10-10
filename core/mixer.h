@@ -3,34 +3,37 @@
 
 #include <array>
 #include <cmath>
-#include <cstddef>
 #include <span>
 
+#include "alnumeric.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "opthelpers.h"
 
 struct MixParams;
 
-/* Mixer functions that handle one input and multiple output channels. */
-using MixerOutFunc = void(*)(const std::span<const float> InSamples,
-    const std::span<FloatBufferLine> OutBuffer, const std::span<float> CurrentGains,
-    const std::span<const float> TargetGains, const std::size_t Counter, const std::size_t OutPos);
+void Mix_C(std::span<f32 const> InSamples, std::span<FloatBufferLine> OutBuffer,
+    std::span<f32> CurrentGains, std::span<f32 const> TargetGains, usize Counter, usize OutPos);
+void Mix_C(std::span<f32 const> InSamples, std::span<f32> OutBuffer, f32 &CurrentGain,
+    f32 TargetGain, usize Counter);
 
-DECL_HIDDEN extern MixerOutFunc MixSamplesOut;
-inline void MixSamples(const std::span<const float> InSamples,
-    const std::span<FloatBufferLine> OutBuffer, const std::span<float> CurrentGains,
-    const std::span<const float> TargetGains, const std::size_t Counter, const std::size_t OutPos)
+/* Mixer functions that handle one input and multiple output channels. */
+using MixerOutFunc = void(*)(std::span<f32 const> InSamples, std::span<FloatBufferLine> OutBuffer,
+    std::span<f32> CurrentGains, std::span<f32 const> TargetGains, usize Counter, usize OutPos);
+
+inline constinit auto MixSamplesOut = MixerOutFunc{Mix_C};
+inline void MixSamples(std::span<f32 const> const InSamples,
+    std::span<FloatBufferLine> const OutBuffer, std::span<f32> const CurrentGains,
+    std::span<f32 const> const TargetGains, usize const Counter, usize const OutPos)
 { MixSamplesOut(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos); }
 
 /* Mixer functions that handle one input and one output channel. */
-using MixerOneFunc = void(*)(const std::span<const float> InSamples,
-    const std::span<float> OutBuffer, float &CurrentGain, const float TargetGain,
-    const std::size_t Counter);
+using MixerOneFunc = void(*)(std::span<f32 const> InSamples, std::span<f32> OutBuffer,
+    f32 &CurrentGain, f32 TargetGain, usize Counter);
 
-DECL_HIDDEN extern MixerOneFunc MixSamplesOne;
-inline void MixSamples(const std::span<const float> InSamples, const std::span<float> OutBuffer,
-    float &CurrentGain, const float TargetGain, const std::size_t Counter)
+inline constinit auto MixSamplesOne = MixerOneFunc{Mix_C};
+inline void MixSamples(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
+    f32 &CurrentGain, f32 const TargetGain, usize const Counter)
 { MixSamplesOne(InSamples, OutBuffer, CurrentGain, TargetGain, Counter); }
 
 

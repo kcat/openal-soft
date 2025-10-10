@@ -17,13 +17,6 @@
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
-struct CTag;
-struct PointTag;
-struct LerpTag;
-struct CubicTag;
-struct BSincTag;
-struct FastBSincTag;
-
 
 namespace {
 
@@ -189,26 +182,22 @@ force_inline void MixLine(std::span<f32 const> InSamples, std::span<f32> const d
 
 } // namespace
 
-template<>
-void Resample_<PointTag,CTag>(InterpState const*, std::span<f32 const> const src, u32 const frac,
+void Resample_Point_C(InterpState const*, std::span<f32 const> const src, u32 const frac,
     u32 const increment, std::span<f32> const dst)
 { DoResample<do_point>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
-template<>
-void Resample_<LerpTag,CTag>(InterpState const*, std::span<f32 const> const src, u32 const frac,
+void Resample_Linear_C(InterpState const*, std::span<f32 const> const src, u32 const frac,
     u32 const increment, std::span<f32> const dst)
 { DoResample<do_lerp>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
-template<>
-void Resample_<CubicTag,CTag>(InterpState const *const state, std::span<f32 const> const src,
+void Resample_Cubic_C(InterpState const *const state, std::span<f32 const> const src,
     u32 const frac, u32 const increment, std::span<f32> const dst)
 {
     DoResample<CubicState,do_cubic>(std::get<CubicState>(*state), src.subspan(MaxResamplerEdge-1),
         frac, increment, dst);
 }
 
-template<>
-void Resample_<FastBSincTag,CTag>(InterpState const *const state, std::span<f32 const> const src,
+void Resample_FastBSinc_C(InterpState const *const state, std::span<f32 const> const src,
     u32 const frac, u32 const increment, std::span<f32> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
@@ -217,8 +206,7 @@ void Resample_<FastBSincTag,CTag>(InterpState const *const state, std::span<f32 
         increment, dst);
 }
 
-template<>
-void Resample_<BSincTag,CTag>(InterpState const *const state, std::span<f32 const> const src,
+void Resample_BSinc_C(InterpState const *const state, std::span<f32 const> const src,
     u32 const frac, u32 const increment, std::span<f32> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
@@ -228,22 +216,19 @@ void Resample_<BSincTag,CTag>(InterpState const *const state, std::span<f32 cons
 }
 
 
-template<>
-void MixHrtf_<CTag>(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtf_C(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
-template<>
-void MixHrtfBlend_<CTag>(std::span<f32 const> const InSamples,
-    std::span<f32x2> const AccumSamples, u32 const IrSize, HrtfFilter const *const oldparams,
-    MixHrtfFilter const *const newparams, usize const SamplesToDo)
+void MixHrtfBlend_C(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+    u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         SamplesToDo);
 }
 
-template<>
-void MixDirectHrtf_<CTag>(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
+void MixDirectHrtf_C(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
@@ -253,8 +238,7 @@ void MixDirectHrtf_<CTag>(FloatBufferSpan const LeftOut, FloatBufferSpan const R
 }
 
 
-template<>
-void Mix_<CTag>(std::span<f32 const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
+void Mix_C(std::span<f32 const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
     std::span<f32> const CurrentGains, std::span<f32 const> const TargetGains,
     usize const Counter, usize const OutPos)
 {
@@ -268,12 +252,11 @@ void Mix_<CTag>(std::span<f32 const> const InSamples, std::span<FloatBufferLine>
             fade_len, Counter);
 }
 
-template<>
-void Mix_<CTag>(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
-    f32 &CurrentGain, f32 const TargetGain, usize const Counter)
+void Mix_C(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer, f32 &CurrentGain,
+    f32 const TargetGain, usize const Counter)
 {
-    const auto delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
-    const auto fade_len = std::min(Counter, InSamples.size());
+    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
+    auto const fade_len = std::min(Counter, InSamples.size());
 
     MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, fade_len, Counter);
 }

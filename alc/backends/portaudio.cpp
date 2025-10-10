@@ -422,12 +422,14 @@ void PortCapture::captureSamples(std::span<std::byte> outbuffer)
 # define PA_LIB "libportaudio.so.2"
 #endif
 
+#if HAVE_DYNLOAD
 OAL_ELF_NOTE_DLOPEN(
     "backend-portaudio",
     "Support for the PortAudio backend",
     OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
     PA_LIB
 );
+#endif
 
 bool PortBackendFactory::init()
 {

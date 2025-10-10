@@ -1441,12 +1441,14 @@ auto PulseCapture::getClockLatency() -> ClockLatency
 #define PULSE_LIB "libpulse.so.0"
 #endif
 
+#if HAVE_DYNLOAD
 OAL_ELF_NOTE_DLOPEN(
     "backend-pulseaudio",
     "Support for the PulseAudio backend",
     OAL_ELF_NOTE_DLOPEN_PRIORITY_RECOMMENDED,
     PULSE_LIB
 );
+#endif
 
 auto PulseBackendFactory::init() -> bool
 {

@@ -946,12 +946,14 @@ auto OpenSLCapture::availableSamples() -> uint
 
 #define SLES_LIB "libOpenSLES.so"
 
+#if HAVE_DYNLOAD
 OAL_ELF_NOTE_DLOPEN(
     "backend-opensl",
     "Support for the OpenSL backend",
     OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
     SLES_LIB
 );
+#endif
 
 bool OSLBackendFactory::init()
 {

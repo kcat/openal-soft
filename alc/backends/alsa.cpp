@@ -1147,12 +1147,14 @@ auto AlsaCapture::getClockLatency() -> ClockLatency
 
 #define ALSA_LIB "libasound.so.2"
 
+#if HAVE_DYNLOAD
 OAL_ELF_NOTE_DLOPEN(
     "backend-alsa",
     "Support for the ALSA backend",
     OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
     ALSA_LIB
 );
+#endif
 
 auto AlsaBackendFactory::init() -> bool
 {

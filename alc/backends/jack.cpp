@@ -118,12 +118,14 @@ jack_options_t ClientOptions = JackNullOption;
 #define JACK_LIB "libjack.so.0"
 #endif
 
+#if HAVE_DYNLOAD
 OAL_ELF_NOTE_DLOPEN(
     "backend-jack",
     "Support for the JACK backend",
     OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
     JACK_LIB
 );
+#endif
 
 auto jack_load() -> bool
 {

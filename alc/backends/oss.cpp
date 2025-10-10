@@ -444,7 +444,7 @@ struct OSScapture final : public BackendBase {
     explicit OSScapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~OSScapture() override;
 
-    void recordProc();
+    void recordProc() const;
 
     void open(std::string_view name) override;
     void start() override;
@@ -468,23 +468,23 @@ OSScapture::~OSScapture()
 }
 
 
-void OSScapture::recordProc()
+void OSScapture::recordProc() const
 {
     SetRTPriority();
     althrd_setname(GetRecordThreadName());
 
-    const auto frame_size = size_t{mDevice->frameSizeFromFmt()};
+    auto const frame_size = usize{mDevice->frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         auto pollitem = pollfd{};
         pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
-        if(const auto pret = poll(&pollitem, 1, 1000); pret < 0)
+        if(auto const pret = poll(&pollitem, 1, 1000); pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
-            const auto errstr = std::generic_category().message(errno);
+            auto const errstr = std::generic_category().message(errno);
             ERR("poll failed: {}", errstr);
             mDevice->handleDisconnect("Failed to check capture samples: {}", errstr);
             break;
@@ -501,12 +501,12 @@ void OSScapture::recordProc()
             auto amt = read(mFd, vec[0].data(), vec[0].size());
             if(amt < 0)
             {
-                const auto errstr = std::generic_category().message(errno);
+                auto const errstr = std::generic_category().message(errno);
                 ERR("read failed: {}", errstr);
                 mDevice->handleDisconnect("Failed reading capture samples: {}", errstr);
                 break;
             }
-            mRing->writeAdvance(gsl::narrow_cast<size_t>(amt)/frame_size);
+            mRing->writeAdvance(gsl::narrow_cast<usize>(amt) / frame_size);
         }
     }
 }

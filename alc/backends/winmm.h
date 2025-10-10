@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct WinMMBackendFactory final : public BackendFactory {
-public:
+struct WinMMBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

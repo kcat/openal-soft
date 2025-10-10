@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct WasapiBackendFactory final : public BackendFactory {
-public:
+struct WasapiBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

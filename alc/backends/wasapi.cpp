@@ -153,7 +153,9 @@ constexpr auto X714Mask = MaskFromTopBits(X7DOT1DOT4);
 
 
 #ifndef _MSC_VER
-constexpr auto operator|(AudioObjectType lhs, AudioObjectType rhs) noexcept -> AudioObjectType
+[[nodiscard]]
+constexpr auto operator|(AudioObjectType const lhs, AudioObjectType const rhs) noexcept
+    -> AudioObjectType
 { return static_cast<AudioObjectType>(lhs | al::to_underlying(rhs)); }
 #endif
 
@@ -184,16 +186,8 @@ constexpr auto ChannelMask_X7144 = AudioObjectType_FrontLeft | AudioObjectType_F
     | AudioObjectType_BottomBackRight;
 
 
-template<typename... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
-
-
 template<typename T>
-struct CoTaskMemDeleter {
-    void operator()(T *ptr) const { CoTaskMemFree(ptr); }
-};
-template<typename T>
-using unique_coptr = std::unique_ptr<T,CoTaskMemDeleter<T>>;
+using unique_coptr = std::unique_ptr<T, decltype([](T *const ptr) { CoTaskMemFree(ptr); })>;
 
 
 /* Scales the given reftime value, rounding the result. */
@@ -310,10 +304,8 @@ auto gInitDone = std::atomic<bool>{false};
 
 
 #ifdef AVRTAPI
-struct AvrtHandleCloser {
-    void operator()(HANDLE handle) { AvRevertMmThreadCharacteristics(handle); }
-};
-using AvrtHandlePtr = std::unique_ptr<std::remove_pointer_t<HANDLE>,AvrtHandleCloser>;
+using AvrtHandlePtr = std::unique_ptr<std::remove_pointer_t<HANDLE>, decltype(
+    [](HANDLE const handle) { AvRevertMmThreadCharacteristics(handle); })>;
 #endif
 
 #if ALSOFT_UWP
@@ -462,7 +454,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
     ~DeviceEnumHelper()
     {
         if(mEnumerator)
-            mEnumerator->UnregisterEndpointNotificationCallback(this);
+            std::ignore = mEnumerator->UnregisterEndpointNotificationCallback(this);
         mEnumerator = nullptr;
     }
 #endif
@@ -509,7 +501,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
             return S_OK;
         }
 #endif
-        else if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
+        if(IId == __uuidof(IAgileObject) || IId == __uuidof(IUnknown))
         {
             *UnknownPtrPtr = as<IUnknown*>();
             AddRef();
@@ -660,7 +652,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
         // Get the string identifier of the audio renderer
         auto AudioSelector = flowdir == eRender ? MediaDevice::GetAudioRenderSelector() : MediaDevice::GetAudioCaptureSelector();
 
-        // Setup the asynchronous callback
+        // Set up the asynchronous callback
         auto&& DeviceInfoCollection = DeviceInformation::FindAllAsync(AudioSelector, /*PropertyList*/nullptr, DeviceInformationKind::DeviceInterface).get();
         if(DeviceInfoCollection)
         {
@@ -703,7 +695,7 @@ private:
     }
 
 #if !ALSOFT_UWP
-    STDMETHODIMP DeviceAdded(LPCWSTR deviceId) noexcept
+    auto DeviceAdded(LPCWSTR const deviceId) const noexcept -> HRESULT
     {
         auto device = ComPtr<IMMDevice>{};
         auto hr = mEnumerator->GetDevice(deviceId, al::out_ptr(device));
@@ -739,7 +731,7 @@ private:
             return S_OK;
         }
 
-        auto devlock = DeviceListLock{gDeviceList};
+        auto const devlock = DeviceListLock{gDeviceList};
         auto &list = (flowdir == eRender) ? devlock.getPlaybackList() : devlock.getCaptureList();
 
         if(AddDevice(device, deviceId, list))
@@ -753,16 +745,17 @@ private:
         return S_OK;
     }
 
-    STDMETHODIMP DeviceRemoved(LPCWSTR deviceId) noexcept
+    static auto DeviceRemoved(LPCWSTR const deviceId) noexcept -> HRESULT
     {
-        auto devlock = DeviceListLock{gDeviceList};
-        for(auto flowdir : std::array{eRender, eCapture})
+        auto const devlock = DeviceListLock{gDeviceList};
+        for(auto const flowdir : std::array{eRender, eCapture})
         {
             auto &list = (flowdir==eRender) ? devlock.getPlaybackList() : devlock.getCaptureList();
-            auto devtype = (flowdir==eRender)?alc::DeviceType::Playback : alc::DeviceType::Capture;
+            auto const devtype = (flowdir == eRender) ? alc::DeviceType::Playback
+                : alc::DeviceType::Capture;
 
             /* Find the ID in the list to remove. */
-            auto iter = std::ranges::find(list, deviceId, &DevMap::devid);
+            auto const iter = std::ranges::find(list, deviceId, &DevMap::devid);
             if(iter == list.end()) continue;
 
             TRACE("Removing device \"{}\", \"{}\", \"{}\"", iter->name, iter->endpoint_guid,
@@ -931,7 +924,8 @@ struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler {
     }
 
     [[nodiscard]]
-    auto activateAudioClient(_In_ DeviceHandle &device, _In_ REFIID iid, void **ppv) -> HRESULT
+    auto activateAudioClient(_In_ DeviceHandle const &device, _In_ REFIID iid, void **ppv)
+        -> HRESULT
     {
         ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
         HRESULT hr{ActivateAudioInterfaceAsync(device.Id().data(), iid, nullptr, this,
@@ -994,7 +988,8 @@ struct DeviceHelper {
     }
 
     [[nodiscard]]
-    static auto activateAudioClient(_In_ DeviceHandle &device, REFIID iid, void **ppv) -> HRESULT
+    static auto activateAudioClient(_In_ DeviceHandle const &device, REFIID iid, void **ppv)
+        -> HRESULT
     {
         if(iid == __uuidof(IAudioClient))
         {
@@ -1062,7 +1057,7 @@ bool MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 
 void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
 {
-    constexpr size_t fmtex_extra_size{sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX)};
+    static constexpr auto fmtex_extra_size = sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX);
     if(format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= fmtex_extra_size)
     {
         const auto *fmtex = CONTAINING_RECORD(format, const WAVEFORMATEXTENSIBLE, Format);
@@ -1172,10 +1167,10 @@ struct WasapiPlayback final : public BackendBase {
         AudioObjectType mStaticMask{};
     };
 
-    void mixerProc(PlainDevice &audio);
-    void mixerProc(SpatialDevice &audio);
+    void mixerProc(PlainDevice const &audio);
+    void mixerProc(SpatialDevice const &audio);
 
-    auto openProxy(const std::string_view name, DeviceHelper &helper, DeviceHandle &mmdev)
+    auto openProxy(std::string_view name, DeviceHelper const &helper, DeviceHandle &mmdev)
         -> HRESULT;
     void finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType);
     auto initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, SpatialDevice &audio) -> bool;
@@ -1252,21 +1247,12 @@ WasapiPlayback::~WasapiPlayback()
 }
 
 
-FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
+FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
 {
-    class PriorityControl {
-        const int mOldPriority;
-
-    public:
-        PriorityControl() : mOldPriority{GetThreadPriority(GetCurrentThread())}
-        {
-            if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
-                ERR("Failed to set priority level for thread");
-        }
-        ~PriorityControl()
-        { SetThreadPriority(GetCurrentThread(), mOldPriority); }
-    };
-    auto prioctrl = PriorityControl{};
+    auto const _ = gsl::finally([oldprio=GetThreadPriority(GetCurrentThread())]
+    { SetThreadPriority(GetCurrentThread(), oldprio); });
+    if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+        ERR("Failed to set priority level for thread");
 
     const auto frame_size = mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u;
     const auto buffer_len = mOutBufferSize;
@@ -1378,7 +1364,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice &audio)
     audio.mClient->Stop();
 }
 
-FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice &audio)
+FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
 {
     class PriorityControl {
         int mOldPriority;
@@ -1553,7 +1539,7 @@ try {
     althrd_setname(GetMixerThreadName());
 
     auto mmdev = DeviceHandle{nullptr};
-    if(auto hr = openProxy(name, helper, mmdev); FAILED(hr))
+    if(auto const hr = openProxy(name, helper, mmdev); FAILED(hr))
     {
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
@@ -1640,15 +1626,15 @@ void WasapiPlayback::open(std::string_view name)
             as_unsigned(mProcResult)};
 }
 
-auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper,
+auto WasapiPlayback::openProxy(std::string_view const name, DeviceHelper const &helper,
     DeviceHandle &mmdev) -> HRESULT
 {
     auto devname = std::string{};
     auto devid = std::wstring{};
     if(!name.empty())
     {
-        auto devlock = DeviceListLock{gDeviceList};
-        const auto list = std::span{devlock.getPlaybackList()};
+        auto const devlock = DeviceListLock{gDeviceList};
+        auto const list = std::span{devlock.getPlaybackList()};
         auto iter = std::ranges::find_if(list, [name](const DevMap &entry) -> bool
         { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
 
@@ -1685,10 +1671,10 @@ auto WasapiPlayback::openProxy(const std::string_view name, DeviceHelper &helper
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = uint(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec);
     else
         mDevice->mSampleRate = std::min(mDevice->mSampleRate,
-            uint(OutputType.Format.nSamplesPerSec));
+            gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec));
 
     const auto chancount = uint32_t{OutputType.Format.nChannels};
     const auto chanmask = OutputType.dwChannelMask;
@@ -1934,10 +1920,10 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
         mDevice->FmtChans = DevFmtStereo;
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = uint(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec);
     else
         mDevice->mSampleRate = std::min(mDevice->mSampleRate,
-            uint(OutputType.Format.nSamplesPerSec));
+            gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec));
 
     setDefaultWFXChannelOrder();
 
@@ -2384,11 +2370,11 @@ struct WasapiCapture final : public BackendBase {
     explicit WasapiCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~WasapiCapture() override;
 
-    void recordProc(IAudioClient *client, IAudioCaptureClient *capture);
+    void recordProc(IAudioClient *client, IAudioCaptureClient *capture) const;
 
     void proc_thread(const std::string &name);
 
-    auto openProxy(const std::string_view name, DeviceHelper &helper, DeviceHandle &mmdev)
+    auto openProxy(std::string_view name, DeviceHelper const &helper, DeviceHandle &mmdev)
         -> HRESULT;
     auto resetProxy(DeviceHelper &helper, DeviceHandle &mmdev, ComPtr<IAudioClient> &client,
         ComPtr<IAudioCaptureClient> &capture) -> HRESULT;
@@ -2428,7 +2414,6 @@ struct WasapiCapture final : public BackendBase {
     RingBufferPtr<std::byte> mRing;
 
     std::atomic<bool> mKillNow{true};
-    std::thread mThread;
 };
 
 WasapiCapture::~WasapiCapture()
@@ -2450,7 +2435,8 @@ WasapiCapture::~WasapiCapture()
 }
 
 
-FORCE_ALIGN void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *capture)
+FORCE_ALIGN
+void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *capture) const
 {
     ResetEvent(mNotifyEvent);
     if(const auto hr = client->Start(); FAILED(hr))
@@ -2671,15 +2657,15 @@ void WasapiCapture::open(std::string_view name)
             as_unsigned(mProcResult)};
 }
 
-auto WasapiCapture::openProxy(const std::string_view name, DeviceHelper &helper,
+auto WasapiCapture::openProxy(std::string_view const name, DeviceHelper const &helper,
     DeviceHandle &mmdev) -> HRESULT
 {
     auto devname = std::string{};
     auto devid = std::wstring{};
     if(!name.empty())
     {
-        auto devlock = DeviceListLock{gDeviceList};
-        const auto devlist = std::span{devlock.getCaptureList()};
+        auto const devlock = DeviceListLock{gDeviceList};
+        auto const devlist = std::span{devlock.getCaptureList()};
         auto iter = std::ranges::find_if(devlist, [name](const DevMap &entry) -> bool
         { return entry.name == name || al::case_compare(entry.endpoint_guid, name) == 0; });
 
@@ -2840,8 +2826,8 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
             return E_FAIL;
         wfx = nullptr;
 
-        auto validate_fmt = [](DeviceBase *device, uint32_t chancount, DWORD chanmask) noexcept
-            -> bool
+        static constexpr auto validate_fmt = [](DeviceBase const *const device,
+            u32 const chancount, u32 const chanmask) noexcept -> bool
         {
             switch(device->FmtChans)
             {
@@ -3056,29 +3042,29 @@ auto WasapiBackendFactory::init() -> bool
     return SUCCEEDED(InitResult);
 }
 
-auto WasapiBackendFactory::querySupport(BackendType type) -> bool
+auto WasapiBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback || type == BackendType::Capture; }
 
-auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
+auto WasapiBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {
     auto outnames = std::vector<std::string>{};
 
-    auto devlock = DeviceListLock{gDeviceList};
+    auto const devlock = DeviceListLock{gDeviceList};
     switch(type)
     {
     case BackendType::Playback:
         {
-            auto defaultId = devlock.getPlaybackDefaultId();
+            auto const defaultId = devlock.getPlaybackDefaultId();
             auto &devlist = devlock.getPlaybackList();
 
             outnames.reserve(devlist.size());
             std::ranges::transform(devlist, std::back_inserter(outnames), &DevMap::name);
 
             /* Default device goes first. */
-            const auto defiter = std::ranges::find(devlist, defaultId, &DevMap::devid);
-            if(defiter != devlist.cend())
+            if(auto const defiter = std::ranges::find(devlist, defaultId, &DevMap::devid);
+                defiter != devlist.end())
             {
-                const auto defname = outnames.begin() + std::distance(devlist.begin(), defiter);
+                auto const defname = outnames.begin() + std::distance(devlist.begin(), defiter);
                 std::rotate(outnames.begin(), defname, defname+1);
             }
         }
@@ -3086,17 +3072,17 @@ auto WasapiBackendFactory::enumerate(BackendType type) -> std::vector<std::strin
 
     case BackendType::Capture:
         {
-            auto defaultId = devlock.getCaptureDefaultId();
+            auto const defaultId = devlock.getCaptureDefaultId();
             auto &devlist = devlock.getCaptureList();
 
             outnames.reserve(devlist.size());
             std::ranges::transform(devlist, std::back_inserter(outnames), &DevMap::name);
 
             /* Default device goes first. */
-            const auto defiter = std::ranges::find(devlist, defaultId, &DevMap::devid);
-            if(defiter != devlist.cend())
+            if(auto const defiter = std::ranges::find(devlist, defaultId, &DevMap::devid);
+                defiter != devlist.end())
             {
-                const auto defname = outnames.begin() + std::distance(devlist.begin(), defiter);
+                auto const defname = outnames.begin() + std::distance(devlist.begin(), defiter);
                 std::rotate(outnames.begin(), defname, defname+1);
             }
         }

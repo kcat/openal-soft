@@ -156,10 +156,10 @@ struct DSoundPlayback final : public BackendBase {
     explicit DSoundPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
     ~DSoundPlayback() override;
 
-    int mixerProc();
+    void mixerProc() const;
 
     void open(std::string_view name) override;
-    bool reset() override;
+    auto reset() -> bool override;
     void start() override;
     void stop() override;
 
@@ -186,7 +186,7 @@ DSoundPlayback::~DSoundPlayback()
 }
 
 
-FORCE_ALIGN int DSoundPlayback::mixerProc()
+FORCE_ALIGN void DSoundPlayback::mixerProc() const
 {
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
@@ -199,22 +199,22 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         ERR("Failed to get buffer caps: {:#x}", as_unsigned(err));
         mDevice->handleDisconnect("Failure retrieving playback buffer info: {:#x}",
             as_unsigned(err));
-        return 1;
+        return;
     }
 
-    const auto FrameStep = size_t{mDevice->channelsFromFmt()};
-    auto FrameSize = DWORD{mDevice->frameSizeFromFmt()};
-    auto FragSize = DWORD{mDevice->mUpdateSize} * FrameSize;
+    auto const FrameStep = usize{mDevice->channelsFromFmt()};
+    auto const FrameSize = DWORD{mDevice->frameSizeFromFmt()};
+    auto const FragSize = DWORD{mDevice->mUpdateSize} * FrameSize;
 
     auto Playing = false;
     auto LastCursor = DWORD{0};
-    mBuffer->GetCurrentPosition(&LastCursor, nullptr);
+    std::ignore = mBuffer->GetCurrentPosition(&LastCursor, nullptr);
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
         // Get current play cursor
         auto PlayCursor = DWORD{};
-        mBuffer->GetCurrentPosition(&PlayCursor, nullptr);
+        std::ignore = mBuffer->GetCurrentPosition(&PlayCursor, nullptr);
         auto avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
         if(avail < FragSize)
@@ -227,7 +227,7 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
                     ERR("Failed to play buffer: {:#x}", as_unsigned(err));
                     mDevice->handleDisconnect("Failure starting playback: {:#x}",
                         as_unsigned(err));
-                    return 1;
+                    return;
                 }
                 Playing = true;
             }
@@ -263,21 +263,19 @@ FORCE_ALIGN int DSoundPlayback::mixerProc()
         {
             ERR("Buffer lock error: {:#x}", as_unsigned(err));
             mDevice->handleDisconnect("Failed to lock output buffer: {:#x}", as_unsigned(err));
-            return 1;
+            return;
         }
 
         mDevice->renderSamples(WritePtr1, WriteCnt1/FrameSize, FrameStep);
         if(WriteCnt2 > 0)
             mDevice->renderSamples(WritePtr2, WriteCnt2/FrameSize, FrameStep);
 
-        mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
+        std::ignore = mBuffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
 
         // Update old write cursor location
         LastCursor += WriteCnt1+WriteCnt2;
         LastCursor %= DSBCaps.dwBufferBytes;
     }
-
-    return 0;
 }
 
 void DSoundPlayback::open(std::string_view name)
@@ -286,7 +284,7 @@ void DSoundPlayback::open(std::string_view name)
     if(PlaybackDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        const auto com = ComWrapper{};
+        auto const com = ComWrapper{};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices: {:#x}", as_unsigned(hr));
@@ -339,7 +337,7 @@ void DSoundPlayback::open(std::string_view name)
     mDeviceName = name;
 }
 
-bool DSoundPlayback::reset()
+auto DSoundPlayback::reset() -> bool
 {
     mNotifies = nullptr;
     mBuffer = nullptr;
@@ -366,9 +364,9 @@ bool DSoundPlayback::reset()
         break;
     }
 
-    WAVEFORMATEXTENSIBLE OutputType{};
-    DWORD speakers{};
-    HRESULT hr{mDS->GetSpeakerConfig(&speakers)};
+    auto OutputType = WAVEFORMATEXTENSIBLE{};
+    auto speakers = DWORD{};
+    auto hr = mDS->GetSpeakerConfig(&speakers);
     if(FAILED(hr))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to get speaker config: {:#x}", as_unsigned(hr)};
@@ -390,7 +388,7 @@ bool DSoundPlayback::reset()
             ERR("Unknown system speaker config: {:#x}", speakers);
     }
     mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
-    const bool isRear51{speakers == DSSPEAKER_5POINT1_BACK};
+    auto const isRear51 = speakers == DSSPEAKER_5POINT1_BACK;
 
     switch(mDevice->FmtChans)
     {
@@ -472,8 +470,8 @@ bool DSoundPlayback::reset()
         hr = mBuffer->QueryInterface(IID_IDirectSoundNotify, al::out_ptr(mNotifies));
         if(SUCCEEDED(hr))
         {
-            auto num_updates = mDevice->mBufferSize / mDevice->mUpdateSize;
-            Expects(num_updates <= MAX_UPDATES);
+            auto const num_updates = std::min(mDevice->mBufferSize / mDevice->mUpdateSize,
+                uint{MAX_UPDATES});
 
             auto nots = std::array<DSBPOSITIONNOTIFY,MAX_UPDATES>{};
             for(auto i = 0u;i < num_updates;++i)
@@ -522,8 +520,9 @@ void DSoundPlayback::stop()
 }
 
 
-struct DSoundCapture final : public BackendBase {
-    explicit DSoundCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct DSoundCapture final : BackendBase {
+    explicit DSoundCapture(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+    { }
     ~DSoundCapture() override;
 
     void open(std::string_view name) override;
@@ -544,7 +543,7 @@ DSoundCapture::~DSoundCapture()
 {
     if(mDSCbuffer)
     {
-        mDSCbuffer->Stop();
+        std::ignore = mDSCbuffer->Stop();
         mDSCbuffer = nullptr;
     }
     mDSC = nullptr;

@@ -249,6 +249,7 @@ constexpr auto X714ChanMap = pa_channel_map{12, {
 
 
 /* NOLINTBEGIN(*EnumCastOutOfRange) *grumble* Don't use enums for bitflags. */
+[[nodiscard]]
 constexpr auto operator|(pa_stream_flags_t lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t
 { return gsl::narrow_cast<pa_stream_flags_t>(lhs | al::to_underlying(rhs)); }
 constexpr auto operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t&
@@ -256,6 +257,7 @@ constexpr auto operator|=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_s
     lhs = lhs | rhs;
     return lhs;
 }
+[[nodiscard]]
 constexpr auto operator~(pa_stream_flags_t flag) -> pa_stream_flags_t
 { return gsl::narrow_cast<pa_stream_flags_t>(~al::to_underlying(flag)); }
 constexpr auto operator&=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_stream_flags_t&
@@ -264,6 +266,7 @@ constexpr auto operator&=(pa_stream_flags_t &lhs, pa_stream_flags_t rhs) -> pa_s
     return lhs;
 }
 
+[[nodiscard]]
 constexpr auto operator|(pa_context_flags_t lhs, pa_context_flags_t rhs) -> pa_context_flags_t
 { return gsl::narrow_cast<pa_context_flags_t>(lhs | al::to_underlying(rhs)); }
 constexpr auto operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs) -> pa_context_flags_t&
@@ -272,6 +275,7 @@ constexpr auto operator|=(pa_context_flags_t &lhs, pa_context_flags_t rhs) -> pa
     return lhs;
 }
 
+[[nodiscard]]
 constexpr auto operator|(pa_subscription_mask_t lhs, pa_subscription_mask_t rhs)
     -> pa_subscription_mask_t
 { return gsl::narrow_cast<pa_subscription_mask_t>(lhs | al::to_underlying(rhs)); }

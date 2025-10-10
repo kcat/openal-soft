@@ -408,11 +408,11 @@ auto as(From) noexcept -> To = delete;
  * - pw_node
  * - pw_metadata
  */
-template<>
+template<> [[nodiscard]]
 auto as(pw_registry *reg) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(reg); }
-template<>
+template<> [[nodiscard]]
 auto as(pw_node *node) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(node); }
-template<>
+template<> [[nodiscard]]
 auto as(pw_metadata *mdata) noexcept -> pw_proxy* { return reinterpret_cast<pw_proxy*>(mdata); }
 /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
@@ -440,7 +440,6 @@ using PwStreamPtr = std::unique_ptr<pw_stream, decltype([](pw_stream *stream)
 auto operator|(pw_stream_flags const lhs, pw_stream_flags const rhs) noexcept -> pw_stream_flags
 { return static_cast<pw_stream_flags>(lhs | al::to_underlying(rhs)); }
 
-[[nodiscard]]
 constexpr auto operator|=(pw_stream_flags &lhs, pw_stream_flags rhs) noexcept -> pw_stream_flags&
 { lhs = lhs | rhs; return lhs; }
 /* NOLINTEND(*EnumCastOutOfRange) */

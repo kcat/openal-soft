@@ -2011,10 +2011,10 @@ NOINLINE void SetProperty(const gsl::not_null<ALsource*> Source,
             if(send.mSlot && slot != send.mSlot && IsPlayingOrPaused(Source))
             {
                 send.mSlot = std::move(slot);
-
-                Voice *voice{GetSourceVoice(Source, Context)};
-                if(voice) UpdateSourceProps(Source, voice, Context);
-                else Source->mPropsDirty = true;
+                if(auto *const voice = GetSourceVoice(Source, Context))
+                    UpdateSourceProps(Source, voice, Context);
+                else
+                    Source->mPropsDirty = true;
             }
             else
             {

@@ -447,11 +447,11 @@ void EnumeratedList::finishEnumeration()
     });
 }
 
-auto EnumeratedList::getDriverIndexForName(const std::string_view name) const
+auto EnumeratedList::getDriverIndexForName(std::string_view const name) const
     -> std::optional<ALCuint>
 {
-    auto idx = 0u;
-    std::ignore = std::ranges::any_of(mEnumeratedDevices,
+    auto idx = 0_u32;
+    std::ignore = std::ranges::find_if(mEnumeratedDevices,
         [name,&idx](const std::span<const std::string_view> names) -> bool
     {
         if(std::ranges::find(names, name) != names.end())

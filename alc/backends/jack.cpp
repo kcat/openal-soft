@@ -110,23 +110,34 @@ decltype(jack_error_callback) * pjack_error_callback;
 
 jack_options_t ClientOptions = JackNullOption;
 
+#if defined(_WIN64)
+#define JACK_LIB "libjack64.dll"
+#elif defined(_WIN32)
+#define JACK_LIB "libjack.dll"
+#else
+#define JACK_LIB "libjack.so.0"
+#endif
+
+#if HAVE_DYNLOAD
+OAL_ELF_NOTE_DLOPEN(
+    "backend-jack",
+    "Support for the JACK backend",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    JACK_LIB
+);
+#endif
+
 auto jack_load() -> bool
 {
 #if HAVE_DYNLOAD
     if(!jack_handle)
     {
-#if defined(_WIN64)
-#define JACKLIB "libjack64.dll"
-#elif defined(_WIN32)
-#define JACKLIB "libjack.dll"
-#else
-#define JACKLIB "libjack.so.0"
-#endif
-        if(auto libresult = LoadLib(JACKLIB))
+        const char *jack_lib = JACK_LIB;
+        if(auto libresult = LoadLib(jack_lib))
             jack_handle = libresult.value();
         else
         {
-            WARN("Failed to load {}: {}", JACKLIB, libresult.error());
+            WARN("Failed to load {}: {}", jack_lib, libresult.error());
             return false;
         }
 

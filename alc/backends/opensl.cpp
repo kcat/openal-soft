@@ -944,17 +944,28 @@ auto OpenSLCapture::availableSamples() -> uint
 
 } // namespace
 
+#define SLES_LIB "libOpenSLES.so"
+
+#if HAVE_DYNLOAD
+OAL_ELF_NOTE_DLOPEN(
+    "backend-opensl",
+    "Support for the OpenSL backend",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    SLES_LIB
+);
+#endif
+
 bool OSLBackendFactory::init()
 {
 #if HAVE_DYNLOAD
     if(!sles_handle)
     {
-#define SLES_LIBNAME "libOpenSLES.so"
-        if(auto libresult = LoadLib(SLES_LIBNAME))
+        const char *sles_lib = SLES_LIB;
+        if(auto libresult = LoadLib(sles_lib))
             sles_handle = libresult.value();
         else
         {
-            WARN("Failed to load {}: {}", SLES_LIBNAME, libresult.error());
+            WARN("Failed to load {}: {}", sles_lib, libresult.error());
             return false;
         }
 

@@ -66,7 +66,7 @@ using MessagePtr = std::unique_ptr<DBusMessage, decltype([](DBusMessage *m)
 
 namespace {
 
-inline auto _gettid() -> pid_t
+auto _gettid() -> pid_t
 {
 #ifdef __linux__
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
@@ -100,14 +100,14 @@ auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, 
     if(!m) return -ENOMEM;
 
     auto *interfacestr = RTKIT_SERVICE_NAME;
-    const auto ready = dbus_message_append_args(m.get(),
+    auto const ready = dbus_message_append_args(m.get(),
         dbus::TypeString, &interfacestr,
         dbus::TypeString, &propname,
         dbus::TypeInvalid);
     if(!ready) return -ENOMEM;
 
     auto error = dbus::Error{};
-    const auto r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(connection, m.get(),
+    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(connection, m.get(),
         -1, &error.get())};
     if(!r) return translate_error(error->name);
 
@@ -129,17 +129,17 @@ auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, 
             {
                 if(curtype == dbus::TypeInt32)
                 {
-                    auto i32 = dbus_int32_t{};
-                    dbus_message_iter_get_basic(&subiter, &i32);
-                    *propval = i32;
+                    auto val32 = dbus_int32_t{};
+                    dbus_message_iter_get_basic(&subiter, &val32);
+                    *propval = val32;
                     ret = 0;
                 }
 
                 if(curtype == dbus::TypeInt64)
                 {
-                    auto i64 = dbus_int64_t{};
-                    dbus_message_iter_get_basic(&subiter, &i64);
-                    *propval = i64;
+                    auto val64 = dbus_int64_t{};
+                    dbus_message_iter_get_basic(&subiter, &val64);
+                    *propval = val64;
                     ret = 0;
                 }
 
@@ -177,27 +177,27 @@ long long rtkit_get_rttime_usec_max(DBusConnection *system_bus)
     return err < 0 ? err : retval;
 }
 
-int rtkit_make_realtime(DBusConnection *system_bus, pid_t thread, int priority)
+auto rtkit_make_realtime(DBusConnection *const system_bus, pid_t thread, int const priority) -> int
 {
     if(thread == 0)
         thread = _gettid();
     if(thread == 0)
         return -ENOTSUP;
 
-    const auto m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
+    auto const m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.RealtimeKit1", "MakeThreadRealtime")};
     if(!m) return -ENOMEM;
 
-    auto u64 = gsl::narrow_cast<dbus_uint64_t>(thread);
-    auto u32 = gsl::narrow_cast<dbus_uint32_t>(priority);
-    const auto ready = dbus_message_append_args(m.get(),
-        dbus::TypeUInt64, &u64,
-        dbus::TypeUInt32, &u32,
+    auto tid64 = gsl::narrow_cast<dbus_uint64_t>(thread);
+    auto prio32 = gsl::narrow_cast<dbus_uint32_t>(priority);
+    auto const ready = dbus_message_append_args(m.get(),
+        dbus::TypeUInt64, &tid64,
+        dbus::TypeUInt32, &prio32,
         dbus::TypeInvalid);
     if(!ready) return -ENOMEM;
 
     auto error = dbus::Error{};
-    const auto r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
+    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
         -1, &error.get())};
     if(!r) return translate_error(error->name);
 
@@ -207,27 +207,28 @@ int rtkit_make_realtime(DBusConnection *system_bus, pid_t thread, int priority)
     return 0;
 }
 
-int rtkit_make_high_priority(DBusConnection *system_bus, pid_t thread, int nice_level)
+auto rtkit_make_high_priority(DBusConnection *const system_bus, pid_t thread, int const nice_level)
+    -> int
 {
     if(thread == 0)
         thread = _gettid();
     if(thread == 0)
         return -ENOTSUP;
 
-    const auto m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
+    auto const m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.RealtimeKit1", "MakeThreadHighPriority")};
     if(!m) return -ENOMEM;
 
-    auto u64 = gsl::narrow_cast<dbus_uint64_t>(thread);
-    auto s32 = gsl::narrow_cast<dbus_int32_t>(nice_level);
-    const auto ready = dbus_message_append_args(m.get(),
-        dbus::TypeUInt64, &u64,
-        dbus::TypeInt32, &s32,
+    auto tid64 = gsl::narrow_cast<dbus_uint64_t>(thread);
+    auto level32 = gsl::narrow_cast<dbus_int32_t>(nice_level);
+    auto const ready = dbus_message_append_args(m.get(),
+        dbus::TypeUInt64, &tid64,
+        dbus::TypeInt32, &level32,
         dbus::TypeInvalid);
     if(!ready) return -ENOMEM;
 
     auto error = dbus::Error{};
-    const auto r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
+    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
         -1, &error.get())};
     if(!r) return translate_error(error->name);
 

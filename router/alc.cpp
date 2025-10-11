@@ -469,11 +469,10 @@ void InitCtxFuncs(DriverIface &iface)
 {
     auto *device = iface.alcGetContextsDevice(iface.alcGetCurrentContext());
 
-    auto load_proc = [&iface](auto &func, const gsl::czstring name)
+    auto load_proc = [&iface]<typename T>(T &func, gsl::czstring const name)
     {
-        using func_t = std::remove_reference_t<decltype(func)>;
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-        func = reinterpret_cast<func_t>(iface.alGetProcAddress(name));
+        func = reinterpret_cast<T>(iface.alGetProcAddress(name));
         if(!func)
             ERR("Failed to find entry point for {} in {}", name,
                 wstr_to_utf8(iface.Name));

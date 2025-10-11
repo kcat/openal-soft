@@ -26,18 +26,18 @@
         SOFTWARE.
 ***/
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "config.h"
 
 #include "rtkit.h"
 
 #include <cerrno>
-
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
-#include <memory>
 #include <cstring>
+#include <dbus/dbus.h>
+#include <memory>
 #include <string_view>
 #include <unistd.h>
 #include <sys/types.h>
@@ -47,24 +47,144 @@
 #include <sys/thr.h>
 #endif
 
+#include "dynload.h"
 #include "gsl/gsl"
+#include "logging.h"
 
-namespace dbus {
 
-constexpr auto TypeString = int{'s'};
-constexpr auto TypeVariant = int{'v'};
-constexpr auto TypeInt32 = int{'i'};
-constexpr auto TypeUInt32 = int{'u'};
-constexpr auto TypeInt64 = int{'x'};
-constexpr auto TypeUInt64 = int{'t'};
-constexpr auto TypeInvalid = int{'\0'};
+#if HAVE_DYNLOAD
 
-using MessagePtr = std::unique_ptr<DBusMessage, decltype([](DBusMessage *m)
-    { dbus_message_unref(m); })>;
-
-} // namespace dbus
+#include <mutex>
 
 namespace {
+
+#define DBUS_FUNCTIONS(MAGIC) \
+MAGIC(dbus_error_init) \
+MAGIC(dbus_error_free) \
+MAGIC(dbus_bus_get) \
+MAGIC(dbus_connection_set_exit_on_disconnect) \
+MAGIC(dbus_connection_unref) \
+MAGIC(dbus_connection_send_with_reply_and_block) \
+MAGIC(dbus_message_unref) \
+MAGIC(dbus_message_new_method_call) \
+MAGIC(dbus_message_append_args) \
+MAGIC(dbus_message_iter_init) \
+MAGIC(dbus_message_iter_next) \
+MAGIC(dbus_message_iter_recurse) \
+MAGIC(dbus_message_iter_get_arg_type) \
+MAGIC(dbus_message_iter_get_basic) \
+MAGIC(dbus_set_error_from_message)
+
+void *dbus_handle{};
+#define DECL_FUNC(x) decltype(x) *p##x{};
+DBUS_FUNCTIONS(DECL_FUNC)
+#undef DECL_FUNC
+
+#ifndef IN_IDE_PARSER
+#define dbus_error_init (*pdbus_error_init)
+#define dbus_error_free (*pdbus_error_free)
+#define dbus_bus_get (*pdbus_bus_get)
+#define dbus_connection_set_exit_on_disconnect (*pdbus_connection_set_exit_on_disconnect)
+#define dbus_connection_unref (*pdbus_connection_unref)
+#define dbus_connection_send_with_reply_and_block (*pdbus_connection_send_with_reply_and_block)
+#define dbus_message_unref (*pdbus_message_unref)
+#define dbus_message_new_method_call (*pdbus_message_new_method_call)
+#define dbus_message_append_args (*pdbus_message_append_args)
+#define dbus_message_iter_init (*pdbus_message_iter_init)
+#define dbus_message_iter_next (*pdbus_message_iter_next)
+#define dbus_message_iter_recurse (*pdbus_message_iter_recurse)
+#define dbus_message_iter_get_arg_type (*pdbus_message_iter_get_arg_type)
+#define dbus_message_iter_get_basic (*pdbus_message_iter_get_basic)
+#define dbus_set_error_from_message (*pdbus_set_error_from_message)
+#endif
+
+#define DBUS_LIB "libdbus-1.so.3"
+
+OAL_ELF_NOTE_DLOPEN(
+    "core-dbus",
+    "RTKit/D-Bus support",
+    OAL_ELF_NOTE_DLOPEN_PRIORITY_SUGGESTED,
+    DBUS_LIB
+);
+
+auto HasDBus() -> bool
+{
+    static constinit auto init_dbus = std::once_flag{};
+    std::call_once(init_dbus, []
+    {
+        auto *const dbus_lib = gsl::czstring{DBUS_LIB};
+        if(auto const libresult = LoadLib(dbus_lib))
+            dbus_handle = libresult.value();
+        else
+        {
+            WARN("Failed to load {}: {}", dbus_lib, libresult.error());
+            return;
+        }
+
+        static constexpr auto load_func = []<typename T>(T &func, gsl::czstring const name) -> bool
+        {
+            auto const funcresult = GetSymbol(dbus_handle, name);
+            if(!funcresult)
+            {
+                WARN("Failed to load function {}: {}", name, funcresult.error());
+                return false;
+            }
+            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+            func = reinterpret_cast<T>(funcresult.value());
+            return true;
+        };
+        auto ok = true;
+#define LOAD_FUNC(f) ok &= load_func(p##f, #f);
+        DBUS_FUNCTIONS(LOAD_FUNC)
+#undef LOAD_FUNC
+        if(!ok)
+        {
+            CloseLib(dbus_handle);
+            dbus_handle = nullptr;
+        }
+    });
+    return dbus_handle != nullptr;
+}
+
+} /* namespace */
+
+#else
+
+namespace {
+constexpr auto HasDBus() noexcept -> bool { return true; }
+} /* namespace */
+
+#endif
+
+namespace {
+
+class dbusError {
+    DBusError mError{};
+
+public:
+    dbusError() { dbus_error_init(&mError); }
+    dbusError(dbusError const&) = delete;
+    dbusError(dbusError&&) = delete;
+    ~dbusError() { dbus_error_free(&mError); }
+
+    void operator=(dbusError const&) = delete;
+    void operator=(dbusError&&) = delete;
+
+    auto operator->() noexcept -> DBusError* { return &mError; }
+    auto get() noexcept -> DBusError& { return mError; }
+};
+
+constexpr auto dbusTypeString = int{'s'};
+constexpr auto dbusTypeVariant = int{'v'};
+constexpr auto dbusTypeInt32 = int{'i'};
+constexpr auto dbusTypeUInt32 = int{'u'};
+constexpr auto dbusTypeInt64 = int{'x'};
+constexpr auto dbusTypeUInt64 = int{'t'};
+constexpr auto dbusTypeInvalid = int{'\0'};
+
+using dbusMessagePtr = std::unique_ptr<DBusMessage, decltype([](DBusMessage *const m)
+    { dbus_message_unref(m); })>;
+
 
 auto _gettid() -> pid_t
 {
@@ -81,7 +201,7 @@ auto _gettid() -> pid_t
 #endif
 }
 
-auto translate_error(const std::string_view name) -> int
+auto translate_error(std::string_view const name) -> int
 {
     if(name == DBUS_ERROR_NO_MEMORY)
         return -ENOMEM;
@@ -92,42 +212,42 @@ auto translate_error(const std::string_view name) -> int
     return -EIO;
 }
 
-auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, long long *propval)
-    -> int
+auto rtkit_get_int_property(DBusConnection *const connection, gsl::czstring const propname,
+    long long *const propval) -> int
 {
-    const auto m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
+    auto const m = dbusMessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.DBus.Properties", "Get")};
     if(!m) return -ENOMEM;
 
-    auto *interfacestr = RTKIT_SERVICE_NAME;
-    auto const ready = dbus_message_append_args(m.get(),
-        dbus::TypeString, &interfacestr,
-        dbus::TypeString, &propname,
-        dbus::TypeInvalid);
+    auto *const interfacestr = gsl::czstring{RTKIT_SERVICE_NAME};
+    auto const ready = dbus_message_append_args(std::to_address(m),
+        dbusTypeString, &interfacestr,
+        dbusTypeString, &propname,
+        dbusTypeInvalid);
     if(!ready) return -ENOMEM;
 
-    auto error = dbus::Error{};
-    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(connection, m.get(),
-        -1, &error.get())};
+    auto error = dbusError{};
+    auto const r = dbusMessagePtr{dbus_connection_send_with_reply_and_block(connection,
+        std::to_address(m), -1, &error.get())};
     if(!r) return translate_error(error->name);
 
-    if(dbus_set_error_from_message(&error.get(), r.get()))
+    if(dbus_set_error_from_message(&error.get(), std::to_address(r)))
         return translate_error(error->name);
 
     auto ret = -EBADMSG;
     auto iter = DBusMessageIter{};
-    dbus_message_iter_init(r.get(), &iter);
+    dbus_message_iter_init(std::to_address(r), &iter);
     while(auto curtype = dbus_message_iter_get_arg_type(&iter))
     {
-        if(curtype == dbus::TypeVariant)
+        if(curtype == dbusTypeVariant)
         {
             auto subiter = DBusMessageIter{};
             dbus_message_iter_recurse(&iter, &subiter);
 
             curtype = dbus_message_iter_get_arg_type(&subiter);
-            while(curtype != dbus::TypeInvalid)
+            while(curtype != dbusTypeInvalid)
             {
-                if(curtype == dbus::TypeInt32)
+                if(curtype == dbusTypeInt32)
                 {
                     auto val32 = dbus_int32_t{};
                     dbus_message_iter_get_basic(&subiter, &val32);
@@ -135,7 +255,7 @@ auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, 
                     ret = 0;
                 }
 
-                if(curtype == dbus::TypeInt64)
+                if(curtype == dbusTypeInt64)
                 {
                     auto val64 = dbus_int64_t{};
                     dbus_message_iter_get_basic(&subiter, &val64);
@@ -155,25 +275,49 @@ auto rtkit_get_int_property(DBusConnection *connection, gsl::czstring propname, 
 
 } // namespace
 
-int rtkit_get_max_realtime_priority(DBusConnection *system_bus)
+void dbusConnectionDeleter::operator()(DBusConnection *const conn) const
+{ dbus_connection_unref(conn); }
+
+auto rtkit_get_dbus_connection() -> dbusConnectionPtr
+{
+    if(!HasDBus())
+    {
+        WARN("D-Bus not available");
+        return {};
+    }
+    auto error = dbusError{};
+    auto conn = dbusConnectionPtr{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
+    if(!conn)
+    {
+        WARN("D-Bus connection failed with {}: {}", error->name, error->message);
+        return {};
+    }
+
+    /* Don't stupidly exit if the connection dies while doing this. */
+    dbus_connection_set_exit_on_disconnect(std::to_address(conn), false);
+    return conn;
+}
+
+
+auto rtkit_get_max_realtime_priority(DBusConnection *const system_bus) -> int
 {
     long long retval{};
     const auto err = rtkit_get_int_property(system_bus, "MaxRealtimePriority", &retval);
     return err < 0 ? err : gsl::narrow_cast<int>(retval);
 }
 
-int rtkit_get_min_nice_level(DBusConnection *system_bus, int *min_nice_level)
+auto rtkit_get_min_nice_level(DBusConnection *const system_bus, int *const min_nice_level) -> int
 {
     long long retval{};
-    const auto err = rtkit_get_int_property(system_bus, "MinNiceLevel", &retval);
+    auto const err = rtkit_get_int_property(system_bus, "MinNiceLevel", &retval);
     if(err >= 0) *min_nice_level = gsl::narrow_cast<int>(retval);
     return err;
 }
 
-long long rtkit_get_rttime_usec_max(DBusConnection *system_bus)
+auto rtkit_get_rttime_usec_max(DBusConnection *const system_bus) -> long long
 {
     long long retval{};
-    const auto err = rtkit_get_int_property(system_bus, "RTTimeUSecMax", &retval);
+    auto const err = rtkit_get_int_property(system_bus, "RTTimeUSecMax", &retval);
     return err < 0 ? err : retval;
 }
 
@@ -184,24 +328,24 @@ auto rtkit_make_realtime(DBusConnection *const system_bus, pid_t thread, int con
     if(thread == 0)
         return -ENOTSUP;
 
-    auto const m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
+    auto const m = dbusMessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.RealtimeKit1", "MakeThreadRealtime")};
     if(!m) return -ENOMEM;
 
     auto tid64 = gsl::narrow_cast<dbus_uint64_t>(thread);
     auto prio32 = gsl::narrow_cast<dbus_uint32_t>(priority);
-    auto const ready = dbus_message_append_args(m.get(),
-        dbus::TypeUInt64, &tid64,
-        dbus::TypeUInt32, &prio32,
-        dbus::TypeInvalid);
+    auto const ready = dbus_message_append_args(std::to_address(m),
+        dbusTypeUInt64, &tid64,
+        dbusTypeUInt32, &prio32,
+        dbusTypeInvalid);
     if(!ready) return -ENOMEM;
 
-    auto error = dbus::Error{};
-    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
-        -1, &error.get())};
+    auto error = dbusError{};
+    auto const r = dbusMessagePtr{dbus_connection_send_with_reply_and_block(system_bus,
+        std::to_address(m), -1, &error.get())};
     if(!r) return translate_error(error->name);
 
-    if(dbus_set_error_from_message(&error.get(), r.get()))
+    if(dbus_set_error_from_message(&error.get(), std::to_address(r)))
         return translate_error(error->name);
 
     return 0;
@@ -215,24 +359,24 @@ auto rtkit_make_high_priority(DBusConnection *const system_bus, pid_t thread, in
     if(thread == 0)
         return -ENOTSUP;
 
-    auto const m = dbus::MessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
+    auto const m = dbusMessagePtr{dbus_message_new_method_call(RTKIT_SERVICE_NAME,
         RTKIT_OBJECT_PATH, "org.freedesktop.RealtimeKit1", "MakeThreadHighPriority")};
     if(!m) return -ENOMEM;
 
     auto tid64 = gsl::narrow_cast<dbus_uint64_t>(thread);
     auto level32 = gsl::narrow_cast<dbus_int32_t>(nice_level);
-    auto const ready = dbus_message_append_args(m.get(),
-        dbus::TypeUInt64, &tid64,
-        dbus::TypeInt32, &level32,
-        dbus::TypeInvalid);
+    auto const ready = dbus_message_append_args(std::to_address(m),
+        dbusTypeUInt64, &tid64,
+        dbusTypeInt32, &level32,
+        dbusTypeInvalid);
     if(!ready) return -ENOMEM;
 
-    auto error = dbus::Error{};
-    auto const r = dbus::MessagePtr{dbus_connection_send_with_reply_and_block(system_bus, m.get(),
-        -1, &error.get())};
+    auto error = dbusError{};
+    auto const r = dbusMessagePtr{dbus_connection_send_with_reply_and_block(system_bus,
+        std::to_address(m), -1, &error.get())};
     if(!r) return translate_error(error->name);
 
-    if(dbus_set_error_from_message(&error.get(), r.get()))
+    if(dbus_set_error_from_message(&error.get(), std::to_address(r)))
         return translate_error(error->name);
 
     return 0;

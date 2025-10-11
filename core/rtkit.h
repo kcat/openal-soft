@@ -28,9 +28,18 @@
         SOFTWARE.
 ***/
 
+#include <memory>
 #include <sys/types.h>
 
-#include "dbus_wrap.h"
+struct DBusConnection;
+
+struct dbusConnectionDeleter {
+    void operator()(DBusConnection *conn) const;
+};
+using dbusConnectionPtr = std::unique_ptr<DBusConnection, dbusConnectionDeleter>;
+
+auto rtkit_get_dbus_connection() -> dbusConnectionPtr;
+
 
 /* This is the reference implementation for a client for
  * RealtimeKit. You don't have to use this, but if do, just copy these
@@ -44,28 +53,28 @@
  * id as returned by gettid(), not a pthread_t! If 'thread' is 0 the
  * current thread is used. The returned value is a negative errno
  * style error code, or 0 on success. */
-int rtkit_make_realtime(DBusConnection *system_bus, pid_t thread, int priority);
+auto rtkit_make_realtime(DBusConnection *system_bus, pid_t thread, int priority) -> int;
 
 /* This is mostly equivalent to setpriority(PRIO_PROCESS, thread,
  * nice_level). 'thread' needs to be a kernel thread id as returned by
  * gettid(), not a pthread_t! If 'thread' is 0 the current thread is
  * used. The returned value is a negative errno style error code, or 0
  * on success.*/
-int rtkit_make_high_priority(DBusConnection *system_bus, pid_t thread, int nice_level);
+auto rtkit_make_high_priority(DBusConnection *system_bus, pid_t thread, int nice_level) -> int;
 
 /* Return the maximum value of realtime priority available. Realtime requests
  * above this value will fail. A negative value is an errno style error code.
  */
-int rtkit_get_max_realtime_priority(DBusConnection *system_bus);
+auto rtkit_get_max_realtime_priority(DBusConnection *system_bus) -> int;
 
 /* Retreive the minimum value of nice level available. High prio requests
  * below this value will fail. The returned value is a negative errno
  * style error code, or 0 on success.*/
-int rtkit_get_min_nice_level(DBusConnection *system_bus, int *min_nice_level);
+auto rtkit_get_min_nice_level(DBusConnection *system_bus, int *min_nice_level) -> int;
 
 /* Return the maximum value of RLIMIT_RTTIME to set before attempting a
  * realtime request. A negative value is an errno style error code.
  */
-long long rtkit_get_rttime_usec_max(DBusConnection *system_bus);
+auto rtkit_get_rttime_usec_max(DBusConnection *system_bus) -> long long;
 
 #endif

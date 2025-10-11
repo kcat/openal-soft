@@ -221,7 +221,6 @@ void SetRTPriority()
 #if HAVE_RTKIT
 #include <sys/resource.h>
 
-#include "dbus_wrap.h"
 #include "rtkit.h"
 #ifndef RLIMIT_RTTIME
 #define RLIMIT_RTTIME 15
@@ -399,21 +398,8 @@ bool SetRTPriorityPthread(int prio [[maybe_unused]])
 bool SetRTPriorityRTKit(int prio [[maybe_unused]])
 {
 #if HAVE_RTKIT
-    if(!HasDBus())
-    {
-        WARN("D-Bus not available");
-        return false;
-    }
-    auto error = dbus::Error{};
-    const auto conn = dbus::ConnectionPtr{dbus_bus_get(DBUS_BUS_SYSTEM, &error.get())};
-    if(!conn)
-    {
-        WARN("D-Bus connection failed with {}: {}", error->name, error->message);
-        return false;
-    }
-
-    /* Don't stupidly exit if the connection dies while doing this. */
-    dbus_connection_set_exit_on_disconnect(conn.get(), false);
+    auto const conn = rtkit_get_dbus_connection();
+    if(!conn) return false;
 
     auto nicemin = int{};
     auto err = rtkit_get_min_nice_level(conn.get(), &nicemin);
@@ -500,10 +486,8 @@ void SetRTPriority()
     if(RTPrioLevel <= 0)
         return;
 
-    if(SetRTPriorityPthread(RTPrioLevel))
-        return;
-    if(SetRTPriorityRTKit(RTPrioLevel))
-        return;
+    if(!SetRTPriorityPthread(RTPrioLevel))
+        SetRTPriorityRTKit(RTPrioLevel);
 }
 
 #endif

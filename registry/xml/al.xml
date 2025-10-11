@@ -110,7 +110,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0" name="AL_NONE" group="DistanceModel" comment="No distance model or no buffer"/>
         <enum value="0" name="AL_FALSE" group="Boolean,SourceSpatializeSOFT,DirectChannelsSOFT" comment="Boolean False."/>
         <enum value="1" name="AL_TRUE" group="Boolean,SourceSpatializeSOFT" comment="Boolean True."/>
-        <enum value="(-1)" name="AL_INVALID" deprecated="Use -1 instead"/>
+        <enum value="-1" name="AL_INVALID" deprecated="Use -1 instead"/>
         <enum value="AL_INVALID_ENUM" name="AL_ILLEGAL_ENUM" deprecated="Use AL_INVALID_ENUM instead"/>
         <enum value="AL_INVALID_OPERATION" name="AL_ILLEGAL_COMMAND" deprecated="Use AL_INVALID_OPERATION instead"/>
     </enums>

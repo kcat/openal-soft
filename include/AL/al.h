@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-07 13:36:17.594757+00:00
+ * Last regenerated: 2025-10-11 15:23:49.044344+00:00
  */
 
 #ifndef AL_AL_H
@@ -469,7 +469,7 @@ typedef void ALvoid;
 #define OPENAL
 #define ALAPI                                    AL_API
 #define ALAPIENTRY                               AL_APIENTRY
-#define AL_INVALID                               (-1)
+#define AL_INVALID                               -1
 #define AL_ILLEGAL_ENUM                          AL_INVALID_ENUM
 #define AL_ILLEGAL_COMMAND                       AL_INVALID_OPERATION
 

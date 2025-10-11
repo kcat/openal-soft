@@ -969,7 +969,7 @@ bool OSLBackendFactory::init()
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, gsl::gzstring const name) -> bool
+        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
             auto const funcresult = GetSymbol(sles_handle, name);

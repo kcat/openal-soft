@@ -8,9 +8,6 @@ import alsoft.router;
 import openal.al;
 import openal.efx;
 
-#ifndef AL_API
- #define AL_API __declspec(dllimport)
-#endif
 #define AL_APIENTRY __cdecl
 
 #else
@@ -19,7 +16,6 @@ import openal.efx;
 #include "AL/efx.h"
 #include "router.h"
 #endif
-
 
 
 #define DECL_THUNK1(R,n,T1)                                                   \

@@ -176,14 +176,15 @@ struct DriverIface {
     DriverIface& operator=(DriverIface&&) = delete;
 };
 using DriverIfacePtr = std::unique_ptr<DriverIface>;
+using LPCDriverIface = DriverIface const*;
 
-inline std::vector<DriverIfacePtr> DriverList;
+inline auto DriverList = std::vector<DriverIfacePtr>{};
 
-inline thread_local DriverIface *ThreadCtxDriver{};
-inline std::atomic<DriverIface*> CurrentCtxDriver{};
+inline thread_local auto ThreadCtxDriver = LPCDriverIface{};
+inline auto CurrentCtxDriver = std::atomic<LPCDriverIface>{};
 
-inline DriverIface *GetThreadDriver() noexcept { return ThreadCtxDriver; }
-inline void SetThreadDriver(DriverIface *driver) noexcept { ThreadCtxDriver = driver; }
+inline auto GetThreadDriver() noexcept -> LPCDriverIface { return ThreadCtxDriver; }
+inline void SetThreadDriver(LPCDriverIface const driver) noexcept { ThreadCtxDriver = driver; }
 
 
 enum class eLogLevel {

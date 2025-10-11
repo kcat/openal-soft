@@ -905,7 +905,8 @@ struct DeviceHelper final : public IActivateAudioInterfaceCompletionHandler {
     auto init() -> HRESULT { return S_OK; }
 
     [[nodiscard]]
-    auto openDevice(const std::wstring &devid, EDataFlow flow, DeviceHandle &device) -> HRESULT
+    auto openDevice(std::wstring const &devid, EDataFlow const flow, DeviceHandle &device) const
+        -> HRESULT
     {
         const auto deviceRole = Windows::Media::Devices::AudioDeviceRole::Default;
         auto devIfPath =
@@ -973,7 +974,7 @@ struct DeviceHelper {
     }
 
     [[nodiscard]]
-    auto openDevice(const std::wstring &devid, EDataFlow flow, DeviceHandle &device) const
+    auto openDevice(std::wstring const &devid, EDataFlow const flow, DeviceHandle &device) const
         -> HRESULT
     {
         auto hr = E_FAIL;

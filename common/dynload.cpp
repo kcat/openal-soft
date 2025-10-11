@@ -11,14 +11,14 @@
 #include "gsl/gsl"
 #include "strutils.hpp"
 
-auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
+auto LoadLib(gsl::czstring const name) -> al::expected<void*, std::string>
 {
-    if(auto res = LoadLibraryW(utf8_to_wstr(name).c_str()))
+    if(auto const res = LoadLibraryW(utf8_to_wstr(name).c_str())) [[likely]]
         return res;
-    const auto err = GetLastError();
+    auto const err = GetLastError();
     auto message = std::wstring{};
     message.resize(1024u);
-    const auto res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    auto const res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message.data(),
         gsl::narrow_cast<DWORD>(message.size()), nullptr);
     if(res > 0)
@@ -29,20 +29,20 @@ auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
     return al::unexpected(std::format("LoadLibraryW error: {}", err));
 }
 
-void CloseLib(void *handle)
+void CloseLib(void *const handle)
 { FreeLibrary(static_cast<HMODULE>(handle)); }
 
-auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, std::string>
+auto GetSymbol(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
 {
-    if(auto sym = GetProcAddress(static_cast<HMODULE>(handle), name))
+    if(auto const sym = GetProcAddress(static_cast<HMODULE>(handle), name)) [[likely]]
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         return reinterpret_cast<void*>(sym);
     }
-    const auto err = GetLastError();
+    auto const err = GetLastError();
     auto message = std::wstring{};
     message.resize(1024u);
-    const auto res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    auto const res = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), message.data(),
         gsl::narrow_cast<DWORD>(message.size()), nullptr);
     if(res > 0)
@@ -57,30 +57,24 @@ auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, st
 
 #include <dlfcn.h>
 
-auto LoadLib(const gsl::czstring name) -> al::expected<void*, std::string>
+auto LoadLib(gsl::czstring const name) -> al::expected<void*, std::string>
 {
     dlerror();
-    auto *handle = dlopen(name, RTLD_NOW);
-    if(auto *err = dlerror(); err != nullptr)
-    {
-        handle = nullptr;
+    auto *const handle = dlopen(name, RTLD_NOW);
+    if(auto *const err = dlerror())
         return al::unexpected(err);
-    }
     return handle;
 }
 
-void CloseLib(void *handle)
+void CloseLib(void *const handle)
 { dlclose(handle); }
 
-auto GetSymbol(void *handle, const gsl::czstring name) -> al::expected<void*, std::string>
+auto GetSymbol(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
 {
     dlerror();
-    auto *sym = dlsym(handle, name);
-    if(auto *err = dlerror(); err != nullptr)
-    {
-        sym = nullptr;
+    auto *const sym = dlsym(handle, name);
+    if(auto *const err = dlerror())
         return al::unexpected(err);
-    }
     return sym;
 }
 #endif

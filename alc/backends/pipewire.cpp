@@ -280,8 +280,8 @@ auto pwire_load() -> bool
     if(pwire_handle)
         return true;
 
-    const char *pwire_lib = PWIRE_LIB;
-    if(auto libresult = LoadLib(pwire_lib))
+    auto *const pwire_lib = gsl::czstring{PWIRE_LIB};
+    if(auto const libresult = LoadLib(pwire_lib))
         pwire_handle = libresult.value();
     else
     {
@@ -292,7 +292,7 @@ auto pwire_load() -> bool
     static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
     {
         using func_t = std::remove_reference_t<decltype(func)>;
-        auto funcresult = GetSymbol(pwire_handle, name);
+        auto const funcresult = GetSymbol(pwire_handle, name);
         if(!funcresult)
         {
             WARN("Failed to load function {}: {}", name, funcresult.error());

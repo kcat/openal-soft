@@ -410,8 +410,6 @@ uint PortCapture::availableSamples()
 void PortCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-} // namespace
-
 #ifdef _WIN32
 # define PA_LIB "portaudio.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -431,13 +429,15 @@ OAL_ELF_NOTE_DLOPEN(
 );
 #endif
 
+} // namespace
+
 bool PortBackendFactory::init()
 {
 #if HAVE_DYNLOAD
     if(!pa_handle)
     {
-        const char *pa_lib = PA_LIB;
-        if(auto libresult = LoadLib(pa_lib))
+        auto *const pa_lib = gsl::czstring{PA_LIB};
+        if(auto const libresult = LoadLib(pa_lib))
             pa_handle = libresult.value();
         else
         {
@@ -445,10 +445,10 @@ bool PortBackendFactory::init()
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(pa_handle, name);
+            auto const funcresult = GetSymbol(pa_handle, name);
             if(!funcresult)
             {
                 WARN("Failed to load function {}: {}", name, funcresult.error());

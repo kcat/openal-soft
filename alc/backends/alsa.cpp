@@ -1143,8 +1143,6 @@ auto AlsaCapture::getClockLatency() -> ClockLatency
     return ret;
 }
 
-} // namespace
-
 #define ALSA_LIB "libasound.so.2"
 
 #if HAVE_DYNLOAD
@@ -1156,13 +1154,15 @@ OAL_ELF_NOTE_DLOPEN(
 );
 #endif
 
+} // namespace
+
 auto AlsaBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!alsa_handle)
     {
-        const char *alsa_lib = ALSA_LIB;
-        if(auto libresult = LoadLib(alsa_lib))
+        auto *const alsa_lib = gsl::czstring{ALSA_LIB};
+        if(auto const libresult = LoadLib(alsa_lib))
             alsa_handle = libresult.value();
         else
         {
@@ -1170,10 +1170,10 @@ auto AlsaBackendFactory::init() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(alsa_handle, name);
+            auto const funcresult = GetSymbol(alsa_handle, name);
             if(!funcresult)
             {
                 WARN("Failed to load function {}: {}", name, funcresult.error());

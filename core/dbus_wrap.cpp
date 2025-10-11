@@ -5,10 +5,10 @@
 
 #if HAVE_DYNLOAD
 
-#include <type_traits>
-
 #include "gsl/gsl"
 #include "logging.h"
+
+namespace {
 
 #define DBUS_LIB "libdbus-1.so.3"
 
@@ -19,10 +19,12 @@ OAL_ELF_NOTE_DLOPEN(
     DBUS_LIB
 );
 
+} /* namespace */
+
 void PrepareDBus()
 {
-    const char *dbus_lib = DBUS_LIB;
-    if(auto libresult = LoadLib(dbus_lib))
+    auto *const dbus_lib = gsl::czstring{DBUS_LIB};
+    if(auto const libresult = LoadLib(dbus_lib))
         dbus_handle = libresult.value();
     else
     {
@@ -30,9 +32,9 @@ void PrepareDBus()
         return;
     }
 
-    static constexpr auto load_func = []<typename T>(T &func, const gsl::czstring name) -> bool
+    static constexpr auto load_func = []<typename T>(T &func, gsl::czstring const name) -> bool
     {
-        auto funcresult = GetSymbol(dbus_handle, name);
+        auto const funcresult = GetSymbol(dbus_handle, name);
         if(!funcresult)
         {
             WARN("Failed to load function {}: {}", name, funcresult.error());

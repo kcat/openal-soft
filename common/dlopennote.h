@@ -28,32 +28,40 @@
 
 #if defined(__ELF__) && defined(HAVE_DLOPEN_NOTES)
 
+/* Modified here to avoid unsafe C arrays and use proper C++ types. */
+#include <array>
+#include <cstdint>
+
 #define OAL_ELF_NOTE_DLOPEN_VENDOR "FDO"
 #define OAL_ELF_NOTE_DLOPEN_TYPE 0x407c0c0aU
 
 #define OAL_ELF_NOTE_INTERNAL2(json, variable_name)                 \
-    __attribute__((aligned(4), used, section(".note.dlopen")))      \
-    static const struct {                                           \
+    [[gnu::aligned(4), gnu::used, gnu::section(".note.dlopen")]]    \
+    const struct {                                                  \
         struct {                                                    \
-            uint32_t n_namesz;                                        \
-            uint32_t n_descsz;                                        \
-            uint32_t n_type;                                          \
+            std::uint32_t n_namesz;                                 \
+            std::uint32_t n_descsz;                                 \
+            std::uint32_t n_type;                                   \
         } nhdr;                                                     \
-        char name[4];                                               \
-        __attribute__((aligned(4))) char dlopen_json[sizeof(json)]; \
+        std::array<char, 4> name;                                   \
+        [[gnu::aligned(4)]]                                         \
+        std::array<char, sizeof(json)> dlopen_json;                 \
     } variable_name = {                                             \
         {                                                           \
              sizeof(OAL_ELF_NOTE_DLOPEN_VENDOR),                    \
              sizeof(json),                                          \
              OAL_ELF_NOTE_DLOPEN_TYPE                               \
         },                                                          \
-        OAL_ELF_NOTE_DLOPEN_VENDOR,                                 \
-        json                                                        \
+        std::to_array<const char>(OAL_ELF_NOTE_DLOPEN_VENDOR),      \
+        std::to_array<const char>(json)                             \
     }
 
 #define OAL_ELF_NOTE_INTERNAL(json, variable_name) \
     OAL_ELF_NOTE_INTERNAL2(json, variable_name)
 
+/* TODO: A constexpr function should be able to concatenate a variable number
+ * of char arrays, instead of a set of macros like this.
+ */
 #define OAL_SONAME_ARRAY1(N1) "[\"" N1 "\"]"
 #define OAL_SONAME_ARRAY2(N1,N2) "[\"" N1 "\",\"" N2 "\"]"
 #define OAL_SONAME_ARRAY3(N1,N2,N3) "[\"" N1 "\",\"" N2 "\",\"" N3 "\"]"

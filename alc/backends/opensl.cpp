@@ -942,8 +942,6 @@ auto OpenSLCapture::availableSamples() -> uint
         - mByteOffset/mFrameSize);
 }
 
-} // namespace
-
 #define SLES_LIB "libOpenSLES.so"
 
 #if HAVE_DYNLOAD
@@ -955,13 +953,15 @@ OAL_ELF_NOTE_DLOPEN(
 );
 #endif
 
+} // namespace
+
 bool OSLBackendFactory::init()
 {
 #if HAVE_DYNLOAD
     if(!sles_handle)
     {
-        const char *sles_lib = SLES_LIB;
-        if(auto libresult = LoadLib(sles_lib))
+        auto *const sles_lib = gsl::czstring{SLES_LIB};
+        if(auto const libresult = LoadLib(sles_lib))
             sles_handle = libresult.value();
         else
         {
@@ -969,10 +969,10 @@ bool OSLBackendFactory::init()
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_func = [](auto *&func, gsl::gzstring const name) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(sles_handle, name);
+            auto const funcresult = GetSymbol(sles_handle, name);
             if(!funcresult)
             {
                 WARN("Failed to load function {}: {}", name, funcresult.error());

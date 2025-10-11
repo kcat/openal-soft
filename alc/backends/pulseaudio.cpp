@@ -1431,8 +1431,6 @@ auto PulseCapture::getClockLatency() -> ClockLatency
     return ret;
 }
 
-} // namespace
-
 #ifdef _WIN32
 #define PULSE_LIB "libpulse-0.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -1450,13 +1448,15 @@ OAL_ELF_NOTE_DLOPEN(
 );
 #endif
 
+} // namespace
+
 auto PulseBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!pulse_handle)
     {
-        const char *pulse_lib = PULSE_LIB;
-        if(auto libresult = LoadLib(pulse_lib))
+        auto *const pulse_lib = gsl::czstring{PULSE_LIB};
+        if(auto const libresult = LoadLib(pulse_lib))
             pulse_handle = libresult.value();
         else
         {
@@ -1464,10 +1464,10 @@ auto PulseBackendFactory::init() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
         {
             using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(pulse_handle, name);
+            auto const funcresult = GetSymbol(pulse_handle, name);
             if(!funcresult)
             {
                 WARN("Failed to load function {}: {}", name, funcresult.error());

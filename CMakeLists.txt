@@ -336,7 +336,10 @@ if(MSVC)
     endif()
     # C4127 - conditional expression is constant
     # C4324 - structure was padded due to alignment specifier
-    set(C_FLAGS ${C_FLAGS} /W4 /wd4127 /wd4324 /utf-8 $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
+    # C4373 - virtual function overrides 'base_function', previous versions of
+    #         the compiler did not override when parameters only differed by
+    #         const/volatile qualifiers
+    set(C_FLAGS ${C_FLAGS} /W4 /wd4127 /wd4324 /wd4373 /utf-8 $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
 
     if(NOT DXSDK_DIR)
         string(REGEX REPLACE "\\\\" "/" DXSDK_DIR "$ENV{DXSDK_DIR}")

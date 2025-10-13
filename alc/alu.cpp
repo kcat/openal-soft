@@ -2405,7 +2405,7 @@ auto DeviceBase::renderSamples(u32 const numSamples) -> u32
     /* Apply any needed post-process for finalizing the Dry mix to the RealOut
      * (Ambisonic decode, UHJ encode, etc.).
      */
-    std::visit([this,samplesToDo](auto &arg) { Process(arg, samplesToDo); }, mPostProcess);
+    std::visit([this,samplesToDo](auto &arg) { this->Process(arg, samplesToDo); }, mPostProcess);
 
     /* Apply compression, limiting sample amplitude if needed or desired. */
     if(Limiter) Limiter->process(samplesToDo, RealOut.Buffer);

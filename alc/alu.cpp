@@ -699,7 +699,7 @@ auto ScaleAzimuthFront3_2(std::array<f32, 3> pos) -> std::array<f32, 3>
  * matrix. Higher orders, however, are more complicated. The method implemented
  * here is a recursive algorithm (the rotation for first-order is used to help
  * generate the second-order rotation, which helps generate the third-order
- * rotation, etc).
+ * rotation, etc.).
  *
  * Adapted from
  * <https://github.com/polarch/Spherical-Harmonic-Transform/blob/master/getSHrotMtx.m>,
@@ -2074,10 +2074,10 @@ void ProcessVoiceChanges(ContextBase *const ctx)
         else if(cur->mState == VChangeState::Play)
         {
             /* NOTE: When playing a voice, sending a source state change event
-             * depends if there's an old voice to stop and if that stop is
-             * successful. If there is no old voice, a playing event is always
-             * sent. If there is an old voice, an event is sent only if the
-             * voice is already stopped.
+             * depends on whether there's an old voice to stop and if that stop
+             * is successful. If there is no old voice, a playing event is
+             * always sent. If there is an old voice, an event is sent only if
+             * the voice is already stopped.
              */
             if(auto *const oldvoice = cur->mOldVoice)
             {

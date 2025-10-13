@@ -2,7 +2,6 @@
 #define ROUTER_ROUTER_H
 
 #include <windows.h>
-#include <winnt.h>
 
 #include <atomic>
 #include <iostream>
@@ -20,7 +19,8 @@
 #include "fmt/ostream.h"
 
 
-constexpr auto MakeALCVer(int major, int minor) noexcept -> int { return (major<<8) | minor; }
+constexpr auto MakeALCVer(int const major, int const minor) noexcept -> int
+{ return (major<<8) | minor; }
 
 struct DriverIface {
     LPALCCREATECONTEXT alcCreateContext{nullptr};
@@ -160,13 +160,13 @@ struct DriverIface {
     LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti{nullptr};
     LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv{nullptr};
 
-    std::wstring Name;
-    HMODULE Module{nullptr};
+    std::wstring const Name;
+    HMODULE const Module{nullptr};
     int ALCVer{0};
     std::once_flag InitOnceCtx;
 
     template<typename T>
-    DriverIface(T&& name, HMODULE mod) : Name(std::forward<T>(name)), Module(mod) { }
+    DriverIface(T&& name, HMODULE const mod) : Name(std::forward<T>(name)), Module(mod) { }
     ~DriverIface() { if(Module) FreeLibrary(Module); }
 
     DriverIface(const DriverIface&) = delete;
@@ -192,34 +192,44 @@ enum class eLogLevel {
     Warn  = 2,
     Trace = 3,
 };
-inline eLogLevel LogLevel{eLogLevel::Error};
-inline std::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
+inline auto LogLevel = eLogLevel::Error;
+inline auto LogFile = std::ofstream{}; /* NOLINT(cert-err58-cpp) */
 
-#define TRACE(...) do {                                     \
-    if(LogLevel >= eLogLevel::Trace)                        \
-    {                                                       \
-        auto &file = LogFile.is_open()?LogFile : std::cerr; \
-        fmt::println(file, "AL Router (II): " __VA_ARGS__); \
-        file.flush();                                       \
-    }                                                       \
-} while(0)
-#define WARN(...) do {                                      \
-    if(LogLevel >= eLogLevel::Warn)                         \
-    {                                                       \
-        auto &file = LogFile.is_open()?LogFile : std::cerr; \
-        fmt::println(file, "AL Router (WW): " __VA_ARGS__); \
-        file.flush();                                       \
-    }                                                       \
-} while(0)
-#define ERR(...) do {                                       \
-    if(LogLevel >= eLogLevel::Error)                        \
-    {                                                       \
-        auto &file = LogFile.is_open()?LogFile : std::cerr; \
-        fmt::println(file, "AL Router (EE): " __VA_ARGS__); \
-        file.flush();                                       \
-    }                                                       \
-} while(0)
+template<typename ...Args>
+void TRACE(fmt::format_string<Args...> const fmt, Args&& ...args)
+{
+    if(LogLevel >= eLogLevel::Trace)
+    {
+        auto &file = LogFile ? LogFile : std::cerr;
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (II): {}\n", fmt::make_format_args(msg));
+        file.flush();
+    }
+}
 
+template<typename ...Args>
+void WARN(fmt::format_string<Args...> const fmt, Args&& ...args)
+{
+    if(LogLevel >= eLogLevel::Warn)
+    {
+        auto &file = LogFile ? LogFile : std::cerr;
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (WW): {}\n", fmt::make_format_args(msg));
+        file.flush();
+    }
+}
+
+template<typename ...Args>
+void ERR(fmt::format_string<Args...> const fmt, Args&& ...args)
+{
+    if(LogLevel >= eLogLevel::Error)
+    {
+        auto &file = LogFile ? LogFile : std::cerr;
+        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
+        fmt::vprint(file, "AL Router (EE): {}\n", fmt::make_format_args(msg));
+        file.flush();
+    }
+}
 
 void LoadDriverList();
 

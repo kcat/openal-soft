@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-11 15:23:49.044344+00:00
+ * Last regenerated: 2025-10-13 18:47:37.100806+00:00
  */
 
 module;
@@ -219,13 +219,13 @@ ALC_API auto ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attr
 ALC_API auto ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) ALC_API_NOEXCEPT -> ALCboolean;
 
 /** Resumes processing updates for the given context. */
-ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcProcessContext(ALCcontext *context) ALC_API_NOEXCEPT -> void;
 
 /** Suspends updates for the given context. */
-ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcSuspendContext(ALCcontext *context) ALC_API_NOEXCEPT -> void;
 
 /** Remove a context from its device and destroys it. */
-ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcDestroyContext(ALCcontext *context) ALC_API_NOEXCEPT -> void;
 
 /** Returns the currently active context. */
 ALC_API auto ALC_APIENTRY alcGetCurrentContext() ALC_API_NOEXCEPT -> ALCcontext*;
@@ -268,7 +268,7 @@ ALC_API auto ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enum
 ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param) ALC_API_NOEXCEPT -> const ALCchar*;
 
 /** Returns information about the device and the version of OpenAL. */
-ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT -> void;
 
 #endif /* ALC_NO_PROTOTYPES */
 
@@ -277,9 +277,9 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
  */
 using LPALCCREATECONTEXT = auto (ALC_APIENTRY*)(ALCdevice *device, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCcontext*;
 using LPALCMAKECONTEXTCURRENT = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> ALCboolean;
-using LPALCPROCESSCONTEXT = void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
-using LPALCSUSPENDCONTEXT = void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
-using LPALCDESTROYCONTEXT = void (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT;
+using LPALCPROCESSCONTEXT = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> void;
+using LPALCSUSPENDCONTEXT = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> void;
+using LPALCDESTROYCONTEXT = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> void;
 using LPALCGETCURRENTCONTEXT = auto (ALC_APIENTRY*)() ALC_API_NOEXCEPT -> ALCcontext*;
 using LPALCGETCONTEXTSDEVICE = auto (ALC_APIENTRY*)(ALCcontext *context) ALC_API_NOEXCEPT -> ALCdevice*;
 
@@ -293,7 +293,7 @@ using LPALCGETPROCADDRESS = auto (ALC_APIENTRY*)(ALCdevice *device, const ALCcha
 using LPALCGETENUMVALUE = auto (ALC_APIENTRY*)(ALCdevice *device, const ALCchar *enumname) ALC_API_NOEXCEPT -> ALCenum;
 
 using LPALCGETSTRING = auto (ALC_APIENTRY*)(ALCdevice *device, ALCenum param) ALC_API_NOEXCEPT -> const ALCchar*;
-using LPALCGETINTEGERV = void (ALC_APIENTRY*)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT;
+using LPALCGETINTEGERV = auto (ALC_APIENTRY*)(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) ALC_API_NOEXCEPT -> void;
 
 /*** ALC_VERSION_1_1 ***/
 /** Context attribute: <int> requested Mono (3D) Sources. */
@@ -338,13 +338,13 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuin
 ALC_API auto ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) ALC_API_NOEXCEPT -> ALCboolean;
 
 /** Starts capturing samples into the device buffer. */
-ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcCaptureStart(ALCdevice *device) ALC_API_NOEXCEPT -> void;
 
 /** Stops capturing samples. Samples in the device buffer remain available. */
-ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcCaptureStop(ALCdevice *device) ALC_API_NOEXCEPT -> void;
 
 /** Reads samples from the device buffer. */
-ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
+ALC_API auto ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT -> void;
 
 #endif /* ALC_NO_PROTOTYPES */
 
@@ -353,9 +353,9 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
  */
 using LPALCCAPTUREOPENDEVICE = auto (ALC_APIENTRY*)(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize) ALC_API_NOEXCEPT -> ALCdevice*;
 using LPALCCAPTURECLOSEDEVICE = auto (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT -> ALCboolean;
-using LPALCCAPTURESTART = void (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT;
-using LPALCCAPTURESTOP = void (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT;
-using LPALCCAPTURESAMPLES = void (ALC_APIENTRY*)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT;
+using LPALCCAPTURESTART = auto (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT -> void;
+using LPALCCAPTURESTOP = auto (ALC_APIENTRY*)(ALCdevice *device) ALC_API_NOEXCEPT -> void;
+using LPALCCAPTURESAMPLES = auto (ALC_APIENTRY*)(ALCdevice *device, ALCvoid *buffer, ALCsizei samples) ALC_API_NOEXCEPT -> void;
 
 
 } /* extern "C" */

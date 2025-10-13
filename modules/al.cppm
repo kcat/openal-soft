@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-11 15:23:49.044344+00:00
+ * Last regenerated: 2025-10-13 18:47:37.100806+00:00
  */
 
 module;
@@ -487,21 +487,21 @@ ENUMDCL AL_INVERSE_DISTANCE_CLAMPED =            0xD002;
 
 #ifndef AL_NO_PROTOTYPES
 /* Renderer State management. */
-AL_API void AL_APIENTRY alEnable(ALenum capability) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDisable(ALenum capability) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alEnable(ALenum capability) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDisable(ALenum capability) AL_API_NOEXCEPT -> void;
 AL_API auto AL_APIENTRY alIsEnabled(ALenum capability) AL_API_NOEXCEPT -> ALboolean;
 
 /* Context state setting. */
-AL_API void AL_APIENTRY alDopplerFactor(ALfloat value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDistanceModel(ALenum distanceModel) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alDopplerFactor(ALfloat value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDopplerVelocity(ALfloat value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDistanceModel(ALenum distanceModel) AL_API_NOEXCEPT -> void;
 
 /* Context state retrieval. */
 AL_API auto AL_APIENTRY alGetString(ALenum param) AL_API_NOEXCEPT -> const ALchar*;
-AL_API void AL_APIENTRY alGetBooleanv(ALenum param, ALboolean *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetIntegerv(ALenum param, ALint *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFloatv(ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetDoublev(ALenum param, ALdouble *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGetBooleanv(ALenum param, ALboolean *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetIntegerv(ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetFloatv(ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetDoublev(ALenum param, ALdouble *values) AL_API_NOEXCEPT -> void;
 AL_API auto AL_APIENTRY alGetBoolean(ALenum param) AL_API_NOEXCEPT -> ALboolean;
 AL_API auto AL_APIENTRY alGetInteger(ALenum param) AL_API_NOEXCEPT -> ALint;
 AL_API auto AL_APIENTRY alGetFloat(ALenum param) AL_API_NOEXCEPT -> ALfloat;
@@ -526,81 +526,81 @@ AL_API auto AL_APIENTRY alGetProcAddress(const ALchar *fname) AL_API_NOEXCEPT ->
 AL_API auto AL_APIENTRY alGetEnumValue(const ALchar *ename) AL_API_NOEXCEPT -> ALenum;
 
 /* Set listener parameters. */
-AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alListeneri(ALenum param, ALint value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alListenerf(ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alListeneri(ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alListeneriv(ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
 /* Get listener parameters. */
-AL_API void AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetListeneri(ALenum param, ALint *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetListeneri(ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetListeneriv(ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 
 /** Create source objects. */
-AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGenSources(ALsizei n, ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Delete source objects. */
-AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Verify an ID is for a valid source. */
 AL_API auto AL_APIENTRY alIsSource(ALuint source) AL_API_NOEXCEPT -> ALboolean;
 
 /* Set source parameters. */
-AL_API void AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
 /* Get source parameters. */
-AL_API void AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 
 /** Play, restart, or resume a source, setting its state to AL_PLAYING. */
-AL_API void AL_APIENTRY alSourcePlay(ALuint source) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourcePlay(ALuint source) AL_API_NOEXCEPT -> void;
 
 /** Stop a source, setting its state to AL_STOPPED if playing or paused. */
-AL_API void AL_APIENTRY alSourceStop(ALuint source) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceStop(ALuint source) AL_API_NOEXCEPT -> void;
 
 /** Rewind a source, setting its state to AL_INITIAL. */
-AL_API void AL_APIENTRY alSourceRewind(ALuint source) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceRewind(ALuint source) AL_API_NOEXCEPT -> void;
 
 /** Pause a source, setting its state to AL_PAUSED if playing. */
-AL_API void AL_APIENTRY alSourcePause(ALuint source) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourcePause(ALuint source) AL_API_NOEXCEPT -> void;
 
 /** Play, restart, or resume a list of sources atomically. */
-AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Stop a list of sources atomically. */
-AL_API void AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Rewind a list of sources atomically. */
-AL_API void AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Pause a list of sources atomically. */
-AL_API void AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
 /** Queue buffers onto a source */
-AL_API void AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT -> void;
 
 /** Unqueue processed buffers from a source */
-AL_API void AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT -> void;
 
 /** Create buffer objects */
-AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT -> void;
 
 /** Delete buffer objects */
-AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT -> void;
 
 /** Verify an ID is a valid buffer (including the NULL buffer) */
 AL_API auto AL_APIENTRY alIsBuffer(ALuint buffer) AL_API_NOEXCEPT -> ALboolean;
@@ -609,41 +609,41 @@ AL_API auto AL_APIENTRY alIsBuffer(ALuint buffer) AL_API_NOEXCEPT -> ALboolean;
  * Copies data into the buffer, interpreting it using the specified format and
  * samplerate.
  */
-AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT -> void;
 
 /* Set buffer parameters. */
-AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
 /* Get buffer parameters. */
-AL_API void AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 #endif /* AL_NO_PROTOTYPES */
 
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
  */
-using LPALENABLE = void (AL_APIENTRY*)(ALenum capability) AL_API_NOEXCEPT;
-using LPALDISABLE = void (AL_APIENTRY*)(ALenum capability) AL_API_NOEXCEPT;
+using LPALENABLE = auto (AL_APIENTRY*)(ALenum capability) AL_API_NOEXCEPT -> void;
+using LPALDISABLE = auto (AL_APIENTRY*)(ALenum capability) AL_API_NOEXCEPT -> void;
 using LPALISENABLED = auto (AL_APIENTRY*)(ALenum capability) AL_API_NOEXCEPT -> ALboolean;
 
-using LPALDOPPLERFACTOR = void (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT;
-using LPALDOPPLERVELOCITY = void (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT;
-using LPALDISTANCEMODEL = void (AL_APIENTRY*)(ALenum distanceModel) AL_API_NOEXCEPT;
+using LPALDOPPLERFACTOR = auto (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT -> void;
+using LPALDOPPLERVELOCITY = auto (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT -> void;
+using LPALDISTANCEMODEL = auto (AL_APIENTRY*)(ALenum distanceModel) AL_API_NOEXCEPT -> void;
 
 using LPALGETSTRING = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> const ALchar*;
-using LPALGETBOOLEANV = void (AL_APIENTRY*)(ALenum param, ALboolean *values) AL_API_NOEXCEPT;
-using LPALGETINTEGERV = void (AL_APIENTRY*)(ALenum param, ALint *values) AL_API_NOEXCEPT;
-using LPALGETFLOATV = void (AL_APIENTRY*)(ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-using LPALGETDOUBLEV = void (AL_APIENTRY*)(ALenum param, ALdouble *values) AL_API_NOEXCEPT;
+using LPALGETBOOLEANV = auto (AL_APIENTRY*)(ALenum param, ALboolean *values) AL_API_NOEXCEPT -> void;
+using LPALGETINTEGERV = auto (AL_APIENTRY*)(ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
+using LPALGETFLOATV = auto (AL_APIENTRY*)(ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALGETDOUBLEV = auto (AL_APIENTRY*)(ALenum param, ALdouble *values) AL_API_NOEXCEPT -> void;
 using LPALGETBOOLEAN = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALboolean;
 using LPALGETINTEGER = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALint;
 using LPALGETFLOAT = auto (AL_APIENTRY*)(ALenum param) AL_API_NOEXCEPT -> ALfloat;
@@ -654,69 +654,69 @@ using LPALISEXTENSIONPRESENT = auto (AL_APIENTRY*)(const ALchar *extname) AL_API
 using LPALGETPROCADDRESS = auto (AL_APIENTRY*)(const ALchar *fname) AL_API_NOEXCEPT -> void*;
 using LPALGETENUMVALUE = auto (AL_APIENTRY*)(const ALchar *ename) AL_API_NOEXCEPT -> ALenum;
 
-using LPALLISTENERF = void (AL_APIENTRY*)(ALenum param, ALfloat value) AL_API_NOEXCEPT;
-using LPALLISTENER3F = void (AL_APIENTRY*)(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-using LPALLISTENERFV = void (AL_APIENTRY*)(ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-using LPALLISTENERI = void (AL_APIENTRY*)(ALenum param, ALint value) AL_API_NOEXCEPT;
-using LPALLISTENER3I = void (AL_APIENTRY*)(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-using LPALLISTENERIV = void (AL_APIENTRY*)(ALenum param, const ALint *values) AL_API_NOEXCEPT;
+using LPALLISTENERF = auto (AL_APIENTRY*)(ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+using LPALLISTENER3F = auto (AL_APIENTRY*)(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+using LPALLISTENERFV = auto (AL_APIENTRY*)(ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALLISTENERI = auto (AL_APIENTRY*)(ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+using LPALLISTENER3I = auto (AL_APIENTRY*)(ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+using LPALLISTENERIV = auto (AL_APIENTRY*)(ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
-using LPALGETLISTENERF = void (AL_APIENTRY*)(ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-using LPALGETLISTENER3F = void (AL_APIENTRY*)(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-using LPALGETLISTENERFV = void (AL_APIENTRY*)(ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-using LPALGETLISTENERI = void (AL_APIENTRY*)(ALenum param, ALint *value) AL_API_NOEXCEPT;
-using LPALGETLISTENER3I = void (AL_APIENTRY*)(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-using LPALGETLISTENERIV = void (AL_APIENTRY*)(ALenum param, ALint *values) AL_API_NOEXCEPT;
+using LPALGETLISTENERF = auto (AL_APIENTRY*)(ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+using LPALGETLISTENER3F = auto (AL_APIENTRY*)(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+using LPALGETLISTENERFV = auto (AL_APIENTRY*)(ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALGETLISTENERI = auto (AL_APIENTRY*)(ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+using LPALGETLISTENER3I = auto (AL_APIENTRY*)(ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+using LPALGETLISTENERIV = auto (AL_APIENTRY*)(ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 
-using LPALGENSOURCES = void (AL_APIENTRY*)(ALsizei n, ALuint *sources) AL_API_NOEXCEPT;
-using LPALDELETESOURCES = void (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+using LPALGENSOURCES = auto (AL_APIENTRY*)(ALsizei n, ALuint *sources) AL_API_NOEXCEPT -> void;
+using LPALDELETESOURCES = auto (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 using LPALISSOURCE = auto (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT -> ALboolean;
 
-using LPALSOURCEF = void (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-using LPALSOURCE3F = void (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-using LPALSOURCEFV = void (AL_APIENTRY*)(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-using LPALSOURCEI = void (AL_APIENTRY*)(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT;
-using LPALSOURCE3I = void (AL_APIENTRY*)(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-using LPALSOURCEIV = void (AL_APIENTRY*)(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT;
+using LPALSOURCEF = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+using LPALSOURCE3F = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+using LPALSOURCEFV = auto (AL_APIENTRY*)(ALuint source, ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALSOURCEI = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+using LPALSOURCE3I = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+using LPALSOURCEIV = auto (AL_APIENTRY*)(ALuint source, ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
-using LPALGETSOURCEF = void (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-using LPALGETSOURCE3F = void (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-using LPALGETSOURCEFV = void (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-using LPALGETSOURCEI = void (AL_APIENTRY*)(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT;
-using LPALGETSOURCE3I = void (AL_APIENTRY*)(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-using LPALGETSOURCEIV = void (AL_APIENTRY*)(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT;
+using LPALGETSOURCEF = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+using LPALGETSOURCE3F = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+using LPALGETSOURCEFV = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALGETSOURCEI = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+using LPALGETSOURCE3I = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+using LPALGETSOURCEIV = auto (AL_APIENTRY*)(ALuint source, ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 
-using LPALSOURCEPLAY = void (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT;
-using LPALSOURCESTOP = void (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT;
-using LPALSOURCEREWIND = void (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT;
-using LPALSOURCEPAUSE = void (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT;
+using LPALSOURCEPLAY = auto (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT -> void;
+using LPALSOURCESTOP = auto (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT -> void;
+using LPALSOURCEREWIND = auto (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT -> void;
+using LPALSOURCEPAUSE = auto (AL_APIENTRY*)(ALuint source) AL_API_NOEXCEPT -> void;
 
-using LPALSOURCEPLAYV = void (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
-using LPALSOURCESTOPV = void (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
-using LPALSOURCEREWINDV = void (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
-using LPALSOURCEPAUSEV = void (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT;
+using LPALSOURCEPLAYV = auto (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
+using LPALSOURCESTOPV = auto (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
+using LPALSOURCEREWINDV = auto (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
+using LPALSOURCEPAUSEV = auto (AL_APIENTRY*)(ALsizei n, const ALuint *sources) AL_API_NOEXCEPT -> void;
 
-using LPALSOURCEQUEUEBUFFERS = void (AL_APIENTRY*)(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT;
-using LPALSOURCEUNQUEUEBUFFERS = void (AL_APIENTRY*)(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT;
+using LPALSOURCEQUEUEBUFFERS = auto (AL_APIENTRY*)(ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT -> void;
+using LPALSOURCEUNQUEUEBUFFERS = auto (AL_APIENTRY*)(ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT -> void;
 
-using LPALGENBUFFERS = void (AL_APIENTRY*)(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT;
-using LPALDELETEBUFFERS = void (AL_APIENTRY*)(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT;
+using LPALGENBUFFERS = auto (AL_APIENTRY*)(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT -> void;
+using LPALDELETEBUFFERS = auto (AL_APIENTRY*)(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT -> void;
 using LPALISBUFFER = auto (AL_APIENTRY*)(ALuint buffer) AL_API_NOEXCEPT -> ALboolean;
-using LPALBUFFERDATA = void (AL_APIENTRY*)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT;
+using LPALBUFFERDATA = auto (AL_APIENTRY*)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT -> void;
 
-using LPALBUFFERF = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-using LPALBUFFER3F = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-using LPALBUFFERFV = void (AL_APIENTRY*)(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-using LPALBUFFERI = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT;
-using LPALBUFFER3I = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-using LPALBUFFERIV = void (AL_APIENTRY*)(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT;
+using LPALBUFFERF = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT -> void;
+using LPALBUFFER3F = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT -> void;
+using LPALBUFFERFV = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALBUFFERI = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT -> void;
+using LPALBUFFER3I = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT -> void;
+using LPALBUFFERIV = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT -> void;
 
-using LPALGETBUFFERF = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-using LPALGETBUFFER3F = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-using LPALGETBUFFERFV = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-using LPALGETBUFFERI = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
-using LPALGETBUFFER3I = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-using LPALGETBUFFERIV = void (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
+using LPALGETBUFFERF = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT -> void;
+using LPALGETBUFFER3F = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT -> void;
+using LPALGETBUFFERFV = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT -> void;
+using LPALGETBUFFERI = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT -> void;
+using LPALGETBUFFER3I = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT -> void;
+using LPALGETBUFFERIV = auto (AL_APIENTRY*)(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT -> void;
 
 /*** AL_VERSION_1_1 ***/
 /**
@@ -789,14 +789,14 @@ ENUMDCL AL_LINEAR_DISTANCE_CLAMPED =             0xD004;
 ENUMDCL AL_EXPONENT_DISTANCE =                   0xD005;
 ENUMDCL AL_EXPONENT_DISTANCE_CLAMPED =           0xD006;
 #ifndef AL_NO_PROTOTYPES
-AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alSpeedOfSound(ALfloat value) AL_API_NOEXCEPT -> void;
 
 #endif /* AL_NO_PROTOTYPES */
 
 /* Pointer-to-function types, useful for storing dynamically loaded AL entry
  * points.
  */
-using LPALSPEEDOFSOUND = void (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT;
+using LPALSPEEDOFSOUND = auto (AL_APIENTRY*)(ALfloat value) AL_API_NOEXCEPT -> void;
 
 
 } /* extern "C" */

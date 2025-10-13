@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-11 15:23:49.044344+00:00
+ * Last regenerated: 2025-10-13 18:47:37.100806+00:00
  */
 
 module;
@@ -715,81 +715,81 @@ ENUMDCL AL_DEFAULT_AUXILIARY_SEND_FILTER_GAINHF_AUTO = AL_TRUE;
 ENUMDCL AL_MIN_METERS_PER_UNIT =                 FLT_MIN;
 ENUMDCL AL_MAX_METERS_PER_UNIT =                 FLT_MAX;
 ENUMDCL AL_DEFAULT_METERS_PER_UNIT =             1.0f;
-using LPALGENEFFECTS = void (AL_APIENTRY*)(ALsizei n, ALuint *effects) AL_API_NOEXCEPT;
-using LPALDELETEEFFECTS = void (AL_APIENTRY*)(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT;
+using LPALGENEFFECTS = auto (AL_APIENTRY*)(ALsizei n, ALuint *effects) AL_API_NOEXCEPT -> void;
+using LPALDELETEEFFECTS = auto (AL_APIENTRY*)(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT -> void;
 using LPALISEFFECT = auto (AL_APIENTRY*)(ALuint effect) AL_API_NOEXCEPT -> ALboolean;
-using LPALEFFECTI = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-using LPALEFFECTIV = void (AL_APIENTRY*)(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-using LPALEFFECTF = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-using LPALEFFECTFV = void (AL_APIENTRY*)(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-using LPALGETEFFECTI = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-using LPALGETEFFECTIV = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-using LPALGETEFFECTF = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-using LPALGETEFFECTFV = void (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+using LPALEFFECTI = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+using LPALEFFECTIV = auto (AL_APIENTRY*)(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALEFFECTF = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+using LPALEFFECTFV = auto (AL_APIENTRY*)(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+using LPALGETEFFECTI = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+using LPALGETEFFECTIV = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALGETEFFECTF = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+using LPALGETEFFECTFV = auto (AL_APIENTRY*)(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
-using LPALGENFILTERS = void (AL_APIENTRY*)(ALsizei n, ALuint *filters) AL_API_NOEXCEPT;
-using LPALDELETEFILTERS = void (AL_APIENTRY*)(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT;
+using LPALGENFILTERS = auto (AL_APIENTRY*)(ALsizei n, ALuint *filters) AL_API_NOEXCEPT -> void;
+using LPALDELETEFILTERS = auto (AL_APIENTRY*)(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT -> void;
 using LPALISFILTER = auto (AL_APIENTRY*)(ALuint filter) AL_API_NOEXCEPT -> ALboolean;
-using LPALFILTERI = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-using LPALFILTERIV = void (AL_APIENTRY*)(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-using LPALFILTERF = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-using LPALFILTERFV = void (AL_APIENTRY*)(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-using LPALGETFILTERI = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-using LPALGETFILTERIV = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-using LPALGETFILTERF = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-using LPALGETFILTERFV = void (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+using LPALFILTERI = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+using LPALFILTERIV = auto (AL_APIENTRY*)(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALFILTERF = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+using LPALFILTERFV = auto (AL_APIENTRY*)(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+using LPALGETFILTERI = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+using LPALGETFILTERIV = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALGETFILTERF = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+using LPALGETFILTERFV = auto (AL_APIENTRY*)(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
-using LPALGENAUXILIARYEFFECTSLOTS = void (AL_APIENTRY*)(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT;
-using LPALDELETEAUXILIARYEFFECTSLOTS = void (AL_APIENTRY*)(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT;
+using LPALGENAUXILIARYEFFECTSLOTS = auto (AL_APIENTRY*)(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT -> void;
+using LPALDELETEAUXILIARYEFFECTSLOTS = auto (AL_APIENTRY*)(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT -> void;
 using LPALISAUXILIARYEFFECTSLOT = auto (AL_APIENTRY*)(ALuint effectslot) AL_API_NOEXCEPT -> ALboolean;
-using LPALAUXILIARYEFFECTSLOTI = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-using LPALAUXILIARYEFFECTSLOTIV = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-using LPALAUXILIARYEFFECTSLOTF = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-using LPALAUXILIARYEFFECTSLOTFV = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-using LPALGETAUXILIARYEFFECTSLOTI = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-using LPALGETAUXILIARYEFFECTSLOTIV = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-using LPALGETAUXILIARYEFFECTSLOTF = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-using LPALGETAUXILIARYEFFECTSLOTFV = void (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+using LPALAUXILIARYEFFECTSLOTI = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+using LPALAUXILIARYEFFECTSLOTIV = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALAUXILIARYEFFECTSLOTF = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+using LPALAUXILIARYEFFECTSLOTFV = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+using LPALGETAUXILIARYEFFECTSLOTI = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+using LPALGETAUXILIARYEFFECTSLOTIV = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+using LPALGETAUXILIARYEFFECTSLOTF = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+using LPALGETAUXILIARYEFFECTSLOTFV = auto (AL_APIENTRY*)(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
 #ifdef AL_ALEXT_PROTOTYPES
 /* Effect object function types. */
-AL_API void AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects) AL_API_NOEXCEPT -> void;
 AL_API auto AL_APIENTRY alIsEffect(ALuint effect) AL_API_NOEXCEPT -> ALboolean;
-AL_API void AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
 /* Filter object function types. */
-AL_API void AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters) AL_API_NOEXCEPT -> void;
 AL_API auto AL_APIENTRY alIsFilter(ALuint filter) AL_API_NOEXCEPT -> ALboolean;
-AL_API void AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
 /* Auxiliary Effect Slot object function types. */
-AL_API void AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots) AL_API_NOEXCEPT -> void;
 AL_API auto AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot) AL_API_NOEXCEPT -> ALboolean;
-AL_API void AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT;
-AL_API void AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT;
+AL_API auto AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, const ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, const ALfloat *pflValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum param, ALint *iValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum param, ALint *piValues) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum param, ALfloat *flValue) AL_API_NOEXCEPT -> void;
+AL_API auto AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum param, ALfloat *pflValues) AL_API_NOEXCEPT -> void;
 
 #endif
 

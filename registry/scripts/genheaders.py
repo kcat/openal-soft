@@ -254,7 +254,6 @@ export module openal.{mod};
 
 EXT_MODULE_PREAMBLE = """
 #include <array>
-#include <cstddef>
 #include <cstdint>
 
 #ifndef ALC_API
@@ -463,9 +462,6 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
             params = "(void)" if header else "()"
         else:
             params = f"({', '.join(x.repr.strip() for x in api.parameters)})"
-        is_void = api.return_type.strip() == "void"
-        lhs_ret = "void" if is_void else "auto"
-        rhs_ret = "" if is_void else f" -> {api.return_type}"
         if pfn:
             if header:
                 return (
@@ -474,21 +470,21 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
                 )
             else:
                 return (
-                    f"using {api.pfn_name} = {lhs_ret} ({api.namespace}_APIENTRY*)"
-                    f"{params} {api.namespace}_API_NOEXCEPT{rhs_ret};"
+                    f"using {api.pfn_name} = auto ({api.namespace}_APIENTRY*)"
+                    f"{params} {api.namespace}_API_NOEXCEPT -> {api.return_type};"
                 )
         else:
             export = f"{api.namespace}_API " if api.export is not None else ""
             doc = reg.render_doc_comment(api.doc, registry)
             if header:
                 return (
-                    f"{doc}{export}{api.return_type} "
-                    f"{api.namespace}_APIENTRY {api.name}{params} {api.namespace}_API_NOEXCEPT;"
+                    f"{doc}{export}{api.return_type} {api.namespace}_APIENTRY "
+                    f"{api.name}{params} {api.namespace}_API_NOEXCEPT;"
                 )
             else:
                 return (
-                    f"{doc}{export}{lhs_ret} "
-                    f"{api.namespace}_APIENTRY {api.name}{params} {api.namespace}_API_NOEXCEPT{rhs_ret};"
+                    f"{doc}{export}auto {api.namespace}_APIENTRY "
+                    f"{api.name}{params} {api.namespace}_API_NOEXCEPT -> {api.return_type};"
                 )
     elif isinstance(api, reg.Enum):
         doc = reg.render_doc_comment(api.doc, registry, api.property)
@@ -535,9 +531,7 @@ def render_api(api: reg.Api, pfn: bool, registry: reg.Registry, header: bool) ->
             )
         type = type.replace(api.name, "").rstrip(";")
         return_type = type[: type.index("(")].strip()
-        if return_type != "void":
-            type = f"auto {type[type.index('('):]} -> {return_type}"
-        type = type.replace("NOEXCEPT17", "NOEXCEPT")
+        type = f"auto {type[type.index('('):]} -> {return_type}".replace("NOEXCEPT17", "NOEXCEPT")
         return f"{reg.render_doc_comment(api.doc, registry)}using {api.name} = {type};"
 
     raise TypeError

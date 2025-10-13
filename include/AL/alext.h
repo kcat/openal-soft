@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-13 18:47:37.100806+00:00
+ * Last regenerated: 2025-10-13 19:40:01.687690+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -175,9 +175,9 @@ extern "C" {
 
 #ifndef AL_EXT_STATIC_BUFFER
 #define AL_EXT_STATIC_BUFFER 1
-typedef void (AL_APIENTRY *PFNALBUFFERDATASTATICPROC)(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
+typedef void (AL_APIENTRY *PFNALBUFFERDATASTATICPROC)(ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-void AL_APIENTRY alBufferDataStatic(const ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
+void AL_APIENTRY alBufferDataStatic(ALuint buffer, ALenum format, ALvoid *data, ALsizei size, ALsizei freq) AL_API_NOEXCEPT;
 #endif
 #endif
 

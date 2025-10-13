@@ -1865,7 +1865,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         </command>
         <command funcpointer="PFNALBUFFERDATASTATICPROC">
             <proto>void <name>alBufferDataStatic</name></proto>
-            <param class="buffer">const <ptype>ALuint</ptype> <name>buffer</name></param>
+            <param class="buffer"><ptype>ALuint</ptype> <name>buffer</name></param>
             <param group="Format"><ptype>ALenum</ptype> <name>format</name></param>
             <param len="size"><ptype>ALvoid</ptype> *<name>data</name></param>
             <param><ptype>ALsizei</ptype> <name>size</name></param>

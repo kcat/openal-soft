@@ -297,22 +297,22 @@ BackendFactory *CaptureFactory{};
  ************************************************/
 
 /* Enumerated device names */
-std::vector<std::string> alcAllDevicesArray;
-std::vector<std::string> alcCaptureDeviceArray;
-std::string alcAllDevicesList;
-std::string alcCaptureDeviceList;
+auto alcAllDevicesArray = std::vector<std::string>{};
+auto alcCaptureDeviceArray = std::vector<std::string>{};
+auto alcAllDevicesList = std::string{};
+auto alcCaptureDeviceList = std::string{};
 
 /* Default is always the first in the list */
-std::string alcDefaultAllDevicesSpecifier;
-std::string alcCaptureDefaultDeviceSpecifier;
+auto alcDefaultAllDevicesSpecifier = std::string{};
+auto alcCaptureDefaultDeviceSpecifier = std::string{};
 
 /* Flag to specify if alcSuspendContext/alcProcessContext should defer/process
  * updates.
  */
-bool SuspendDefers{true};
+auto SuspendDefers = true;
 
 /* Initial seed for dithering. */
-constexpr uint DitherRNGSeed{22222u};
+constexpr auto DitherRNGSeed = 22222_u32;
 
 
 /************************************************
@@ -373,11 +373,11 @@ constexpr uint DitherRNGSeed{22222u};
 }
 
 
-constexpr int alcMajorVersion{1};
-constexpr int alcMinorVersion{1};
+constexpr auto alcMajorVersion = 1_i32;
+constexpr auto alcMinorVersion = 1_i32;
 
-constexpr int alcEFXMajorVersion{1};
-constexpr int alcEFXMinorVersion{0};
+constexpr auto alcEFXMajorVersion = 1_i32;
+constexpr auto alcEFXMinorVersion = 0_i32;
 
 
 using DeviceRef = al::intrusive_ptr<al::Device>;
@@ -417,13 +417,13 @@ void alc_initconfig()
         std::string_view{ALSOFT_GIT_COMMIT_HASH}.empty() ? "unknown" : ALSOFT_GIT_COMMIT_HASH,
         std::string_view{ALSOFT_GIT_BRANCH}.empty() ? "unknown" : ALSOFT_GIT_BRANCH);
     {
-        auto names = std::array<std::string_view,BackendList.size()>{};
+        auto names = std::array<std::string_view, BackendList.size()>{};
         std::ranges::transform(BackendList, names.begin(), &BackendInfo::name);
         TRACE("{}", fmt::format("Supported backends: {}", fmt::join(names, ", ")));
     }
     ReadALConfig();
 
-    if(auto suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
+    if(auto const suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
     {
         if(al::case_compare(*suspendmode, "ignore"sv) == 0)
         {
@@ -434,7 +434,7 @@ void alc_initconfig()
             ERR("Unhandled context suspend behavior setting: \"{}\"", *suspendmode);
     }
 
-    int capfilter{0};
+    auto capfilter = 0_i32;
 #if HAVE_SSE4_1
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
 #elif HAVE_SSE3
@@ -449,8 +449,7 @@ void alc_initconfig()
 #endif
     if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"sv))
     {
-        auto cpulist = std::string_view{*cpuopt};
-        if(al::case_compare(cpulist, "all"sv) == 0)
+        if(auto const cpulist = std::string_view{*cpuopt}; al::case_compare(cpulist, "all"sv) == 0)
             capfilter = 0;
         else
         {
@@ -478,14 +477,14 @@ void alc_initconfig()
             });
         }
     }
-    if(auto cpuopt = GetCPUInfo())
+    if(auto const cpuopt = GetCPUInfo())
     {
         if(!cpuopt->mVendor.empty() || !cpuopt->mName.empty())
         {
             TRACE("Vendor ID: \"{}\"", cpuopt->mVendor);
             TRACE("Name: \"{}\"", cpuopt->mName);
         }
-        const int caps{cpuopt->mCaps};
+        auto const caps = cpuopt->mCaps;
         TRACE("Extensions:{}{}{}{}{}{}",
             ((capfilter&CPU_CAP_SSE)   ?(caps&CPU_CAP_SSE)   ?" +SSE"sv    : " -SSE"sv    : ""sv),
             ((capfilter&CPU_CAP_SSE2)  ?(caps&CPU_CAP_SSE2)  ?" +SSE2"sv   : " -SSE2"sv   : ""sv),
@@ -496,17 +495,17 @@ void alc_initconfig()
         CPUCapFlags = caps & capfilter;
     }
 
-    if(auto priopt = ConfigValueInt({}, {}, "rt-prio"sv))
+    if(auto priopt = ConfigValueI32({}, {}, "rt-prio"sv))
         RTPrioLevel = *priopt;
     if(auto limopt = ConfigValueBool({}, {}, "rt-time-limit"sv))
         AllowRTTimeLimit = *limopt;
 
     {
         auto compatflags = CompatFlagBitset{};
-        static constexpr auto checkflag = [](const gsl::czstring envname,
-            const std::string_view optname) -> bool
+        static constexpr auto checkflag = [](gsl::czstring const envname,
+            std::string_view const optname) -> bool
         {
-            if(auto optval = al::getenv(envname))
+            if(auto const optval = al::getenv(envname))
             {
                 return al::case_compare(*optval, "true"sv) == 0
                     || strtol(optval->c_str(), nullptr, 0) == 1;
@@ -518,7 +517,7 @@ void alc_initconfig()
         compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"sv));
         compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"sv));
 
-        aluInit(compatflags, ConfigValueFloat({}, "game_compat"sv, "nfc-scale"sv).value_or(1.0f));
+        aluInit(compatflags, ConfigValueF32({}, "game_compat"sv, "nfc-scale"sv).value_or(1.0f));
     }
     Voice::InitMixer(ConfigValueStr({}, {}, "resampler"sv));
 
@@ -569,7 +568,7 @@ void alc_initconfig()
             al::Device::sTrapALCError = GetConfigValueBool({}, {}, "trap-alc-error"sv, false);
     }
 
-    if(auto boostopt = ConfigValueFloat({}, "reverb"sv, "boost"sv))
+    if(auto boostopt = ConfigValueF32({}, "reverb"sv, "boost"sv))
     {
         const auto valf = std::isfinite(*boostopt) ? std::clamp(*boostopt, -24.0f, 24.0f) : 0.0f;
         ReverbBoost *= std::pow(10.0f, valf / 20.0f);
@@ -719,7 +718,7 @@ void alc_initconfig()
     }
 #endif // ALSOFT_EAX
 }
-inline void InitConfig()
+void InitConfig()
 {
     static constinit auto init_once = std::once_flag{};
     std::call_once(init_once, [] { alc_initconfig(); });
@@ -787,10 +786,10 @@ void ProbeCaptureDeviceList()
 
 struct AttributePair { ALCint attribute; ALCint value; };
 static_assert(sizeof(AttributePair) == sizeof(int)*2);
-auto SpanFromAttributeList(const ALCint *attribs LIFETIMEBOUND) noexcept
-    -> std::span<const AttributePair>
+auto SpanFromAttributeList(ALCint const *const attribs LIFETIMEBOUND) noexcept
+    -> std::span<AttributePair const>
 {
-    auto attrSpan = std::span<const AttributePair>{};
+    auto attrSpan = std::span<AttributePair const>{};
     if(attribs && *attribs != 0)
     {
         /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
@@ -799,15 +798,15 @@ auto SpanFromAttributeList(const ALCint *attribs LIFETIMEBOUND) noexcept
             attrEnd += 2;
         /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
         /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-        attrSpan = {std::launder(reinterpret_cast<const AttributePair*>(attribs)),
-            reinterpret_cast<const AttributePair*>(attrEnd)};
+        attrSpan = {std::launder(reinterpret_cast<AttributePair const*>(attribs)),
+            reinterpret_cast<AttributePair const*>(attrEnd)};
         /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
     }
     return attrSpan;
 }
 
 struct DevFmtPair { DevFmtChannels chans; DevFmtType type; };
-std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
+auto DecomposeDevFormat(ALenum const format) -> std::optional<DevFmtPair>
 {
     struct FormatType {
         ALenum alformat;
@@ -849,12 +848,13 @@ std::optional<DevFmtPair> DecomposeDevFormat(ALenum format)
         FormatType{AL_FORMAT_71CHN_FLOAT32, {DevFmtX71, DevFmtFloat}},
     };
 
-    const auto item = std::ranges::find(list, format, &FormatType::alformat);
-    if(item != list.end()) return item->formatpair;
+    if(const auto item = std::ranges::find(list, format, &FormatType::alformat);
+        item != list.end())
+        return item->formatpair;
     return std::nullopt;
 }
 
-std::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
+auto DevFmtTypeFromEnum(ALCenum const type) -> std::optional<DevFmtType>
 {
     switch(type)
     {
@@ -869,7 +869,7 @@ std::optional<DevFmtType> DevFmtTypeFromEnum(ALCenum type)
     WARN("Unsupported format type: {:#04x}", as_unsigned(type));
     return std::nullopt;
 }
-ALCenum EnumFromDevFmt(DevFmtType type)
+auto EnumFromDevFmt(DevFmtType const type) -> ALCenum
 {
     switch(type)
     {
@@ -884,7 +884,7 @@ ALCenum EnumFromDevFmt(DevFmtType type)
     throw std::runtime_error{std::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
 }
 
-std::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
+auto DevFmtChannelsFromEnum(ALCenum const channels) -> std::optional<DevFmtChannels>
 {
     switch(channels)
     {
@@ -899,7 +899,7 @@ std::optional<DevFmtChannels> DevFmtChannelsFromEnum(ALCenum channels)
     WARN("Unsupported format channels: {:#04x}", as_unsigned(channels));
     return std::nullopt;
 }
-ALCenum EnumFromDevFmt(DevFmtChannels channels)
+auto EnumFromDevFmt(DevFmtChannels const channels) -> ALCenum
 {
     switch(channels)
     {
@@ -920,7 +920,7 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
         int{al::to_underlying(channels)})};
 }
 
-std::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
+auto DevAmbiLayoutFromEnum(ALCenum const layout) -> std::optional<DevAmbiLayout>
 {
     switch(layout)
     {
@@ -930,7 +930,7 @@ std::optional<DevAmbiLayout> DevAmbiLayoutFromEnum(ALCenum layout)
     WARN("Unsupported ambisonic layout: {:#04x}", as_unsigned(layout));
     return std::nullopt;
 }
-ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
+auto EnumFromDevAmbi(DevAmbiLayout const layout) -> ALCenum
 {
     switch(layout)
     {
@@ -941,7 +941,7 @@ ALCenum EnumFromDevAmbi(DevAmbiLayout layout)
         int{al::to_underlying(layout)})};
 }
 
-std::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
+auto DevAmbiScalingFromEnum(ALCenum const scaling) -> std::optional<DevAmbiScaling>
 {
     switch(scaling)
     {
@@ -952,7 +952,7 @@ std::optional<DevAmbiScaling> DevAmbiScalingFromEnum(ALCenum scaling)
     WARN("Unsupported ambisonic scaling: {:#04x}", as_unsigned(scaling));
     return std::nullopt;
 }
-ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
+auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
 {
     switch(scaling)
     {
@@ -968,7 +968,7 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
 /* Downmixing channel arrays, to map a device format's missing channels to
  * existing ones. Based on what PipeWire does, though simplified.
  */
-constexpr auto inv_sqrt2f = gsl::narrow_cast<float>(1.0 / std::numbers::sqrt2);
+constexpr auto inv_sqrt2f = gsl::narrow_cast<f32>(1.0 / std::numbers::sqrt2);
 constexpr auto FrontStereo3dB = std::array{
     InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}
@@ -1021,23 +1021,23 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(gsl::not_null<const al::Device*> device, const float threshold)
+auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 const threshold)
     -> std::unique_ptr<Compressor>
 {
-    static constexpr float LookAheadTime{0.001f};
-    static constexpr float HoldTime{0.002f};
-    static constexpr float PreGainDb{0.0f};
-    static constexpr float PostGainDb{0.0f};
-    static constexpr float Ratio{std::numeric_limits<float>::infinity()};
-    static constexpr float KneeDb{0.0f};
-    static constexpr float AttackTime{0.02f};
-    static constexpr float ReleaseTime{0.2f};
+    static constexpr auto LookAheadTime = 0.001f;
+    static constexpr auto HoldTime = 0.002f;
+    static constexpr auto PreGainDb = 0.0f;
+    static constexpr auto PostGainDb = 0.0f;
+    static constexpr auto Ratio = std::numeric_limits<float>::infinity();
+    static constexpr auto KneeDb = 0.0f;
+    static constexpr auto AttackTime = 0.02f;
+    static constexpr auto ReleaseTime = 0.2f;
 
-    const auto flags = Compressor::FlagBits{}.set(Compressor::AutoKnee).set(Compressor::AutoAttack)
+    auto const flags = Compressor::FlagBits{}.set(Compressor::AutoKnee).set(Compressor::AutoAttack)
         .set(Compressor::AutoRelease).set(Compressor::AutoPostGain).set(Compressor::AutoDeclip);
 
     return Compressor::Create(device->RealOut.Buffer.size(),
-        gsl::narrow_cast<float>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
+        gsl::narrow_cast<f32>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
         PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
 }
 
@@ -1047,11 +1047,11 @@ auto CreateDeviceLimiter(gsl::not_null<const al::Device*> device, const float th
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-inline void UpdateClockBase(gsl::not_null<al::Device*> device)
+void UpdateClockBase(gsl::not_null<al::Device*> const device)
 {
     using std::chrono::duration_cast;
 
-    const auto mixLock = device->getWriteMixLock();
+    auto const mixLock = device->getWriteMixLock();
 
     auto clockBaseSec = device->mClockBaseSec.load(std::memory_order_relaxed);
     auto clockBaseNSec = nanoseconds{device->mClockBaseNSec.load(std::memory_order_relaxed)};
@@ -1072,7 +1072,7 @@ inline void UpdateClockBase(gsl::not_null<al::Device*> device)
  * responsible for holding the list lock).
  */
 auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
-    const std::span<const AttributePair> attrList) -> ALCenum
+    std::span<AttributePair const> const attrList) -> ALCenum
 {
     if(attrList.empty() && device->Type == DeviceType::Loopback)
     {
@@ -1085,32 +1085,32 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     auto numSends = device->NumAuxSends;
     auto stereomode = std::optional<StereoEncoding>{};
     auto optlimit = std::optional<bool>{};
-    auto optsrate = std::optional<uint>{};
+    auto optsrate = std::optional<u32>{};
     auto optchans = std::optional<DevFmtChannels>{};
     auto opttype = std::optional<DevFmtType>{};
     auto optlayout = std::optional<DevAmbiLayout>{};
     auto optscale = std::optional<DevAmbiScaling>{};
-    auto period_size = uint{DefaultUpdateSize};
-    auto buffer_size = uint{DefaultUpdateSize * DefaultNumUpdates};
-    auto hrtf_id = -1;
-    auto aorder = 0u;
+    auto period_size = u32{DefaultUpdateSize};
+    auto buffer_size = u32{DefaultUpdateSize * DefaultNumUpdates};
+    auto hrtf_id = -1_i32;
+    auto aorder = 0_u32;
 
     if(device->Type != DeviceType::Loopback)
     {
         /* Get default settings from the user configuration */
 
-        if(auto freqopt = device->configValue<uint>({}, "frequency"))
+        if(auto freqopt = device->configValue<u32>({}, "frequency"))
         {
-            optsrate = std::clamp<uint>(*freqopt, MinOutputRate, MaxOutputRate);
+            optsrate = std::clamp<u32>(*freqopt, MinOutputRate, MaxOutputRate);
 
-            const double scale{gsl::narrow_cast<double>(*optsrate) / double{DefaultOutputRate}};
-            period_size = gsl::narrow_cast<uint>(std::lround(period_size * scale));
+            const double scale{gsl::narrow_cast<f64>(*optsrate) / f64{DefaultOutputRate}};
+            period_size = gsl::narrow_cast<u32>(std::lround(period_size * scale));
         }
 
-        if(auto persizeopt = device->configValue<uint>({}, "period_size"))
-            period_size = std::clamp(*persizeopt, 64u, 8192u);
-        if(auto numperopt = device->configValue<uint>({}, "periods"))
-            buffer_size = std::clamp(*numperopt, 2u, 16u) * period_size;
+        if(auto persizeopt = device->configValue<u32>({}, "period_size"))
+            period_size = std::clamp(*persizeopt, 64_u32, 8192_u32);
+        if(auto numperopt = device->configValue<u32>({}, "periods"))
+            buffer_size = std::clamp(*numperopt, 2_u32, 16_u32) * period_size;
         else
             buffer_size = period_size * uint{DefaultNumUpdates};
 
@@ -1131,7 +1131,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             };
 
             const auto iter = std::ranges::find_if(typelist,
-                [svfmt=std::string_view{*typeopt}](const TypeMap &entry) -> bool
+                [svfmt=std::string_view{*typeopt}](TypeMap const &entry) -> bool
                 { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == typelist.end())
                 ERR("Unsupported sample-type: {}", *typeopt);
@@ -1144,7 +1144,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             struct ChannelMap {
                 std::string_view name;
                 DevFmtChannels chans;
-                uint8_t order;
+                u8 order;
             };
             constexpr auto chanlist = std::array{
                 ChannelMap{"mono"sv,       DevFmtMono,   0},
@@ -1164,7 +1164,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             };
 
             const auto iter = std::ranges::find_if(chanlist,
-                [svfmt=std::string_view{*chanopt}](const ChannelMap &entry) -> bool
+                [svfmt=std::string_view{*chanopt}](ChannelMap const &entry) -> bool
                 { return al::case_compare(entry.name, svfmt) == 0; });
             if(iter == chanlist.end())
                 ERR("Unsupported channels: {}", *chanopt);
@@ -1247,7 +1247,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     {
         auto outmode = ALenum{ALC_ANY_SOFT};
         auto opthrtf = std::optional<bool>{};
-        auto freqAttr = int{};
+        auto freqAttr = i32{};
 
         for(const auto attrparam : attrList)
         {
@@ -1281,26 +1281,26 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
             case ATTRIBUTE(ALC_AMBISONIC_ORDER_SOFT)
                 if(device->Type == DeviceType::Loopback)
-                    aorder = gsl::narrow_cast<uint>(attrparam.value);
+                    aorder = gsl::narrow_cast<u32>(attrparam.value);
                 break;
 
             case ATTRIBUTE(ALC_MONO_SOURCES)
                 if(const auto val = attrparam.value; val >= 0)
-                    numMono = gsl::narrow_cast<uint>(val);
+                    numMono = gsl::narrow_cast<u32>(val);
                 else
                     numMono = 0;
                 break;
 
             case ATTRIBUTE(ALC_STEREO_SOURCES)
                 if(const auto val = attrparam.value; val >= 0)
-                    numStereo = gsl::narrow_cast<uint>(val);
+                    numStereo = gsl::narrow_cast<u32>(val);
                 else
                     numStereo = 0;
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
                 if(const auto val = attrparam.value; val >= 0)
-                    numSends = std::min(gsl::narrow_cast<uint>(val), uint{MaxSendCount});
+                    numSends = std::min(gsl::narrow_cast<u32>(val), uint{MaxSendCount});
                 else
                     numSends = 0;
                 break;
@@ -1539,8 +1539,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     const auto oldChans = device->FmtChans;
     const auto oldType = device->FmtType;
     try {
-        auto *backend = device->Backend.get();
-        if(!backend->reset())
+        if(auto *const backend = device->Backend.get(); !backend->reset())
             throw al::backend_exception{al::backend_error::DeviceError, "Device reset failure"};
     }
     catch(std::exception &e) {
@@ -1589,15 +1588,15 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device->configValue<uint>({}, "sources"sv))
+    if(auto srcsopt = device->configValue<u32>({}, "sources"sv))
     {
         if(*srcsopt <= 0) numMono = 256;
-        else numMono = std::max(*srcsopt, 16u);
+        else numMono = std::max(*srcsopt, 16_u32);
     }
     else
     {
-        numMono = std::min(numMono, std::numeric_limits<int>::max()-numStereo);
-        numMono = std::max(numMono+numStereo, 256u);
+        numMono = std::min(numMono, std::numeric_limits<i32>::max()-numStereo);
+        numMono = std::max(numMono+numStereo, 256_u32);
     }
     numStereo = std::min(numStereo, numMono);
     numMono -= numStereo;
@@ -1605,8 +1604,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     device->NumMonoSources = numMono;
     device->NumStereoSources = numStereo;
 
-    if(auto sendsopt = device->configValue<uint>({}, "sends"sv))
-        numSends = std::min(numSends, std::clamp(*sendsopt, 0u, uint{MaxSendCount}));
+    if(auto sendsopt = device->configValue<u32>({}, "sends"sv))
+        numSends = std::min(numSends, std::clamp(*sendsopt, 0u, u32{MaxSendCount}));
     device->NumAuxSends = numSends;
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",
@@ -1636,7 +1635,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
     if(device->getConfigValueBool({}, "dither"sv, true))
     {
-        auto depth = device->configValue<int>({}, "dither-depth"sv).value_or(0);
+        auto depth = device->configValue<i32>({}, "dither-depth"sv).value_or(0);
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -2766,10 +2765,9 @@ try {
 
     auto context = al::Context::Create(dev, ctxflags);
 
-    if(auto volopt = dev->configValue<float>({}, "volume-adjust"))
+    if(auto const volopt = dev->configValue<f32>({}, "volume-adjust"))
     {
-        const auto valf = *volopt;
-        if(!std::isfinite(valf))
+        if(auto const valf = *volopt; !std::isfinite(valf))
             ERR("volume-adjust must be finite: {:f}", valf);
         else
         {

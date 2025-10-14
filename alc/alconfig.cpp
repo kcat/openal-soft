@@ -538,42 +538,42 @@ auto ConfigValueStr(const std::string_view devName, const std::string_view block
     return std::nullopt;
 }
 
-auto ConfigValueInt(const std::string_view devName, const std::string_view blockName,
-    const std::string_view keyName) -> std::optional<int>
+auto ConfigValueI32(std::string_view const devName, std::string_view const blockName,
+    std::string_view const keyName) -> std::optional<i32>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return std::stoi(val, nullptr, 0);
     }
     catch(std::out_of_range&) {
-        WARN("Option is out of range of int: {} = {}", keyName, val);
+        WARN("Option is out of range of i32: {} = {}", keyName, val);
     }
     catch(std::exception&) {
-        WARN("Option is not an int: {} = {}", keyName, val);
+        WARN("Option is not an i32: {} = {}", keyName, val);
     }
 
     return std::nullopt;
 }
 
-auto ConfigValueUInt(const std::string_view devName, const std::string_view blockName,
-    const std::string_view keyName) -> std::optional<unsigned int>
+auto ConfigValueU32(std::string_view const devName, std::string_view const blockName,
+    std::string_view const keyName) -> std::optional<u32>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return gsl::narrow<unsigned int>(std::stoul(val, nullptr, 0));
+        return gsl::narrow<u32>(std::stoul(val, nullptr, 0));
     }
     catch(std::out_of_range&) {
-        WARN("Option is out of range of unsigned int: {} = {}", keyName, val);
+        WARN("Option is out of range of u32: {} = {}", keyName, val);
     }
     catch(gsl::narrowing_error&) {
-        WARN("Option is out of range of unsigned int: {} = {}", keyName, val);
+        WARN("Option is out of range of u32: {} = {}", keyName, val);
     }
     catch(std::exception&) {
-        WARN("Option is not an unsigned int: {} = {}", keyName, val);
+        WARN("Option is not an u32: {} = {}", keyName, val);
     }
     return std::nullopt;
 }
 
-auto ConfigValueFloat(const std::string_view devName, const std::string_view blockName,
-    const std::string_view keyName) -> std::optional<float>
+auto ConfigValueF32(std::string_view const devName, std::string_view const blockName,
+    std::string_view const keyName) -> std::optional<f32>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return std::stof(val);
@@ -584,8 +584,8 @@ auto ConfigValueFloat(const std::string_view devName, const std::string_view blo
     return std::nullopt;
 }
 
-auto ConfigValueBool(const std::string_view devName, const std::string_view blockName,
-    const std::string_view keyName) -> std::optional<bool>
+auto ConfigValueBool(std::string_view const devName, std::string_view const blockName,
+    std::string_view const keyName) -> std::optional<bool>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
         return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0

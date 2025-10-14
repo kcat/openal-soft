@@ -509,7 +509,7 @@ bool JackPlayback::reset()
     else
     {
         const auto devname = std::string_view{mDevice->mDeviceName};
-        auto bufsize = ConfigValueUInt(devname, "jack", "buffer-size")
+        auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
             .value_or(mDevice->mUpdateSize);
         bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize);
         mDevice->mBufferSize = bufsize + mDevice->mUpdateSize;
@@ -604,7 +604,7 @@ void JackPlayback::start()
         mPlaying.store(true, std::memory_order_release);
     else
     {
-        auto bufsize = ConfigValueUInt(devname, "jack", "buffer-size")
+        auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
             .value_or(mDevice->mUpdateSize);
         bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize) / mDevice->mUpdateSize;
         mDevice->mBufferSize = (bufsize+1) * mDevice->mUpdateSize;

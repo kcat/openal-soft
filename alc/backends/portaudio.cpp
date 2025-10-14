@@ -201,7 +201,7 @@ void PortPlayback::open(std::string_view name)
     auto deviceid = PaDeviceIndex{-1};
     if(name.empty())
     {
-        if(const auto devidopt = ConfigValueInt({}, "port", "device"))
+        if(const auto devidopt = ConfigValueI32({}, "port", "device"))
             deviceid = *devidopt;
         if(deviceid < 0 || std::cmp_greater_equal(deviceid, DeviceNames.size()))
             deviceid = Pa_GetDefaultOutputDevice();
@@ -334,7 +334,7 @@ void PortCapture::open(std::string_view name)
     auto deviceid = PaDeviceIndex{};
     if(name.empty())
     {
-        if(auto devidopt = ConfigValueInt({}, "port", "capture"))
+        if(auto const devidopt = ConfigValueI32({}, "port", "capture"))
             deviceid = *devidopt;
         if(deviceid < 0 || std::cmp_greater_equal(deviceid, DeviceNames.size()))
             deviceid = Pa_GetDefaultInputDevice();
@@ -513,7 +513,7 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     {
     case BackendType::Playback:
         defaultid = Pa_GetDefaultOutputDevice();
-        if(auto devidopt = ConfigValueInt({}, "port", "device"); devidopt && *devidopt >= 0
+        if(auto const devidopt = ConfigValueI32({}, "port", "device"); devidopt && *devidopt >= 0
             && std::cmp_less(*devidopt, DeviceNames.size()))
             defaultid = *devidopt;
 
@@ -531,7 +531,7 @@ auto PortBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 
     case BackendType::Capture:
         defaultid = Pa_GetDefaultInputDevice();
-        if(auto devidopt = ConfigValueInt({}, "port", "capture"); devidopt && *devidopt >= 0
+        if(auto devidopt = ConfigValueI32({}, "port", "capture"); devidopt && *devidopt >= 0
             && std::cmp_less(*devidopt, DeviceNames.size()))
             defaultid = *devidopt;
 

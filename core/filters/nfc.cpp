@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include "alnumeric.h"
+
 
 /* Near-field control filters are the basis for handling the near-field effect.
  * The near-field effect is a bass-boost present in the directional components
@@ -51,7 +53,7 @@ constexpr auto B2 = std::array{   3.0f,     3.0f};
 constexpr auto B3 = std::array{3.6778f,  6.4595f, 2.3222f};
 constexpr auto B4 = std::array{4.2076f, 11.4877f, 5.7924f, 9.1401f};
 
-NfcFilter1 NfcFilterCreate1(const float w0, const float w1) noexcept
+auto NfcFilterCreate1(f32 const w0, f32 const w1) noexcept -> NfcFilter1
 {
     auto nfc = NfcFilter1{};
 
@@ -74,18 +76,18 @@ NfcFilter1 NfcFilterCreate1(const float w0, const float w1) noexcept
     return nfc;
 }
 
-void NfcFilterAdjust1(NfcFilter1 *nfc, const float w0) noexcept
+void NfcFilterAdjust1(NfcFilter1 *const nfc, f32 const w0) noexcept
 {
-    const auto r = 0.5f * w0;
-    const auto b_00 = B1[0] * r;
-    const auto g_0 = 1.0f + b_00;
+    auto const r = 0.5f * w0;
+    auto const b_00 = B1[0] * r;
+    auto const g_0 = 1.0f + b_00;
 
     nfc->gain = nfc->base_gain * g_0;
     nfc->b1 = 2.0f * b_00 / g_0;
 }
 
 
-NfcFilter2 NfcFilterCreate2(const float w0, const float w1) noexcept
+auto NfcFilterCreate2(f32 const w0, f32 const w1) noexcept -> NfcFilter2
 {
     auto nfc = NfcFilter2{};
 
@@ -112,7 +114,7 @@ NfcFilter2 NfcFilterCreate2(const float w0, const float w1) noexcept
     return nfc;
 }
 
-void NfcFilterAdjust2(NfcFilter2 *nfc, const float w0) noexcept
+void NfcFilterAdjust2(NfcFilter2 *const nfc, f32 const w0) noexcept
 {
     const auto r = 0.5f * w0;
     const auto b_10 = B2[0] * r;
@@ -125,7 +127,7 @@ void NfcFilterAdjust2(NfcFilter2 *nfc, const float w0) noexcept
 }
 
 
-NfcFilter3 NfcFilterCreate3(const float w0, const float w1) noexcept
+auto NfcFilterCreate3(f32 const w0, f32 const w1) noexcept -> NfcFilter3
 {
     auto nfc = NfcFilter3{};
 
@@ -158,14 +160,14 @@ NfcFilter3 NfcFilterCreate3(const float w0, const float w1) noexcept
     return nfc;
 }
 
-void NfcFilterAdjust3(NfcFilter3 *nfc, const float w0) noexcept
+void NfcFilterAdjust3(NfcFilter3 *const nfc, f32 const w0) noexcept
 {
-    const auto r = 0.5f * w0;
-    const auto b_10 = B3[0] * r;
-    const auto b_11 = B3[1] * (r*r);
-    const auto b_00 = B3[2] * r;
-    const auto g_1 = 1.0f + b_10 + b_11;
-    const auto g_0 = 1.0f + b_00;
+    auto const r = 0.5f * w0;
+    auto const b_10 = B3[0] * r;
+    auto const b_11 = B3[1] * (r*r);
+    auto const b_00 = B3[2] * r;
+    auto const g_1 = 1.0f + b_10 + b_11;
+    auto const g_0 = 1.0f + b_00;
 
     nfc->gain = nfc->base_gain * (g_1 * g_0);
     nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
@@ -174,7 +176,7 @@ void NfcFilterAdjust3(NfcFilter3 *nfc, const float w0) noexcept
 }
 
 
-NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
+auto NfcFilterCreate4(f32 const w0, f32 const w1) noexcept -> NfcFilter4
 {
     auto nfc = NfcFilter4{};
 
@@ -211,15 +213,15 @@ NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
     return nfc;
 }
 
-void NfcFilterAdjust4(NfcFilter4 *nfc, const float w0) noexcept
+void NfcFilterAdjust4(NfcFilter4 *const nfc, f32 const w0) noexcept
 {
-    const auto r = 0.5f * w0;
-    const auto b_10 = B4[0] * r;
-    const auto b_11 = B4[1] * (r*r);
-    const auto b_00 = B4[2] * r;
-    const auto b_01 = B4[3] * (r*r);
-    const auto g_1 = 1.0f + b_10 + b_11;
-    const auto g_0 = 1.0f + b_00 + b_01;
+    auto const r = 0.5f * w0;
+    auto const b_10 = B4[0] * r;
+    auto const b_11 = B4[1] * (r*r);
+    auto const b_00 = B4[2] * r;
+    auto const b_01 = B4[3] * (r*r);
+    auto const g_1 = 1.0f + b_10 + b_11;
+    auto const g_0 = 1.0f + b_00 + b_01;
 
     nfc->gain = nfc->base_gain * (g_1 * g_0);
     nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
@@ -230,7 +232,7 @@ void NfcFilterAdjust4(NfcFilter4 *nfc, const float w0) noexcept
 
 } // namespace
 
-void NfcFilter::init(const float w1) noexcept
+void NfcFilter::init(f32 const w1) noexcept
 {
     first = NfcFilterCreate1(0.0f, w1);
     second = NfcFilterCreate2(0.0f, w1);
@@ -238,7 +240,7 @@ void NfcFilter::init(const float w1) noexcept
     fourth = NfcFilterCreate4(0.0f, w1);
 }
 
-void NfcFilter::adjust(const float w0) noexcept
+void NfcFilter::adjust(f32 const w0) noexcept
 {
     NfcFilterAdjust1(&first, w0);
     NfcFilterAdjust2(&second, w0);
@@ -247,36 +249,36 @@ void NfcFilter::adjust(const float w0) noexcept
 }
 
 
-void NfcFilter::process1(const std::span<const float> src, const std::span<float> dst)
+void NfcFilter::process1(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    const auto gain = first.gain;
-    const auto b1 = first.b1;
-    const auto a1 = first.a1;
+    auto const gain = first.gain;
+    auto const b1 = first.b1;
+    auto const a1 = first.a1;
     auto z1 = first.z[0];
-    std::ranges::transform(src, dst.begin(), [gain,b1,a1,&z1](const float in) noexcept -> float
+    std::ranges::transform(src, dst.begin(), [gain,b1,a1,&z1](f32 const in) noexcept -> f32
     {
-        const auto y = in*gain - a1*z1;
-        const auto out = y + b1*z1;
+        auto const y = in*gain - a1*z1;
+        auto const out = y + b1*z1;
         z1 += y;
         return out;
     });
     first.z[0] = z1;
 }
 
-void NfcFilter::process2(const std::span<const float> src, const std::span<float> dst)
+void NfcFilter::process2(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    const auto gain = second.gain;
-    const auto b1 = second.b1;
-    const auto b2 = second.b2;
-    const auto a1 = second.a1;
-    const auto a2 = second.a2;
+    auto const gain = second.gain;
+    auto const b1 = second.b1;
+    auto const b2 = second.b2;
+    auto const a1 = second.a1;
+    auto const a2 = second.a2;
     auto z1 = second.z[0];
     auto z2 = second.z[1];
     std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,a1,a2,&z1,&z2](const float in) noexcept -> float
+        [gain,b1,b2,a1,a2,&z1,&z2](f32 const in) noexcept -> f32
     {
-        const auto y = in*gain - a1*z1 - a2*z2;
-        const auto out = y + b1*z1 + b2*z2;
+        auto const y = in*gain - a1*z1 - a2*z2;
+        auto const out = y + b1*z1 + b2*z2;
         z2 += z1;
         z1 += y;
         return out;
@@ -285,64 +287,64 @@ void NfcFilter::process2(const std::span<const float> src, const std::span<float
     second.z[1] = z2;
 }
 
-void NfcFilter::process3(const std::span<const float> src, const std::span<float> dst)
+void NfcFilter::process3(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    const auto gain = third.gain;
-    const auto b1 = third.b1;
-    const auto b2 = third.b2;
-    const auto b3 = third.b3;
-    const auto a1 = third.a1;
-    const auto a2 = third.a2;
-    const auto a3 = third.a3;
+    auto const gain = third.gain;
+    auto const b1 = third.b1;
+    auto const b2 = third.b2;
+    auto const b3 = third.b3;
+    auto const a1 = third.a1;
+    auto const a2 = third.a2;
+    auto const a3 = third.a3;
     auto z1 = third.z[0];
     auto z2 = third.z[1];
     auto z3 = third.z[2];
     std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,b3,a1,a2,a3,&z1,&z2,&z3](const float in) noexcept -> float
+        [gain,b1,b2,b3,a1,a2,a3,&z1,&z2,&z3](f32 const in) noexcept -> f32
     {
-        auto y = in*gain - a1*z1 - a2*z2;
-        auto out = y + b1*z1 + b2*z2;
+        auto const y0 = in*gain - a1*z1 - a2*z2;
+        auto const out0 = y0 + b1*z1 + b2*z2;
         z2 += z1;
-        z1 += y;
+        z1 += y0;
 
-        y = out - a3*z3;
-        out = y + b3*z3;
-        z3 += y;
-        return out;
+        auto const y1 = out0 - a3*z3;
+        auto const out1 = y1 + b3*z3;
+        z3 += y1;
+        return out1;
     });
     third.z[0] = z1;
     third.z[1] = z2;
     third.z[2] = z3;
 }
 
-void NfcFilter::process4(const std::span<const float> src, const std::span<float> dst)
+void NfcFilter::process4(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    const auto gain = fourth.gain;
-    const auto b1 = fourth.b1;
-    const auto b2 = fourth.b2;
-    const auto b3 = fourth.b3;
-    const auto b4 = fourth.b4;
-    const auto a1 = fourth.a1;
-    const auto a2 = fourth.a2;
-    const auto a3 = fourth.a3;
-    const auto a4 = fourth.a4;
+    auto const gain = fourth.gain;
+    auto const b1 = fourth.b1;
+    auto const b2 = fourth.b2;
+    auto const b3 = fourth.b3;
+    auto const b4 = fourth.b4;
+    auto const a1 = fourth.a1;
+    auto const a2 = fourth.a2;
+    auto const a3 = fourth.a3;
+    auto const a4 = fourth.a4;
     auto z1 = fourth.z[0];
     auto z2 = fourth.z[1];
     auto z3 = fourth.z[2];
     auto z4 = fourth.z[3];
     std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,b3,b4,a1,a2,a3,a4,&z1,&z2,&z3,&z4](const float in) noexcept -> float
+        [gain,b1,b2,b3,b4,a1,a2,a3,a4,&z1,&z2,&z3,&z4](f32 const in) noexcept -> f32
     {
-        auto y = in*gain - a1*z1 - a2*z2;
-        auto out = y + b1*z1 + b2*z2;
+        auto const y0 = in*gain - a1*z1 - a2*z2;
+        auto const out0 = y0 + b1*z1 + b2*z2;
         z2 += z1;
-        z1 += y;
+        z1 += y0;
 
-        y = out - a3*z3 - a4*z4;
-        out = y + b3*z3 + b4*z4;
+        auto const y1 = out0 - a3*z3 - a4*z4;
+        auto const out1 = y1 + b3*z3 + b4*z4;
         z4 += z3;
-        z3 += y;
-        return out;
+        z3 += y1;
+        return out1;
     });
     fourth.z[0] = z1;
     fourth.z[1] = z2;

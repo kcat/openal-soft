@@ -53,25 +53,21 @@ constexpr auto B2 = std::array{   3.0f,     3.0f};
 constexpr auto B3 = std::array{3.6778f,  6.4595f, 2.3222f};
 constexpr auto B4 = std::array{4.2076f, 11.4877f, 5.7924f, 9.1401f};
 
-auto NfcFilterCreate1(f32 const w0, f32 const w1) noexcept -> NfcFilter1
+auto NfcFilterCreate1(f32 const w1) noexcept -> NfcFilter1
 {
     auto nfc = NfcFilter1{};
 
     /* Calculate bass-cut coefficients. */
-    auto r = 0.5f * w1;
-    auto b_00 = B1[0] * r;
-    auto g_0 = 1.0f + b_00;
+    auto const r = 0.5f * w1;
+    auto const b_00 = B1[0] * r;
+    auto const g_0 = 1.0f + b_00;
 
     nfc.base_gain = 1.0f / g_0;
     nfc.a1 = 2.0f * b_00 / g_0;
 
-    /* Calculate bass-boost coefficients. */
-    r = 0.5f * w0;
-    b_00 = B1[0] * r;
-    g_0 = 1.0f + b_00;
-
-    nfc.gain = nfc.base_gain * g_0;
-    nfc.b1 = 2.0f * b_00 / g_0;
+    /* Calculate bass-boost coefficients (matches bass-cut for passthrough). */
+    nfc.gain = 1.0f;
+    nfc.b1 = nfc.a1;
 
     return nfc;
 }
@@ -87,29 +83,22 @@ void NfcFilterAdjust1(NfcFilter1 *const nfc, f32 const w0) noexcept
 }
 
 
-auto NfcFilterCreate2(f32 const w0, f32 const w1) noexcept -> NfcFilter2
+auto NfcFilterCreate2(f32 const w1) noexcept -> NfcFilter2
 {
     auto nfc = NfcFilter2{};
 
-    /* Calculate bass-cut coefficients. */
-    auto r = 0.5f * w1;
-    auto b_10 = B2[0] * r;
-    auto b_11 = B2[1] * (r*r);
-    auto g_1 = 1.0f + b_10 + b_11;
+    auto const r = 0.5f * w1;
+    auto const b_10 = B2[0] * r;
+    auto const b_11 = B2[1] * (r*r);
+    auto const g_1 = 1.0f + b_10 + b_11;
 
     nfc.base_gain = 1.0f / g_1;
     nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc.a2 = 4.0f * b_11 / g_1;
 
-    /* Calculate bass-boost coefficients. */
-    r = 0.5f * w0;
-    b_10 = B2[0] * r;
-    b_11 = B2[1] * r * r;
-    g_1 = 1.0f + b_10 + b_11;
-
-    nfc.gain = nfc.base_gain * g_1;
-    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.b2 = 4.0f * b_11 / g_1;
+    nfc.gain = 1.0f;
+    nfc.b1 = nfc.a1;
+    nfc.b2 = nfc.a2;
 
     return nfc;
 }
@@ -127,35 +116,26 @@ void NfcFilterAdjust2(NfcFilter2 *const nfc, f32 const w0) noexcept
 }
 
 
-auto NfcFilterCreate3(f32 const w0, f32 const w1) noexcept -> NfcFilter3
+auto NfcFilterCreate3(f32 const w1) noexcept -> NfcFilter3
 {
     auto nfc = NfcFilter3{};
 
-    /* Calculate bass-cut coefficients. */
-    auto r = 0.5f * w1;
-    auto b_10 = B3[0] * r;
-    auto b_11 = B3[1] * (r*r);
-    auto b_00 = B3[2] * r;
-    auto g_1 = 1.0f + b_10 + b_11;
-    auto g_0 = 1.0f + b_00;
+    auto const r = 0.5f * w1;
+    auto const b_10 = B3[0] * r;
+    auto const b_11 = B3[1] * (r*r);
+    auto const b_00 = B3[2] * r;
+    auto const g_1 = 1.0f + b_10 + b_11;
+    auto const g_0 = 1.0f + b_00;
 
     nfc.base_gain = 1.0f / (g_1 * g_0);
     nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
     nfc.a2 = 4.0f * b_11 / g_1;
     nfc.a3 = 2.0f * b_00 / g_0;
 
-    /* Calculate bass-boost coefficients. */
-    r = 0.5f * w0;
-    b_10 = B3[0] * r;
-    b_11 = B3[1] * (r*r);
-    b_00 = B3[2] * r;
-    g_1 = 1.0f + b_10 + b_11;
-    g_0 = 1.0f + b_00;
-
-    nfc.gain = nfc.base_gain * (g_1 * g_0);
-    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.b2 = 4.0f * b_11 / g_1;
-    nfc.b3 = 2.0f * b_00 / g_0;
+    nfc.gain = 1.0f;
+    nfc.b1 = nfc.a1;
+    nfc.b2 = nfc.a2;
+    nfc.b3 = nfc.a3;
 
     return nfc;
 }
@@ -176,18 +156,17 @@ void NfcFilterAdjust3(NfcFilter3 *const nfc, f32 const w0) noexcept
 }
 
 
-auto NfcFilterCreate4(f32 const w0, f32 const w1) noexcept -> NfcFilter4
+auto NfcFilterCreate4(f32 const w1) noexcept -> NfcFilter4
 {
     auto nfc = NfcFilter4{};
 
-    /* Calculate bass-cut coefficients. */
-    auto r = 0.5f * w1;
-    auto b_10 = B4[0] * r;
-    auto b_11 = B4[1] * (r*r);
-    auto b_00 = B4[2] * r;
-    auto b_01 = B4[3] * (r*r);
-    auto g_1 = 1.0f + b_10 + b_11;
-    auto g_0 = 1.0f + b_00 + b_01;
+    auto const r = 0.5f * w1;
+    auto const b_10 = B4[0] * r;
+    auto const b_11 = B4[1] * (r*r);
+    auto const b_00 = B4[2] * r;
+    auto const b_01 = B4[3] * (r*r);
+    auto const g_1 = 1.0f + b_10 + b_11;
+    auto const g_0 = 1.0f + b_00 + b_01;
 
     nfc.base_gain = 1.0f / (g_1 * g_0);
     nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
@@ -195,20 +174,11 @@ auto NfcFilterCreate4(f32 const w0, f32 const w1) noexcept -> NfcFilter4
     nfc.a3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
     nfc.a4 = 4.0f * b_01 / g_0;
 
-    /* Calculate bass-boost coefficients. */
-    r = 0.5f * w0;
-    b_10 = B4[0] * r;
-    b_11 = B4[1] * (r*r);
-    b_00 = B4[2] * r;
-    b_01 = B4[3] * (r*r);
-    g_1 = 1.0f + b_10 + b_11;
-    g_0 = 1.0f + b_00 + b_01;
-
-    nfc.gain = nfc.base_gain * (g_1 * g_0);
-    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.b2 = 4.0f * b_11 / g_1;
-    nfc.b3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
-    nfc.b4 = 4.0f * b_01 / g_0;
+    nfc.gain = 1.0f;
+    nfc.b1 = nfc.a1;
+    nfc.b2 = nfc.a2;
+    nfc.b3 = nfc.a3;
+    nfc.b4 = nfc.a4;
 
     return nfc;
 }
@@ -234,10 +204,10 @@ void NfcFilterAdjust4(NfcFilter4 *const nfc, f32 const w0) noexcept
 
 void NfcFilter::init(f32 const w1) noexcept
 {
-    first = NfcFilterCreate1(0.0f, w1);
-    second = NfcFilterCreate2(0.0f, w1);
-    third = NfcFilterCreate3(0.0f, w1);
-    fourth = NfcFilterCreate4(0.0f, w1);
+    first = NfcFilterCreate1(w1);
+    second = NfcFilterCreate2(w1);
+    third = NfcFilterCreate3(w1);
+    fourth = NfcFilterCreate4(w1);
 }
 
 void NfcFilter::adjust(f32 const w0) noexcept

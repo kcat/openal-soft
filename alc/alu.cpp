@@ -904,11 +904,9 @@ void CalcAmbisonicPanning(Voice *const voice, f32 const xpos, f32 const ypos, f3
     {
         if(!(distance > std::numeric_limits<f32>::epsilon()))
         {
-            /* NOTE: The NFCtrlFilters were created with a w0 of 0, which is
-             * what we want for FOA input. The first channel may have been
-             * previously re-adjusted if panned, so reset it.
-             */
-            voice->mChans[0].mDryParams.NFCtrlFilter.adjust(0.0f);
+            /* NOTE: The NFCtrlFilters should use a w0 of 0 for FOA input. */
+            for(auto &chanparams : voice->mChans)
+                chanparams.mDryParams.NFCtrlFilter.adjust(0.0f);
         }
         else
         {

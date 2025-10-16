@@ -280,10 +280,10 @@ void BiquadInterpFilter::dualProcess(BiquadInterpFilter &other, std::span<f32 co
     std::span<f32> dst)
 {
     ASSUME(this != &other);
-    if(mCounter > 0)
+    if(auto const maxcounter = std::max(mCounter, other.mCounter); maxcounter > 0)
     {
-        auto counter = mCounter / SamplesPerStep;
-        auto steprem = gsl::narrow_cast<usize>(SamplesPerStep - (mCounter&SamplesPerStepMask));
+        auto counter = maxcounter / SamplesPerStep;
+        auto steprem = gsl::narrow_cast<usize>(SamplesPerStep - (maxcounter&SamplesPerStepMask));
         while(counter > 0)
         {
             auto const td = std::min(steprem, src.size());

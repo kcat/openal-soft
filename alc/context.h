@@ -6,7 +6,6 @@
 #include <atomic>
 #include <bitset>
 #include <concepts>
-#include <cstdint>
 #include <deque>
 #include <format>
 #include <functional>
@@ -24,6 +23,7 @@
 #include "AL/alext.h"
 
 #include "al/listener.h"
+#include "alnumeric.h"
 #include "althreads.h"
 #include "core/context.h"
 #include "gsl/gsl"
@@ -46,29 +46,28 @@ struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
 
-enum class DebugSource : std::uint8_t;
-enum class DebugType : std::uint8_t;
-enum class DebugSeverity : std::uint8_t;
-
-using uint = unsigned int;
+enum class DebugSource : u8;
+enum class DebugType : u8;
+enum class DebugSeverity : u8;
 
 
 enum ContextFlags {
     DebugBit = 0, /* ALC_CONTEXT_DEBUG_BIT_EXT */
 };
-using ContextFlagBitset = std::bitset<sizeof(ALuint)*8>;
+using ContextFlagBitset = std::bitset<sizeof(u32)*8>;
 
 
 struct DebugLogEntry {
-    const DebugSource mSource;
-    const DebugType mType;
-    const DebugSeverity mSeverity;
-    const uint mId;
+    DebugSource const mSource;
+    DebugType const mType;
+    DebugSeverity const mSeverity;
+    u32 const mId;
 
     std::string mMessage;
 
     template<typename T>
-    DebugLogEntry(DebugSource source, DebugType type, uint id, DebugSeverity severity, T&& message)
+    DebugLogEntry(DebugSource const source, DebugType const type, u32 const id,
+        DebugSeverity const severity, T&& message)
         : mSource{source}, mType{type}, mSeverity{severity}, mId{id}
         , mMessage{std::forward<T>(message)}
     { }
@@ -84,8 +83,8 @@ struct Device;
 struct Context;
 
 struct ContextDeleter { void operator()(gsl::owner<Context*> context) const noexcept; };
-struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>, ContextBase {
-    const gsl::not_null<intrusive_ptr<Device>> mALDevice;
+struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, ContextBase {
+    gsl::not_null<intrusive_ptr<Device>> const mALDevice;
 
     bool mPropsDirty{true};
     bool mDeferUpdates{false};
@@ -100,10 +99,10 @@ struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>,
     DistanceModel mDistanceModel{DistanceModel::Default};
     bool mSourceDistanceModel{false};
 
-    float mDopplerFactor{1.0f};
-    float mDopplerVelocity{1.0f};
-    float mSpeedOfSound{SpeedOfSoundMetersPerSec};
-    float mAirAbsorptionGainHF{AirAbsorbGainHF};
+    f32 mDopplerFactor{1.0f};
+    f32 mDopplerVelocity{1.0f};
+    f32 mSpeedOfSound{SpeedOfSoundMetersPerSec};
+    f32 mAirAbsorptionGainHF{AirAbsorbGainHF};
 
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
@@ -118,11 +117,11 @@ struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>,
     ALlistener mListener{};
 
     std::vector<SourceSubList> mSourceList;
-    ALuint mNumSources{0};
+    u32 mNumSources{0_u32};
     std::mutex mSourceLock;
 
     std::vector<EffectSlotSubList> mEffectSlotList;
-    ALuint mNumEffectSlots{0u};
+    u32 mNumEffectSlots{0_u32};
     std::mutex mEffectSlotLock;
 
     /* Default effect slot */
@@ -131,8 +130,8 @@ struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>,
     std::vector<std::string_view> mExtensions;
     std::string mExtensionsString;
 
-    std::unordered_map<ALuint,std::string> mSourceNames;
-    std::unordered_map<ALuint,std::string> mEffectSlotNames;
+    std::unordered_map<u32, std::string> mSourceNames;
+    std::unordered_map<u32, std::string> mEffectSlotNames;
 
     /**
      * Removes the context from being current on the running thread or
@@ -163,24 +162,24 @@ struct Context final : public ALCcontext, intrusive_ref<Context,ContextDeleter>,
      */
     void applyAllUpdates();
 
-    void setErrorImpl(ALenum errorCode, const std::string_view fmt, std::format_args args);
+    void setErrorImpl(ALenum errorCode, std::string_view fmt, std::format_args args);
 
     template<typename ...Args>
-    void setError(ALenum errorCode, std::format_string<Args...> msg, Args&& ...args)
+    void setError(ALenum const errorCode, std::format_string<Args...> const msg, Args&& ...args)
     { setErrorImpl(errorCode, msg.get(), std::make_format_args(args...)); }
 
     [[noreturn]]
-    void throw_error_impl(ALenum errorCode, const std::string_view fmt, std::format_args args);
+    void throw_error_impl(ALenum errorCode, std::string_view fmt, std::format_args args);
 
     template<typename ...Args> [[noreturn]]
-    void throw_error(ALenum errorCode, std::format_string<Args...> fmt, Args&&... args)
+    void throw_error(ALenum const errorCode, std::format_string<Args...> const fmt, Args&&... args)
     { throw_error_impl(errorCode, fmt.get(), std::make_format_args(args...)); }
 
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
         DebugType type, ALuint id, DebugSeverity severity, std::string_view message);
 
-    void debugMessage(DebugSource source, DebugType type, ALuint id, DebugSeverity severity,
-        std::string_view message)
+    void debugMessage(DebugSource const source, DebugType const type, u32 const id,
+        DebugSeverity const severity, std::string_view const message)
     {
         if(!mDebugEnabled.load(std::memory_order_relaxed)) [[likely]]
             return;
@@ -251,7 +250,7 @@ public:
     void eaxSetLastError() noexcept;
 
     [[nodiscard]]
-    auto eaxGetDistanceFactor() const noexcept -> float { return mEax.flDistanceFactor; }
+    auto eaxGetDistanceFactor() const noexcept -> f32 { return mEax.flDistanceFactor; }
 
     [[nodiscard]]
     auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
@@ -314,7 +313,7 @@ private:
     };
 
     struct Eax4DistanceFactorValidator {
-        void operator()(float flDistanceFactor) const
+        void operator()(f32 const flDistanceFactor) const
         {
             eax_validate_range<ContextException>(
                 "Distance Factor",
@@ -325,7 +324,7 @@ private:
     };
 
     struct Eax4AirAbsorptionHfValidator {
-        void operator()(float flAirAbsorptionHF) const
+        void operator()(f32 const flAirAbsorptionHF) const
         {
             eax_validate_range<ContextException>(
                 "Air Absorption HF",
@@ -336,7 +335,7 @@ private:
     };
 
     struct Eax4HfReferenceValidator {
-        void operator()(float flHFReference) const
+        void operator()(f32 const flHFReference) const
         {
             eax_validate_range<ContextException>(
                 "HF Reference",
@@ -371,7 +370,7 @@ private:
     };
 
     struct Eax5MacroFxFactorValidator {
-        void operator()(float flMacroFXFactor) const
+        void operator()(f32 const flMacroFXFactor) const
         {
             eax_validate_range<ContextException>(
                 "Macro FX Factor",
@@ -451,7 +450,7 @@ private:
     Eax5Props mEax{}; // Current EAX state.
     EAXSESSIONPROPERTIES mEaxSession{};
 
-    [[noreturn]] static void eax_fail(const std::string_view message);
+    [[noreturn]] static void eax_fail(std::string_view message);
     [[noreturn]] static void eax_fail_unknown_property_set_id();
     [[noreturn]] static void eax_fail_unknown_primary_fx_slot_id();
     [[noreturn]] static void eax_fail_unknown_property_id();
@@ -470,7 +469,7 @@ private:
      * value, and updates a dirty flag.
      */
     template<typename TValidator>
-    void eax_defer(const EaxCall &call, auto &state, size_t dirty_bit, auto member)
+    void eax_defer(const EaxCall &call, auto &state, usize const dirty_bit, auto member)
     {
         static_assert(std::invocable<decltype(member), decltype(state.i)>);
         using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
@@ -485,7 +484,7 @@ private:
     }
 
     void eax_context_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
-        size_t dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
+        usize const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
         if(mEaxDf.test(dirty_bit))
         {
@@ -552,12 +551,12 @@ private:
 
 using ContextRef = al::intrusive_ptr<al::Context>;
 
-ContextRef GetContextRef() noexcept;
+auto GetContextRef() noexcept -> ContextRef;
 
 void UpdateContextProps(al::Context *context);
 
 
-inline bool TrapALError{false};
+inline constinit auto TrapALError = false;
 
 
 #if ALSOFT_EAX

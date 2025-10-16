@@ -27,13 +27,13 @@
 struct ContextBase;
 struct DeviceBase;
 struct EffectSlot;
-enum class DistanceModel : unsigned char;
+enum class DistanceModel : u8;
 
 inline constexpr auto MaxSendCount = 6_uz;
 
 inline constexpr auto MaxPitch = 10_u32;
 
-inline auto ResamplerDefault = Resampler::Spline;
+inline constinit auto ResamplerDefault = Resampler::Spline;
 
 enum class SpatializeMode : u8 {
     Off,
@@ -158,7 +158,7 @@ struct VoiceProps {
     std::array<SendData, MaxSendCount> Send;
 };
 
-struct VoicePropsItem : public VoiceProps {
+struct VoicePropsItem : VoiceProps {
     std::atomic<VoicePropsItem*> next{nullptr};
 };
 

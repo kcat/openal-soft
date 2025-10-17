@@ -237,8 +237,8 @@ void SendSourceStoppedEvent(ContextBase const *const context, u32 const id)
 
 
 auto DoFilters(BiquadInterpFilter &lpfilter, BiquadInterpFilter &hpfilter,
-    std::span<f32, BufferLineSize> const dst, std::span<f32 const> const src, bool const active)
-    -> std::span<f32 const>
+    std::span<f32, BufferLineSize> const dst LIFETIMEBOUND,
+    std::span<f32 const> const src LIFETIMEBOUND, bool const active) -> std::span<f32 const>
 {
     if(active)
     {

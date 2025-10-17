@@ -62,12 +62,12 @@ auto NfcFilterCreate1(f32 const w1) noexcept -> NfcFilter1
     auto const b_00 = B1[0] * r;
     auto const g_0 = 1.0f + b_00;
 
-    nfc.base_gain = 1.0f / g_0;
-    nfc.a1 = 2.0f * b_00 / g_0;
+    nfc.mBaseGain = 1.0f / g_0;
+    nfc.mCoeffs.a1 = 2.0f * b_00 / g_0;
 
     /* Calculate bass-boost coefficients (matches bass-cut for passthrough). */
-    nfc.gain = 1.0f;
-    nfc.b1 = nfc.a1;
+    nfc.mCoeffs.a0 = 1.0f;
+    nfc.mCoeffs.b1 = nfc.mCoeffs.a1;
 
     return nfc;
 }
@@ -78,8 +78,8 @@ void NfcFilterAdjust1(NfcFilter1 *const nfc, f32 const w0) noexcept
     auto const b_00 = B1[0] * r;
     auto const g_0 = 1.0f + b_00;
 
-    nfc->gain = nfc->base_gain * g_0;
-    nfc->b1 = 2.0f * b_00 / g_0;
+    nfc->mCoeffs.a0 = nfc->mBaseGain * g_0;
+    nfc->mCoeffs.b1 = 2.0f * b_00 / g_0;
 }
 
 
@@ -92,13 +92,13 @@ auto NfcFilterCreate2(f32 const w1) noexcept -> NfcFilter2
     auto const b_11 = B2[1] * (r*r);
     auto const g_1 = 1.0f + b_10 + b_11;
 
-    nfc.base_gain = 1.0f / g_1;
-    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.a2 = 4.0f * b_11 / g_1;
+    nfc.mBaseGain = 1.0f / g_1;
+    nfc.mCoeffs.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.mCoeffs.a2 = 4.0f * b_11 / g_1;
 
-    nfc.gain = 1.0f;
-    nfc.b1 = nfc.a1;
-    nfc.b2 = nfc.a2;
+    nfc.mCoeffs.a0 = 1.0f;
+    nfc.mCoeffs.b1 = nfc.mCoeffs.a1;
+    nfc.mCoeffs.b2 = nfc.mCoeffs.a2;
 
     return nfc;
 }
@@ -110,9 +110,9 @@ void NfcFilterAdjust2(NfcFilter2 *const nfc, f32 const w0) noexcept
     const auto b_11 = B2[1] * (r*r);
     const auto g_1 = 1.0f + b_10 + b_11;
 
-    nfc->gain = nfc->base_gain * g_1;
-    nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc->b2 = 4.0f * b_11 / g_1;
+    nfc->mCoeffs.a0 = nfc->mBaseGain * g_1;
+    nfc->mCoeffs.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc->mCoeffs.b2 = 4.0f * b_11 / g_1;
 }
 
 
@@ -127,15 +127,15 @@ auto NfcFilterCreate3(f32 const w1) noexcept -> NfcFilter3
     auto const g_1 = 1.0f + b_10 + b_11;
     auto const g_0 = 1.0f + b_00;
 
-    nfc.base_gain = 1.0f / (g_1 * g_0);
-    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.a2 = 4.0f * b_11 / g_1;
-    nfc.a3 = 2.0f * b_00 / g_0;
+    nfc.mBaseGain = 1.0f / (g_1 * g_0);
+    nfc.mCoeffs.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.mCoeffs.a2 = 4.0f * b_11 / g_1;
+    nfc.mCoeffs.a3 = 2.0f * b_00 / g_0;
 
-    nfc.gain = 1.0f;
-    nfc.b1 = nfc.a1;
-    nfc.b2 = nfc.a2;
-    nfc.b3 = nfc.a3;
+    nfc.mCoeffs.a0 = 1.0f;
+    nfc.mCoeffs.b1 = nfc.mCoeffs.a1;
+    nfc.mCoeffs.b2 = nfc.mCoeffs.a2;
+    nfc.mCoeffs.b3 = nfc.mCoeffs.a3;
 
     return nfc;
 }
@@ -149,10 +149,10 @@ void NfcFilterAdjust3(NfcFilter3 *const nfc, f32 const w0) noexcept
     auto const g_1 = 1.0f + b_10 + b_11;
     auto const g_0 = 1.0f + b_00;
 
-    nfc->gain = nfc->base_gain * (g_1 * g_0);
-    nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc->b2 = 4.0f * b_11 / g_1;
-    nfc->b3 = 2.0f * b_00 / g_0;
+    nfc->mCoeffs.a0 = nfc->mBaseGain * (g_1 * g_0);
+    nfc->mCoeffs.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc->mCoeffs.b2 = 4.0f * b_11 / g_1;
+    nfc->mCoeffs.b3 = 2.0f * b_00 / g_0;
 }
 
 
@@ -168,17 +168,17 @@ auto NfcFilterCreate4(f32 const w1) noexcept -> NfcFilter4
     auto const g_1 = 1.0f + b_10 + b_11;
     auto const g_0 = 1.0f + b_00 + b_01;
 
-    nfc.base_gain = 1.0f / (g_1 * g_0);
-    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc.a2 = 4.0f * b_11 / g_1;
-    nfc.a3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
-    nfc.a4 = 4.0f * b_01 / g_0;
+    nfc.mBaseGain = 1.0f / (g_1 * g_0);
+    nfc.mCoeffs.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.mCoeffs.a2 = 4.0f * b_11 / g_1;
+    nfc.mCoeffs.a3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
+    nfc.mCoeffs.a4 = 4.0f * b_01 / g_0;
 
-    nfc.gain = 1.0f;
-    nfc.b1 = nfc.a1;
-    nfc.b2 = nfc.a2;
-    nfc.b3 = nfc.a3;
-    nfc.b4 = nfc.a4;
+    nfc.mCoeffs.a0 = 1.0f;
+    nfc.mCoeffs.b1 = nfc.mCoeffs.a1;
+    nfc.mCoeffs.b2 = nfc.mCoeffs.a2;
+    nfc.mCoeffs.b3 = nfc.mCoeffs.a3;
+    nfc.mCoeffs.b4 = nfc.mCoeffs.a4;
 
     return nfc;
 }
@@ -193,11 +193,11 @@ void NfcFilterAdjust4(NfcFilter4 *const nfc, f32 const w0) noexcept
     auto const g_1 = 1.0f + b_10 + b_11;
     auto const g_0 = 1.0f + b_00 + b_01;
 
-    nfc->gain = nfc->base_gain * (g_1 * g_0);
-    nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
-    nfc->b2 = 4.0f * b_11 / g_1;
-    nfc->b3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
-    nfc->b4 = 4.0f * b_01 / g_0;
+    nfc->mCoeffs.a0 = nfc->mBaseGain * (g_1 * g_0);
+    nfc->mCoeffs.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc->mCoeffs.b2 = 4.0f * b_11 / g_1;
+    nfc->mCoeffs.b3 = (2.0f*b_00 + 4.0f*b_01) / g_0;
+    nfc->mCoeffs.b4 = 4.0f * b_01 / g_0;
 }
 
 } // namespace
@@ -219,105 +219,66 @@ void NfcFilter::adjust(f32 const w0) noexcept
 }
 
 
-void NfcFilter::process1(std::span<f32 const> const src, std::span<f32> const dst)
+void NfcFilter1::process(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    auto const gain = first.gain;
-    auto const b1 = first.b1;
-    auto const a1 = first.a1;
-    auto z1 = first.z[0];
-    std::ranges::transform(src, dst.begin(), [gain,b1,a1,&z1](f32 const in) noexcept -> f32
+    auto z = mZ;
+    std::ranges::transform(src, dst.begin(), [coeffs0=mCoeffs, &z](f32 const in) noexcept -> f32
     {
-        auto const y = in*gain - a1*z1;
-        auto const out = y + b1*z1;
-        z1 += y;
+        auto const y = in*coeffs0.a0 - coeffs0.a1*z[0];
+        auto const out = y + coeffs0.b1*z[0];
+        z[0] += y;
         return out;
     });
-    first.z[0] = z1;
+    mZ = z;
 }
 
-void NfcFilter::process2(std::span<f32 const> const src, std::span<f32> const dst)
+void NfcFilter2::process(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    auto const gain = second.gain;
-    auto const b1 = second.b1;
-    auto const b2 = second.b2;
-    auto const a1 = second.a1;
-    auto const a2 = second.a2;
-    auto z1 = second.z[0];
-    auto z2 = second.z[1];
-    std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,a1,a2,&z1,&z2](f32 const in) noexcept -> f32
+    auto z = mZ;
+    std::ranges::transform(src, dst.begin(), [coeffs=mCoeffs,&z](f32 const in) noexcept -> f32
     {
-        auto const y = in*gain - a1*z1 - a2*z2;
-        auto const out = y + b1*z1 + b2*z2;
-        z2 += z1;
-        z1 += y;
+        auto const y = in*coeffs.a0 - coeffs.a1*z[0] - coeffs.a2*z[1];
+        auto const out = y + coeffs.b1*z[0] + coeffs.b2*z[1];
+        z[1] += z[0];
+        z[0] += y;
         return out;
     });
-    second.z[0] = z1;
-    second.z[1] = z2;
+    mZ = z;
 }
 
-void NfcFilter::process3(std::span<f32 const> const src, std::span<f32> const dst)
+void NfcFilter3::process(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    auto const gain = third.gain;
-    auto const b1 = third.b1;
-    auto const b2 = third.b2;
-    auto const b3 = third.b3;
-    auto const a1 = third.a1;
-    auto const a2 = third.a2;
-    auto const a3 = third.a3;
-    auto z1 = third.z[0];
-    auto z2 = third.z[1];
-    auto z3 = third.z[2];
-    std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,b3,a1,a2,a3,&z1,&z2,&z3](f32 const in) noexcept -> f32
+    auto z = mZ;
+    std::ranges::transform(src, dst.begin(), [coeffs=mCoeffs,&z](f32 const in) noexcept -> f32
     {
-        auto const y0 = in*gain - a1*z1 - a2*z2;
-        auto const out0 = y0 + b1*z1 + b2*z2;
-        z2 += z1;
-        z1 += y0;
+        auto const y0 = in*coeffs.a0 - coeffs.a1*z[0] - coeffs.a2*z[1];
+        auto const out0 = y0 + coeffs.b1*z[0] + coeffs.b2*z[1];
+        z[1] += z[0];
+        z[0] += y0;
 
-        auto const y1 = out0 - a3*z3;
-        auto const out1 = y1 + b3*z3;
-        z3 += y1;
+        auto const y1 = out0 - coeffs.a3*z[2];
+        auto const out1 = y1 + coeffs.b3*z[2];
+        z[2] += y1;
         return out1;
     });
-    third.z[0] = z1;
-    third.z[1] = z2;
-    third.z[2] = z3;
+    mZ = z;
 }
 
-void NfcFilter::process4(std::span<f32 const> const src, std::span<f32> const dst)
+void NfcFilter4::process(std::span<f32 const> const src, std::span<f32> const dst)
 {
-    auto const gain = fourth.gain;
-    auto const b1 = fourth.b1;
-    auto const b2 = fourth.b2;
-    auto const b3 = fourth.b3;
-    auto const b4 = fourth.b4;
-    auto const a1 = fourth.a1;
-    auto const a2 = fourth.a2;
-    auto const a3 = fourth.a3;
-    auto const a4 = fourth.a4;
-    auto z1 = fourth.z[0];
-    auto z2 = fourth.z[1];
-    auto z3 = fourth.z[2];
-    auto z4 = fourth.z[3];
-    std::ranges::transform(src, dst.begin(),
-        [gain,b1,b2,b3,b4,a1,a2,a3,a4,&z1,&z2,&z3,&z4](f32 const in) noexcept -> f32
+    auto z = mZ;
+    std::ranges::transform(src, dst.begin(), [coeffs=mCoeffs,&z](f32 const in) noexcept -> f32
     {
-        auto const y0 = in*gain - a1*z1 - a2*z2;
-        auto const out0 = y0 + b1*z1 + b2*z2;
-        z2 += z1;
-        z1 += y0;
+        auto const y0 = in*coeffs.a0 - coeffs.a1*z[0] - coeffs.a2*z[1];
+        auto const out0 = y0 + coeffs.b1*z[0] + coeffs.b2*z[1];
+        z[1] += z[0];
+        z[0] += y0;
 
-        auto const y1 = out0 - a3*z3 - a4*z4;
-        auto const out1 = y1 + b3*z3 + b4*z4;
-        z4 += z3;
-        z3 += y1;
+        auto const y1 = out0 - coeffs.a3*z[2] - coeffs.a4*z[3];
+        auto const out1 = y1 + coeffs.b3*z[2] + coeffs.b4*z[3];
+        z[3] += z[2];
+        z[2] += y1;
         return out1;
     });
-    fourth.z[0] = z1;
-    fourth.z[1] = z2;
-    fourth.z[2] = z3;
-    fourth.z[3] = z4;
+    mZ = z;
 }

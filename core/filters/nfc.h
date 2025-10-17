@@ -8,24 +8,44 @@
 
 
 struct NfcFilter1 {
-    f32 base_gain{1.0f}, gain{1.0f};
-    f32 b1{}, a1{};
-    std::array<f32, 1> z{};
+    struct Coefficients {
+        f32 a0{1.0f}, a1{}, b1{};
+    };
+    f32 mBaseGain{1.0f};
+    Coefficients mCoeffs;
+    std::array<f32, 1> mZ{};
+
+    void process(std::span<f32 const> src, std::span<f32> dst);
 };
 struct NfcFilter2 {
-    f32 base_gain{1.0f}, gain{1.0f};
-    f32 b1{}, b2{}, a1{}, a2{};
-    std::array<f32, 2> z{};
+    struct Coefficients {
+        f32 a0{1.0f}, a1{}, a2{}, b1{}, b2{};
+    };
+    f32 mBaseGain{1.0f};
+    Coefficients mCoeffs;
+    std::array<f32, 2> mZ{};
+
+    void process(std::span<f32 const> src, std::span<f32> dst);
 };
 struct NfcFilter3 {
-    f32 base_gain{1.0f}, gain{1.0f};
-    f32 b1{}, b2{}, b3{}, a1{}, a2{}, a3{};
-    std::array<f32, 3> z{};
+    struct Coefficients {
+        f32 a0{1.0f}, a1{}, a2{}, a3{}, b1{}, b2{}, b3{};
+    };
+    f32 mBaseGain{1.0f};
+    Coefficients mCoeffs;
+    std::array<f32, 3> mZ{};
+
+    void process(std::span<f32 const> src, std::span<f32> dst);
 };
 struct NfcFilter4 {
-    f32 base_gain{1.0f}, gain{1.0f};
-    f32 b1{}, b2{}, b3{}, b4{}, a1{}, a2{}, a3{}, a4{};
-    std::array<f32, 4> z{};
+    struct Coefficients {
+        f32 a0{1.0f}, a1{}, a2{}, a3{}, a4{}, b1{}, b2{}, b3{}, b4{};
+    };
+    f32 mBaseGain{1.0f};
+    Coefficients mCoeffs;
+    std::array<f32, 4> mZ{};
+
+    void process(std::span<f32 const> src, std::span<f32> dst);
 };
 
 class NfcFilter {
@@ -49,16 +69,20 @@ public:
     void adjust(f32 w0) noexcept;
 
     /* Near-field control filter for first-order ambisonic channels (1-3). */
-    void process1(std::span<f32 const> src, std::span<f32> dst);
+    void process1(std::span<f32 const> const src, std::span<f32> const dst)
+    { first.process(src, dst); }
 
     /* Near-field control filter for second-order ambisonic channels (4-8). */
-    void process2(std::span<f32 const> src, std::span<f32> dst);
+    void process2(std::span<f32 const> const src, std::span<f32> const dst)
+    { second.process(src, dst); }
 
     /* Near-field control filter for third-order ambisonic channels (9-15). */
-    void process3(std::span<f32 const> src, std::span<f32> dst);
+    void process3(std::span<f32 const> const src, std::span<f32> const dst)
+    { third.process(src, dst); }
 
     /* Near-field control filter for fourth-order ambisonic channels (16-24). */
-    void process4(std::span<f32 const> src, std::span<f32> dst);
+    void process4(std::span<f32 const> const src, std::span<f32> const dst)
+    { fourth.process(src, dst); }
 };
 
 #endif /* CORE_FILTERS_NFC_H */

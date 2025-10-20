@@ -1066,7 +1066,7 @@ auto InitHrtfPanning(al::Device *const device) -> std::unique_ptr<DirectHrtfStat
         auto mode = std::string_view{*modeopt};
         if(al::case_compare(mode, "basic"sv) == 0)
         {
-            ERR("HRTF mode \"{}\" deprecated, substituting \"{}\"", *modeopt, "ambi2");
+            ERR(R"(HRTF mode "{}" deprecated, substituting "{}")", *modeopt, "ambi2");
             mode = "ambi2";
         }
 

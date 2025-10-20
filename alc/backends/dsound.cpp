@@ -144,7 +144,7 @@ auto CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     auto *guidstr = LPOLESTR{};
     if(const auto hr = StringFromCLSID(*guid, &guidstr); SUCCEEDED(hr))
     {
-        TRACE("Got device \"{}\", GUID \"{}\"", newentry.name, wstr_to_utf8(guidstr));
+        TRACE(R"(Got device "{}", GUID "{}")", newentry.name, wstr_to_utf8(guidstr));
         CoTaskMemFree(guidstr);
     }
 

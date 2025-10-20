@@ -689,7 +689,7 @@ private:
             newname = std::format("{} #{}", name, ++count);
         const auto &newentry = list.emplace_back(std::move(newname), std::move(guid), devid);
 
-        TRACE("Got device \"{}\", \"{}\", \"{}\"", newentry.name, newentry.endpoint_guid,
+        TRACE(R"(Got device "{}", "{}", "{}")", newentry.name, newentry.endpoint_guid,
             wstr_to_utf8(newentry.devid));
         return true;
     }
@@ -758,7 +758,7 @@ private:
             auto const iter = std::ranges::find(list, deviceId, &DevMap::devid);
             if(iter == list.end()) continue;
 
-            TRACE("Removing device \"{}\", \"{}\", \"{}\"", iter->name, iter->endpoint_guid,
+            TRACE(R"(Removing device "{}", "{}", "{}")", iter->name, iter->endpoint_guid,
                 wstr_to_utf8(iter->devid));
 
             const auto msg = "Device removed: "+std::move(iter->name);

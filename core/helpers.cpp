@@ -302,7 +302,7 @@ auto GetProcBinary() -> const PathNamePair&
         else
             res.fname = pathname;
 
-        TRACE("Got binary: \"{}\", \"{}\"", res.path, res.fname);
+        TRACE(R"(Got binary: "{}", "{}")", res.path, res.fname);
         return res;
     });
     return procbin;

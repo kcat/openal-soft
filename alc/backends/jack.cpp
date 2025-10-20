@@ -585,7 +585,7 @@ void JackPlayback::start()
                 return false;
             }
             if(jack_connect(mClient, jack_port_name(port), portname))
-                ERR("Failed to connect output port \"{}\" to \"{}\"", jack_port_name(port),
+                ERR(R"(Failed to connect output port "{}" to "{}")", jack_port_name(port),
                     portname);
             return true;
         });

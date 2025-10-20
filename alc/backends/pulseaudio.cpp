@@ -395,7 +395,7 @@ public:
 
         const auto &newentry = PlaybackDevices.emplace_back(DevMap{std::move(newname),
             info->name, info->index});
-        TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
+        TRACE(R"(Got device "{}", "{}" ({}))", newentry.name, newentry.device_name,
             newentry.index);
 
         const auto msg = std::format("Device added: {}", newentry.device_name);
@@ -424,7 +424,7 @@ public:
 
         const auto &newentry = CaptureDevices.emplace_back(DevMap{std::move(newname), info->name,
             info->index});
-        TRACE("Got device \"{}\", \"{}\" ({})", newentry.name, newentry.device_name,
+        TRACE(R"(Got device "{}", "{}" ({}))", newentry.name, newentry.device_name,
             newentry.index);
 
         const auto msg = std::format("Device added: {}", newentry.device_name);

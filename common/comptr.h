@@ -8,31 +8,34 @@
 #include <windows.h>
 #include <objbase.h>
 
-struct ComWrapper {
+class ComWrapper {
     HRESULT mStatus{};
 
-    ComWrapper(void *reserved, DWORD coinit)
+public:
+    ComWrapper(void *const reserved, DWORD const coinit)
         : mStatus{CoInitializeEx(reserved, coinit)}
     { }
-    explicit ComWrapper(DWORD coinit=COINIT_APARTMENTTHREADED)
+    explicit ComWrapper(DWORD const coinit=COINIT_APARTMENTTHREADED)
         : mStatus{CoInitializeEx(nullptr, coinit)}
     { }
-    ComWrapper(ComWrapper&& rhs) { mStatus = std::exchange(rhs.mStatus, E_FAIL); }
+    ComWrapper(ComWrapper&& rhs) noexcept { mStatus = std::exchange(rhs.mStatus, E_FAIL); }
     ComWrapper(const ComWrapper&) = delete;
     ~ComWrapper() { if(SUCCEEDED(mStatus)) CoUninitialize(); }
 
-    ComWrapper& operator=(ComWrapper&& rhs)
+    auto operator=(ComWrapper&& rhs) noexcept -> ComWrapper&
     {
-        if(SUCCEEDED(mStatus))
-            CoUninitialize();
-        mStatus = std::exchange(rhs.mStatus, E_FAIL);
+        if(this != &rhs) [[likely]]
+        {
+            if(SUCCEEDED(mStatus))
+                CoUninitialize();
+            mStatus = std::exchange(rhs.mStatus, E_FAIL);
+        }
         return *this;
     }
-    ComWrapper& operator=(const ComWrapper&) = delete;
+    auto operator=(const ComWrapper&) -> ComWrapper& = delete;
 
-    [[nodiscard]]
-    HRESULT status() const noexcept { return mStatus; }
-    explicit operator bool() const noexcept { return SUCCEEDED(status()); }
+    [[nodiscard]] auto status() const noexcept -> HRESULT { return mStatus; }
+    [[nodiscard]] explicit operator bool() const noexcept { return SUCCEEDED(status()); }
 
     void uninit()
     {
@@ -44,7 +47,10 @@ struct ComWrapper {
 
 
 template<typename T> /* NOLINTNEXTLINE(clazy-rule-of-three) False positive */
-struct ComPtr {
+class ComPtr {
+    T *mPtr{nullptr};
+
+public:
     using element_type = T;
 
     static constexpr bool RefIsNoexcept{noexcept(std::declval<T&>().AddRef())
@@ -55,11 +61,11 @@ struct ComPtr {
     { if(mPtr) mPtr->AddRef(); }
     ComPtr(ComPtr&& rhs) noexcept : mPtr{rhs.mPtr} { rhs.mPtr = nullptr; }
     ComPtr(std::nullptr_t) noexcept { } /* NOLINT(google-explicit-constructor) */
-    explicit ComPtr(T *ptr) noexcept : mPtr{ptr} { }
+    explicit ComPtr(T *const ptr) noexcept : mPtr{ptr} { }
     ~ComPtr() { if(mPtr) mPtr->Release(); }
 
     /* NOLINTNEXTLINE(bugprone-unhandled-self-assignment) Yes it is. */
-    ComPtr& operator=(const ComPtr &rhs) noexcept(RefIsNoexcept)
+    auto operator=(const ComPtr &rhs) noexcept(RefIsNoexcept) -> ComPtr&
     {
         if constexpr(RefIsNoexcept)
         {
@@ -70,15 +76,15 @@ struct ComPtr {
         }
         else
         {
-            ComPtr tmp{rhs};
+            auto tmp = rhs;
             if(mPtr) mPtr->Release();
             mPtr = tmp.release();
             return *this;
         }
     }
-    ComPtr& operator=(ComPtr&& rhs) noexcept(RefIsNoexcept)
+    auto operator=(ComPtr&& rhs) noexcept(RefIsNoexcept) -> ComPtr&
     {
-        if(&rhs != this)
+        if(&rhs != this) [[likely]]
         {
             if(mPtr) mPtr->Release();
             mPtr = std::exchange(rhs.mPtr, nullptr);
@@ -86,24 +92,21 @@ struct ComPtr {
         return *this;
     }
 
-    void reset(T *ptr=nullptr) noexcept(RefIsNoexcept)
+    void reset(T *const ptr=nullptr) noexcept(RefIsNoexcept)
     {
         if(mPtr) mPtr->Release();
         mPtr = ptr;
     }
 
-    explicit operator bool() const noexcept { return mPtr != nullptr; }
+    [[nodiscard]] explicit operator bool() const noexcept { return mPtr != nullptr; }
 
-    T& operator*() const noexcept { return *mPtr; }
-    T* operator->() const noexcept { return mPtr; }
-    T* get() const noexcept { return mPtr; }
+    [[nodiscard]] auto operator*() const noexcept -> T& { return *mPtr; }
+    [[nodiscard]] auto operator->() const noexcept -> T* { return mPtr; }
+    [[nodiscard]] auto get() const noexcept -> T* { return mPtr; }
 
-    T* release() noexcept { return std::exchange(mPtr, nullptr); }
+    [[nodiscard]] auto release() noexcept -> T* { return std::exchange(mPtr, nullptr); }
 
     void swap(ComPtr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
-
-private:
-    T *mPtr{nullptr};
 };
 
 template<typename T>

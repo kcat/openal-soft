@@ -116,7 +116,7 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
     static void SetGlobalError(ALCenum const errorCode) { SetError(nullptr, errorCode); }
     void setError(ALCenum const errorCode) { SetError(this, errorCode); }
 
-    static inline auto sLastGlobalError = std::atomic<ALCenum>{ALC_NO_ERROR};
+    static inline auto sLastGlobalError = std::atomic{ALC_NO_ERROR};
     /* Flag to trap ALC device errors */
     static inline auto sTrapALCError = false;
 

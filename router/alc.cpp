@@ -336,7 +336,7 @@ constexpr auto alcMinorVersion = 1;
 auto EnumerationLock = std::recursive_mutex{}; /* NOLINT(cert-err58-cpp) May throw on construction */
 auto ContextSwitchLock = std::mutex{};
 
-auto LastError = std::atomic<ALCenum>{ALC_NO_ERROR};
+auto LastError = std::atomic{ALC_NO_ERROR};
 
 template<typename T>
 class ProtectedIfaceMap {

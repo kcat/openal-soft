@@ -300,7 +300,7 @@ struct DeviceListLock : public std::unique_lock<DeviceList> {
 };
 
 auto gDeviceList = DeviceList{};
-auto gInitDone = std::atomic<bool>{false};
+auto gInitDone = std::atomic{false};
 
 
 #ifdef AVRTAPI

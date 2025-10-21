@@ -69,6 +69,7 @@
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wpedantic\"")
 std_pragma("GCC diagnostic ignored \"-Wconversion\"")
+std_pragma("GCC diagnostic ignored \"-Warith-conversion\"")
 std_pragma("GCC diagnostic ignored \"-Wfloat-conversion\"")
 std_pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
 std_pragma("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -1479,17 +1480,17 @@ void PipeWirePlayback::outputCallback() noexcept
     if(!pw_buf) [[unlikely]] return;
 
     const auto datas = std::span{pw_buf->buffer->datas,
-        std::min(mChannelPtrs.size(), size_t{pw_buf->buffer->n_datas})};
+        std::min(mChannelPtrs.size(), usize{pw_buf->buffer->n_datas})};
 #if PW_CHECK_VERSION(0,3,49)
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.
      */
-    auto length = gsl::narrow_cast<uint>(pw_buf->requested);
+    auto length = al::saturate_cast<u32>(pw_buf->requested);
 #else
     /* In 0.3.48 and earlier, spa_io_rate_match::size apparently has the number
      * of samples per update.
      */
-    auto length = uint{mRateMatch ? mRateMatch->size : 0u};
+    auto length = mRateMatch ? u32{mRateMatch->size} : 0_u32;
 #endif
     /* If no length is specified, use the device's update size as a fallback. */
     if(!length) [[unlikely]] length = mDevice->mUpdateSize;
@@ -1502,13 +1503,13 @@ void PipeWirePlayback::outputCallback() noexcept
     auto chanptr_end = mChannelPtrs.begin();
     for(const auto &data : datas)
     {
-        length = std::min(length, data.maxsize/uint{sizeof(float)});
+        length = std::min(length, data.maxsize/u32{sizeof(float)});
         *chanptr_end = data.data;
         ++chanptr_end;
 
         data.chunk->offset = 0;
         data.chunk->stride = sizeof(float);
-        data.chunk->size   = length * sizeof(float);
+        data.chunk->size   = length * u32{sizeof(float)};
     }
 
     mDevice->renderSamples(mChannelPtrs, length);

@@ -359,6 +359,11 @@ else()
     set(C_FLAGS ${C_FLAGS} -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align -Wpedantic
         $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
 
+    check_cxx_compiler_flag(-Warith-conversion HAVE_WARITH_CONVERSION)
+    if(HAVE_WARITH_CONVERSION)
+        set(C_FLAGS ${C_FLAGS} -Warith-conversion)
+    endif()
+
     check_cxx_compiler_flag(-Wno-interference-size HAVE_WNO_INTERFERENCE_SIZE)
     if(HAVE_WNO_INTERFERENCE_SIZE)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-interference-size>)

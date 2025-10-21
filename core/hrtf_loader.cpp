@@ -253,7 +253,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
             throw std::runtime_error{std::format("Invalid delays[{}]: {} ({})", i, delays[i][0],
                 MaxHrirDelay)};
         }
-        delays[i][0] <<= HrirDelayFracBits;
+        delays[i][0] = gsl::narrow<u8>(delays[i][0] << HrirDelayFracBits);
     }
 
     /* Mirror the left ear responses to the right ear. */
@@ -321,7 +321,7 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
             throw std::runtime_error{std::format("Invalid delays[{}]: {} ({})", i, delays[i][0],
                 MaxHrirDelay)};
         }
-        delays[i][0] <<= HrirDelayFracBits;
+        delays[i][0] = gsl::narrow<u8>(delays[i][0] << HrirDelayFracBits);
     }
 
     /* Mirror the left ear responses to the right ear. */

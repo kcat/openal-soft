@@ -108,7 +108,7 @@ public:
 };
 
 
-auto EnumerateHrtf(std::optional<std::string> pathopt) -> std::vector<std::string>;
+auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std::string>;
 auto GetLoadedHrtf(std::string_view name, u32 devrate) -> HrtfStorePtr;
 
 #endif /* CORE_HRTF_H */

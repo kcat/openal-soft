@@ -423,7 +423,7 @@ void AddBuiltInEntry(std::string_view const dispname, u32 const residx)
 } // namespace
 
 
-auto EnumerateHrtf(std::optional<std::string> const pathopt) -> std::vector<std::string>
+auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std::string>
 {
     auto enumlock = std::lock_guard{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();

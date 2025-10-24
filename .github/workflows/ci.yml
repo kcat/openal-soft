@@ -111,7 +111,9 @@ jobs:
             os: ubuntu-latest,
             cmake_opts: "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
-            -DALSOFT_REQUIRE_OPENSL=ON",
+            -DALSOFT_REQUIRE_OPENSL=ON \
+            -DALSOFT_REQUIRE_OBOE=ON \
+            -DOBOE_SOURCE=oboe",
             build_type: "Release"
           }
         - {
@@ -121,13 +123,19 @@ jobs:
             -DANDROID_PLATFORM=25 \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DALSOFT_EMBED_HRTF_DATA=TRUE \
-            -DALSOFT_REQUIRE_OPENSL=ON",
+            -DALSOFT_REQUIRE_OPENSL=ON \
+            -DALSOFT_REQUIRE_OBOE=ON \
+            -DOBOE_SOURCE=oboe",
             build_type: "Release"
           }
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: '0'
+
+    - name: Setup Oboe for Android
+      if: ${{ contains(matrix.config.name, 'Android') }}
+      run: git clone https://github.com/google/oboe --depth=1 --branch 1.10.0
 
     - name: Get current commit tag, short hash, count and date
       run: |

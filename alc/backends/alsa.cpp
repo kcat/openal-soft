@@ -302,7 +302,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
             {
                 const auto &entry = devlist.emplace_back(customdevs->substr(curpos, seppos-curpos),
                     customdevs->substr(seppos+1, nextpos-seppos-1));
-                TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
+                TRACE(R"(Got device "{}", "{}")", entry.name, entry.device_name);
             }
 
             if(nextpos < customdevs->length())
@@ -369,7 +369,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
             auto device = std::format("{}CARD={},DEV={}", device_prefix, cardid, dev);
             
             const auto &entry = devlist.emplace_back(std::move(name), std::move(device));
-            TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
+            TRACE(R"(Got device "{}", "{}")", entry.name, entry.device_name);
         }
     }
     if(err < 0)

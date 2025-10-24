@@ -135,7 +135,7 @@ jobs:
 
     - name: Setup Oboe for Android
       if: ${{ contains(matrix.config.name, 'Android') }}
-      run: git clone https://github.com/google/oboe
+      run: git clone https://github.com/google/oboe --depth=1 --branch 1.10.0
 
     - name: Get current commit tag, short hash, count and date
       run: |

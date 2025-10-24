@@ -21,7 +21,7 @@ void eax_validate_range(std::string_view value_name, const TValue& value, const 
 
     const auto message = std::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
         value, min_value, max_value);
-    throw TException{message.c_str()};
+    throw TException{message};
 }
 
 #endif // !EAX_UTILS_INCLUDED

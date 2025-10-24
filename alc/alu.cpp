@@ -2298,9 +2298,6 @@ void ApplyDither(std::span<FloatBufferLine> const Samples, u32 *const dither_see
 }
 
 
-/* Base template left undefined. Should be marked =delete, but Clang 3.8.1
- * chokes on that given the inline specializations.
- */
 template<typename T> [[nodiscard]]
 auto SampleConv(f32) noexcept -> T = delete;
 

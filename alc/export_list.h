@@ -245,7 +245,7 @@ inline const auto alcFunctions = std::to_array({
 
     DECL(alGetErrorDirect),
     DECL(alIsExtensionPresentDirect),
-    DECL(alGetProcAddress),
+    DECL(alGetProcAddressDirect),
     DECL(alGetEnumValueDirect),
 
     DECL(alListeneriDirect),

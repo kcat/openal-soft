@@ -262,8 +262,8 @@ struct Voice {
     Voice(const Voice&) = delete;
     Voice& operator=(Voice const&) = delete;
 
-    void mix(State vstate, ContextBase *Context, std::chrono::nanoseconds deviceTime,
-        u32 SamplesToDo);
+    void mix(State vstate, ContextBase *context, std::chrono::nanoseconds deviceTime,
+        u32 samplesToDo);
 
     void prepare(DeviceBase *device);
 

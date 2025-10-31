@@ -1763,7 +1763,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
                 AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
-            auto *state = slot->Effect.State.get();
+            auto *state = slot->mEffect.State.get();
             state->mOutTarget = device->Dry.Buffer;
             state->deviceUpdate(device, slot->mBuffer.get());
             slot->mPropsDirty = true;
@@ -1786,7 +1786,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
                     AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
-                auto &state = *slot.Effect.State;
+                auto &state = *slot.mEffect.State;
                 state.mOutTarget = device->Dry.Buffer;
                 state.deviceUpdate(device, slot.mBuffer.get());
                 slot.mPropsDirty = true;

@@ -50,9 +50,9 @@ enum class SlotState : bool {
 };
 
 struct ALeffectslot {
-    ALuint EffectId{};
-    float Gain{1.0f};
-    bool  AuxSendAuto{true};
+    u32 mEffectId{};
+    f32 mGain{1.0f};
+    bool mAuxSendAuto{true};
     al::intrusive_ptr<ALeffectslot> mTarget;
     al::intrusive_ptr<ALbuffer> mBuffer;
 
@@ -62,7 +62,7 @@ struct ALeffectslot {
 
         al::intrusive_ptr<EffectState> State;
     };
-    EffectData Effect;
+    EffectData mEffect;
 
     bool mPropsDirty{true};
 
@@ -73,7 +73,7 @@ struct ALeffectslot {
     gsl::not_null<EffectSlot*> mSlot;
 
     /* Self ID */
-    ALuint id{};
+    u32 mId{};
 
     explicit ALeffectslot(gsl::not_null<al::Context*> context);
     ALeffectslot(const ALeffectslot&) = delete;
@@ -88,11 +88,11 @@ struct ALeffectslot {
         return al::intrusive_ptr{this};
     }
 
-    auto initEffect(ALuint effectId, ALenum effectType, const EffectProps &effectProps,
+    auto initEffect(u32 effectId, ALenum effectType, const EffectProps &effectProps,
         gsl::not_null<al::Context*> context) -> void;
     void updateProps(gsl::not_null<al::Context*> context) const;
 
-    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, u32 id, std::string_view name);
 
 
 #if ALSOFT_EAX
@@ -260,7 +260,7 @@ private:
     Eax5State mEax5{}; // EAX5 state.
     EAX50FXSLOTPROPERTIES mEax{}; // Current EAX state.
 
-    [[noreturn]] static void eax_fail(const std::string_view message);
+    [[noreturn]] static void eax_fail(std::string_view message);
     [[noreturn]] static void eax_fail_unknown_effect_id();
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();

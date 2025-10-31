@@ -273,14 +273,9 @@ constexpr auto SanitizeAlignment(FmtType const type, u32 const align) noexcept -
 {
     if(align == 0)
     {
+        /* A default of 65/64 for backwards compatibility. */
         if(type == FmtIMA4)
-        {
-            /* Here is where things vary:
-             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
-             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
-             */
             return 65;
-        }
         if(type == FmtMSADPCM)
             return 64;
         return 1;

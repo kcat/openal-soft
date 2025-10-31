@@ -163,7 +163,7 @@ Context::~Context()
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
+    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();

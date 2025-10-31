@@ -831,9 +831,9 @@ inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> device,
     if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->BufferList[gsl::narrow_cast<size_t>(lidx)];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.Buffers->begin(),
+    return std::to_address(std::next(sublist.mBuffers->begin(),
         gsl::narrow_cast<ptrdiff_t>(slidx)));
 }
 
@@ -879,9 +879,9 @@ inline auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> context
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     auto &sublist{context->mEffectSlotList[gsl::narrow_cast<size_t>(lidx)]};
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.EffectSlots->begin() + gsl::narrow_cast<size_t>(slidx));
+    return std::to_address(sublist.mEffectSlots->begin() + gsl::narrow_cast<size_t>(slidx));
 }
 
 [[nodiscard]]
@@ -1669,12 +1669,12 @@ NOINLINE void SetProperty(const gsl::not_null<ALsource*> Source,
             {
                 auto buflock = std::lock_guard{device->BufferLock};
                 auto buffer = LookupBuffer(Context, as_unsigned(values[0]));
-                if(buffer->MappedAccess && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+                if(buffer->mMappedAccess && !(buffer->mMappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
                     Context->throw_error(AL_INVALID_OPERATION,
-                        "Setting non-persistently mapped buffer {}", buffer->id);
+                        "Setting non-persistently mapped buffer {}", buffer->mId);
                 if(buffer->mCallback && buffer->mRef.load(std::memory_order_relaxed) != 0)
                     Context->throw_error(AL_INVALID_OPERATION,
-                        "Setting already-set callback buffer {}", buffer->id);
+                        "Setting already-set callback buffer {}", buffer->mId);
 
                 /* Add the selected buffer to a one-item queue */
                 auto newlist = std::deque<ALbufferQueueItem>{};
@@ -2358,7 +2358,7 @@ NOINLINE void GetProperty(const gsl::not_null<ALsource*> Source,
                 BufferList = (iter != Source->mQueue.end()) ? &*iter : nullptr;
             }
             auto *buffer = BufferList ? BufferList->mBuffer.get() : nullptr;
-            values[0] = buffer ? static_cast<T>(buffer->id) : T{0};
+            values[0] = buffer ? static_cast<T>(buffer->mId) : T{0};
             return;
         }
         break;
@@ -3443,15 +3443,15 @@ try {
             {
                 if(buffer->mSampleRate < 1)
                     context->throw_error(AL_INVALID_OPERATION,
-                        "Queueing buffer {} with no format", buffer->id);
+                        "Queueing buffer {} with no format", buffer->mId);
 
                 if(buffer->mCallback)
                     context->throw_error(AL_INVALID_OPERATION, "Queueing callback buffer {}",
-                        buffer->id);
+                        buffer->mId);
 
-                if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+                if(buffer->mMappedAccess != 0 && !(buffer->mMappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
                     context->throw_error(AL_INVALID_OPERATION,
-                        "Queueing non-persistently mapped buffer {}", buffer->id);
+                        "Queueing non-persistently mapped buffer {}", buffer->mId);
             }
 
             source->mQueue.emplace_back();
@@ -3557,7 +3557,7 @@ try {
     {
         auto bid = 0u;
         if(auto *buffer = source->mQueue.front().mBuffer.get())
-            bid = buffer->id;
+            bid = buffer->mId;
         source->mQueue.pop_front();
         return bid;
     });

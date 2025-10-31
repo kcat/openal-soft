@@ -1773,11 +1773,11 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             std::ranges::fill(*curarray | std::views::drop(curarray->size()>>1), nullptr);
         std::ranges::for_each(context->mEffectSlotList,[device,context](EffectSlotSubList &sublist)
         {
-            auto usemask = ~sublist.FreeMask;
+            auto usemask = ~sublist.mFreeMask;
             while(usemask)
             {
                 const auto idx = gsl::narrow_cast<uint>(std::countr_zero(usemask));
-                auto &slot = (*sublist.EffectSlots)[idx];
+                auto &slot = (*sublist.mEffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
                 const auto slotbase = slot.mSlot;

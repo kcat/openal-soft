@@ -370,19 +370,19 @@ auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffe
 #endif // ALSOFT_EAX
 
 struct EffectSlotSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALeffectslot,64>*> EffectSlots{nullptr};
+    uint64_t mFreeMask{~0_u64};
+    gsl::owner<std::array<ALeffectslot,64>*> mEffectSlots{nullptr};
 
     EffectSlotSubList() noexcept = default;
     EffectSlotSubList(const EffectSlotSubList&) = delete;
     EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
-      : FreeMask{rhs.FreeMask}, EffectSlots{rhs.EffectSlots}
-    { rhs.FreeMask = ~0_u64; rhs.EffectSlots = nullptr; }
+      : mFreeMask{rhs.mFreeMask}, mEffectSlots{rhs.mEffectSlots}
+    { rhs.mFreeMask = ~0_u64; rhs.mEffectSlots = nullptr; }
     ~EffectSlotSubList();
 
     EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;
     EffectSlotSubList& operator=(EffectSlotSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(EffectSlots, rhs.EffectSlots); return *this; }
+    { std::swap(mFreeMask, rhs.mFreeMask); std::swap(mEffectSlots, rhs.mEffectSlots); return *this; }
 };
 
 #endif

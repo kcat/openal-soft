@@ -52,7 +52,7 @@ Device::~Device()
 
     auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
         [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 

@@ -109,9 +109,9 @@ auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = context->mEffectSlotList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.EffectSlots->begin(), slidx));
+    return std::to_address(std::next(sublist.mEffectSlots->begin(), slidx));
 }
 
 [[nodiscard]]
@@ -157,9 +157,9 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
     if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->BufferList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.Buffers->begin(), slidx));
+    return std::to_address(std::next(sublist.mBuffers->begin(), slidx));
 }
 
 [[nodiscard]]
@@ -272,7 +272,7 @@ try {
     auto count = std::accumulate(context->mEffectSlotList.cbegin(),
         context->mEffectSlotList.cend(), 0_uz,
         [](usize const cur, const EffectSlotSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<ALuint>(std::popcount(sublist.FreeMask)); });
+        { return cur + gsl::narrow_cast<ALuint>(std::popcount(sublist.mFreeMask)); });
 
     while(needed > count)
     {
@@ -280,8 +280,8 @@ try {
             return false;
 
         auto sublist = EffectSlotSubList{};
-        sublist.FreeMask = ~0_u64;
-        sublist.EffectSlots = SubListAllocator{}.allocate(1);
+        sublist.mFreeMask = ~0_u64;
+        sublist.mEffectSlots = SubListAllocator{}.allocate(1);
         context->mEffectSlotList.emplace_back(std::move(sublist));
         count += std::tuple_size_v<SubListAllocator::value_type>;
     }
@@ -295,21 +295,21 @@ catch(...) {
 auto AllocEffectSlot(gsl::not_null<al::Context*> const context) -> gsl::not_null<ALeffectslot*>
 {
     auto const sublist = std::ranges::find_if(context->mEffectSlotList,
-        &EffectSlotSubList::FreeMask);
+        &EffectSlotSubList::mFreeMask);
     auto const lidx = gsl::narrow_cast<u32>(std::distance(context->mEffectSlotList.begin(),
         sublist));
-    auto const slidx = gsl::narrow_cast<u32>(std::countr_zero(sublist->FreeMask));
+    auto const slidx = gsl::narrow_cast<u32>(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
     auto const slot = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->EffectSlots->begin(), slidx)), context));
+        std::to_address(std::next(sublist->mEffectSlots->begin(), slidx)), context));
     aluInitEffectPanning(slot->mSlot, context);
 
     /* Add 1 to avoid ID 0. */
     slot->mId = ((lidx<<6) | slidx) + 1;
 
     context->mNumEffectSlots += 1;
-    sublist->FreeMask &= ~(1_u64 << slidx);
+    sublist->mFreeMask &= ~(1_u64 << slidx);
 
     return slot;
 }
@@ -325,7 +325,7 @@ void FreeEffectSlot(gsl::not_null<al::Context*> const context,
 
     std::destroy_at(std::to_address(slot));
 
-    context->mEffectSlotList[lidx].FreeMask |= 1_u64 << slidx;
+    context->mEffectSlotList[lidx].mFreeMask |= 1_u64 << slidx;
     context->mNumEffectSlots--;
 }
 
@@ -534,7 +534,7 @@ try {
     case AL_BUFFER:
         if(auto const *const buffer = slot->mBuffer.get())
         {
-            if(buffer->id == as_unsigned(value))
+            if(buffer->mId == as_unsigned(value))
                 return;
         }
         else if(value == 0)
@@ -710,7 +710,7 @@ try {
 
     case AL_BUFFER:
         if(auto *buffer = slot->mBuffer.get())
-            *value = as_signed(buffer->id);
+            *value = as_signed(buffer->mId);
         else
             *value = 0;
         return;
@@ -904,13 +904,12 @@ void ALeffectslot::updateProps(gsl::not_null<al::Context*> context) const
     }
 }
 
-void ALeffectslot::SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name)
+void ALeffectslot::SetName(gsl::not_null<al::Context*> const context, u32 id,
+    std::string_view const name)
 {
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
 
-    auto slot = LookupEffectSlot(context, id);
-    if(!slot)
-        context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", id);
+    std::ignore = LookupEffectSlot(context, id);
 
     context->mEffectSlotNames.insert_or_assign(id, name);
 }
@@ -920,13 +919,13 @@ void UpdateAllEffectSlotProps(gsl::not_null<al::Context*> context)
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};
     for(auto &sublist : context->mEffectSlotList)
     {
-        auto usemask = ~sublist.FreeMask;
+        auto usemask = ~sublist.mFreeMask;
         while(usemask)
         {
             const auto idx = as_unsigned(std::countr_zero(usemask));
             usemask ^= 1_u64 << idx;
 
-            auto &slot = (*sublist.EffectSlots)[idx];
+            auto &slot = (*sublist.mEffectSlots)[idx];
             if(std::exchange(slot.mPropsDirty, false))
                 slot.updateProps(context);
         }
@@ -935,19 +934,19 @@ void UpdateAllEffectSlotProps(gsl::not_null<al::Context*> context)
 
 EffectSlotSubList::~EffectSlotSubList()
 {
-    if(!EffectSlots)
+    if(!mEffectSlots)
         return;
 
-    uint64_t usemask{~FreeMask};
+    uint64_t usemask{~mFreeMask};
     while(usemask)
     {
         const int idx{std::countr_zero(usemask)};
-        std::destroy_at(std::to_address(EffectSlots->begin() + idx));
+        std::destroy_at(std::to_address(mEffectSlots->begin() + idx));
         usemask &= ~(1_u64 << idx);
     }
-    FreeMask = ~usemask;
-    SubListAllocator{}.deallocate(EffectSlots, 1);
-    EffectSlots = nullptr;
+    mFreeMask = ~usemask;
+    SubListAllocator{}.deallocate(mEffectSlots, 1);
+    mEffectSlots = nullptr;
 }
 
 

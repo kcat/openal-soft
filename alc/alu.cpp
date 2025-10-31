@@ -1635,7 +1635,7 @@ void CalcPanningAndFilters(Voice *const voice, f32 const xpos, f32 const ypos, f
     }
 }
 
-void CalcNonAttnSourceParams(Voice *const voice, ContextBase const *const context)
+void CalcNonAttnVoiceParams(Voice *const voice, ContextBase const *const context)
 {
     auto const &props = voice->mProps;
     auto const device = al::get_not_null(context->mDevice);
@@ -1687,7 +1687,7 @@ void CalcNonAttnSourceParams(Voice *const voice, ContextBase const *const contex
         context->mParams, device);
 }
 
-void CalcAttnSourceParams(Voice *const voice, ContextBase const *const context)
+void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context)
 {
     auto const &props = voice->mProps;
     auto const device = al::get_not_null(context->mDevice);
@@ -1987,7 +1987,7 @@ void CalcAttnSourceParams(Voice *const voice, ContextBase const *const context)
         distance, spread, drygain, wetgain, sendslots, context->mParams, device);
 }
 
-void CalcSourceParams(Voice *const voice, ContextBase *const context, bool const force)
+void CalcVoiceParams(Voice *const voice, ContextBase *const context, bool const force)
 {
     if(auto *const props = voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel))
     {
@@ -2002,9 +2002,9 @@ void CalcSourceParams(Voice *const voice, ContextBase *const context, bool const
         (props.DirectChannels != DirectMode::Off && !ismono3d && !IsAmbisonic(voice->mFmtChannels))
         || props.mSpatializeMode == SpatializeMode::Off
         || (props.mSpatializeMode == SpatializeMode::Auto && !ismono3d))
-        CalcNonAttnSourceParams(voice, context);
+        CalcNonAttnVoiceParams(voice, context);
     else
-        CalcAttnSourceParams(voice, context);
+        CalcAttnVoiceParams(voice, context);
 }
 
 
@@ -2143,7 +2143,7 @@ void ProcessParamUpdates(ContextBase *const ctx, std::span<EffectSlot*const> con
         {
             /* Only update voices that have a source. */
             if(voice->mSourceID.load(std::memory_order_relaxed) != 0)
-                CalcSourceParams(voice, ctx, force);
+                CalcVoiceParams(voice, ctx, force);
         }
     }
     IncrementRef(ctx->mUpdateCount);

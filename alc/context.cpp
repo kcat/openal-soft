@@ -222,9 +222,9 @@ void Context::init()
     eax_set_defaults();
 #endif
 
-    mParams.Position = alu::Vector{0.0f, 0.0f, 0.0f, 1.0f};
-    mParams.Matrix = alu::Matrix::Identity();
-    mParams.Velocity = alu::Vector{};
+    mParams.Position = al::Vector{0.0f, 0.0f, 0.0f, 1.0f};
+    mParams.Matrix = al::Matrix::Identity();
+    mParams.Velocity = al::Vector{};
     mParams.Gain = mListener.Gain;
     mParams.MetersPerUnit = mListener.mMetersPerUnit
 #if ALSOFT_EAX

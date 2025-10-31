@@ -510,12 +510,12 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot
         }
         mOutTarget = target.Main->Buffer;
 
-        alu::Vector N{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
+        al::Vector N{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
         N.normalize();
-        alu::Vector V{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
+        al::Vector V{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
         V.normalize();
         /* Build and normalize right-vector */
-        alu::Vector U{N.cross_product(V)};
+        al::Vector U{N.cross_product(V)};
         U.normalize();
 
         const std::array mixmatrix{

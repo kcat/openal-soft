@@ -495,24 +495,24 @@ auto CalcContextParams(ContextBase *const ctx) -> bool
     auto *const props = ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
 
-    auto const pos = alu::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f};
+    auto const pos = al::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f};
     ctx->mParams.Position = pos;
 
     /* AT then UP */
-    auto N = alu::Vector{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
+    auto N = al::Vector{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
     N.normalize();
-    auto V = alu::Vector{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
+    auto V = al::Vector{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
     V.normalize();
     /* Build and normalize right-vector */
-    auto U = alu::Vector{N.cross_product(V)};
+    auto U = al::Vector{N.cross_product(V)};
     U.normalize();
 
-    auto const rot = alu::Matrix{
+    auto const rot = al::Matrix{
         U[0],  V[0], -N[0],  0.0f,
         U[1],  V[1], -N[1],  0.0f,
         U[2],  V[2], -N[2],  0.0f,
         0.0f,  0.0f,  0.0f,  1.0f};
-    auto const vel = alu::Vector{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0};
+    auto const vel = al::Vector{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0};
 
     ctx->mParams.Matrix = rot;
     ctx->mParams.Velocity = rot * vel;
@@ -956,9 +956,9 @@ void CalcAmbisonicPanning(Voice *const voice, f32 const xpos, f32 const ypos, f3
     /* Local B-Format sources have their XYZ channels rotated according to the
      * orientation.
      */
-    auto N = alu::Vector{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
+    auto N = al::Vector{props.OrientAt[0], props.OrientAt[1], props.OrientAt[2], 0.0f};
     N.normalize();
-    auto V = alu::Vector{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
+    auto V = al::Vector{props.OrientUp[0], props.OrientUp[1], props.OrientUp[2], 0.0f};
     V.normalize();
     if(!props.HeadRelative)
     {
@@ -966,7 +966,7 @@ void CalcAmbisonicPanning(Voice *const voice, f32 const xpos, f32 const ypos, f3
         V = ctxparams.Matrix * V;
     }
     /* Build and normalize right-vector */
-    auto U = alu::Vector{N.cross_product(V)};
+    auto U = al::Vector{N.cross_product(V)};
     U.normalize();
 
     /* Build a rotation matrix. Manually fill the zeroth- and first-order
@@ -1719,9 +1719,9 @@ void CalcAttnSourceParams(Voice *const voice, ContextBase const *const context)
     }
 
     /* Transform source to listener space (convert to head relative) */
-    auto position = alu::Vector{props.Position[0], props.Position[1], props.Position[2], 1.0f};
-    auto velocity = alu::Vector{props.Velocity[0], props.Velocity[1], props.Velocity[2], 0.0f};
-    auto direction = alu::Vector{props.Direction[0], props.Direction[1], props.Direction[2], 0.0f};
+    auto position = al::Vector{props.Position[0], props.Position[1], props.Position[2], 1.0f};
+    auto velocity = al::Vector{props.Velocity[0], props.Velocity[1], props.Velocity[2], 0.0f};
+    auto direction = al::Vector{props.Direction[0], props.Direction[1], props.Direction[2], 0.0f};
     if(!props.HeadRelative)
     {
         /* Transform source vectors */
@@ -1735,7 +1735,7 @@ void CalcAttnSourceParams(Voice *const voice, ContextBase const *const context)
         velocity += context->mParams.Velocity;
     }
 
-    auto tosource = alu::Vector{position[0], position[1], position[2], 0.0f};
+    auto tosource = al::Vector{position[0], position[1], position[2], 0.0f};
     auto const distance = tosource.normalize();
     auto const directional = bool{direction.normalize() > 0.0f};
 

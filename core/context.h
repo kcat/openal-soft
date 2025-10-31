@@ -67,9 +67,9 @@ struct ContextParams {
     /* Pointer to the most recent property values that are awaiting an update. */
     std::atomic<ContextProps*> ContextUpdate{nullptr};
 
-    alu::Vector Position;
-    alu::Matrix Matrix{alu::Matrix::Identity()};
-    alu::Vector Velocity;
+    al::Vector Position;
+    al::Matrix Matrix{al::Matrix::Identity()};
+    al::Vector Velocity;
 
     f32 Gain{1.0f};
     f32 MetersPerUnit{1.0f};

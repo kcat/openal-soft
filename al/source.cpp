@@ -850,7 +850,7 @@ auto LookupBuffer(gsl::not_null<al::Context*> const context, std::unsigned_integ
 
 [[nodiscard]]
 auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device,
-    std::unsigned_integral auto const id) noexcept -> ALfilter*
+    std::unsigned_integral auto const id) noexcept -> al::Filter*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -858,15 +858,15 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device,
     if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->FilterList[gsl::narrow_cast<usize>(lidx)];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.Filters->begin(),
+    return std::to_address(std::next(sublist.mFilters->begin(),
         gsl::narrow_cast<isize>(slidx)));
 }
 
 [[nodiscard]]
 auto LookupFilter(gsl::not_null<al::Context*> const context, std::unsigned_integral auto const id)
-    -> gsl::not_null<ALfilter*>
+    -> gsl::not_null<al::Filter*>
 {
     if(auto *filter = LookupFilter(std::nothrow, al::get_not_null(context->mALDevice), id))
         [[likely]] return gsl::make_not_null(filter);
@@ -1848,11 +1848,11 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
             {
                 const auto filterlock = std::lock_guard{device->FilterLock};
                 const auto filter = LookupFilter(Context, filterid);
-                Source->mDirect.mGain = filter->Gain;
-                Source->mDirect.mGainHF = filter->GainHF;
-                Source->mDirect.mHFReference = filter->HFReference;
-                Source->mDirect.mGainLF = filter->GainLF;
-                Source->mDirect.mLFReference = filter->LFReference;
+                Source->mDirect.mGain = filter->mGain;
+                Source->mDirect.mGainHF = filter->mGainHF;
+                Source->mDirect.mHFReference = filter->mHFReference;
+                Source->mDirect.mGainLF = filter->mGainLF;
+                Source->mDirect.mLFReference = filter->mLFReference;
             }
             else
             {
@@ -1994,11 +1994,11 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
             {
                 const auto filterlock = std::lock_guard{device->FilterLock};
                 const auto filter = LookupFilter(Context, filterid);
-                send.mGain = filter->Gain;
-                send.mGainHF = filter->GainHF;
-                send.mHFReference = filter->HFReference;
-                send.mGainLF = filter->GainLF;
-                send.mLFReference = filter->LFReference;
+                send.mGain = filter->mGain;
+                send.mGainHF = filter->mGainHF;
+                send.mHFReference = filter->mHFReference;
+                send.mGainLF = filter->mGainLF;
+                send.mLFReference = filter->mLFReference;
             }
             else
             {

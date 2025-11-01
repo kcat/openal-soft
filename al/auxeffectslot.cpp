@@ -125,7 +125,7 @@ auto LookupEffectSlot(gsl::not_null<al::Context*> const context, u32 const id)
 
 [[nodiscard]]
 auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> ALeffect*
+    -> al::Effect*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -133,14 +133,14 @@ auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
     if(lidx >= device->EffectList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->EffectList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) [[unlikely]]
+    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.Effects->begin(), slidx));
+    return std::to_address(std::next(sublist.mEffects->begin(), slidx));
 }
 
 [[nodiscard]]
 auto LookupEffect(gsl::not_null<al::Context*> const context, u32 const id)
-    -> gsl::not_null<ALeffect*>
+    -> gsl::not_null<al::Effect*>
 {
     if(auto *const effect = LookupEffect(std::nothrow, al::get_not_null(context->mALDevice), id))
         [[likely]] return gsl::make_not_null(effect);
@@ -470,7 +470,7 @@ try {
             else
             {
                 auto const effect = LookupEffect(context, as_unsigned(value));
-                slot->initEffect(effect->id, effect->type, effect->Props, context);
+                slot->initEffect(effect->mId, effect->mType, effect->mProps, context);
             }
         }
 

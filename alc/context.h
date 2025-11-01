@@ -40,8 +40,8 @@
 class EaxCall;
 #endif // ALSOFT_EAX
 
-struct ALeffect;
 namespace al {
+struct Effect;
 struct EffectSlot;
 }
 struct DebugGroup;
@@ -235,7 +235,7 @@ public:
     static void setThreadContext(Context *context) noexcept { sThreadContext.set(context); }
 
     /* Default effect that applies to sources that don't have an effect on send 0. */
-    static ALeffect sDefaultEffect;
+    static Effect sDefaultEffect;
 
 #if ALSOFT_EAX
     bool hasEax() const noexcept { return mEaxIsInitialized; }

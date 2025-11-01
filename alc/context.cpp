@@ -118,22 +118,22 @@ Context::ThreadCtx::~ThreadCtx()
 }
 thread_local Context::ThreadCtx Context::sThreadContext;
 
-ALeffect Context::sDefaultEffect;
+Effect Context::sDefaultEffect;
 
 
-void ContextDeleter::operator()(gsl::owner<Context*> context) const noexcept
+void ContextDeleter::operator()(gsl::owner<Context*> const context) const noexcept
 { delete context; }
 
-auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
-    -> intrusive_ptr<Context>
+auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device,
+    ContextFlagBitset const flags) -> intrusive_ptr<Context>
 {
-    auto ret = ContextRef{new al::Context{device, flags}};
+    auto ret = ContextRef{new Context{device, flags}};
     ret->init();
     return ret;
 }
 
 
-Context::Context(const gsl::not_null<intrusive_ptr<Device>> &device, ContextFlagBitset flags)
+Context::Context(gsl::not_null<intrusive_ptr<Device>> const &device, ContextFlagBitset const flags)
     : ContextBase{get_not_null(device)}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
     , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
@@ -172,7 +172,7 @@ Context::~Context()
 
 void Context::init()
 {
-    if(sDefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
+    if(sDefaultEffect.mType != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
     {
         mDefaultSlot = std::make_unique<EffectSlot>(gsl::make_not_null(this));
         aluInitEffectPanning(mDefaultSlot->mSlot, this);

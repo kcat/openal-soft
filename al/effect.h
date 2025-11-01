@@ -3,7 +3,6 @@
 
 #include <array>
 #include <bitset>
-#include <cstdint>
 #include <string_view>
 #include <utility>
 #include <variant>
@@ -52,40 +51,44 @@ using EffectHandlerVariant = std::variant<NullEffectHandler,ReverbEffectHandler,
     FshifterEffectHandler,ModulatorEffectHandler,PshifterEffectHandler,VmorpherEffectHandler,
     DedicatedDialogEffectHandler,DedicatedLfeEffectHandler,ConvolutionEffectHandler>;
 
-struct ALeffect {
-    // Effect type (AL_EFFECT_NULL, ...)
-    ALenum type{AL_EFFECT_NULL};
+namespace al {
 
-    EffectHandlerVariant PropsVariant;
-    EffectProps Props;
+struct Effect {
+    // Effect type (AL_EFFECT_NULL, ...)
+    ALenum mType{AL_EFFECT_NULL};
+
+    EffectHandlerVariant mPropsVariant;
+    EffectProps mProps;
 
     /* Self ID */
-    ALuint id{0u};
+    u32 mId{0u};
 
-    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, u32 id, std::string_view name);
 
     DISABLE_ALLOC
 };
 
-void InitEffect(ALeffect *effect);
+} /* namespace al */
 
-void LoadReverbPreset(const std::string_view name, ALeffect *effect);
+void InitEffect(al::Effect *effect);
+
+void LoadReverbPreset(std::string_view name, al::Effect *effect);
 
 bool IsValidEffectType(ALenum type) noexcept;
 
 struct EffectSubList {
-    uint64_t FreeMask{~0_u64};
-    gsl::owner<std::array<ALeffect,64>*> Effects{nullptr}; /* 64 */
+    u64 mFreeMask{~0_u64};
+    gsl::owner<std::array<al::Effect,64>*> mEffects{nullptr}; /* 64 */
 
     EffectSubList() noexcept = default;
     EffectSubList(const EffectSubList&) = delete;
-    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
-    { rhs.FreeMask = ~0_u64; rhs.Effects = nullptr; }
+    EffectSubList(EffectSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mEffects{rhs.mEffects}
+    { rhs.mFreeMask = ~0_u64; rhs.mEffects = nullptr; }
     ~EffectSubList();
 
     EffectSubList& operator=(const EffectSubList&) = delete;
     EffectSubList& operator=(EffectSubList&& rhs) noexcept
-    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
+    { std::swap(mFreeMask, rhs.mFreeMask); std::swap(mEffects, rhs.mEffects); return *this; }
 };
 
 #endif

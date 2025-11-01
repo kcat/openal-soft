@@ -1369,21 +1369,10 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
 
 FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
 {
-    class PriorityControl {
-        int mOldPriority;
-    public:
-        PriorityControl() : mOldPriority{GetThreadPriority(GetCurrentThread())}
-        {
-            if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
-                ERR("Failed to set priority level for thread");
-        }
-        ~PriorityControl()
-        { SetThreadPriority(GetCurrentThread(), mOldPriority); }
-
-        PriorityControl(const PriorityControl&) = delete;
-        auto operator=(const PriorityControl&) -> PriorityControl& = delete;
-    };
-    auto prioctrl = PriorityControl{};
+    auto const _ = gsl::finally([oldprio=GetThreadPriority(GetCurrentThread())]
+    { SetThreadPriority(GetCurrentThread(), oldprio); });
+    if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+        ERR("Failed to set priority level for thread");
 
 #ifdef AVRTAPI
     auto taskname = (mOutUpdateSize < mFormat.Format.nSamplesPerSec/100) ? L"Pro Audio" : L"Audio";
@@ -1393,7 +1382,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
     auto channels = std::vector<ComPtr<ISpatialAudioObject>>{};
     auto buffers = std::vector<void*>{};
     auto resbuffers = std::vector<void*>{};
-    auto tmpbuffers = std::vector<const void*>{};
+    auto tmpbuffers = std::vector<void const*>{};
 
     /* TODO: Set mPadding appropriately. There doesn't seem to be a way to
      * update it dynamically based on the stream, so a fixed size may be the
@@ -2369,8 +2358,9 @@ ClockLatency WasapiPlayback::getClockLatency()
 }
 
 
-struct WasapiCapture final : public BackendBase {
-    explicit WasapiCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct WasapiCapture final : BackendBase {
+    explicit WasapiCapture(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+    { }
     ~WasapiCapture() override;
 
     void recordProc(IAudioClient *client, IAudioCaptureClient *capture) const;
@@ -2408,7 +2398,6 @@ struct WasapiCapture final : public BackendBase {
         Quit
     };
     ThreadAction mAction{ThreadAction::Nothing};
-
 
     HANDLE mNotifyEvent{nullptr};
 
@@ -2482,7 +2471,7 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                 {
                     static constexpr auto lenlimit = usize{std::numeric_limits<i32>::max()};
                     auto *srcdata = LPCVOID{rdata};
-                    auto srcframes = unsigned{numsamples};
+                    auto srcframes = u32{numsamples};
 
                     const auto len1 = data[0].size() / mRing->getElemSize();
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].data(),

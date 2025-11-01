@@ -81,7 +81,7 @@ try {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
             context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
-        listener.Gain = value;
+        listener.mGain = value;
         UpdateProps(context);
         return;
 
@@ -112,18 +112,18 @@ try {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
             context->throw_error(AL_INVALID_VALUE, "Listener position out of range");
-        listener.Position[0] = value1;
-        listener.Position[1] = value2;
-        listener.Position[2] = value3;
+        listener.mPosition[0] = value1;
+        listener.mPosition[1] = value2;
+        listener.mPosition[2] = value3;
         CommitAndUpdateProps(context);
         return;
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
             context->throw_error(AL_INVALID_VALUE, "Listener velocity out of range");
-        listener.Velocity[0] = value1;
-        listener.Velocity[1] = value2;
-        listener.Velocity[2] = value3;
+        listener.mVelocity[0] = value1;
+        listener.mVelocity[1] = value2;
+        listener.mVelocity[2] = value3;
         CommitAndUpdateProps(context);
         return;
     }
@@ -165,8 +165,8 @@ try {
         if(!std::ranges::all_of(vals, [](float f){ return std::isfinite(f); }))
             context->throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
-        std::ranges::copy(vals | std::views::take(3), listener.OrientAt.begin());
-        std::ranges::copy(vals | std::views::drop(3), listener.OrientUp.begin());
+        std::ranges::copy(vals | std::views::take(3), listener.mOrientAt.begin());
+        std::ranges::copy(vals | std::views::drop(3), listener.mOrientUp.begin());
         CommitAndUpdateProps(context);
         return;
     }
@@ -189,7 +189,7 @@ try {
     case AL_GAIN:
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
-        listener.Gain = gsl::narrow_cast<float>(value);
+        listener.mGain = gsl::narrow_cast<float>(value);
         UpdateProps(context);
         return;
 
@@ -283,7 +283,7 @@ try {
     const auto &listener = context->mListener;
     switch(param)
     {
-    case AL_GAIN: *value = listener.Gain; return;
+    case AL_GAIN: *value = listener.mGain; return;
     case AL_METERS_PER_UNIT: *value = listener.mMetersPerUnit; return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
@@ -306,15 +306,15 @@ try {
     switch(param)
     {
     case AL_POSITION:
-        *value1 = listener.Position[0];
-        *value2 = listener.Position[1];
-        *value3 = listener.Position[2];
+        *value1 = listener.mPosition[0];
+        *value2 = listener.mPosition[1];
+        *value3 = listener.mPosition[2];
         return;
 
     case AL_VELOCITY:
-        *value1 = listener.Velocity[0];
-        *value2 = listener.Velocity[1];
-        *value3 = listener.Velocity[2];
+        *value1 = listener.mVelocity[0];
+        *value2 = listener.mVelocity[1];
+        *value3 = listener.mVelocity[2];
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
@@ -352,8 +352,8 @@ try {
     case AL_ORIENTATION:
         const auto vals = std::span{values, 6_uz};
         // AT then UP
-        auto oiter = std::ranges::copy(listener.OrientAt, vals.begin()).out;
-        std::ranges::copy(listener.OrientUp, oiter);
+        auto oiter = std::ranges::copy(listener.mOrientAt, vals.begin()).out;
+        std::ranges::copy(listener.mOrientUp, oiter);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
@@ -379,7 +379,7 @@ try {
     switch(param)
     {
     case AL_GAIN:
-        *value = gsl::narrow_cast<int>(std::min(listener.Gain, float_int_max));
+        *value = gsl::narrow_cast<int>(std::min(listener.mGain, float_int_max));
         return;
     case AL_METERS_PER_UNIT:
         *value = gsl::narrow_cast<int>(std::clamp(listener.mMetersPerUnit, 1.0f, float_int_max));
@@ -405,15 +405,15 @@ try {
     switch(param)
     {
     case AL_POSITION:
-        *value1 = gsl::narrow_cast<int>(listener.Position[0]);
-        *value2 = gsl::narrow_cast<int>(listener.Position[1]);
-        *value3 = gsl::narrow_cast<int>(listener.Position[2]);
+        *value1 = gsl::narrow_cast<int>(listener.mPosition[0]);
+        *value2 = gsl::narrow_cast<int>(listener.mPosition[1]);
+        *value3 = gsl::narrow_cast<int>(listener.mPosition[2]);
         return;
 
     case AL_VELOCITY:
-        *value1 = gsl::narrow_cast<int>(listener.Velocity[0]);
-        *value2 = gsl::narrow_cast<int>(listener.Velocity[1]);
-        *value3 = gsl::narrow_cast<int>(listener.Velocity[2]);
+        *value1 = gsl::narrow_cast<int>(listener.mVelocity[0]);
+        *value2 = gsl::narrow_cast<int>(listener.mVelocity[1]);
+        *value3 = gsl::narrow_cast<int>(listener.mVelocity[2]);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
@@ -453,8 +453,8 @@ try {
     case AL_ORIENTATION:
         const auto vals = std::span{values, 6_uz};
         // AT then UP
-        auto oiter = std::ranges::transform(listener.OrientAt, vals.begin(), f2i).out;
-        std::ranges::transform(listener.OrientUp, oiter, f2i);
+        auto oiter = std::ranges::transform(listener.mOrientAt, vals.begin(), f2i).out;
+        std::ranges::transform(listener.mOrientUp, oiter, f2i);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",

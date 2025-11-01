@@ -116,7 +116,7 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     std::vector<DebugGroup> mDebugGroups;
     std::deque<DebugLogEntry> mDebugLog;
 
-    ALlistener mListener{};
+    Listener mListener{};
 
     std::vector<SourceSubList> mSourceList;
     u32 mNumSources{0_u32};

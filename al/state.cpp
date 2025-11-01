@@ -611,11 +611,11 @@ void UpdateContextProps(al::Context *context)
 
     /* Copy in current property values. */
     const auto &listener = context->mListener;
-    props->Position = listener.Position;
-    props->Velocity = listener.Velocity;
-    props->OrientAt = listener.OrientAt;
-    props->OrientUp = listener.OrientUp;
-    props->Gain = listener.Gain;
+    props->Position = listener.mPosition;
+    props->Velocity = listener.mVelocity;
+    props->OrientAt = listener.mOrientAt;
+    props->OrientUp = listener.mOrientUp;
+    props->Gain = listener.mGain;
     props->MetersPerUnit = listener.mMetersPerUnit;
 
     props->AirAbsorptionGainHF = context->mAirAbsorptionGainHF;

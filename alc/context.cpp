@@ -225,7 +225,7 @@ void Context::init()
     mParams.Position = al::Vector{0.0f, 0.0f, 0.0f, 1.0f};
     mParams.Matrix = al::Matrix::Identity();
     mParams.Velocity = al::Vector{};
-    mParams.Gain = mListener.Gain;
+    mParams.Gain = mListener.mGain;
     mParams.MetersPerUnit = mListener.mMetersPerUnit
 #if ALSOFT_EAX
         * eaxGetDistanceFactor()

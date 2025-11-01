@@ -6,17 +6,20 @@
 #include "AL/efx.h"
 
 #include "almalloc.h"
+#include "altypes.hpp"
 
+namespace al {
 
-struct ALlistener {
-    std::array<float,3> Position{{0.0f, 0.0f, 0.0f}};
-    std::array<float,3> Velocity{{0.0f, 0.0f, 0.0f}};
-    std::array<float,3> OrientAt{{0.0f, 0.0f, -1.0f}};
-    std::array<float,3> OrientUp{{0.0f, 1.0f, 0.0f}};
-    float Gain{1.0f};
-    float mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
+struct Listener {
+    std::array<f32, 3> mPosition{{0.0f, 0.0f, 0.0f}};
+    std::array<f32, 3> mVelocity{{0.0f, 0.0f, 0.0f}};
+    std::array<f32, 3> mOrientAt{{0.0f, 0.0f, -1.0f}};
+    std::array<f32, 3> mOrientUp{{0.0f, 1.0f, 0.0f}};
+    f32 mGain{1.0f};
+    f32 mMetersPerUnit{AL_DEFAULT_METERS_PER_UNIT};
 
     DISABLE_ALLOC
 };
 
+} /* namespace al */
 #endif

@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct SDL2BackendFactory final : public BackendFactory {
-public:
+struct SDL2BackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct JackBackendFactory final : public BackendFactory {
-public:
+struct JackBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

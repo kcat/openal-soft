@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct SolarisBackendFactory final : public BackendFactory {
-public:
+struct SolarisBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

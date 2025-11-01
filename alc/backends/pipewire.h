@@ -9,8 +9,7 @@
 
 struct DeviceBase;
 
-struct PipeWireBackendFactory final : public BackendFactory {
-public:
+struct PipeWireBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

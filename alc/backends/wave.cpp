@@ -27,7 +27,6 @@
 #include <bit>
 #include <cerrno>
 #include <chrono>
-#include <cstdint>
 #include <cstring>
 #include <exception>
 #include <fstream>

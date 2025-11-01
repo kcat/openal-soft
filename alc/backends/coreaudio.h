@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct CoreAudioBackendFactory final : public BackendFactory {
-public:
+struct CoreAudioBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

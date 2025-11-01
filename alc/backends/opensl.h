@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct OSLBackendFactory final : public BackendFactory {
-public:
+struct OSLBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

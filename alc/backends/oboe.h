@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct OboeBackendFactory final : public BackendFactory {
-public:
+struct OboeBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

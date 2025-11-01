@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct WaveBackendFactory final : public BackendFactory {
-public:
+struct WaveBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

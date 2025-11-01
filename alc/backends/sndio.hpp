@@ -3,8 +3,7 @@
 
 #include "base.h"
 
-struct SndIOBackendFactory final : public BackendFactory {
-public:
+struct SndIOBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;

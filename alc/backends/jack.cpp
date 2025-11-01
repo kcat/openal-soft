@@ -340,7 +340,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
     const auto dst = std::span{outptrs}.first(mPort.size());
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
-        mDevice->renderSamples(dst, gsl::narrow_cast<uint>(numframes));
+        mDevice->renderSamples(dst, gsl::narrow_cast<u32>(numframes));
     else
     {
         std::ranges::for_each(dst, [numframes](void *outbuf) -> void
@@ -363,9 +363,9 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
 
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
     {
-        auto data = mRing->getReadVector();
+        auto const data = mRing->getReadVector();
 
-        const auto outlen = size_t{numframes / mDevice->mUpdateSize};
+        const auto outlen = usize{numframes / mDevice->mUpdateSize};
         const auto updates1 = std::min(data[0].size() / mRing->getElemSize(), outlen);
         const auto updates2 = std::min(data[1].size() / mRing->getElemSize(), outlen - updates1);
 
@@ -519,10 +519,10 @@ bool JackPlayback::reset()
     mDevice->FmtType = DevFmtFloat;
 
     try {
-        const auto numchans = size_t{mDevice->channelsFromFmt()};
-        std::ranges::for_each(std::views::iota(0_uz, numchans), [this](const size_t idx)
+        const auto numchans = usize{mDevice->channelsFromFmt()};
+        std::ranges::for_each(std::views::iota(0_uz, numchans), [this](usize const idx)
         {
-            auto name = std::format("channel_{}", idx);
+            auto const name = std::format("channel_{}", idx);
             auto &newport = mPort.emplace_back();
             newport = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
                 JackPortIsOutput | JackPortIsTerminal, 0);
@@ -610,7 +610,7 @@ void JackPlayback::start()
         mDevice->mBufferSize = (bufsize+1) * mDevice->mUpdateSize;
 
         mRing = RingBuffer<float>::Create(bufsize,
-            size_t{mDevice->mUpdateSize} * mDevice->channelsFromFmt(), true);
+            usize{mDevice->mUpdateSize} * mDevice->channelsFromFmt(), true);
 
         try {
             mPlaying.store(true, std::memory_order_release);

@@ -471,10 +471,10 @@ auto DSoundPlayback::reset() -> bool
         if(SUCCEEDED(hr))
         {
             auto const num_updates = std::min(mDevice->mBufferSize / mDevice->mUpdateSize,
-                uint{MAX_UPDATES});
+                u32{MAX_UPDATES});
 
-            auto nots = std::array<DSBPOSITIONNOTIFY,MAX_UPDATES>{};
-            for(auto i = 0u;i < num_updates;++i)
+            auto nots = std::array<DSBPOSITIONNOTIFY, MAX_UPDATES>{};
+            for(auto i = 0_u32;i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->mUpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
@@ -529,7 +529,7 @@ struct DSoundCapture final : BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> uint override;
+    auto availableSamples() -> usize override;
 
     ComPtr<IDirectSoundCapture> mDSC;
     ComPtr<IDirectSoundCaptureBuffer> mDSCbuffer;
@@ -691,7 +691,7 @@ void DSoundCapture::stop()
 void DSoundCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-uint DSoundCapture::availableSamples()
+auto DSoundCapture::availableSamples() -> usize
 {
     if(mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -707,7 +707,7 @@ uint DSoundCapture::availableSamples()
         if(SUCCEEDED(hr))
         {
             const auto NumBytes = (BufferBytes+ReadCursor-LastCursor) % BufferBytes;
-            if(!NumBytes) return gsl::narrow_cast<uint>(mRing->readSpace());
+            if(!NumBytes) return mRing->readSpace();
             hr = mDSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1, &ReadPtr2, &ReadCnt2,
                 0);
         }
@@ -727,7 +727,7 @@ uint DSoundCapture::availableSamples()
         }
     }
 
-    return gsl::narrow_cast<uint>(mRing->readSpace());
+    return mRing->readSpace();
 }
 
 } // namespace

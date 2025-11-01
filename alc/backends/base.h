@@ -2,8 +2,6 @@
 #define ALC_BACKENDS_BASE_H
 
 #include <chrono>
-#include <cstdarg>
-#include <cstddef>
 #include <format>
 #include <memory>
 #include <span>
@@ -12,12 +10,11 @@
 #include <vector>
 
 #include "alc/events.h"
+#include "altypes.hpp"
 #include "core/device.h"
 #include "core/except.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
-
-using uint = unsigned int;
 
 
 struct ClockLatency {
@@ -33,7 +30,7 @@ struct BackendBase {
     virtual void stop() = 0;
 
     virtual void captureSamples(std::span<std::byte> outbuffer);
-    virtual auto availableSamples() -> uint;
+    virtual auto availableSamples() -> usize;
 
     virtual auto getClockLatency() -> ClockLatency;
 
@@ -43,7 +40,7 @@ struct BackendBase {
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;
     BackendBase(BackendBase&&) = delete;
-    explicit BackendBase(gsl::not_null<DeviceBase*> device) noexcept : mDevice{device} { }
+    explicit BackendBase(gsl::not_null<DeviceBase*> const device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
     void operator=(const BackendBase&) = delete;
@@ -66,9 +63,10 @@ enum class BackendType {
 /* Helper to get the device latency from the backend, including any fixed
  * latency from post-processing.
  */
-inline ClockLatency GetClockLatency(DeviceBase *device, BackendBase *backend)
+inline auto GetClockLatency(DeviceBase const *const device, BackendBase *const backend)
+    -> ClockLatency
 {
-    ClockLatency ret{backend->getClockLatency()};
+    auto ret = backend->getClockLatency();
     ret.Latency += device->FixedLatency;
     return ret;
 }

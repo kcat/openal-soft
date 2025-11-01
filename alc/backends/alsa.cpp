@@ -345,7 +345,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
                 ERR("snd_ctl_pcm_next_device failed");
             if(dev < 0) break;
 
-            snd_pcm_info_set_device(pcminfo.get(), gsl::narrow_cast<uint>(dev));
+            snd_pcm_info_set_device(pcminfo.get(), gsl::narrow_cast<unsigned>(dev));
             snd_pcm_info_set_subdevice(pcminfo.get(), 0);
             snd_pcm_info_set_stream(pcminfo.get(), stream);
             err = snd_ctl_pcm_info(handle.get(), pcminfo.get());
@@ -421,8 +421,9 @@ auto verify_state(snd_pcm_t *handle) -> int
 }
 
 
-struct AlsaPlayback final : public BackendBase {
-    explicit AlsaPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct AlsaPlayback final : BackendBase {
+    explicit AlsaPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+    { }
     ~AlsaPlayback() override;
 
     void mixerProc();
@@ -439,7 +440,7 @@ struct AlsaPlayback final : public BackendBase {
 
     std::mutex mMutex;
 
-    uint mFrameStep{};
+    unsigned mFrameStep{};
     std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -517,10 +518,10 @@ void AlsaPlayback::mixerProc()
 
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
             auto *WritePtr = static_cast<char*>(areas->addr) + (offset * areas->step / 8);
-            mDevice->renderSamples(WritePtr, gsl::narrow_cast<uint>(frames), mFrameStep);
+            mDevice->renderSamples(WritePtr, gsl::narrow_cast<u32>(frames), mFrameStep);
 
-            const auto commitres = snd_pcm_mmap_commit(mPcmHandle, offset, frames);
-            if(std::cmp_not_equal(commitres, frames))
+            if(const auto commitres = snd_pcm_mmap_commit(mPcmHandle, offset, frames);
+                std::cmp_not_equal(commitres, frames))
             {
                 ERR("mmap commit error: {}",
                     snd_strerror(commitres >= 0 ? -EPIPE : gsl::narrow_cast<int>(commitres)));
@@ -581,7 +582,7 @@ void AlsaPlayback::mixerNoMMapProc()
         auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         const auto dlock = std::lock_guard{mMutex};
-        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<uint>(avail),
+        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<u32>(avail),
             mFrameStep);
         while(avail > 0)
         {
@@ -669,9 +670,9 @@ auto AlsaPlayback::reset() -> bool
     }
 
     auto allowmmap = GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true);
-    auto periodLen = gsl::narrow_cast<uint>(mDevice->mUpdateSize * 1000000_u64
+    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * 1000000_u64
         / mDevice->mSampleRate);
-    auto bufferLen = gsl::narrow_cast<uint>(mDevice->mBufferSize * 1000000_u64
+    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * 1000000_u64
         / mDevice->mSampleRate);
     auto rate = mDevice->mSampleRate;
 
@@ -720,7 +721,7 @@ auto AlsaPlayback::reset() -> bool
     /* set channels (implicitly sets frame bits) */
     if(snd_pcm_hw_params_set_channels(mPcmHandle, hp.get(), mDevice->channelsFromFmt()) < 0)
     {
-        uint numchans{2u};
+        auto numchans = 2u;
         CHECK(snd_pcm_hw_params_set_channels_near(mPcmHandle, hp.get(), &numchans));
         if(numchans < 1)
             throw al::backend_exception{al::backend_error::DeviceError, "Got 0 device channels"};
@@ -765,8 +766,8 @@ auto AlsaPlayback::reset() -> bool
 #undef CHECK
     sp = nullptr;
 
-    mDevice->mBufferSize = gsl::narrow_cast<uint>(bufferSizeInFrames);
-    mDevice->mUpdateSize = gsl::narrow_cast<uint>(periodSizeInFrames);
+    mDevice->mBufferSize = gsl::narrow_cast<u32>(bufferSizeInFrames);
+    mDevice->mUpdateSize = gsl::narrow_cast<u32>(periodSizeInFrames);
     mDevice->mSampleRate = rate;
 
     setDefaultChannelOrder();
@@ -791,8 +792,8 @@ void AlsaPlayback::start()
     void (AlsaPlayback::*thread_func)(){};
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        auto datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
-        mBuffer.resize(gsl::narrow_cast<size_t>(datalen));
+        auto const datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
+        mBuffer.resize(gsl::narrow<usize>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
@@ -849,7 +850,7 @@ struct AlsaCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> uint override;
+    auto availableSamples() -> usize override;
     auto getClockLatency() -> ClockLatency override;
 
     snd_pcm_t *mPcmHandle{nullptr};
@@ -1054,7 +1055,7 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
         std::ranges::fill(outbuffer, (mDevice->FmtType==DevFmtUByte)?std::byte{0x80}:std::byte{0});
 }
 
-auto AlsaCapture::availableSamples() -> uint
+auto AlsaCapture::availableSamples() -> usize
 {
     auto avail = snd_pcm_sframes_t{0};
     if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
@@ -1066,8 +1067,7 @@ auto AlsaCapture::availableSamples() -> uint
         avail = snd_pcm_recover(mPcmHandle, gsl::narrow_cast<int>(avail), 1);
         if(avail >= 0)
         {
-            if(mDoCapture)
-                avail = snd_pcm_start(mPcmHandle);
+            avail = snd_pcm_start(mPcmHandle);
             if(avail >= 0)
                 avail = snd_pcm_avail_update(mPcmHandle);
         }
@@ -1084,7 +1084,7 @@ auto AlsaCapture::availableSamples() -> uint
         avail = std::max<snd_pcm_sframes_t>(avail, 0);
         avail += snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         mLastAvail = std::max(mLastAvail, avail);
-        return gsl::narrow_cast<uint>(mLastAvail);
+        return gsl::narrow_cast<usize>(mLastAvail);
     }
 
     while(avail > 0)
@@ -1124,7 +1124,7 @@ auto AlsaCapture::availableSamples() -> uint
         avail -= amt;
     }
 
-    return gsl::narrow_cast<uint>(mRing->readSpace());
+    return mRing->readSpace();
 }
 
 auto AlsaCapture::getClockLatency() -> ClockLatency

@@ -12,26 +12,27 @@
 
 namespace al {
 
-auto backend_exception::make_string(std::string_view fmt, std::format_args args) -> std::string
+auto backend_exception::make_string(std::string_view const fmt, std::format_args args)
+    -> std::string
 { return std::vformat(fmt, std::move(args)); }
 
 } // namespace al
 
 
-bool BackendBase::reset()
+auto BackendBase::reset() -> bool
 { throw al::backend_exception{al::backend_error::DeviceError, "Invalid BackendBase call"}; }
 
 void BackendBase::captureSamples(std::span<std::byte> outbuffer [[maybe_unused]])
 { }
 
-auto BackendBase::availableSamples() -> uint
-{ return 0u; }
+auto BackendBase::availableSamples() -> usize
+{ return 0_uz; }
 
 auto BackendBase::getClockLatency() -> ClockLatency
 {
     auto ret = ClockLatency{};
 
-    auto refcount = uint{};
+    auto refcount = u32{};
     do {
         refcount = mDevice->waitForMix();
         ret.ClockTime = mDevice->getClockTime();

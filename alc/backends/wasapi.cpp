@@ -191,10 +191,10 @@ using unique_coptr = std::unique_ptr<T, decltype([](T *const ptr) { CoTaskMemFre
 
 
 /* Scales the given reftime value, rounding the result. */
-constexpr auto RefTime2Samples(const ReferenceTime &val, DWORD srate) noexcept -> uint
+constexpr auto RefTime2Samples(ReferenceTime const &val, DWORD const srate) noexcept -> u32
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return al::saturate_cast<uint>(retval);
+    return al::saturate_cast<u32>(retval);
 }
 
 
@@ -237,7 +237,7 @@ public:
     template<typename T> [[nodiscard]]
     auto value() const -> T
     {
-        if constexpr(std::is_same_v<T,uint>)
+        if constexpr(std::is_same_v<T,unsigned>)
         {
             Expects(mProp.vt == VT_UI4 || mProp.vt == VT_UINT);
             return mProp.uintVal;
@@ -252,7 +252,7 @@ public:
 
     void setBlob(const std::span<std::byte> data)
     {
-        if constexpr(sizeof(size_t) > sizeof(ULONG))
+        if constexpr(sizeof(usize) > sizeof(ULONG))
             Expects(data.size() <= std::numeric_limits<ULONG>::max());
         mProp.vt = VT_BLOB;
         mProp.blob.cbSize = gsl::narrow_cast<ULONG>(data.size());
@@ -369,7 +369,7 @@ auto GetDeviceNameAndGuid(const DeviceHandle &device) -> NameGUIDPair
         if(auto devIdStartEnd = wcschr(devIdStart, L'#'))
         {
             ret.mGuid = wstr_to_utf8(std::wstring_view{devIdStart,
-                gsl::narrow_cast<size_t>(devIdStartEnd - devIdStart)});
+                gsl::narrow_cast<usize>(devIdStartEnd - devIdStart)});
             std::transform(ret.mGuid.begin(), ret.mGuid.end(), ret.mGuid.begin(),
                 [](char ch) { return gsl::narrow_cast<char>(std::toupper(ch)); });
         }
@@ -396,7 +396,7 @@ auto GetDeviceFormfactor(IMMDevice *device) -> EndpointFormFactor
     if(FAILED(hr))
         WARN("GetValue AudioEndpoint_FormFactor failed: {:#x}", as_unsigned(hr));
     else if(pvform.type() == VT_UI4)
-        formfactor = static_cast<EndpointFormFactor>(pvform.value<uint>());
+        formfactor = static_cast<EndpointFormFactor>(pvform.value<unsigned>());
     else if(pvform.type() != VT_EMPTY)
         WARN("Unexpected PROPVARIANT type: {:#04x}", pvform.type());
     return formfactor;
@@ -607,17 +607,17 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
             return defaultId;
         }
 
-        UINT count{0};
+        auto count = UINT{0};
         hr = coll->GetCount(&count);
         if(SUCCEEDED(hr) && count > 0)
             list.reserve(count);
 
-        ComPtr<IMMDevice> device;
+        auto device = ComPtr<IMMDevice>{};
         hr = mEnumerator->GetDefaultAudioEndpoint(flowdir, eMultimedia, al::out_ptr(device));
         if(SUCCEEDED(hr))
         {
             auto devid = unique_coptr<WCHAR>{};
-            if(auto hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
+            if(auto const hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
                 defaultId = devid.get();
             else
                 ERR("Failed to get device id: {:#x}", as_unsigned(hr));
@@ -631,7 +631,7 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
                 continue;
 
             auto devid = unique_coptr<WCHAR>{};
-            if(auto hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
+            if(auto const hr2 = device->GetId(al::out_ptr(devid)); SUCCEEDED(hr2))
                 std::ignore = AddDevice(device, devid.get(), list);
             else
                 ERR("Failed to get device id: {:#x}", as_unsigned(hr));
@@ -1094,11 +1094,11 @@ void TraceFormat(const std::string_view msg, const WAVEFORMATEX *format)
 }
 
 
-template<typename T, size_t N, size_t ...I>
+template<typename T, usize N, usize ...I>
 constexpr auto span_to_array(const std::span<T,N> span, std::index_sequence<I...>)
 { return std::array<T,N>{{span[I]...}}; }
 
-template<typename T, size_t N> requires(N != std::dynamic_extent)
+template<typename T, usize N> requires(N != std::dynamic_extent)
 constexpr auto span_to_array(const std::span<T,N> span) -> std::array<T,N>
 { return span_to_array(span, std::make_index_sequence<N>{}); }
 
@@ -1106,7 +1106,7 @@ constexpr auto span_to_array(const std::span<T,N> span) -> std::array<T,N>
  * halving the volume. Essentially converting mono to stereo.
  */
 template<typename T>
-void DuplicateSamples(std::span<BYTE> insamples, size_t step)
+void DuplicateSamples(std::span<BYTE> insamples, usize step)
 {
     if constexpr(std::is_floating_point_v<T> || std::is_signed_v<T>)
     {
@@ -1139,7 +1139,8 @@ void DuplicateSamples(std::span<BYTE> insamples, size_t step)
     }
 }
 
-void DuplicateSamples(std::span<BYTE> insamples, DevFmtType sampletype, size_t step)
+void DuplicateSamples(std::span<BYTE> const insamples, DevFmtType const sampletype,
+    usize const step)
 {
     switch(sampletype)
     {
@@ -1154,8 +1155,9 @@ void DuplicateSamples(std::span<BYTE> insamples, DevFmtType sampletype, size_t s
 }
 
 
-struct WasapiPlayback final : public BackendBase {
-    explicit WasapiPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct WasapiPlayback final : BackendBase {
+    explicit WasapiPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+    { }
     ~WasapiPlayback() override;
 
     struct PlainDevice {
@@ -1182,7 +1184,7 @@ struct WasapiPlayback final : public BackendBase {
 
 
     void open(std::string_view name) override;
-    bool reset() override;
+    auto reset() -> bool override;
     void start() override;
     void stop() override;
 
@@ -1194,7 +1196,7 @@ struct WasapiPlayback final : public BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : uint8_t {
+    enum class ThreadState : u8 {
         Initializing,
         Waiting,
         Playing,
@@ -1202,7 +1204,7 @@ struct WasapiPlayback final : public BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : uint8_t {
+    enum class ThreadAction : u8 {
         Nothing,
         Configure,
         Play,
@@ -1211,13 +1213,13 @@ struct WasapiPlayback final : public BackendBase {
     ThreadAction mAction{ThreadAction::Nothing};
 
 
-    static inline DWORD sAvIndex{};
+    static inline auto sAvIndex = DWORD{};
 
     HANDLE mNotifyEvent{nullptr};
 
     UINT32 mOutBufferSize{}, mOutUpdateSize{};
     std::vector<char> mResampleBuffer;
-    uint mBufferFilled{0};
+    u32 mBufferFilled{0};
     SampleConverterPtr mResampler;
     bool mMonoUpsample{false};
     bool mExclusiveMode{false};
@@ -1255,7 +1257,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
     if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
         ERR("Failed to set priority level for thread");
 
-    const auto frame_size = mFormat.Format.nChannels * mFormat.Format.wBitsPerSample / 8u;
+    const auto frame_size = u32{mFormat.Format.nChannels} * mFormat.Format.wBitsPerSample / 8_u32;
     const auto buffer_len = mOutBufferSize;
     auto *resbufferptr = LPCVOID{};
 
@@ -1284,7 +1286,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
         auto written = UINT32{};
         if(!mExclusiveMode)
         {
-            if(auto hr = audio.mClient->GetCurrentPadding(&written); FAILED(hr))
+            if(auto const hr = audio.mClient->GetCurrentPadding(&written); FAILED(hr))
             {
                 ERR("Failed to get padding: {:#x}", as_unsigned(hr));
                 mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
@@ -1294,7 +1296,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             mPadding.store(written, std::memory_order_relaxed);
         }
 
-        if(const auto len = uint{buffer_len - written})
+        if(const auto len = u32{buffer_len - written})
         {
             auto *buffer = LPBYTE{};
             auto hr = audio.mRender->GetBuffer(len, &buffer);
@@ -1303,7 +1305,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
                 if(mResampler)
                 {
                     auto dlock = std::lock_guard{mMutex};
-                    auto dst = std::span{buffer, size_t{len}*frame_size};
+                    auto dst = std::span{buffer, usize{len}*frame_size};
                     for(UINT32 done{0};done < len;)
                     {
                         if(mBufferFilled == 0)
@@ -1316,7 +1318,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
 
                         const auto got = mResampler->convert(&resbufferptr, &mBufferFilled,
                             dst.data(), len-done);
-                        dst = dst.subspan(size_t{got}*frame_size);
+                        dst = dst.subspan(usize{got}*frame_size);
                         done += got;
                     }
                     mPadding.store(written + len, std::memory_order_relaxed);
@@ -1330,7 +1332,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
 
                 if(mMonoUpsample)
                 {
-                    DuplicateSamples(std::span{buffer, size_t{len}*frame_size}, mDevice->FmtType,
+                    DuplicateSamples(std::span{buffer, usize{len}*frame_size}, mDevice->FmtType,
                         mFormat.Format.nChannels);
                 }
 
@@ -1426,7 +1428,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
                     tmpbuffers.resize(buffers.size());
                     resbuffers.resize(buffers.size());
                     auto bufptr = mResampleBuffer.begin();
-                    for(size_t i{0};i < tmpbuffers.size();++i)
+                    for(usize i{0};i < tmpbuffers.size();++i)
                     {
                         resbuffers[i] = std::to_address(bufptr);
                         std::advance(bufptr, mDevice->mUpdateSize*sizeof(float));
@@ -1677,7 +1679,7 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
         mDevice->mSampleRate = std::min(mDevice->mSampleRate,
             gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec));
 
-    const auto chancount = uint32_t{OutputType.Format.nChannels};
+    const auto chancount = u32{OutputType.Format.nChannels};
     const auto chanmask = OutputType.dwChannelMask;
     /* Don't update the channel format if the requested format fits what's
      * supported.
@@ -1938,7 +1940,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
 
-    mDevice->mUpdateSize = gsl::narrow_cast<uint>((uint64_t{mOutUpdateSize}*mDevice->mSampleRate
+    mDevice->mUpdateSize = gsl::narrow_cast<u32>((u64{mOutUpdateSize}*mDevice->mSampleRate
         + (mFormat.Format.nSamplesPerSec-1)) / mFormat.Format.nSamplesPerSec);
     mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
@@ -1952,7 +1954,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
         const auto channelCount = as_unsigned(std::popcount(flags));
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType, channelCount,
             mDevice->mSampleRate, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
-        mResampleBuffer.resize(size_t{mDevice->mUpdateSize} * channelCount *
+        mResampleBuffer.resize(usize{mDevice->mUpdateSize} * channelCount *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
@@ -1964,7 +1966,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     return true;
 }
 
-bool WasapiPlayback::reset()
+auto WasapiPlayback::reset() -> bool
 {
     auto plock = std::unique_lock{mProcMutex};
     if(mState != ThreadState::Waiting)
@@ -2286,7 +2288,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
          * implicitly two update periods on the device.
          */
         mOutUpdateSize = buffer_len;
-        mDevice->mUpdateSize = gsl::narrow_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+        mDevice->mUpdateSize = gsl::narrow_cast<u32>(u64{buffer_len} * mDevice->mSampleRate /
             mFormat.Format.nSamplesPerSec);
         mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     }
@@ -2294,7 +2296,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     {
         mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
-        mDevice->mBufferSize = gsl::narrow_cast<uint>(uint64_t{buffer_len} * mDevice->mSampleRate /
+        mDevice->mBufferSize = gsl::narrow_cast<u32>(u64{buffer_len} * mDevice->mSampleRate /
             mFormat.Format.nSamplesPerSec);
         mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
             mDevice->mBufferSize/2u);
@@ -2309,7 +2311,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
             mFormat.Format.nChannels, mDevice->mSampleRate, mFormat.Format.nSamplesPerSec,
             Resampler::FastBSinc24);
-        mResampleBuffer.resize(size_t{mDevice->mUpdateSize} * mFormat.Format.nChannels *
+        mResampleBuffer.resize(usize{mDevice->mUpdateSize} * mFormat.Format.nChannels *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
@@ -2384,7 +2386,7 @@ struct WasapiCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> uint override;
+    auto availableSamples() -> usize override;
 
 
     std::thread mProcThread;
@@ -2392,7 +2394,7 @@ struct WasapiCapture final : public BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : uint8_t {
+    enum class ThreadState : u8 {
         Initializing,
         Waiting,
         Recording,
@@ -2400,7 +2402,7 @@ struct WasapiCapture final : public BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : uint8_t {
+    enum class ThreadAction : u8 {
         Nothing,
         Record,
         Quit
@@ -2475,16 +2477,16 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
 
                 auto data = mRing->getWriteVector();
 
-                auto dstframes = size_t{};
+                auto dstframes = usize{};
                 if(mSampleConv)
                 {
-                    static constexpr auto lenlimit = size_t{std::numeric_limits<int>::max()};
+                    static constexpr auto lenlimit = usize{std::numeric_limits<i32>::max()};
                     auto *srcdata = LPCVOID{rdata};
-                    auto srcframes = uint{numsamples};
+                    auto srcframes = unsigned{numsamples};
 
                     const auto len1 = data[0].size() / mRing->getElemSize();
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].data(),
-                        gsl::narrow_cast<uint>(std::min(len1, lenlimit)));
+                        gsl::narrow_cast<u32>(std::min(len1, lenlimit)));
                     if(srcframes > 0 && dstframes == len1 && !data[1].empty())
                     {
                         /* If some source samples remain, all of the first dest
@@ -2493,16 +2495,16 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                          */
                         const auto len2 = data[1].size() / mRing->getElemSize();
                         dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].data(),
-                            gsl::narrow_cast<uint>(std::min(len2, lenlimit)));
+                            gsl::narrow_cast<u32>(std::min(len2, lenlimit)));
                     }
                 }
                 else
                 {
                     const auto framesize = mDevice->frameSizeFromFmt();
-                    auto dst = std::span{rdata, size_t{numsamples}*framesize};
+                    auto dst = std::span{rdata, usize{numsamples}*framesize};
                     auto len1 = data[0].size() / mRing->getElemSize();
                     auto len2 = data[1].size() / mRing->getElemSize();
-                    len1 = std::min(len1, size_t{numsamples});
+                    len1 = std::min(len1, usize{numsamples});
                     len2 = std::min(len2, numsamples-len1);
 
                     memcpy(data[0].data(), dst.data(), std::min(data[0].size(), dst.size()));
@@ -3017,11 +3019,11 @@ void WasapiCapture::stop()
 }
 
 
-void WasapiCapture::captureSamples(std::span<std::byte> outbuffer)
+void WasapiCapture::captureSamples(std::span<std::byte> const outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto WasapiCapture::availableSamples() -> uint
-{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
+auto WasapiCapture::availableSamples() -> usize
+{ return mRing->readSpace(); }
 
 } // namespace
 
@@ -3093,8 +3095,8 @@ auto WasapiBackendFactory::enumerate(BackendType const type) -> std::vector<std:
     return outnames;
 }
 
-auto WasapiBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
-    -> BackendPtr
+auto WasapiBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
+    BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WasapiPlayback{device}};
@@ -3103,13 +3105,14 @@ auto WasapiBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, Back
     return nullptr;
 }
 
-BackendFactory &WasapiBackendFactory::getFactory()
+auto WasapiBackendFactory::getFactory() -> BackendFactory&
 {
     static WasapiBackendFactory factory{};
     return factory;
 }
 
-alc::EventSupport WasapiBackendFactory::queryEventSupport(alc::EventType eventType, BackendType)
+auto WasapiBackendFactory::queryEventSupport(alc::EventType const eventType, BackendType)
+    -> alc::EventSupport
 {
     switch(eventType)
     {

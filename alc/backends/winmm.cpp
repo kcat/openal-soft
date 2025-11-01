@@ -323,7 +323,7 @@ void WinMMPlayback::start()
     try {
         for(auto &waveHdr : mWaveBuffer)
             waveOutPrepareHeader(mOutHdl, &waveHdr, sizeof(WAVEHDR));
-        mWritable.store(gsl::narrow_cast<uint>(mWaveBuffer.size()), std::memory_order_release);
+        mWritable.store(gsl::narrow_cast<u32>(mWaveBuffer.size()), std::memory_order_release);
 
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{&WinMMPlayback::mixerProc, this};
@@ -367,7 +367,7 @@ struct WinMMCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> uint override;
+    auto availableSamples() -> usize override;
 
     std::atomic<u32> mReadable{0_u32};
     u32 mIdx{0_u32};
@@ -563,8 +563,8 @@ void WinMMCapture::stop()
 void WinMMCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto WinMMCapture::availableSamples() -> uint
-{ return gsl::narrow_cast<uint>(mRing->readSpace()); }
+auto WinMMCapture::availableSamples() -> usize
+{ return mRing->readSpace(); }
 
 } // namespace
 

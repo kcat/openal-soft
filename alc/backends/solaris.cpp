@@ -61,8 +61,9 @@ using namespace std::string_view_literals;
 std::string solaris_driver{"/dev/audio"};
 
 
-struct SolarisBackend final : public BackendBase {
-    explicit SolarisBackend(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct SolarisBackend final : BackendBase {
+    explicit SolarisBackend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+    { }
     ~SolarisBackend() override;
 
     int mixerProc();
@@ -74,7 +75,7 @@ struct SolarisBackend final : public BackendBase {
 
     int mFd{-1};
 
-    uint mFrameStep{};
+    u32 mFrameStep{};
     std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -93,18 +94,17 @@ int SolarisBackend::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const size_t frame_step{mDevice->channelsFromFmt()};
-    const size_t frame_size{mDevice->frameSizeFromFmt()};
+    auto const frame_step = usize{mDevice->channelsFromFmt()};
+    auto const frame_size = usize{mDevice->frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice->Connected.load(std::memory_order_acquire))
     {
-        pollfd pollitem{};
+        auto pollitem = pollfd{};
         pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
-        int pret{poll(&pollitem, 1, 1000)};
-        if(pret < 0)
+        if(auto const pret = poll(&pollitem, 1, 1000); pret < 0)
         {
             if(errno == EINTR || errno == EAGAIN)
                 continue;
@@ -119,11 +119,11 @@ int SolarisBackend::mixerProc()
         }
 
         auto buffer = std::span{mBuffer};
-        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<uint>(buffer.size()/frame_size),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<u32>(buffer.size()/frame_size),
             frame_step);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
-            ssize_t wrote{write(mFd, buffer.data(), buffer.size())};
+            auto const wrote = write(mFd, buffer.data(), buffer.size());
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -133,7 +133,7 @@ int SolarisBackend::mixerProc()
                 break;
             }
 
-            buffer = buffer.subspan(gsl::narrow_cast<size_t>(wrote));
+            buffer = buffer.subspan(gsl::narrow<usize>(wrote));
         }
     }
 
@@ -222,7 +222,7 @@ bool SolarisBackend::reset()
         return false;
     }
 
-    uint frame_size{mDevice->bytesFromFmt() * info.play.channels};
+    auto const frame_size = u32{mDevice->bytesFromFmt() * info.play.channels};
     mFrameStep = info.play.channels;
     mDevice->mSampleRate = info.play.sample_rate;
     mDevice->mBufferSize = info.play.buffer_size / frame_size;
@@ -231,8 +231,8 @@ bool SolarisBackend::reset()
 
     setDefaultChannelOrder();
 
-    mBuffer.resize(mDevice->mUpdateSize * size_t{frame_size});
-    std::fill(mBuffer.begin(), mBuffer.end(), std::byte{});
+    mBuffer.resize(mDevice->mUpdateSize * usize{frame_size});
+    std::ranges::fill(mBuffer, std::byte{});
 
     return true;
 }
@@ -261,23 +261,23 @@ void SolarisBackend::stop()
 
 } // namespace
 
-BackendFactory &SolarisBackendFactory::getFactory()
+auto SolarisBackendFactory::getFactory() -> BackendFactory &
 {
     static SolarisBackendFactory factory{};
     return factory;
 }
 
-bool SolarisBackendFactory::init()
+auto SolarisBackendFactory::init() -> bool
 {
     if(auto devopt = ConfigValueStr({}, "solaris", "device"))
         solaris_driver = std::move(*devopt);
     return true;
 }
 
-bool SolarisBackendFactory::querySupport(BackendType type)
+auto SolarisBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback; }
 
-auto SolarisBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
+auto SolarisBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {
     switch(type)
     {
@@ -292,8 +292,8 @@ auto SolarisBackendFactory::enumerate(BackendType type) -> std::vector<std::stri
     return {};
 }
 
-auto SolarisBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
-    -> BackendPtr
+auto SolarisBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
+    BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new SolarisBackend{device}};

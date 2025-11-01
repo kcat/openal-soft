@@ -219,7 +219,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     std::mutex mMutex;
 
-    uint mFrameSize{0};
+    u32 mFrameSize{0};
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -275,7 +275,7 @@ void OpenSLPlayback::mixerProc()
         PrintErr(result, "bufferQueue->GetInterface SL_IID_PLAY");
     }
 
-    const auto frame_step = size_t{mDevice->channelsFromFmt()};
+    const auto frame_step = usize{mDevice->channelsFromFmt()};
 
     if(SL_RESULT_SUCCESS != result)
         mDevice->handleDisconnect("Failed to get playback buffer: {:#08x}", result);
@@ -310,17 +310,17 @@ void OpenSLPlayback::mixerProc()
 
         auto dlock = std::unique_lock{mMutex};
         auto data = mRing->getWriteVector();
-        mDevice->renderSamples(data[0].data(), gsl::narrow_cast<uint>(data[0].size()/mFrameSize),
+        mDevice->renderSamples(data[0].data(), gsl::narrow_cast<u32>(data[0].size()/mFrameSize),
             frame_step);
         if(!data[1].empty())
             mDevice->renderSamples(data[1].data(),
-                gsl::narrow_cast<uint>(data[1].size()/mFrameSize), frame_step);
+                gsl::narrow_cast<u32>(data[1].size()/mFrameSize), frame_step);
 
-        const auto todo = size_t{data[0].size() + data[1].size()} / mRing->getElemSize();
+        const auto todo = usize{data[0].size() + data[1].size()} / mRing->getElemSize();
         mRing->writeAdvance(todo);
         dlock.unlock();
 
-        for(size_t i{0};i < todo;++i)
+        for(usize i{0};i < todo;++i)
         {
             if(data[0].empty())
             {
@@ -615,7 +615,7 @@ struct OpenSLCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> uint override;
+    auto availableSamples() -> usize override;
 
     /* engine interfaces */
     SLObjectItf mEngineObj{nullptr};
@@ -625,9 +625,9 @@ struct OpenSLCapture final : public BackendBase {
     SLObjectItf mRecordObj{nullptr};
 
     RingBufferPtr<std::byte> mRing;
-    uint mByteOffset{0u};
+    u32 mByteOffset{0u};
 
-    uint mFrameSize{0u};
+    u32 mFrameSize{0u};
 };
 
 OpenSLCapture::~OpenSLCapture()
@@ -683,7 +683,7 @@ void OpenSLCapture::open(std::string_view name)
         mRing = RingBuffer<std::byte>::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->mUpdateSize = update_len;
-        mDevice->mBufferSize = gsl::narrow_cast<uint>(mRing->writeSpace() * update_len);
+        mDevice->mBufferSize = gsl::narrow_cast<u32>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {
@@ -792,12 +792,12 @@ void OpenSLCapture::open(std::string_view name)
         auto data = mRing->getWriteVector();
         std::ranges::fill(data[0], silence);
         std::ranges::fill(data[1], silence);
-        for(size_t i{0u};i < data[0].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
+        for(usize i{0u};i < data[0].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
             result = VCALL(bufferQueue,Enqueue)(data[0].data() + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
         }
-        for(size_t i{0u};i < data[1].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
+        for(usize i{0u};i < data[1].size() && SL_RESULT_SUCCESS == result;i+=chunk_size)
         {
             result = VCALL(bufferQueue,Enqueue)(data[1].data() + i, chunk_size);
             PrintErr(result, "bufferQueue->Enqueue");
@@ -853,7 +853,7 @@ void OpenSLCapture::stop()
 
 void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
 {
-    const auto update_size = mDevice->mUpdateSize;
+    const auto update_size = usize{mDevice->mUpdateSize};
     const auto chunk_size = update_size * mFrameSize;
 
     /* Read the desired samples from the ring buffer then advance its read
@@ -863,7 +863,7 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
     auto rdata = mRing->getReadVector();
     while(!outbuffer.empty())
     {
-        const auto rem = std::min(outbuffer.size(), size_t{chunk_size}-mByteOffset);
+        const auto rem = std::min(outbuffer.size(), usize{chunk_size}-mByteOffset);
         std::ranges::copy(rdata[0].subspan(mByteOffset, rem), outbuffer.begin());
 
         mByteOffset += rem;
@@ -936,10 +936,9 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
     }
 }
 
-auto OpenSLCapture::availableSamples() -> uint
+auto OpenSLCapture::availableSamples() -> usize
 {
-    return gsl::narrow_cast<uint>(mRing->readSpace()*mDevice->mUpdateSize
-        - mByteOffset/mFrameSize);
+    return mRing->readSpace()*mDevice->mUpdateSize - mByteOffset/mFrameSize;
 }
 
 #define SLES_LIB "libOpenSLES.so"
@@ -955,7 +954,7 @@ OAL_ELF_NOTE_DLOPEN(
 
 } // namespace
 
-bool OSLBackendFactory::init()
+auto OSLBackendFactory::init() -> bool
 {
 #if HAVE_DYNLOAD
     if(!sles_handle)
@@ -998,10 +997,10 @@ bool OSLBackendFactory::init()
     return true;
 }
 
-auto OSLBackendFactory::querySupport(BackendType type) -> bool
+auto OSLBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
 
-auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
+auto OSLBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {
     switch(type)
     {
@@ -1012,8 +1011,8 @@ auto OSLBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return {};
 }
 
-auto OSLBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
-    -> BackendPtr
+auto OSLBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
+    BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OpenSLPlayback{device}};
@@ -1022,7 +1021,7 @@ auto OSLBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, Backend
     return nullptr;
 }
 
-BackendFactory &OSLBackendFactory::getFactory()
+auto OSLBackendFactory::getFactory() -> BackendFactory&
 {
     static OSLBackendFactory factory{};
     return factory;

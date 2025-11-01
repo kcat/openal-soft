@@ -174,7 +174,7 @@ void Context::init()
 {
     if(sDefaultEffect.type != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
     {
-        mDefaultSlot = std::make_unique<ALeffectslot>(gsl::make_not_null(this));
+        mDefaultSlot = std::make_unique<EffectSlot>(gsl::make_not_null(this));
         aluInitEffectPanning(mDefaultSlot->mSlot, this);
     }
 

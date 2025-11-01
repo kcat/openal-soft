@@ -870,26 +870,26 @@ auto LookupFilter(gsl::not_null<al::Context*> context, std::unsigned_integral au
     context->throw_error(AL_INVALID_NAME, "Invalid filter ID {}", id);
 }
 
-inline auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> context,
-    std::unsigned_integral auto id) noexcept -> ALeffectslot*
+auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
+    std::unsigned_integral auto const id) noexcept -> al::EffectSlot*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
 
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
-    auto &sublist{context->mEffectSlotList[gsl::narrow_cast<size_t>(lidx)]};
+    auto &sublist = context->mEffectSlotList[gsl::narrow_cast<usize>(lidx)];
     if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.mEffectSlots->begin() + gsl::narrow_cast<size_t>(slidx));
+    return std::to_address(sublist.mEffectSlots->begin() + gsl::narrow_cast<isize>(slidx));
 }
 
 [[nodiscard]]
-auto LookupEffectSlot(gsl::not_null<al::Context*> context, std::unsigned_integral auto id)
-    -> gsl::not_null<ALeffectslot*>
+auto LookupEffectSlot(gsl::not_null<al::Context*> const context,
+    std::unsigned_integral auto const id) -> gsl::not_null<al::EffectSlot*>
 {
-    if(auto *slot = LookupEffectSlot(std::nothrow, context, id))
-        [[likely]] return gsl::make_not_null(slot);
+    if(auto *const slot = LookupEffectSlot(std::nothrow, context, id)) [[likely]]
+        return gsl::make_not_null(slot);
     context->throw_error(AL_INVALID_NAME, "Invalid effect slot ID {}", id);
 }
 
@@ -1974,7 +1974,7 @@ NOINLINE void SetProperty(const gsl::not_null<ALsource*> Source,
             const auto filterid = as_unsigned(values[2]);
 
             const auto slotlock = std::unique_lock{Context->mEffectSlotLock};
-            auto slot = al::intrusive_ptr<ALeffectslot>{};
+            auto slot = al::intrusive_ptr<al::EffectSlot>{};
             if(slotid)
                 slot = LookupEffectSlot(Context, slotid)->newReference();
 
@@ -4043,7 +4043,7 @@ auto ALsource::eax_create_direct_filter_param() const noexcept -> EaxAlLowPassPa
     return EaxAlLowPassParam{level_mb_to_gain(gain_mb), level_mb_to_gain(gainhf_mb)};
 }
 
-auto ALsource::eax_create_room_filter_param(const ALeffectslot &fx_slot,
+auto ALsource::eax_create_room_filter_param(const al::EffectSlot &fx_slot,
     const EAXSOURCEALLSENDPROPERTIES& send) const noexcept -> EaxAlLowPassParam
 {
     auto gain_mb = 0.0f;
@@ -4751,7 +4751,7 @@ void ALsource::eax_get(const EaxCall &call) const
     }
 }
 
-void ALsource::eax_set_al_source_send(al::intrusive_ptr<ALeffectslot> slot, size_t sendidx,
+void ALsource::eax_set_al_source_send(al::intrusive_ptr<al::EffectSlot> slot, usize const sendidx,
     const EaxAlLowPassParam &filter)
 {
     if(sendidx >= EAX_MAX_FXSLOTS)

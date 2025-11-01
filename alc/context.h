@@ -41,7 +41,9 @@ class EaxCall;
 #endif // ALSOFT_EAX
 
 struct ALeffect;
-struct ALeffectslot;
+namespace al {
+struct EffectSlot;
+}
 struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
@@ -125,7 +127,7 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     std::mutex mEffectSlotLock;
 
     /* Default effect slot */
-    std::unique_ptr<ALeffectslot> mDefaultSlot;
+    std::unique_ptr<EffectSlot> mDefaultSlot;
 
     std::vector<std::string_view> mExtensions;
     std::string mExtensionsString;
@@ -256,12 +258,13 @@ public:
     auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
     { return mEaxPrimaryFxSlotIndex; }
 
-    const ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) const LIFETIMEBOUND
+    auto eaxGetFxSlot(EaxFxSlotIndexValue const fx_slot_index) const LIFETIMEBOUND
+        -> EffectSlot const&
     { return mEaxFxSlots.get(fx_slot_index); }
-    ALeffectslot& eaxGetFxSlot(EaxFxSlotIndexValue fx_slot_index) LIFETIMEBOUND
+    auto eaxGetFxSlot(EaxFxSlotIndexValue const fx_slot_index) LIFETIMEBOUND -> EffectSlot&
     { return mEaxFxSlots.get(fx_slot_index); }
 
-    bool eaxNeedsCommit() const noexcept { return mEaxNeedsCommit; }
+    auto eaxNeedsCommit() const noexcept -> bool { return mEaxNeedsCommit; }
     void eaxCommit();
 
     void eaxCommitFxSlots() const { mEaxFxSlots.commit(); }

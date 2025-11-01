@@ -24,8 +24,8 @@ public:
             fx_slot->eax_commit();
     }
 
-    [[nodiscard]] auto get(EaxFxSlotIndex index) const -> const ALeffectslot&;
-    [[nodiscard]] auto get(EaxFxSlotIndex index) -> ALeffectslot&;
+    [[nodiscard]] auto get(EaxFxSlotIndex index) const -> const al::EffectSlot&;
+    [[nodiscard]] auto get(EaxFxSlotIndex index) -> al::EffectSlot&;
 
 private:
     using Items = std::array<EaxAlEffectSlotUPtr, EAX_MAX_FXSLOTS>;

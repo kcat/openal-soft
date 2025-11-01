@@ -513,7 +513,7 @@ try {
     case AL_BUFFER: al::Buffer::SetName(context, name, objname); return;
     case AL_FILTER_EXT: ALfilter::SetName(context, name, objname); return;
     case AL_EFFECT_EXT: ALeffect::SetName(context, name, objname); return;
-    case AL_AUXILIARY_EFFECT_SLOT_EXT: ALeffectslot::SetName(context, name, objname); return;
+    case AL_AUXILIARY_EFFECT_SLOT_EXT: al::EffectSlot::SetName(context, name, objname); return;
     }
 
     context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",

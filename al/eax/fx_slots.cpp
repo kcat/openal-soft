@@ -19,7 +19,6 @@ public:
 
 } // namespace
 
-
 void EaxFxSlots::initialize(gsl::not_null<al::Context*> al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
@@ -38,14 +37,14 @@ void EaxFxSlots::uninitialize() noexcept
         fx_slot = nullptr;
 }
 
-const ALeffectslot &EaxFxSlots::get(EaxFxSlotIndex index) const
+auto EaxFxSlots::get(EaxFxSlotIndex const index) const -> al::EffectSlot const&
 {
     if(!index.has_value())
         fail("Empty index.");
     return *fx_slots_[index.value()];
 }
 
-ALeffectslot &EaxFxSlots::get(EaxFxSlotIndex index)
+auto EaxFxSlots::get(EaxFxSlotIndex const index) -> al::EffectSlot&
 {
     if(!index.has_value())
         fail("Empty index.");
@@ -53,5 +52,5 @@ ALeffectslot &EaxFxSlots::get(EaxFxSlotIndex index)
 }
 
 [[noreturn]]
-void EaxFxSlots::fail(const std::string_view message)
+void EaxFxSlots::fail(std::string_view const message)
 { throw EaxFxSlotsException{message}; }

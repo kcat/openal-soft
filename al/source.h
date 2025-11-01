@@ -37,8 +37,8 @@
 namespace al {
 struct Context;
 struct Buffer;
+struct EffectSlot;
 } // namespace al
-struct ALeffectslot;
 enum class Resampler : u8;
 
 enum class SourceStereo : bool {
@@ -128,7 +128,7 @@ struct ALsource {
     DirectData Direct;
 
     struct SendData {
-        al::intrusive_ptr<ALeffectslot> mSlot;
+        al::intrusive_ptr<al::EffectSlot> mSlot;
         float mGain{};
         float mGainHF{};
         float mHFReference{};
@@ -857,7 +857,7 @@ private:
 
     [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;
 
-    [[nodiscard]] auto eax_create_room_filter_param(const ALeffectslot& fx_slot,
+    [[nodiscard]] auto eax_create_room_filter_param(al::EffectSlot const& fx_slot,
         const EAXSOURCEALLSENDPROPERTIES& send) const noexcept -> EaxAlLowPassParam;
 
     void eax_update_direct_filter();
@@ -1009,8 +1009,8 @@ private:
     void eax_set(const EaxCall& call);
 
     // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`
-    void eax_set_al_source_send(al::intrusive_ptr<ALeffectslot> slot, size_t sendidx,
-        const EaxAlLowPassParam &filter);
+    void eax_set_al_source_send(al::intrusive_ptr<al::EffectSlot> slot, usize sendidx,
+        EaxAlLowPassParam const &filter);
 
     void eax_commit_active_fx_slots();
 #endif // ALSOFT_EAX
@@ -1019,7 +1019,7 @@ private:
 void UpdateAllSourceProps(gsl::not_null<al::Context*> context);
 
 struct SourceSubList {
-    uint64_t FreeMask{~0_u64};
+    u64 FreeMask{~0_u64};
     gsl::owner<std::array<ALsource,64>*> Sources{nullptr};
 
     SourceSubList() noexcept = default;

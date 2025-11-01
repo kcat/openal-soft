@@ -149,7 +149,7 @@ auto LookupEffect(gsl::not_null<al::Context*> const context, u32 const id)
 
 [[nodiscard]]
 auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> ALbuffer*
+    -> al::Buffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -164,7 +164,7 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
 
 [[nodiscard]]
 auto LookupBuffer(gsl::not_null<al::Context*> const context, u32 const id)
-    -> gsl::not_null<ALbuffer*>
+    -> gsl::not_null<al::Buffer*>
 {
     if(auto *const buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
         [[likely]] return gsl::make_not_null(buffer);
@@ -546,7 +546,7 @@ try {
 
             auto const device = al::get_not_null(context->mALDevice);
             auto bufferlock = std::unique_lock{device->BufferLock};
-            auto buffer = al::intrusive_ptr<ALbuffer>{};
+            auto buffer = al::intrusive_ptr<al::Buffer>{};
             if(value)
             {
                 auto const buf = LookupBuffer(context, as_unsigned(value));

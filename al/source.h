@@ -36,24 +36,24 @@
 
 namespace al {
 struct Context;
+struct Buffer;
 } // namespace al
-struct ALbuffer;
 struct ALeffectslot;
-enum class Resampler : uint8_t;
+enum class Resampler : u8;
 
 enum class SourceStereo : bool {
     Normal = AL_NORMAL_SOFT,
     Enhanced = AL_SUPER_STEREO_SOFT
 };
 
-inline constexpr size_t DefaultSendCount{2};
+inline constexpr auto DefaultSendCount = 2_uz;
 
-inline constexpr ALuint InvalidVoiceIndex{std::numeric_limits<ALuint>::max()};
+inline constexpr auto InvalidVoiceIndex = std::numeric_limits<u32>::max();
 
-inline bool sBufferSubDataCompat{false};
+inline constinit auto sBufferSubDataCompat = false;
 
-struct ALbufferQueueItem : public VoiceBufferItem {
-    al::intrusive_ptr<ALbuffer> mBuffer;
+struct ALbufferQueueItem : VoiceBufferItem {
+    al::intrusive_ptr<al::Buffer> mBuffer;
 };
 
 

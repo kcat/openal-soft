@@ -32,8 +32,8 @@
 
 namespace al {
 struct Context;
+struct Buffer;
 } // namespace al
-struct ALbuffer;
 
 #if ALSOFT_EAX
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
@@ -54,7 +54,7 @@ struct ALeffectslot {
     f32 mGain{1.0f};
     bool mAuxSendAuto{true};
     al::intrusive_ptr<ALeffectslot> mTarget;
-    al::intrusive_ptr<ALbuffer> mBuffer;
+    al::intrusive_ptr<al::Buffer> mBuffer;
 
     struct EffectData {
         EffectSlotType Type{EffectSlotType::None};

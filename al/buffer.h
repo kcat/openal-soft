@@ -20,10 +20,6 @@
 #include "intrusive_ptr.h"
 #include "vector.h"
 
-namespace al {
-struct Context;
-} // namespace al
-
 #if ALSOFT_EAX
 enum class EaxStorage : u8 {
     Automatic,
@@ -32,8 +28,11 @@ enum class EaxStorage : u8 {
 };
 #endif // ALSOFT_EAX
 
+namespace al {
 
-struct ALbuffer : public BufferStorage {
+struct Context;
+
+struct Buffer : BufferStorage {
     ALbitfieldSOFT mAccess{0u};
 
     std::variant<al::vector<u8, 16>,
@@ -82,9 +81,11 @@ struct ALbuffer : public BufferStorage {
 #endif // ALSOFT_EAX
 };
 
+} /* namespace al */
+
 struct BufferSubList {
     u64 mFreeMask{~0_u64};
-    gsl::owner<std::array<ALbuffer,64>*> mBuffers{nullptr};
+    gsl::owner<std::array<al::Buffer,64>*> mBuffers{nullptr};
 
     BufferSubList() noexcept = default;
     BufferSubList(const BufferSubList&) = delete;

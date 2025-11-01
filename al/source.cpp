@@ -274,7 +274,7 @@ auto GetSourceSecOffset(gsl::not_null<ALsource*> Source, gsl::not_null<al::Conte
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
 
-    const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
+    const auto BufferFmt = std::invoke([Source]() -> al::Buffer*
     {
         const auto iter = std::ranges::find_if(Source->mQueue, HasBuffer);
         if(iter != Source->mQueue.end())
@@ -323,7 +323,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<ALsource*> Source, ALenum name,
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
 
-    const auto BufferFmt = std::invoke([Source]() -> ALbuffer*
+    const auto BufferFmt = std::invoke([Source]() -> al::Buffer*
     {
         const auto iter = std::ranges::find_if(Source->mQueue, HasBuffer);
         if(iter != Source->mQueue.end())
@@ -384,7 +384,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<ALsource*> Source, ALenum name,
 template<typename T>
 NOINLINE auto GetSourceLength(gsl::not_null<const ALsource*> source, ALenum name) -> T
 {
-    const auto BufferFmt = std::invoke([source]() -> ALbuffer*
+    const auto BufferFmt = std::invoke([source]() -> al::Buffer*
     {
         const auto iter = std::ranges::find_if(source->mQueue, HasBuffer);
         if(iter != source->mQueue.end())
@@ -448,7 +448,7 @@ std::optional<VoicePos> GetSampleOffset(std::deque<ALbufferQueueItem> &BufferLis
     ALenum OffsetType, double Offset)
 {
     /* Find the first valid Buffer in the Queue */
-    const auto BufferFmt = std::invoke([&BufferList]() -> ALbuffer*
+    const auto BufferFmt = std::invoke([&BufferList]() -> al::Buffer*
     {
         const auto iter = std::ranges::find_if(BufferList, HasBuffer);
         if(iter != BufferList.end())
@@ -822,8 +822,8 @@ auto LookupSource(gsl::not_null<al::Context*> context, ALuint id) -> gsl::not_nu
 }
 
 [[nodiscard]]
-inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> device,
-    std::unsigned_integral auto id) noexcept -> ALbuffer*
+auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device,
+    std::unsigned_integral auto const id) noexcept -> al::Buffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -838,10 +838,10 @@ inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> device,
 }
 
 [[nodiscard]]
-auto LookupBuffer(gsl::not_null<al::Context*> context, std::unsigned_integral auto id)
-    -> gsl::not_null<ALbuffer*>
+auto LookupBuffer(gsl::not_null<al::Context*> const context, std::unsigned_integral auto const id)
+    -> gsl::not_null<al::Buffer*>
 {
-    if(auto *buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
+    if(auto *const buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
         [[likely]] return gsl::make_not_null(buffer);
     context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
@@ -3423,7 +3423,7 @@ try {
 
     /* Check for a valid Buffer, for its frequency and format */
     auto const device = al::get_not_null(context->mALDevice);
-    auto BufferFmt = std::invoke([source]() -> ALbuffer*
+    auto BufferFmt = std::invoke([source]() -> al::Buffer*
     {
         const auto iter = std::ranges::find_if(source->mQueue, HasBuffer);
         if(iter != source->mQueue.end())

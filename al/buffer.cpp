@@ -75,7 +75,7 @@ using uint = unsigned int;
 
 namespace {
 
-using SubListAllocator = al::allocator<std::array<ALbuffer,64>>;
+using SubListAllocator = al::allocator<std::array<al::Buffer,64>>;
 
 constexpr auto AmbiLayoutFromEnum(ALenum const layout) noexcept -> std::optional<AmbiLayout>
 {
@@ -144,7 +144,7 @@ constexpr auto EnumFromEaxStorage(EaxStorage const storage) -> ALenum
 }
 
 
-auto eax_x_ram_check_availability(const al::Device &device, const ALbuffer &buffer,
+auto eax_x_ram_check_availability(const al::Device &device, al::Buffer const &buffer,
     u32 const newsize) noexcept -> bool
 {
     auto freemem = device.eax_x_ram_free_size;
@@ -156,7 +156,7 @@ auto eax_x_ram_check_availability(const al::Device &device, const ALbuffer &buff
     return freemem >= newsize;
 }
 
-void eax_x_ram_apply(al::Device &device, ALbuffer &buffer) noexcept
+void eax_x_ram_apply(al::Device &device, al::Buffer &buffer) noexcept
 {
     if(buffer.mEaxXRamIsHardware)
         return;
@@ -168,7 +168,7 @@ void eax_x_ram_apply(al::Device &device, ALbuffer &buffer) noexcept
     }
 }
 
-void eax_x_ram_clear(al::Device &al_device, ALbuffer &al_buffer) noexcept
+void eax_x_ram_clear(al::Device &al_device, al::Buffer &al_buffer) noexcept
 {
     if(al_buffer.mEaxXRamIsHardware)
         al_device.eax_x_ram_free_size += al_buffer.mOriginalSize;
@@ -209,7 +209,7 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_null<ALbuffer*>
+auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_null<al::Buffer*>
 {
     auto sublist = std::ranges::find_if(device->BufferList, &BufferSubList::mFreeMask);
     auto lidx = std::distance(device->BufferList.begin(), sublist);
@@ -227,7 +227,7 @@ auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
     return buffer;
 }
 
-void FreeBuffer(gsl::not_null<al::Device*> const device, gsl::not_null<ALbuffer*> const buffer)
+void FreeBuffer(gsl::not_null<al::Device*> const device, gsl::not_null<al::Buffer*> const buffer)
 {
 #if ALSOFT_EAX
     eax_x_ram_clear(*device, *buffer);
@@ -246,7 +246,7 @@ void FreeBuffer(gsl::not_null<al::Device*> const device, gsl::not_null<ALbuffer*
 
 [[nodiscard]]
 inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id)
-    noexcept -> ALbuffer*
+    noexcept -> al::Buffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -261,7 +261,7 @@ inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device
 
 [[nodiscard]]
 auto LookupBuffer(gsl::not_null<al::Context*> const context, u32 const id)
-    -> gsl::not_null<ALbuffer*>
+    -> gsl::not_null<al::Buffer*>
 {
     if(auto *const buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
         [[likely]] return gsl::make_not_null(buffer);
@@ -273,7 +273,7 @@ constexpr auto SanitizeAlignment(FmtType const type, u32 const align) noexcept -
 {
     if(align == 0)
     {
-        /* A default of 65/64 for backwards compatibility. */
+        /* Default to 65/64 sample frames per block for compatibility. */
         if(type == FmtIMA4)
             return 65;
         if(type == FmtMSADPCM)
@@ -299,7 +299,7 @@ constexpr auto SanitizeAlignment(FmtType const type, u32 const align) noexcept -
 
 
 /** Loads the specified data into the buffer, using the specified format. */
-void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<ALbuffer*> const ALBuf,
+void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffer*> const ALBuf,
     i32 const freq, u32 const size, FmtChannels const DstChannels, FmtType const DstType,
     std::span<std::byte const> const SrcData, ALbitfieldSOFT const access)
 {
@@ -443,7 +443,7 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<ALbuffer*
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
 void PrepareCallback(gsl::not_null<al::Context*> const context,
-    gsl::not_null<ALbuffer*> const ALBuf, i32 const freq, FmtChannels const DstChannels,
+    gsl::not_null<al::Buffer*> const ALBuf, i32 const freq, FmtChannels const DstChannels,
     FmtType const DstType, ALBUFFERCALLBACKTYPESOFT const callback, void *const userptr)
 {
     if(ALBuf->mRef.load(std::memory_order_relaxed) != 0 || ALBuf->mMappedAccess != 0)
@@ -514,7 +514,7 @@ void PrepareCallback(gsl::not_null<al::Context*> const context,
 
 /** Prepares the buffer to use caller-specified storage. */
 void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
-    gsl::not_null<ALbuffer*> const ALBuf, i32 const freq, FmtChannels const DstChannels,
+    gsl::not_null<al::Buffer*> const ALBuf, i32 const freq, FmtChannels const DstChannels,
     FmtType const DstType, void *const usrdata, u32 const usrdatalen)
 {
     if(ALBuf->mRef.load(std::memory_order_relaxed) != 0 || ALBuf->mMappedAccess != 0)
@@ -1581,7 +1581,7 @@ try {
     }
 
     /* Validate the buffers. */
-    auto buflist = std::unordered_set<gsl::not_null<ALbuffer*>>{};
+    auto buflist = std::unordered_set<gsl::not_null<al::Buffer*>>{};
     for(u32 const bufid : std::views::counted(buffers, n))
     {
         if(bufid == AL_NONE)
@@ -1739,7 +1739,8 @@ AL_API auto AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) noexcep
 }
 
 
-void ALbuffer::SetName(gsl::not_null<al::Context*> context, u32 id, std::string_view name)
+void al::Buffer::SetName(gsl::not_null<al::Context*> const context, u32 const id,
+    std::string_view const name)
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock = std::lock_guard{device->BufferLock};

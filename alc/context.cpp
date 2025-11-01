@@ -150,7 +150,7 @@ Context::~Context()
 
     auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.FreeMask)); });
+    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -303,17 +303,17 @@ void Context::applyAllUpdates()
 #if ALSOFT_EAX
 namespace {
 
-void ForEachSource(al::Context *context, std::invocable<ALsource&> auto&& func)
+void ForEachSource(al::Context *context, std::invocable<al::Source&> auto&& func)
 {
     std::ranges::for_each(context->mSourceList, [&func](SourceSubList &sublist)
     {
-        auto usemask = ~sublist.FreeMask;
+        auto usemask = ~sublist.mFreeMask;
         while(usemask)
         {
             const auto idx = as_unsigned(std::countr_zero(usemask));
             usemask ^= 1_u64 << idx;
 
-            std::invoke(func, (*sublist.Sources)[idx]);
+            std::invoke(func, (*sublist.mSources)[idx]);
         }
     });
 }
@@ -597,7 +597,7 @@ void Context::eax_dispatch_fx_slot(const EaxCall& call)
     if(fx_slot.eax_dispatch(call))
     {
         const auto srclock = std::lock_guard{mSourceLock};
-        ForEachSource(this, &ALsource::eaxMarkAsChanged);
+        ForEachSource(this, &Source::eaxMarkAsChanged);
     }
 }
 
@@ -606,7 +606,7 @@ void Context::eax_dispatch_source(const EaxCall& call)
     const auto source_id = call.get_property_al_name();
     const auto srclock = std::lock_guard{mSourceLock};
 
-    const auto source = ALsource::EaxLookupSource(gsl::make_not_null(this), source_id);
+    const auto source = Source::EaxLookupSource(gsl::make_not_null(this), source_id);
     if(source == nullptr)
         eax_fail("Source not found.");
 
@@ -703,7 +703,7 @@ void Context::eax_initialize_fx_slots()
 void Context::eax_update_sources()
 {
     const auto srclock = std::lock_guard{mSourceLock};
-    ForEachSource(this, &ALsource::eaxCommit);
+    ForEachSource(this, &Source::eaxCommit);
 }
 
 void Context::eax_set_misc(const EaxCall& call)

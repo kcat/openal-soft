@@ -1802,15 +1802,15 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         const auto num_sends = device->NumAuxSends;
         std::ranges::for_each(context->mSourceList, [num_sends](SourceSubList &sublist)
         {
-            auto usemask = ~sublist.FreeMask;
+            auto usemask = ~sublist.mFreeMask;
             while(usemask)
             {
                 const auto idx = gsl::narrow_cast<uint>(std::countr_zero(usemask));
-                auto &source = (*sublist.Sources)[idx];
+                auto &source = (*sublist.mSources)[idx];
                 usemask &= ~(1_u64 << idx);
 
-                const auto sendrange = source.Send | std::views::drop(num_sends);
-                std::ranges::fill(sendrange, ALsource::SendData{.mSlot={}, .mGain=1.0f,
+                const auto sendrange = source.mSend | std::views::drop(num_sends);
+                std::ranges::fill(sendrange, al::Source::SendData{.mSlot={}, .mGain=1.0f,
                     .mGainHF=1.0f, .mHFReference=LowPassFreqRef,
                     .mGainLF=1.0f, .mLFReference=HighPassFreqRef});
 

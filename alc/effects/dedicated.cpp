@@ -51,7 +51,7 @@ struct DedicatedState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) final;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props_,
         const EffectTarget target) final;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) final;
@@ -62,7 +62,7 @@ void DedicatedState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mCurrentGains.fill(0.0f);
 }
 
-void DedicatedState::update(const ContextBase*, const EffectSlot *slot,
+void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     mTargetGains.fill(0.0f);

@@ -21,7 +21,7 @@
 #include "vecmat.h"
 
 struct DeviceBase;
-struct EffectSlot;
+struct EffectSlotBase;
 struct EffectSlotProps;
 struct Voice;
 struct VoiceChange;
@@ -133,7 +133,7 @@ struct ContextBase {
     }
 
 
-    using EffectSlotArray = al::FlexArray<EffectSlot*>;
+    using EffectSlotArray = al::FlexArray<EffectSlotBase*>;
     /* This array is split in half. The front half is the list of activated
      * effect slots as set by the app, and the back half is the same list but
      * sorted to ensure later effect slots are fed by earlier ones.
@@ -161,9 +161,9 @@ struct ContextBase {
     std::vector<VoicePropsCluster> mVoicePropClusters;
 
 
-    auto getEffectSlot() LIFETIMEBOUND -> gsl::not_null<EffectSlot*>;
+    auto getEffectSlot() LIFETIMEBOUND -> gsl::not_null<EffectSlotBase*>;
 
-    using EffectSlotCluster = std::unique_ptr<std::array<EffectSlot,4>>;
+    using EffectSlotCluster = std::unique_ptr<std::array<EffectSlotBase,4>>;
     std::vector<EffectSlotCluster> mEffectSlotClusters;
 
     using EffectSlotPropsCluster = std::unique_ptr<std::array<EffectSlotProps,4>>;

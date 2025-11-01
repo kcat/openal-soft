@@ -240,7 +240,7 @@ struct ConvolutionState final : public EffectState {
     {&ConvolutionState::NormalMix};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -422,7 +422,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 }
 
 
-void ConvolutionState::update(const ContextBase *context, const EffectSlot *slot,
+void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     /* TODO: LFE is not mixed to output. This will require each buffer channel

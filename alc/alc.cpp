@@ -1739,7 +1739,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         auto slotcluster_rem = std::ranges::remove_if(context->mEffectSlotClusters,
             [](ContextBase::EffectSlotCluster &clusterptr) -> bool
         {
-            return std::ranges::none_of(*clusterptr, &EffectSlot::InUse);
+            return std::ranges::none_of(*clusterptr, &EffectSlotBase::InUse);
         });
         context->mEffectSlotClusters.erase(slotcluster_rem.begin(), slotcluster_rem.end());
 
@@ -1748,7 +1748,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
          */
         std::ranges::for_each(context->mEffectSlotClusters
             | std::views::transform(&ContextBase::EffectSlotCluster::operator*)
-            | std::views::join, [](EffectSlot &slot)
+            | std::views::join, [](EffectSlotBase &slot)
         {
             slot.mWetBuffer.clear();
             slot.mWetBuffer.shrink_to_fit();

@@ -9,7 +9,7 @@
 #include "context.h"
 
 
-std::unique_ptr<EffectSlotArray> EffectSlot::CreatePtrArray(size_t count)
+std::unique_ptr<EffectSlotArray> EffectSlotBase::CreatePtrArray(size_t count)
 {
     return std::unique_ptr<EffectSlotArray>{new(FamCount{count}) EffectSlotArray(count)};
 }

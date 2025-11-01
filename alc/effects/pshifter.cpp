@@ -112,7 +112,7 @@ struct PshifterState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -141,7 +141,7 @@ void PshifterState::deviceUpdate(const DeviceBase*, const BufferStorage*)
         mFft = PFFFTSetup{StftSize, PFFFT_REAL};
 }
 
-void PshifterState::update(const ContextBase*, const EffectSlot *slot,
+void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<PshifterProps>(*props_);

@@ -12,7 +12,7 @@
 struct BufferStorage;
 struct ContextBase;
 struct DeviceBase;
-struct EffectSlot;
+struct EffectSlotBase;
 struct MixParams;
 struct RealMixParams;
 
@@ -200,7 +200,7 @@ struct EffectState : public al::intrusive_ref<EffectState> {
     virtual ~EffectState() = default;
 
     virtual void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) = 0;
-    virtual void update(const ContextBase *context, const EffectSlot *slot,
+    virtual void update(const ContextBase *context, const EffectSlotBase *slot,
         const EffectProps *props, const EffectTarget target) = 0;
     virtual void process(const size_t samplesToDo,
         const std::span<const FloatBufferLine> samplesIn,

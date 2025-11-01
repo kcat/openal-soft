@@ -103,7 +103,7 @@ struct EqualizerState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -114,7 +114,7 @@ void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mChans.fill(OutParams{});
 }
 
-void EqualizerState::update(const ContextBase *context, const EffectSlot *slot,
+void EqualizerState::update(const ContextBase *context, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<EqualizerProps>(*props_);

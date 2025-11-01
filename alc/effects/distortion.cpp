@@ -59,7 +59,7 @@ struct DistortionState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -71,7 +71,7 @@ void DistortionState::deviceUpdate(const DeviceBase*, const BufferStorage*)
     mBandpass.clear();
 }
 
-void DistortionState::update(const ContextBase *context, const EffectSlot *slot,
+void DistortionState::update(const ContextBase *context, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<DistortionProps>(*props_);

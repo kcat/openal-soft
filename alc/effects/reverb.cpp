@@ -689,7 +689,7 @@ struct ReverbState final : public EffectState {
     void allocLines(const float frequency);
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -1204,7 +1204,7 @@ void ReverbPipeline::update3DPanning(const std::span<const float,3> ReflectionsP
     });
 }
 
-void ReverbState::update(const ContextBase *Context, const EffectSlot *Slot,
+void ReverbState::update(const ContextBase *Context, const EffectSlotBase *Slot,
     const EffectProps *props_, const EffectTarget target)
 {
     auto &props = std::get<ReverbProps>(*props_);

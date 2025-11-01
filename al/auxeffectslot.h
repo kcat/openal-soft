@@ -70,7 +70,7 @@ struct ALeffectslot {
 
     std::atomic<ALuint> mRef{0u};
 
-    gsl::not_null<EffectSlot*> mSlot;
+    gsl::not_null<EffectSlotBase*> mSlot;
 
     /* Self ID */
     u32 mId{};

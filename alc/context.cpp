@@ -180,10 +180,10 @@ void Context::init()
 
     auto auxslots = std::unique_ptr<EffectSlotArray>{};
     if(!mDefaultSlot)
-        auxslots = EffectSlot::CreatePtrArray(0);
+        auxslots = EffectSlotBase::CreatePtrArray(0);
     else
     {
-        auxslots = EffectSlot::CreatePtrArray(2);
+        auxslots = EffectSlotBase::CreatePtrArray(2);
         (*auxslots)[0] = mDefaultSlot->mSlot;
         (*auxslots)[1] = mDefaultSlot->mSlot;
         mDefaultSlot->mState = SlotState::Playing;

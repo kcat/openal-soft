@@ -90,7 +90,7 @@ struct ChorusState final : public EffectState {
     void calcSinusoidDelays(const size_t todo);
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage*) final;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props_,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props_,
         const EffectTarget target) final;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) final;
@@ -109,7 +109,7 @@ void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
     mGains.fill(OutGains{});
 }
 
-void ChorusState::update(const ContextBase *context, const EffectSlot *slot,
+void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target)
 {
     static constexpr auto mindelay = int{MaxResamplerEdge << gCubicTable.sTableBits};

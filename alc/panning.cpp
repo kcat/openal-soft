@@ -1383,7 +1383,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
 }
 
 
-void aluInitEffectPanning(EffectSlot *slot, al::Context *context)
+void aluInitEffectPanning(EffectSlotBase *slot, al::Context *context)
 {
     auto const device = al::get_not_null(context->mDevice);
     auto const count = AmbiChannelsFromOrder(device->mAmbiOrder);

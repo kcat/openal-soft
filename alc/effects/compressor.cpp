@@ -80,7 +80,7 @@ struct CompressorState final : public EffectState {
 
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
-    void update(const ContextBase *context, const EffectSlot *slot, const EffectProps *props,
+    void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
         const EffectTarget target) override;
     void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
         const std::span<FloatBufferLine> samplesOut) override;
@@ -102,7 +102,7 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
     mChans.fill(TargetGain{});
 }
 
-void CompressorState::update(const ContextBase*, const EffectSlot *slot,
+void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
     const EffectProps *props, const EffectTarget target)
 {
     mEnabled = std::get<CompressorProps>(*props).OnOff;

@@ -187,7 +187,7 @@ void AddActiveEffectSlots(std::span<gsl::not_null<ALeffectslot*> const> const au
     /* Insert the new effect slots into the head of the new array, followed by
      * the existing ones.
      */
-    auto newarray = EffectSlot::CreatePtrArray(newcount<<1);
+    auto newarray = EffectSlotBase::CreatePtrArray(newcount<<1);
     {
         const auto new_end = std::ranges::transform(auxslots, newarray->begin(),
             &ALeffectslot::mSlot).out;
@@ -203,7 +203,7 @@ void AddActiveEffectSlots(std::span<gsl::not_null<ALeffectslot*> const> const au
     {
         newcount -= removed;
         auto const oldarray = std::move(newarray);
-        newarray = EffectSlot::CreatePtrArray(newcount<<1);
+        newarray = EffectSlotBase::CreatePtrArray(newcount<<1);
         std::ranges::copy(*oldarray | std::views::take(newcount), newarray->begin());
     }
     std::ranges::fill(*newarray | std::views::drop(newcount), nullptr);
@@ -221,14 +221,14 @@ void RemoveActiveEffectSlots(std::span<gsl::not_null<ALeffectslot*> const> const
 
     /* Copy the existing slots, excluding those specified in auxslots. */
     auto *curarray = context->mActiveAuxSlots.load(std::memory_order_acquire);
-    auto tmparray = std::vector<EffectSlot*>{};
+    auto tmparray = std::vector<EffectSlotBase*>{};
     tmparray.reserve(curarray->size()>>1);
     std::ranges::copy_if(*curarray | std::views::take(curarray->size()>>1),
-        std::back_inserter(tmparray), [auxslots](const EffectSlot *slot) -> bool
+        std::back_inserter(tmparray), [auxslots](const EffectSlotBase *slot) -> bool
         { return std::ranges::find(auxslots, slot, &ALeffectslot::mSlot) == auxslots.end(); });
 
     /* Reallocate with the new size. */
-    auto newarray = EffectSlot::CreatePtrArray(tmparray.size()<<1);
+    auto newarray = EffectSlotBase::CreatePtrArray(tmparray.size()<<1);
     auto new_end = std::ranges::copy(tmparray, newarray->begin()).out;
     std::ranges::fill(new_end, newarray->end(), nullptr);
 

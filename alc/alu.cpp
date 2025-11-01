@@ -540,7 +540,7 @@ auto CalcContextParams(ContextBase *const ctx) -> bool
 }
 
 [[nodiscard]]
-auto CalcEffectSlotParams(EffectSlot *const slot, EffectSlot **const sorted_slots,
+auto CalcEffectSlotParams(EffectSlotBase *const slot, EffectSlotBase **const sorted_slots,
     ContextBase *const context) ->bool
 {
     auto *const props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
@@ -894,7 +894,7 @@ struct GainTriplet { f32 Base, HF, LF; };
 void CalcAmbisonicPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 const zpos,
     f32 const distance, f32 const spread, GainTriplet const &drygain,
     std::span<const GainTriplet, MaxSendCount> const wetgain,
-    std::span<EffectSlot*const, MaxSendCount> const sendslots, ContextParams const &ctxparams,
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, ContextParams const &ctxparams,
     DeviceBase *const device)
 {
     auto const samplerate = gsl::narrow_cast<f32>(device->mSampleRate);
@@ -1099,8 +1099,8 @@ auto GetPanGainSelector(VoiceProps const &props)
 /* With non-HRTF mixing, we can cheat for mono-as-stereo by adding the left and
  * right output gains and mix only one channel to output.
  */
-void MergePannedMono(Voice *const voice, std::span<EffectSlot*const, MaxSendCount> const sendslots,
-    DeviceBase *const device)
+void MergePannedMono(Voice *const voice,
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, DeviceBase *const device)
 {
     auto const drytarget0 = std::span{voice->mChans[0].mDryParams.Gains.Target};
     auto const drytarget1 = std::span{voice->mChans[1].mDryParams.Gains.Target};
@@ -1124,7 +1124,7 @@ void MergePannedMono(Voice *const voice, std::span<EffectSlot*const, MaxSendCoun
 void CalcDirectPanning(Voice *const voice, DirectMode const directmode,
     std::span<ChanPosMap const> const chans, GainTriplet const &drygain,
     std::span<GainTriplet const, MaxSendCount> const wetgain,
-    std::span<EffectSlot*const, MaxSendCount> const sendslots, DeviceBase *const device)
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, DeviceBase *const device)
 {
     auto const &props = voice->mProps;
     auto ChannelPanGain = GetPanGainSelector(props);
@@ -1179,7 +1179,7 @@ void CalcDirectPanning(Voice *const voice, DirectMode const directmode,
 void CalcHrtfPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 const zpos,
     f32 const distance, f32 const spread, std::span<ChanPosMap const> const chans,
     GainTriplet const &drygain, std::span<GainTriplet const, MaxSendCount> const wetgain,
-    std::span<EffectSlot*const, MaxSendCount> const sendslots, DeviceBase *const device)
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, DeviceBase *const device)
 {
     auto const &props = voice->mProps;
     auto ChannelPanGain = GetPanGainSelector(props);
@@ -1294,7 +1294,7 @@ void CalcHrtfPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 con
 void CalcNormalPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 const zpos,
     f32 const distance, f32 const spread, std::span<ChanPosMap const> const chans,
     GainTriplet const &drygain, std::span<GainTriplet const, MaxSendCount> const wetgain,
-    std::span<EffectSlot*const, MaxSendCount> const sendslots, DeviceBase *const device)
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, DeviceBase *const device)
 {
     auto const &props = voice->mProps;
     auto ChannelPanGain = GetPanGainSelector(props);
@@ -1450,7 +1450,7 @@ void CalcNormalPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 c
 void CalcPanningAndFilters(Voice *const voice, f32 const xpos, f32 const ypos, f32 const zpos,
     f32 const distance, f32 const spread, GainTriplet const &drygain,
     std::span<GainTriplet const, MaxSendCount> const wetgain,
-    std::span<EffectSlot*const, MaxSendCount> const sendslots, ContextParams const &ctxparams,
+    std::span<EffectSlotBase*const, MaxSendCount> const sendslots, ContextParams const &ctxparams,
     DeviceBase *const device)
 {
     static constexpr auto MonoMap = std::array{
@@ -1639,7 +1639,7 @@ void CalcNonAttnVoiceParams(Voice *const voice, ContextBase const *const context
 {
     auto const &props = voice->mProps;
     auto const device = al::get_not_null(context->mDevice);
-    auto sendslots = std::array<EffectSlot*,MaxSendCount>{};
+    auto sendslots = std::array<EffectSlotBase*,MaxSendCount>{};
 
     voice->mDirect.Buffer = device->Dry.Buffer;
     for(auto const i : std::views::iota(0_uz, device->NumAuxSends))
@@ -1696,7 +1696,7 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context)
     /* Set mixing buffers and get send parameters. */
     voice->mDirect.Buffer = device->Dry.Buffer;
 
-    auto sendslots = std::array<EffectSlot*,MaxSendCount>{};
+    auto sendslots = std::array<EffectSlotBase*,MaxSendCount>{};
     auto roomrolloff = std::array<f32, MaxSendCount>{};
     for(auto const i : std::views::iota(0_uz, numsends))
     {
@@ -2126,8 +2126,8 @@ void ProcessVoiceChanges(ContextBase *const ctx)
     ctx->mCurrentVoiceChange.store(cur, std::memory_order_release);
 }
 
-void ProcessParamUpdates(ContextBase *const ctx, std::span<EffectSlot*const> const slots,
-    std::span<EffectSlot*> const sorted_slots, std::span<Voice*const> const voices)
+void ProcessParamUpdates(ContextBase *const ctx, std::span<EffectSlotBase*const> const slots,
+    std::span<EffectSlotBase*> const sorted_slots, std::span<Voice*const> const voices)
 {
     ProcessVoiceChanges(ctx);
 
@@ -2167,7 +2167,7 @@ void ProcessContexts(DeviceBase const *const device, u32 const SamplesToDo)
         ProcessParamUpdates(ctx, auxslots, sorted_slots, voices);
 
         /* Clear auxiliary effect slot mixing buffers. */
-        std::ranges::fill(auxslots | std::views::transform(&EffectSlot::Wet)
+        std::ranges::fill(auxslots | std::views::transform(&EffectSlotBase::Wet)
             | std::views::transform(&MixParams::Buffer) | std::views::join | std::views::join,
             0.0f);
 
@@ -2191,7 +2191,7 @@ void ProcessContexts(DeviceBase const *const device, u32 const SamplesToDo)
                 /* First, copy the slots to the sorted list and partition them,
                  * so that all slots without a target slot go to the end.
                  */
-                static constexpr auto has_target = [](EffectSlot const *const slot) noexcept
+                static constexpr auto has_target = [](EffectSlotBase const *const slot) noexcept
                 { return slot->Target != nullptr; };
                 auto split_point = std::partition_copy(auxslots.rbegin(), auxslots.rend(),
                     sorted_slots.begin(), sorted_slots.rbegin(), has_target).first;
@@ -2216,13 +2216,14 @@ void ProcessContexts(DeviceBase const *const device, u32 const SamplesToDo)
                         break;
 
                     --next_target;
-                    auto not_next = [next_target](EffectSlot const *const slot) noexcept -> bool
+                    auto const not_next = [next_target](EffectSlotBase const *const slot) noexcept
+                        -> bool
                     { return slot->Target != *next_target; };
                     split_point = std::partition(sorted_slots.begin(), split_point, not_next);
                 }
             }
 
-            std::ranges::for_each(sorted_slots, [SamplesToDo](EffectSlot const *const slot)
+            std::ranges::for_each(sorted_slots, [SamplesToDo](EffectSlotBase const *const slot)
             {
                 auto *const state = slot->mEffectState.get();
                 state->process(SamplesToDo, slot->Wet.Buffer, state->mOutTarget);

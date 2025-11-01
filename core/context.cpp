@@ -129,12 +129,12 @@ void ContextBase::allocEffectSlotProps()
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
-auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlot*>
+auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlotBase*>
 {
     for(auto &clusterptr : mEffectSlotClusters)
     {
         const auto cluster = std::span{*clusterptr};
-        if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlot::InUse);
+        if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlotBase::InUse);
             iter != cluster.end())
             return gsl::make_not_null(std::to_address(iter));
     }

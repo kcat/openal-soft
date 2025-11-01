@@ -26,7 +26,7 @@
 
 struct ContextBase;
 struct DeviceBase;
-struct EffectSlot;
+struct EffectSlotBase;
 enum class DistanceModel : u8;
 
 inline constexpr auto MaxSendCount = 6_uz;
@@ -148,7 +148,7 @@ struct VoiceProps {
     DirectData Direct;
 
     struct SendData {
-        EffectSlot *Slot;
+        EffectSlotBase *Slot;
         f32 Gain;
         f32 GainHF;
         f32 HFReference;

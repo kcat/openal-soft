@@ -412,7 +412,12 @@ struct EarlyReflections {
 
     void updateLines(f32 density_mult, f32 diffusion, f32 decayTime, f32 frequency);
 
-    void clear() { std::ranges::for_each(Gains, &OutGains::clear); }
+    void clear()
+    {
+        std::ranges::fill(Allpass.Delay.mLine, 0.0f);
+        std::ranges::fill(Delay.mLine, 0.0f);
+        std::ranges::for_each(Gains, &OutGains::clear);
+    }
 };
 
 
@@ -471,6 +476,8 @@ struct LateReverb {
 
     void clear()
     {
+        std::ranges::fill(VecAp.Delay.mLine, 0.0f);
+        std::ranges::fill(Delay.mLine, 0.0f);
         std::ranges::for_each(T60, &T60Filter::clear);
         Mod.clear();
         std::ranges::for_each(Gains, &OutGains::clear);
@@ -526,6 +533,7 @@ struct ReverbPipeline {
 
     void clear() noexcept
     {
+        std::ranges::fill(mLateDelayIn.mLine, 0.0f);
         std::ranges::for_each(mFilter, &FilterPair::clear);
         mEarlyDelayTap = {};
         mEarlyDelayCoeff = {};
@@ -1820,10 +1828,6 @@ void ReverbState::process(usize const samplesToDo,
     {
         if(mPipelineState == Cleanup)
         {
-            const auto numSamples = mSampleBuffer.size()/2_uz;
-            const auto skipSamples = numSamples * !mCurrentPipeline;
-            std::ranges::fill(std::span{mSampleBuffer}.subspan(skipSamples, numSamples), 0.0f);
-
             oldpipeline.clear();
             mPipelineState = Normal;
         }

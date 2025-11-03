@@ -140,7 +140,7 @@ namespace {
 using ModulatorCommitter = EaxCommitter<EaxModulatorCommitter>;
 
 struct FrequencyValidator {
-    void operator()(float flFrequency) const
+    void operator()(float const flFrequency) const
     {
         eax_validate_range<ModulatorCommitter::Exception>(
             "Frequency",
@@ -151,7 +151,7 @@ struct FrequencyValidator {
 }; // FrequencyValidator
 
 struct HighPassCutOffValidator {
-    void operator()(float flHighPassCutOff) const
+    void operator()(float const flHighPassCutOff) const
     {
         eax_validate_range<ModulatorCommitter::Exception>(
             "High-Pass Cutoff",
@@ -162,7 +162,7 @@ struct HighPassCutOffValidator {
 }; // HighPassCutOffValidator
 
 struct WaveformValidator {
-    void operator()(unsigned long ulWaveform) const
+    void operator()(eax_ulong const ulWaveform) const
     {
         eax_validate_range<ModulatorCommitter::Exception>(
             "Waveform",
@@ -199,7 +199,7 @@ auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) cons
     if(auto *cur = std::get_if<EAXRINGMODULATORPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
-    static constexpr auto get_waveform = [](unsigned long form)
+    static constexpr auto get_waveform = [](eax_ulong const form)
     {
         switch(form)
         {

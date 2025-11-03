@@ -461,7 +461,7 @@ public:
 };
 
 struct EnvironmentValidator1 {
-    void operator()(unsigned long ulEnvironment) const
+    void operator()(eax_ulong const ulEnvironment) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Environment",
@@ -472,7 +472,7 @@ struct EnvironmentValidator1 {
 }; // EnvironmentValidator1
 
 struct VolumeValidator {
-    void operator()(float volume) const
+    void operator()(float const volume) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Volume",
@@ -483,7 +483,7 @@ struct VolumeValidator {
 }; // VolumeValidator
 
 struct DecayTimeValidator {
-    void operator()(float flDecayTime) const
+    void operator()(float const flDecayTime) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Decay Time",
@@ -494,7 +494,7 @@ struct DecayTimeValidator {
 }; // DecayTimeValidator
 
 struct DampingValidator {
-    void operator()(float damping) const
+    void operator()(float const damping) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Damping",
@@ -515,7 +515,7 @@ struct AllValidator1 {
 }; // AllValidator1
 
 struct RoomValidator {
-    void operator()(long lRoom) const
+    void operator()(eax_long const lRoom) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Room",
@@ -526,7 +526,7 @@ struct RoomValidator {
 }; // RoomValidator
 
 struct RoomHFValidator {
-    void operator()(long lRoomHF) const
+    void operator()(eax_long const lRoomHF) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Room HF",
@@ -537,7 +537,7 @@ struct RoomHFValidator {
 }; // RoomHFValidator
 
 struct RoomRolloffFactorValidator {
-    void operator()(float flRoomRolloffFactor) const
+    void operator()(float const flRoomRolloffFactor) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Room Rolloff Factor",
@@ -548,7 +548,7 @@ struct RoomRolloffFactorValidator {
 }; // RoomRolloffFactorValidator
 
 struct DecayHFRatioValidator {
-    void operator()(float flDecayHFRatio) const
+    void operator()(float const flDecayHFRatio) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Decay HF Ratio",
@@ -559,7 +559,7 @@ struct DecayHFRatioValidator {
 }; // DecayHFRatioValidator
 
 struct ReflectionsValidator {
-    void operator()(long lReflections) const
+    void operator()(eax_long const lReflections) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Reflections",
@@ -570,7 +570,7 @@ struct ReflectionsValidator {
 }; // ReflectionsValidator
 
 struct ReflectionsDelayValidator {
-    void operator()(float flReflectionsDelay) const
+    void operator()(float const flReflectionsDelay) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Reflections Delay",
@@ -581,7 +581,7 @@ struct ReflectionsDelayValidator {
 }; // ReflectionsDelayValidator
 
 struct ReverbValidator {
-    void operator()(long lReverb) const
+    void operator()(eax_long const lReverb) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Reverb",
@@ -592,7 +592,7 @@ struct ReverbValidator {
 }; // ReverbValidator
 
 struct ReverbDelayValidator {
-    void operator()(float flReverbDelay) const
+    void operator()(float const flReverbDelay) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Reverb Delay",
@@ -603,7 +603,7 @@ struct ReverbDelayValidator {
 }; // ReverbDelayValidator
 
 struct EnvironmentSizeValidator {
-    void operator()(float flEnvironmentSize) const
+    void operator()(float const flEnvironmentSize) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Environment Size",
@@ -614,7 +614,7 @@ struct EnvironmentSizeValidator {
 }; // EnvironmentSizeValidator
 
 struct EnvironmentDiffusionValidator {
-    void operator()(float flEnvironmentDiffusion) const
+    void operator()(float const flEnvironmentDiffusion) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Environment Diffusion",
@@ -625,7 +625,7 @@ struct EnvironmentDiffusionValidator {
 }; // EnvironmentDiffusionValidator
 
 struct AirAbsorptionHFValidator {
-    void operator()(float flAirAbsorptionHF) const
+    void operator()(float const flAirAbsorptionHF) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Air Absorbtion HF",
@@ -636,12 +636,12 @@ struct AirAbsorptionHFValidator {
 }; // AirAbsorptionHFValidator
 
 struct FlagsValidator2 {
-    void operator()(unsigned long ulFlags) const
+    void operator()(eax_ulong const ulFlags) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Flags",
             ulFlags,
-            0UL,
+            0_eax_ulong,
             ~EAX2LISTENERFLAGS_RESERVED);
     }
 }; // FlagsValidator2
@@ -667,7 +667,7 @@ struct AllValidator2 {
 }; // AllValidator2
 
 struct EnvironmentValidator3 {
-    void operator()(unsigned long ulEnvironment) const
+    void operator()(eax_ulong const ulEnvironment) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Environment",
@@ -678,7 +678,7 @@ struct EnvironmentValidator3 {
 }; // EnvironmentValidator1
 
 struct RoomLFValidator {
-    void operator()(long lRoomLF) const
+    void operator()(eax_long const lRoomLF) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Room LF",
@@ -689,7 +689,7 @@ struct RoomLFValidator {
 }; // RoomLFValidator
 
 struct DecayLFRatioValidator {
-    void operator()(float flDecayLFRatio) const
+    void operator()(float const flDecayLFRatio) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Decay LF Ratio",
@@ -705,7 +705,7 @@ struct VectorValidator {
 }; // VectorValidator
 
 struct EchoTimeValidator {
-    void operator()(float flEchoTime) const
+    void operator()(float const flEchoTime) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Echo Time",
@@ -716,7 +716,7 @@ struct EchoTimeValidator {
 }; // EchoTimeValidator
 
 struct EchoDepthValidator {
-    void operator()(float flEchoDepth) const
+    void operator()(float const flEchoDepth) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Echo Depth",
@@ -727,7 +727,7 @@ struct EchoDepthValidator {
 }; // EchoDepthValidator
 
 struct ModulationTimeValidator {
-    void operator()(float flModulationTime) const
+    void operator()(float const flModulationTime) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Modulation Time",
@@ -738,7 +738,7 @@ struct ModulationTimeValidator {
 }; // ModulationTimeValidator
 
 struct ModulationDepthValidator {
-    void operator()(float flModulationDepth) const
+    void operator()(float const flModulationDepth) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Modulation Depth",
@@ -749,7 +749,7 @@ struct ModulationDepthValidator {
 }; // ModulationDepthValidator
 
 struct HFReferenceValidator {
-    void operator()(float flHFReference) const
+    void operator()(float const flHFReference) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "HF Reference",
@@ -760,7 +760,7 @@ struct HFReferenceValidator {
 }; // HFReferenceValidator
 
 struct LFReferenceValidator {
-    void operator()(float flLFReference) const
+    void operator()(float const flLFReference) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "LF Reference",
@@ -771,12 +771,12 @@ struct LFReferenceValidator {
 }; // LFReferenceValidator
 
 struct FlagsValidator3 {
-    void operator()(unsigned long ulFlags) const
+    void operator()(eax_ulong const ulFlags) const
     {
         eax_validate_range<EaxReverbEffectException>(
             "Flags",
             ulFlags,
-            0UL,
+            0_eax_ulong,
             ~EAXREVERBFLAGS_RESERVED);
     }
 }; // FlagsValidator3
@@ -812,14 +812,14 @@ struct AllValidator3 {
 }; // AllValidator3
 
 struct EnvironmentDeferrer2 {
-    void operator()(EAX20LISTENERPROPERTIES& props, unsigned long dwEnvironment) const
+    void operator()(EAX20LISTENERPROPERTIES& props, eax_ulong const dwEnvironment) const
     {
         props = EAX2REVERB_PRESETS[dwEnvironment];
     }
 }; // EnvironmentDeferrer2
 
 struct EnvironmentSizeDeferrer2 {
-    void operator()(EAX20LISTENERPROPERTIES& props, float flEnvironmentSize) const
+    void operator()(EAX20LISTENERPROPERTIES& props, float const flEnvironmentSize) const
     {
         if (props.flEnvironmentSize == flEnvironmentSize)
         {
@@ -841,7 +841,7 @@ struct EnvironmentSizeDeferrer2 {
             (props.dwFlags & EAX2LISTENERFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
             props.lReflections = std::clamp(
-                props.lReflections - gsl::narrow_cast<long>(gain_to_level_mb(scale)),
+                props.lReflections - gsl::narrow_cast<eax_long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
         }
@@ -859,7 +859,7 @@ struct EnvironmentSizeDeferrer2 {
             const auto log_scalar = ((props.dwFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
 
             props.lReverb = std::clamp(
-                props.lReverb - gsl::narrow_cast<long>(std::log10(scale) * log_scalar),
+                props.lReverb - gsl::narrow_cast<eax_long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
         }
@@ -875,7 +875,7 @@ struct EnvironmentSizeDeferrer2 {
 }; // EnvironmentSizeDeferrer2
 
 struct EnvironmentDeferrer3 {
-    void operator()(EAXREVERBPROPERTIES& props, unsigned long ulEnvironment) const
+    void operator()(EAXREVERBPROPERTIES& props, eax_ulong const ulEnvironment) const
     {
         if (ulEnvironment == EAX_ENVIRONMENT_UNDEFINED)
         {
@@ -888,7 +888,7 @@ struct EnvironmentDeferrer3 {
 }; // EnvironmentDeferrer3
 
 struct EnvironmentSizeDeferrer3 {
-    void operator()(EAXREVERBPROPERTIES& props, float flEnvironmentSize) const
+    void operator()(EAXREVERBPROPERTIES& props, float const flEnvironmentSize) const
     {
         if (props.flEnvironmentSize == flEnvironmentSize)
         {
@@ -911,7 +911,7 @@ struct EnvironmentSizeDeferrer3 {
             (props.ulFlags & EAXREVERBFLAGS_REFLECTIONSDELAYSCALE) != 0)
         {
             props.lReflections = std::clamp(
-                props.lReflections - gsl::narrow_cast<long>(gain_to_level_mb(scale)),
+                props.lReflections - gsl::narrow_cast<eax_long>(gain_to_level_mb(scale)),
                 EAXREVERB_MINREFLECTIONS,
                 EAXREVERB_MAXREFLECTIONS);
         }
@@ -928,7 +928,7 @@ struct EnvironmentSizeDeferrer3 {
         {
             const auto log_scalar = ((props.ulFlags & EAXREVERBFLAGS_DECAYTIMESCALE) != 0) ? 2'000.0F : 3'000.0F;
             props.lReverb = std::clamp(
-                props.lReverb - gsl::narrow_cast<long>(std::log10(scale) * log_scalar),
+                props.lReverb - gsl::narrow_cast<eax_long>(std::log10(scale) * log_scalar),
                 EAXREVERB_MINREVERB,
                 EAXREVERB_MAXREVERB);
         }

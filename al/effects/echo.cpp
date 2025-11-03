@@ -107,7 +107,7 @@ namespace {
 using EchoCommitter = EaxCommitter<EaxEchoCommitter>;
 
 struct DelayValidator {
-    void operator()(float flDelay) const
+    void operator()(f32 const flDelay) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Delay",
@@ -118,7 +118,7 @@ struct DelayValidator {
 }; // DelayValidator
 
 struct LrDelayValidator {
-    void operator()(float flLRDelay) const
+    void operator()(f32 const flLRDelay) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "LR Delay",
@@ -129,7 +129,7 @@ struct LrDelayValidator {
 }; // LrDelayValidator
 
 struct DampingValidator {
-    void operator()(float flDamping) const
+    void operator()(f32 const flDamping) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Damping",
@@ -140,7 +140,7 @@ struct DampingValidator {
 }; // DampingValidator
 
 struct FeedbackValidator {
-    void operator()(float flFeedback) const
+    void operator()(f32 const flFeedback) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Feedback",
@@ -151,7 +151,7 @@ struct FeedbackValidator {
 }; // FeedbackValidator
 
 struct SpreadValidator {
-    void operator()(float flSpread) const
+    void operator()(f32 const flSpread) const
     {
         eax_validate_range<EchoCommitter::Exception>(
             "Spread",

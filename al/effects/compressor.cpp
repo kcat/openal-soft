@@ -71,7 +71,7 @@ namespace {
 using CompressorCommitter = EaxCommitter<EaxCompressorCommitter>;
 
 struct OnOffValidator {
-    void operator()(unsigned long ulOnOff) const
+    void operator()(eax_ulong const ulOnOff) const
     {
         eax_validate_range<CompressorCommitter::Exception>(
             "On-Off",

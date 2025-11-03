@@ -145,7 +145,7 @@ namespace {
 using EqualizerCommitter = EaxCommitter<EaxEqualizerCommitter>;
 
 struct LowGainValidator {
-    void operator()(long lLowGain) const
+    void operator()(eax_long const lLowGain) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Low Gain",
@@ -156,7 +156,7 @@ struct LowGainValidator {
 }; // LowGainValidator
 
 struct LowCutOffValidator {
-    void operator()(float flLowCutOff) const
+    void operator()(float const flLowCutOff) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Low Cutoff",
@@ -167,7 +167,7 @@ struct LowCutOffValidator {
 }; // LowCutOffValidator
 
 struct Mid1GainValidator {
-    void operator()(long lMid1Gain) const
+    void operator()(eax_long const lMid1Gain) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid1 Gain",
@@ -178,7 +178,7 @@ struct Mid1GainValidator {
 }; // Mid1GainValidator
 
 struct Mid1CenterValidator {
-    void operator()(float flMid1Center) const
+    void operator()(float const flMid1Center) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid1 Center",
@@ -189,7 +189,7 @@ struct Mid1CenterValidator {
 }; // Mid1CenterValidator
 
 struct Mid1WidthValidator {
-    void operator()(float flMid1Width) const
+    void operator()(float const flMid1Width) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid1 Width",
@@ -200,7 +200,7 @@ struct Mid1WidthValidator {
 }; // Mid1WidthValidator
 
 struct Mid2GainValidator {
-    void operator()(long lMid2Gain) const
+    void operator()(eax_long const lMid2Gain) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid2 Gain",
@@ -211,7 +211,7 @@ struct Mid2GainValidator {
 }; // Mid2GainValidator
 
 struct Mid2CenterValidator {
-    void operator()(float flMid2Center) const
+    void operator()(float const flMid2Center) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid2 Center",
@@ -222,7 +222,7 @@ struct Mid2CenterValidator {
 }; // Mid2CenterValidator
 
 struct Mid2WidthValidator {
-    void operator()(float flMid2Width) const
+    void operator()(float const flMid2Width) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "Mid2 Width",
@@ -233,7 +233,7 @@ struct Mid2WidthValidator {
 }; // Mid2WidthValidator
 
 struct HighGainValidator {
-    void operator()(long lHighGain) const
+    void operator()(eax_long const lHighGain) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "High Gain",
@@ -244,7 +244,7 @@ struct HighGainValidator {
 }; // HighGainValidator
 
 struct HighCutOffValidator {
-    void operator()(float flHighCutOff) const
+    void operator()(float const flHighCutOff) const
     {
         eax_validate_range<EqualizerCommitter::Exception>(
             "High Cutoff",

@@ -139,7 +139,7 @@ namespace {
 using FrequencyShifterCommitter = EaxCommitter<EaxFrequencyShifterCommitter>;
 
 struct FrequencyValidator {
-    void operator()(float flFrequency) const
+    void operator()(float const flFrequency) const
     {
         eax_validate_range<FrequencyShifterCommitter::Exception>(
             "Frequency",
@@ -150,7 +150,7 @@ struct FrequencyValidator {
 }; // FrequencyValidator
 
 struct LeftDirectionValidator {
-    void operator()(unsigned long ulLeftDirection) const
+    void operator()(eax_ulong const ulLeftDirection) const
     {
         eax_validate_range<FrequencyShifterCommitter::Exception>(
             "Left Direction",
@@ -161,7 +161,7 @@ struct LeftDirectionValidator {
 }; // LeftDirectionValidator
 
 struct RightDirectionValidator {
-    void operator()(unsigned long ulRightDirection) const
+    void operator()(eax_ulong const ulRightDirection) const
     {
         eax_validate_range<FrequencyShifterCommitter::Exception>(
             "Right Direction",
@@ -198,7 +198,7 @@ auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &p
     if(auto *cur = std::get_if<EAXFREQUENCYSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
-    static constexpr auto get_direction = [](unsigned long dir) noexcept
+    static constexpr auto get_direction = [](eax_ulong const dir) noexcept
     {
         switch(dir)
         {

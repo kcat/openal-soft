@@ -483,7 +483,7 @@ void Context::eax_ensure_compatibility() const
     eax_ensure_enough_aux_sends();
 }
 
-auto Context::eax_detect_speaker_configuration() const -> unsigned long
+auto Context::eax_detect_speaker_configuration() const -> eax_ulong
 {
 #define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
 

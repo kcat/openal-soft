@@ -122,7 +122,7 @@ struct ReleaseTimeValidator {
 }; // ReleaseTimeValidator
 
 struct ResonanceValidator {
-    void operator()(long lResonance) const
+    void operator()(eax_long const lResonance) const
     {
         eax_validate_range<AutowahCommitter::Exception>(
             "Resonance",
@@ -133,7 +133,7 @@ struct ResonanceValidator {
 }; // ResonanceValidator
 
 struct PeakLevelValidator {
-    void operator()(long lPeakLevel) const
+    void operator()(eax_long const lPeakLevel) const
     {
         eax_validate_range<AutowahCommitter::Exception>(
             "Peak Level",

@@ -3854,7 +3854,7 @@ void al::Source::eax5_set_speaker_levels_defaults(EaxSpeakerLevels& speaker_leve
     for(auto const i : std::views::iota(0_uz, usize{eax_max_speakers}))
     {
         auto& speaker_level = speaker_levels[i];
-        speaker_level.lSpeakerID = gsl::narrow_cast<long>(EAXSPEAKER_FRONT_LEFT + i);
+        speaker_level.lSpeakerID = gsl::narrow_cast<eax_long>(EAXSPEAKER_FRONT_LEFT + i);
         speaker_level.lLevel = EAXSOURCE_DEFAULTSPEAKERLEVEL;
     }
 }
@@ -3894,8 +3894,9 @@ void al::Source::eax1_translate(const EAXBUFFER_REVERBPROPERTIES& src, Eax5Props
     else
     {
         dst.source.ulFlags &= ~EAXSOURCEFLAGS_ROOMAUTO;
-        dst.sends[0].mSend.lSend = std::clamp(gsl::narrow_cast<long>(gain_to_level_mb(src.fMix)),
-            EAXSOURCE_MINSEND, EAXSOURCE_MAXSEND);
+        dst.sends[0].mSend.lSend = std::clamp(
+            gsl::narrow_cast<eax_long>(gain_to_level_mb(src.fMix)), EAXSOURCE_MINSEND,
+            EAXSOURCE_MAXSEND);
     }
 }
 
@@ -3989,8 +3990,8 @@ void al::Source::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
     eax5_set_speaker_levels_defaults(dst.speaker_levels);
 }
 
-auto al::Source::eax_calculate_dst_occlusion_mb(long const src_occlusion_mb, f32 const path_ratio,
-    f32 const lf_ratio) noexcept -> f32
+auto al::Source::eax_calculate_dst_occlusion_mb(eax_long const src_occlusion_mb,
+    f32 const path_ratio, f32 const lf_ratio) noexcept -> f32
 {
     const auto ratio_1 = path_ratio + lf_ratio - 1.0f;
     const auto ratio_2 = path_ratio * lf_ratio;

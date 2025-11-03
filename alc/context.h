@@ -395,7 +395,7 @@ private:
     };
 
     struct Eax5EaxVersionValidator {
-        void operator()(unsigned long ulEAXVersion) const
+        void operator()(eax_ulong const ulEAXVersion) const
         {
             eax_validate_range<ContextException>(
                 "EAX version",
@@ -406,7 +406,7 @@ private:
     };
 
     struct Eax5MaxActiveSendsValidator {
-        void operator()(unsigned long ulMaxActiveSends) const
+        void operator()(eax_ulong const ulMaxActiveSends) const
         {
             eax_validate_range<ContextException>(
                 "Max Active Sends",
@@ -425,7 +425,7 @@ private:
     };
 
     struct Eax5SpeakerConfigValidator {
-        void operator()(unsigned long ulSpeakerConfig) const
+        void operator()(eax_ulong const ulSpeakerConfig) const
         {
             eax_validate_range<ContextException>(
                 "Speaker Config",
@@ -438,8 +438,8 @@ private:
     bool mEaxIsInitialized{};
     bool mEaxIsTried{};
 
-    long mEaxLastError{};
-    unsigned long mEaxSpeakerConfig{};
+    eax_long mEaxLastError{};
+    eax_ulong mEaxSpeakerConfig{};
 
     EaxFxSlotIndex mEaxPrimaryFxSlotIndex{};
     EaxFxSlots mEaxFxSlots{};
@@ -501,13 +501,13 @@ private:
     void eax_initialize_extensions();
     void eax_initialize();
 
-    bool eax_has_no_default_effect_slot() const noexcept;
+    auto eax_has_no_default_effect_slot() const noexcept -> bool;
     void eax_ensure_no_default_effect_slot() const;
-    bool eax_has_enough_aux_sends() const noexcept;
+    auto eax_has_enough_aux_sends() const noexcept -> bool;
     void eax_ensure_enough_aux_sends() const;
     void eax_ensure_compatibility() const;
 
-    unsigned long eax_detect_speaker_configuration() const;
+    auto eax_detect_speaker_configuration() const -> eax_ulong;
     void eax_update_speaker_configuration();
 
     void eax_set_last_error_defaults() noexcept;

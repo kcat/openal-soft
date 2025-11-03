@@ -1089,7 +1089,7 @@ const GUID& al::EffectSlot::eax_get_eax_default_effect_guid() const noexcept
     }
 }
 
-long al::EffectSlot::eax_get_eax_default_lock() const noexcept
+auto al::EffectSlot::eax_get_eax_default_lock() const noexcept -> eax_long
 {
     return eax4_fx_slot_is_legacy() ? EAXFXSLOT_LOCKED : EAXFXSLOT_UNLOCKED;
 }

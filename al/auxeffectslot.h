@@ -162,7 +162,7 @@ private:
     };
 
     struct Eax4VolumeValidator {
-        void operator()(long lVolume) const
+        void operator()(eax_long const lVolume) const
         {
             EaxRangeValidator{}(
                 "Volume",
@@ -173,7 +173,7 @@ private:
     };
 
     struct Eax4LockValidator {
-        void operator()(long lLock) const
+        void operator()(eax_long const lLock) const
         {
             EaxRangeValidator{}(
                 "Lock",
@@ -184,12 +184,12 @@ private:
     };
 
     struct Eax4FlagsValidator {
-        void operator()(unsigned long ulFlags) const
+        void operator()(eax_ulong const ulFlags) const
         {
             EaxRangeValidator{}(
                 "Flags",
                 ulFlags,
-                0UL,
+                0_eax_ulong,
                 ~EAX40FXSLOTFLAGS_RESERVED);
         }
     };
@@ -205,18 +205,18 @@ private:
     };
 
     struct Eax5FlagsValidator {
-        void operator()(unsigned long ulFlags) const
+        void operator()(eax_ulong const ulFlags) const
         {
             EaxRangeValidator{}(
                 "Flags",
                 ulFlags,
-                0UL,
+                0_eax_ulong,
                 ~EAX50FXSLOTFLAGS_RESERVED);
         }
     };
 
     struct Eax5OcclusionValidator {
-        void operator()(long lOcclusion) const
+        void operator()(eax_long const lOcclusion) const
         {
             EaxRangeValidator{}(
                 "Occlusion",
@@ -227,7 +227,7 @@ private:
     };
 
     struct Eax5OcclusionLfRatioValidator {
-        void operator()(float flOcclusionLFRatio) const
+        void operator()(float const flOcclusionLFRatio) const
         {
             EaxRangeValidator{}(
                 "Occlusion LF Ratio",
@@ -298,7 +298,7 @@ private:
 
     [[nodiscard]] static auto eax_get_efx_effect_type(const GUID& guid) -> ALenum;
     [[nodiscard]] auto eax_get_eax_default_effect_guid() const noexcept -> const GUID&;
-    [[nodiscard]] auto eax_get_eax_default_lock() const noexcept -> long;
+    [[nodiscard]] auto eax_get_eax_default_lock() const noexcept -> eax_long;
 
     void eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) const noexcept;
     void eax5_fx_slot_set_defaults(EAX50FXSLOTPROPERTIES& props) const noexcept;

@@ -294,7 +294,7 @@ struct EaxChorusTraits {
     static constexpr auto eax_default_feedback() { return EAXCHORUS_DEFAULTFEEDBACK; }
     static constexpr auto eax_default_delay() { return EAXCHORUS_DEFAULTDELAY; }
 
-    static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
+    static constexpr auto eax_waveform(eax_ulong const type) -> ChorusWaveform
     {
         if(type == EAX_CHORUS_SINUSOID) return ChorusWaveform::Sinusoid;
         if(type == EAX_CHORUS_TRIANGLE) return ChorusWaveform::Triangle;
@@ -336,7 +336,7 @@ struct EaxFlangerTraits {
     static constexpr auto eax_default_feedback() { return EAXFLANGER_DEFAULTFEEDBACK; }
     static constexpr auto eax_default_delay() { return EAXFLANGER_DEFAULTDELAY; }
 
-    static constexpr auto eax_waveform(unsigned long type) -> ChorusWaveform
+    static constexpr auto eax_waveform(eax_ulong const type) -> ChorusWaveform
     {
         if(type == EAX_FLANGER_SINUSOID) return ChorusWaveform::Sinusoid;
         if(type == EAX_FLANGER_TRIANGLE) return ChorusWaveform::Triangle;
@@ -352,7 +352,7 @@ struct ChorusFlangerEffect {
     using Exception = Committer::Exception;
 
     struct WaveformValidator {
-        void operator()(unsigned long ulWaveform) const
+        void operator()(eax_ulong const ulWaveform) const
         {
             eax_validate_range<Exception>(
                 "Waveform",
@@ -363,7 +363,7 @@ struct ChorusFlangerEffect {
     }; // WaveformValidator
 
     struct PhaseValidator {
-        void operator()(long lPhase) const
+        void operator()(eax_long const lPhase) const
         {
             eax_validate_range<Exception>(
                 "Phase",
@@ -374,7 +374,7 @@ struct ChorusFlangerEffect {
     }; // PhaseValidator
 
     struct RateValidator {
-        void operator()(float flRate) const
+        void operator()(float const flRate) const
         {
             eax_validate_range<Exception>(
                 "Rate",
@@ -385,7 +385,7 @@ struct ChorusFlangerEffect {
     }; // RateValidator
 
     struct DepthValidator {
-        void operator()(float flDepth) const
+        void operator()(float const flDepth) const
         {
             eax_validate_range<Exception>(
                 "Depth",
@@ -396,7 +396,7 @@ struct ChorusFlangerEffect {
     }; // DepthValidator
 
     struct FeedbackValidator {
-        void operator()(float flFeedback) const
+        void operator()(float const flFeedback) const
         {
             eax_validate_range<Exception>(
                 "Feedback",
@@ -407,7 +407,7 @@ struct ChorusFlangerEffect {
     }; // FeedbackValidator
 
     struct DelayValidator {
-        void operator()(float flDelay) const
+        void operator()(float const flDelay) const
         {
             eax_validate_range<Exception>(
                 "Delay",
@@ -429,7 +429,6 @@ struct ChorusFlangerEffect {
         }
     }; // AllValidator
 
-public:
     static void SetDefaults(EaxEffectProps &props)
     {
         props = EaxProps{

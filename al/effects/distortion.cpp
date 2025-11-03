@@ -107,7 +107,7 @@ namespace {
 using DistortionCommitter = EaxCommitter<EaxDistortionCommitter>;
 
 struct EdgeValidator {
-    void operator()(float flEdge) const
+    void operator()(float const flEdge) const
     {
         eax_validate_range<DistortionCommitter::Exception>(
             "Edge",
@@ -118,7 +118,7 @@ struct EdgeValidator {
 }; // EdgeValidator
 
 struct GainValidator {
-    void operator()(long lGain) const
+    void operator()(eax_long const lGain) const
     {
         eax_validate_range<DistortionCommitter::Exception>(
             "Gain",
@@ -129,7 +129,7 @@ struct GainValidator {
 }; // GainValidator
 
 struct LowPassCutOffValidator {
-    void operator()(float flLowPassCutOff) const
+    void operator()(float const flLowPassCutOff) const
     {
         eax_validate_range<DistortionCommitter::Exception>(
             "Low-pass Cut-off",
@@ -140,7 +140,7 @@ struct LowPassCutOffValidator {
 }; // LowPassCutOffValidator
 
 struct EqCenterValidator {
-    void operator()(float flEQCenter) const
+    void operator()(float const flEQCenter) const
     {
         eax_validate_range<DistortionCommitter::Exception>(
             "EQ Center",
@@ -151,7 +151,7 @@ struct EqCenterValidator {
 }; // EqCenterValidator
 
 struct EqBandwidthValidator {
-    void operator()(float flEQBandwidth) const
+    void operator()(float const flEQBandwidth) const
     {
         eax_validate_range<DistortionCommitter::Exception>(
             "EQ Bandwidth",

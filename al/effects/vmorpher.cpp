@@ -242,7 +242,7 @@ namespace {
 using VocalMorpherCommitter = EaxCommitter<EaxVocalMorpherCommitter>;
 
 struct PhonemeAValidator {
-    void operator()(unsigned long ulPhonemeA) const
+    void operator()(eax_ulong const ulPhonemeA) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Phoneme A",
@@ -253,7 +253,7 @@ struct PhonemeAValidator {
 }; // PhonemeAValidator
 
 struct PhonemeACoarseTuningValidator {
-    void operator()(long lPhonemeACoarseTuning) const
+    void operator()(eax_long const lPhonemeACoarseTuning) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Phoneme A Coarse Tuning",
@@ -264,7 +264,7 @@ struct PhonemeACoarseTuningValidator {
 }; // PhonemeACoarseTuningValidator
 
 struct PhonemeBValidator {
-    void operator()(unsigned long ulPhonemeB) const
+    void operator()(eax_ulong const ulPhonemeB) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Phoneme B",
@@ -275,7 +275,7 @@ struct PhonemeBValidator {
 }; // PhonemeBValidator
 
 struct PhonemeBCoarseTuningValidator {
-    void operator()(long lPhonemeBCoarseTuning) const
+    void operator()(eax_long const lPhonemeBCoarseTuning) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Phoneme B Coarse Tuning",
@@ -286,7 +286,7 @@ struct PhonemeBCoarseTuningValidator {
 }; // PhonemeBCoarseTuningValidator
 
 struct WaveformValidator {
-    void operator()(unsigned long ulWaveform) const
+    void operator()(eax_ulong const ulWaveform) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Waveform",
@@ -297,7 +297,7 @@ struct WaveformValidator {
 }; // WaveformValidator
 
 struct RateValidator {
-    void operator()(float flRate) const
+    void operator()(float const flRate) const
     {
         eax_validate_range<VocalMorpherCommitter::Exception>(
             "Rate",
@@ -337,7 +337,7 @@ auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) co
     if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
         return false;
 
-    static constexpr auto get_phoneme = [](unsigned long phoneme) noexcept
+    static constexpr auto get_phoneme = [](eax_ulong const phoneme) noexcept
     {
 #define HANDLE_PHENOME(x) case EAX_VOCALMORPHER_PHONEME_##x: return VMorpherPhenome::x
         switch(phoneme)
@@ -377,7 +377,7 @@ auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) co
         return VMorpherPhenome::A;
 #undef HANDLE_PHENOME
     };
-    static constexpr auto get_waveform = [](unsigned long form) noexcept
+    static constexpr auto get_waveform = [](eax_ulong const form) noexcept
     {
         switch(form)
         {

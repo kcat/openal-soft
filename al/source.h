@@ -275,7 +275,7 @@ private:
     };
 
     struct Eax2SourceDirectValidator {
-        void operator()(long lDirect) const
+        void operator()(eax_long const lDirect) const
         {
             eax_validate_range<Exception>(
                 "Direct",
@@ -286,7 +286,7 @@ private:
     };
 
     struct Eax2SourceDirectHfValidator {
-        void operator()(long lDirectHF) const
+        void operator()(eax_long const lDirectHF) const
         {
             eax_validate_range<Exception>(
                 "Direct HF",
@@ -297,7 +297,7 @@ private:
     };
 
     struct Eax2SourceRoomValidator {
-        void operator()(long lRoom) const
+        void operator()(eax_long const lRoom) const
         {
             eax_validate_range<Exception>(
                 "Room",
@@ -308,7 +308,7 @@ private:
     };
 
     struct Eax2SourceRoomHfValidator {
-        void operator()(long lRoomHF) const
+        void operator()(eax_long const lRoomHF) const
         {
             eax_validate_range<Exception>(
                 "Room HF",
@@ -330,7 +330,7 @@ private:
     };
 
     struct Eax2SourceObstructionValidator {
-        void operator()(long lObstruction) const
+        void operator()(eax_long const lObstruction) const
         {
             eax_validate_range<Exception>(
                 "Obstruction",
@@ -352,7 +352,7 @@ private:
     };
 
     struct Eax2SourceOcclusionValidator {
-        void operator()(long lOcclusion) const
+        void operator()(eax_long const lOcclusion) const
         {
             eax_validate_range<Exception>(
                 "Occlusion",
@@ -385,7 +385,7 @@ private:
     };
 
     struct Eax2SourceOutsideVolumeHfValidator {
-        void operator()(long lOutsideVolumeHF) const
+        void operator()(eax_long const lOutsideVolumeHF) const
         {
             eax_validate_range<Exception>(
                 "Outside Volume HF",
@@ -407,12 +407,12 @@ private:
     };
 
     struct Eax2SourceFlagsValidator {
-        void operator()(unsigned long dwFlags) const
+        void operator()(eax_ulong const dwFlags) const
         {
             eax_validate_range<Exception>(
                 "Flags",
                 dwFlags,
-                0UL,
+                0_eax_ulong,
                 ~EAX20SOURCEFLAGS_RESERVED);
         }
     };
@@ -429,7 +429,7 @@ private:
     };
 
     struct Eax3SourceExclusionValidator {
-        void operator()(long lExclusion) const
+        void operator()(eax_long const lExclusion) const
         {
             eax_validate_range<Exception>(
                 "Exclusion",
@@ -484,12 +484,12 @@ private:
     };
 
     struct Eax5SourceFlagsValidator {
-        void operator()(unsigned long dwFlags) const
+        void operator()(eax_ulong const dwFlags) const
         {
             eax_validate_range<Exception>(
                 "Flags",
                 dwFlags,
-                0UL,
+                0_eax_ulong,
                 ~EAX50SOURCEFLAGS_RESERVED);
         }
     };
@@ -637,7 +637,7 @@ private:
     };
 
     struct Eax4SendSendValidator {
-        void operator()(long lSend) const
+        void operator()(eax_long const lSend) const
         {
             eax_validate_range<Exception>(
                 "Send",
@@ -648,7 +648,7 @@ private:
     };
 
     struct Eax4SendSendHfValidator {
-        void operator()(long lSendHF) const
+        void operator()(eax_long const lSendHF) const
         {
             eax_validate_range<Exception>(
                 "Send HF",
@@ -751,7 +751,7 @@ private:
     // Speaker level validators.
 
     struct Eax5SpeakerIdValidator {
-        void operator()(long lSpeakerID) const
+        void operator()(eax_long const lSpeakerID) const
         {
             switch (lSpeakerID) {
                 case EAXSPEAKER_FRONT_LEFT:
@@ -772,7 +772,7 @@ private:
     };
 
     struct Eax5SpeakerLevelValidator {
-        void operator()(long lLevel) const
+        void operator()(eax_long const lLevel) const
         {
             // TODO Use a range when the feature will be implemented.
             if (lLevel != EAXSOURCE_DEFAULTSPEAKERLEVEL)
@@ -821,7 +821,7 @@ private:
         }
     };
 
-    [[noreturn]] static void eax_fail(const std::string_view message);
+    [[noreturn]] static void eax_fail(std::string_view message);
     [[noreturn]] static void eax_fail_unknown_property_id();
     [[noreturn]] static void eax_fail_unknown_version();
     [[noreturn]] static void eax_fail_unknown_active_fx_slot_id();
@@ -850,7 +850,7 @@ private:
     static void eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept;
     static void eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept;
 
-    static auto eax_calculate_dst_occlusion_mb(long src_occlusion_mb, f32 path_ratio,
+    static auto eax_calculate_dst_occlusion_mb(eax_long src_occlusion_mb, f32 path_ratio,
         f32 lf_ratio) noexcept -> f32;
 
     [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;

@@ -83,7 +83,7 @@ namespace {
 using PitchShifterCommitter = EaxCommitter<EaxPitchShifterCommitter>;
 
 struct CoarseTuneValidator {
-    void operator()(long lCoarseTune) const
+    void operator()(eax_long const lCoarseTune) const
     {
         eax_validate_range<PitchShifterCommitter::Exception>(
             "Coarse Tune",
@@ -94,7 +94,7 @@ struct CoarseTuneValidator {
 }; // CoarseTuneValidator
 
 struct FineTuneValidator {
-    void operator()(long lFineTune) const
+    void operator()(eax_long const lFineTune) const
     {
         eax_validate_range<PitchShifterCommitter::Exception>(
             "Fine Tune",

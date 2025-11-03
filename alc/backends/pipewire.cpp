@@ -1664,7 +1664,7 @@ auto PipeWirePlayback::reset() -> bool
     /* Force planar 32-bit float output for playback. This is what PipeWire
      * handles internally, and it's easier for us too.
      */
-    auto const info = spa_audio_info_raw{make_spa_info(mDevice, is51rear, ForceF32Planar)};
+    auto info = spa_audio_info_raw{make_spa_info(mDevice, is51rear, ForceF32Planar)};
 
     auto b = PodDynamicBuilder{};
     auto params = as_const_ptr(spa_format_audio_raw_build(b.get(), SPA_PARAM_EnumFormat, &info));

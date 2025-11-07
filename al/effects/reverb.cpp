@@ -1094,7 +1094,7 @@ void EaxReverbCommitter::SetDefaults(EAX_REVERBPROPERTIES &props)
 void EaxReverbCommitter::SetDefaults(EAX20LISTENERPROPERTIES &props)
 {
     props = EAX2REVERB_PRESETS[EAX2_ENVIRONMENT_GENERIC];
-    props.lRoom = -10'000L;
+    props.lRoom = -10'000_eax_long;
 }
 
 void EaxReverbCommitter::SetDefaults(EAXREVERBPROPERTIES &props)

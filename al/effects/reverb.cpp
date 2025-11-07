@@ -1065,7 +1065,7 @@ auto EaxReverbCommitter::commit(const EAXREVERBPROPERTIES &props) const -> bool
             "  ReflectionsPan: [{}, {}, {}]\n"
             "  LateReverbGain: {:f}\n"
             "  LateReverbDelay: {:f}\n"
-            "  LateRevernPan: [{}, {}, {}]\n"
+            "  LateReverbPan: [{}, {}, {}]\n"
             "  EchoTime: {:f}\n"
             "  EchoDepth: {:f}\n"
             "  ModulationTime: {:f}\n"

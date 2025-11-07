@@ -1532,11 +1532,11 @@ void CalcPanningAndFilters(Voice *const voice, f32 const xpos, f32 const ypos, f
             if(props.DirectChannels == DirectMode::Off)
             {
                 auto chanpos = StereoMap | std::views::transform(&ChanPosMap::pos);
-                std::ranges::transform(props.StereoPan, chanpos, chanpos.begin(),
-                    [](f32 const a, std::span<f32, 3> const pos)
+                std::ranges::transform(props.StereoPan, chanpos | std::views::elements<1>,
+                    chanpos.begin(), [](f32 const a, f32 const y)
                 {
                     /* StereoPan is counter-clockwise in radians. */
-                    return std::array{-std::sin(a), pos[1], -std::cos(a)};
+                    return std::array{-std::sin(a), y, -std::cos(a)};
                 });
             }
             return {props.DirectChannels, std::span{StereoMap}};

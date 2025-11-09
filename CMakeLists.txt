@@ -1530,6 +1530,13 @@ if(HAVE_CXXMODULES)
     set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/gsl.cppm)
     target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES alsoft-modules/gsl.cppm)
 endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
+    AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
+    # Targeting versions prior to macOS 10.13 requires specifying custom
+    # alignment-aware operators, which we do. This lets the compiler know they
+    # exist and it can use them.
+    target_compile_options(alsoft.common PUBLIC "-faligned-allocation")
+endif()
 
 
 unset(HAS_ROUTER)
@@ -1556,6 +1563,13 @@ if(LIBTYPE STREQUAL "STATIC")
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB}
         $<BUILD_LOCAL_INTERFACE:alsoft::fmt>)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
+        AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
+        # The static library doesn't link with alsoft.common, so needs this
+        # compile flag set for itself.
+        target_compile_options(${IMPL_TARGET} PRIVATE "-faligned-allocation")
+    endif()
 
     if(WIN32)
         # This option is for static linking OpenAL Soft into another project

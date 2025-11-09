@@ -11,25 +11,6 @@
 #include "gsl/gsl"
 
 
-#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
-    && __MAC_OS_X_VERSION_MIN_REQUIRED < 101300
-
-auto operator new(std::size_t len, std::align_val_t align, std::nothrow_t const&) noexcept
-    -> gsl::owner<void*>;
-auto operator new[](std::size_t len, std::align_val_t align, std::nothrow_t const &tag) noexcept
-    -> gsl::owner<void*>;
-auto operator new(std::size_t len, std::align_val_t align) -> gsl::owner<void*>;
-auto operator new[](std::size_t len, std::align_val_t align) -> gsl::owner<void*>;
-
-auto operator delete(void *ptr, std::align_val_t) noexcept -> void;
-auto operator delete[](void *ptr, std::align_val_t) noexcept -> void;
-auto operator delete(void *ptr, std::size_t, std::align_val_t) noexcept -> void;
-auto operator delete[](void *ptr, std::size_t, std::align_val_t) noexcept -> void;
-auto operator delete(void *ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void;
-auto operator delete[](void *ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void;
-
-#endif
-
 #define DISABLE_ALLOC                                                         \
     auto operator new(std::size_t) -> void* = delete;                         \
     auto operator new[](std::size_t) -> void* = delete;                       \

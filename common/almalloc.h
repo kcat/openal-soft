@@ -11,17 +11,36 @@
 #include "gsl/gsl"
 
 
+#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
+    && __MAC_OS_X_VERSION_MIN_REQUIRED < 101300
+
+auto operator new(std::size_t len, std::align_val_t align, std::nothrow_t const&) noexcept
+    -> gsl::owner<void*>;
+auto operator new[](std::size_t len, std::align_val_t align, std::nothrow_t const &tag) noexcept
+    -> gsl::owner<void*>;
+auto operator new(std::size_t len, std::align_val_t align) -> gsl::owner<void*>;
+auto operator new[](std::size_t len, std::align_val_t align) -> gsl::owner<void*>;
+
+auto operator delete(void *ptr, std::align_val_t) noexcept -> void;
+auto operator delete[](void *ptr, std::align_val_t) noexcept -> void;
+auto operator delete(void *ptr, std::size_t, std::align_val_t) noexcept -> void;
+auto operator delete[](void *ptr, std::size_t, std::align_val_t) noexcept -> void;
+auto operator delete(void *ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void;
+auto operator delete[](void *ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void;
+
+#endif
+
 #define DISABLE_ALLOC                                                         \
-    void *operator new(size_t) = delete;                                      \
-    void *operator new[](size_t) = delete;                                    \
-    void operator delete(void*) noexcept = delete;                            \
-    void operator delete[](void*) noexcept = delete;
+    auto operator new(std::size_t) -> void* = delete;                         \
+    auto operator new[](std::size_t) -> void* = delete;                       \
+    auto operator delete(void*) noexcept -> void = delete;                    \
+    auto operator delete[](void*) noexcept -> void = delete;
 
 
 enum FamCount : size_t { };
 
 #define DEF_FAM_NEWDEL(T, FamMem)                                             \
-    static constexpr size_t Sizeof(size_t count) noexcept                     \
+    static constexpr auto Sizeof(std::size_t count) noexcept -> std::size_t   \
     {                                                                         \
         static_assert(&Sizeof == &T::Sizeof,                                  \
             "Incorrect container type specified");                            \
@@ -29,17 +48,18 @@ enum FamCount : size_t { };
             sizeof(T));                                                       \
     }                                                                         \
                                                                               \
-    gsl::owner<void*> operator new(size_t /*size*/, FamCount count)           \
+    auto operator new(std::size_t /*size*/, FamCount count)                   \
+        -> gsl::owner<void*>                                                  \
     {                                                                         \
         const auto alignment = std::align_val_t{alignof(T)};                  \
         return ::operator new[](T::Sizeof(count), alignment);                 \
     }                                                                         \
-    void operator delete(gsl::owner<void*> block, FamCount) noexcept          \
+    auto operator delete(gsl::owner<void*> block, FamCount) noexcept -> void  \
     { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
-    void operator delete(gsl::owner<void*> block) noexcept                    \
+    auto operator delete(gsl::owner<void*> block) noexcept -> void            \
     { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
-    void *operator new[](size_t /*size*/) = delete;                           \
-    void operator delete[](void* /*block*/) = delete;
+    auto operator new[](std::size_t /*size*/) -> void* = delete;              \
+    auto operator delete[](void* /*block*/) -> void = delete;
 
 
 namespace al {

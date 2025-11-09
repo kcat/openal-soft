@@ -680,6 +680,7 @@ set(COMMON_OBJS
     common/alcomplex.cpp
     common/alcomplex.h
     common/alformat.hpp
+    common/almalloc.cpp
     common/almalloc.h
     common/alnumeric.h
     common/alstring.cpp

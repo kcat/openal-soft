@@ -1,10 +1,11 @@
 #ifndef AL_FORMAT_HPP
 #define AL_FORMAT_HPP
 
-/* On macOS, std::format requires std::from_chars, which isn't available prior
- * to macOS 13. 
+/* On macOS, std::format requires std::to_chars, which isn't available prior
+ * to macOS 13.
  */
-#if defined(__APPLE__) && __MAC_OS_X_VERSION_MIN_REQUIRED < 130000
+#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
+    && __MAC_OS_X_VERSION_MIN_REQUIRED < 130000
 #include "fmt/format.h"
 
 namespace al {
@@ -32,7 +33,6 @@ using std::string_view;
 using std::vformat;
 
 } /* namespace al */
-
 #endif
 
 #endif /* AL_FORMAT_HPP */

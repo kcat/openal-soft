@@ -6,7 +6,6 @@
 #include <atomic>
 #include <bitset>
 #include <exception>
-#include <format>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -21,6 +20,7 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/async_event.h"
 #include "core/context.h"
@@ -96,7 +96,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                         break;
                     }
 
-                    const auto msg = std::format("Source ID {} state has changed to {}", evt.mId,
+                    const auto msg = al::format("Source ID {} state has changed to {}", evt.mId,
                         state_sv);
                     context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
                         al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);
@@ -107,7 +107,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                         || !enabledevts.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
                         return;
 
-                    const auto msg = std::format("{} buffer{} completed", evt.mCount,
+                    const auto msg = al::format("{} buffer{} completed", evt.mCount,
                         (evt.mCount == 1) ? "" : "s");
                     context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
                         al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);

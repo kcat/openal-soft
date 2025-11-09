@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <format>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -51,6 +50,7 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/device.h"
@@ -93,7 +93,7 @@ constexpr auto EnumFromAmbiLayout(AmbiLayout const layout) -> ALenum
     case AmbiLayout::FuMa: return AL_FUMA_SOFT;
     case AmbiLayout::ACN: return AL_ACN_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid AmbiLayout: {}",
+    throw std::runtime_error{al::format("Invalid AmbiLayout: {}",
         int{al::to_underlying(layout)})};
 }
 
@@ -116,7 +116,7 @@ constexpr auto EnumFromAmbiScaling(AmbiScaling const scale) -> ALenum
     case AmbiScaling::N3D: return AL_N3D_SOFT;
     case AmbiScaling::UHJ: break;
     }
-    throw std::runtime_error{std::format("Invalid AmbiScaling: {}",
+    throw std::runtime_error{al::format("Invalid AmbiScaling: {}",
         int{al::to_underlying(scale)})};
 }
 
@@ -139,7 +139,7 @@ constexpr auto EnumFromEaxStorage(EaxStorage const storage) -> ALenum
     case EaxStorage::Accessible: return AL_STORAGE_ACCESSIBLE;
     case EaxStorage::Hardware: return AL_STORAGE_HARDWARE;
     }
-    throw std::runtime_error{std::format("Invalid EaxStorage: {}",
+    throw std::runtime_error{al::format("Invalid EaxStorage: {}",
         int{al::to_underlying(storage)})};
 }
 

@@ -33,12 +33,12 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <format>
 #include <ranges>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -80,7 +80,7 @@ void ProbePlaybackDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(PlaybackDevices, newname))
-                newname = std::format("{} #{}", basename, ++count);
+                newname = al::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);
@@ -107,7 +107,7 @@ void ProbeCaptureDevices()
             auto count = 1;
             auto newname = basename;
             while(checkName(CaptureDevices, newname))
-                newname = std::format("{} #{}", basename, ++count);
+                newname = al::format("{} #{}", basename, ++count);
             dname = std::move(newname);
 
             TRACE("Got device \"{}\", ID {}", dname, i);

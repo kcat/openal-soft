@@ -43,7 +43,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <format>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -75,6 +74,7 @@
 #include "al/source.h"
 #include "alc/events.h"
 #include "alconfig.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "alu.h"
@@ -881,7 +881,7 @@ auto EnumFromDevFmt(DevFmtType const type) -> ALCenum
     case DevFmtUInt: return ALC_UNSIGNED_INT_SOFT;
     case DevFmtFloat: return ALC_FLOAT_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
+    throw std::runtime_error{al::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
 }
 
 auto DevFmtChannelsFromEnum(ALCenum const channels) -> std::optional<DevFmtChannels>
@@ -916,7 +916,7 @@ auto EnumFromDevFmt(DevFmtChannels const channels) -> ALCenum
     case DevFmtX3D71:
         break;
     }
-    throw std::runtime_error{std::format("Invalid DevFmtChannels: {}",
+    throw std::runtime_error{al::format("Invalid DevFmtChannels: {}",
         int{al::to_underlying(channels)})};
 }
 
@@ -937,7 +937,7 @@ auto EnumFromDevAmbi(DevAmbiLayout const layout) -> ALCenum
     case DevAmbiLayout::FuMa: return ALC_FUMA_SOFT;
     case DevAmbiLayout::ACN: return ALC_ACN_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid DevAmbiLayout: {}",
+    throw std::runtime_error{al::format("Invalid DevAmbiLayout: {}",
         int{al::to_underlying(layout)})};
 }
 
@@ -960,7 +960,7 @@ auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
     case DevAmbiScaling::SN3D: return ALC_SN3D_SOFT;
     case DevAmbiScaling::N3D: return ALC_N3D_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid DevAmbiScaling: {}",
+    throw std::runtime_error{al::format("Invalid DevAmbiScaling: {}",
         int{al::to_underlying(scaling)})};
 }
 
@@ -1943,7 +1943,7 @@ auto VerifyDevice(ALCdevice *device) -> gsl::not_null<DeviceRef>
         return gsl::make_not_null(DeviceRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    throw al::base_exception{std::format("Invalid device handle {}", voidp{device})};
+    throw al::base_exception{al::format("Invalid device handle {}", voidp{device})};
 }
 
 
@@ -1961,7 +1961,7 @@ auto VerifyContext(ALCcontext *context) -> gsl::not_null<ContextRef>
         return gsl::make_not_null(ContextRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-    throw al::base_exception{std::format("Invalid context handle {}", voidp{context})};
+    throw al::base_exception{al::format("Invalid context handle {}", voidp{context})};
 }
 
 } // namespace

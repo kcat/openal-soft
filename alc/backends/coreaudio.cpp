@@ -24,7 +24,6 @@
 
 #include <cinttypes>
 #include <cmath>
-#include <format>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -37,6 +36,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/converter.h"
@@ -293,7 +293,7 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
                 auto name = std::string{};
                 auto count = 1_uz;
                 do {
-                    name = std::format("{} #{}", curitem->mName, ++count);
+                    name = al::format("{} #{}", curitem->mName, ++count);
                 } while(std::ranges::find(subrange, name, &DeviceEntry::mName) != subrange.end());
                 curitem->mName = std::move(name);
             }

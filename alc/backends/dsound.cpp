@@ -35,13 +35,13 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
-#include <format>
 #include <memory.h>
 #include <span>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
@@ -138,7 +138,7 @@ auto CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR*, voi
     auto count = 1;
     auto newname = basename;
     while(checkName(devices, newname))
-        newname = std::format("{} #{}", basename, ++count);
+        newname = al::format("{} #{}", basename, ++count);
     const DevMap &newentry = devices.emplace_back(std::move(newname), *guid);
 
     auto *guidstr = LPOLESTR{};

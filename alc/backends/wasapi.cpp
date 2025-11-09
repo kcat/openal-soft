@@ -51,7 +51,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
-#include <format>
 #include <functional>
 #include <future>
 #include <iterator>
@@ -64,6 +63,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"
@@ -203,7 +203,7 @@ class GuidPrinter {
 
 public:
     explicit GuidPrinter(const GUID &guid)
-        : mMsg{std::format(
+        : mMsg{al::format(
             "{{{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}}}",
             guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2],
             guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7])}
@@ -686,7 +686,7 @@ private:
         auto count = 1;
         auto newname = name;
         while(checkName(list, newname))
-            newname = std::format("{} #{}", name, ++count);
+            newname = al::format("{} #{}", name, ++count);
         const auto &newentry = list.emplace_back(std::move(newname), std::move(guid), devid);
 
         TRACE(R"(Got device "{}", "{}", "{}")", newentry.name, newentry.endpoint_guid,

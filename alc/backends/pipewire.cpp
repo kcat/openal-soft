@@ -34,7 +34,6 @@
 #include <cerrno>
 #include <chrono>
 #include <ctime>
-#include <format>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -48,6 +47,7 @@
 
 #include "alc/alconfig.h"
 #include "alc/backends/base.h"
+#include "alformat.hpp"
 #include "alstring.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -758,7 +758,7 @@ void EventManager::RemoveDevice(uint32_t const id)
             return false;
         TRACE("Removing device \"{}\"", n.mDevName);
         if(gEventHandler.initIsDone(std::memory_order_relaxed))
-            n.callEvent(alc::EventType::DeviceRemoved, std::format("Device removed: {}", n.mName));
+            n.callEvent(alc::EventType::DeviceRemoved, al::format("Device removed: {}", n.mName));
         return true;
     });
     sList.erase(end.begin(), end.end());
@@ -1021,7 +1021,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         {
             if(nodeName && *nodeName)
                 return std::string{nodeName};
-            return std::format("PipeWire node #{}", info->id);
+            return al::format("PipeWire node #{}", info->id);
         });
 
         auto *form_factor = spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR);
@@ -1051,7 +1051,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             {
                 if(!node.mName.empty())
                 {
-                    const auto msg = std::format("Device removed: {}", node.mName);
+                    const auto msg = al::format("Device removed: {}", node.mName);
                     node.callEvent(alc::EventType::DeviceRemoved, msg);
                 }
                 notifyAdd = true;
@@ -1064,7 +1064,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             || al::case_compare(form_factor, "headset"sv) == 0);
         if(notifyAdd)
         {
-            const auto msg = std::format("Device added: {}", node.mName);
+            const auto msg = al::format("Device added: {}", node.mName);
             node.callEvent(alc::EventType::DeviceAdded, msg);
         }
     }
@@ -1158,7 +1158,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
                     auto *entry = EventManager::FindDevice(*propValue);
-                    const auto message = std::format("Default playback device changed: {}",
+                    const auto message = al::format("Default playback device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
                         message);
@@ -1170,7 +1170,7 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
                     auto *entry = EventManager::FindDevice(*propValue);
-                    const auto message = std::format("Default capture device changed: {}",
+                    const auto message = al::format("Default capture device changed: {}",
                         entry ? entry->mName : std::string{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
                         message);
@@ -1568,7 +1568,7 @@ void PipeWirePlayback::open(std::string_view name)
     if(!mLoop)
     {
         const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
-        const auto thread_name = std::format("ALSoftP{}", count);
+        const auto thread_name = al::format("ALSoftP{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,
@@ -2043,7 +2043,7 @@ void PipeWireCapture::open(std::string_view name)
     if(!mLoop)
     {
         const auto count = OpenCount.fetch_add(1u, std::memory_order_relaxed);
-        const auto thread_name = std::format("ALSoftC{}", count);
+        const auto thread_name = al::format("ALSoftC{}", count);
         mLoop = ThreadMainloop::Create(thread_name.c_str());
         if(!mLoop)
             throw al::backend_exception{al::backend_error::DeviceError,

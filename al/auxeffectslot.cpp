@@ -25,8 +25,6 @@
 #include <algorithm>
 #include <bit>
 #include <cstddef>
-#include <cstdint>
-#include <format>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -48,6 +46,7 @@
 #include "alc/device.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -94,7 +93,7 @@ auto getFactoryByType(EffectSlotType const type) -> gsl::not_null<EffectStateFac
     case EffectSlotType::PitchShifter: return PshifterStateFactory_getFactory();
     case EffectSlotType::VocalMorpher: return VmorpherStateFactory_getFactory();
     }
-    throw std::runtime_error{std::format("Unexpected effect slot type: {:#x}",
+    throw std::runtime_error{al::format("Unexpected effect slot type: {:#x}",
         al::to_underlying(type))};
 }
 

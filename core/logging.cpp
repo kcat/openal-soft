@@ -87,9 +87,9 @@ void al_set_log_callback(LogCallbackFunc const callback, void *const userptr)
     }
 }
 
-void al_print_impl(LogLevel const level, std::string_view const fmt, std::format_args&& args)
+void al_print_impl(LogLevel const level, al::string_view const fmt, al::format_args&& args)
 {
-    const auto msg = std::vformat(fmt, std::move(args));
+    const auto msg = al::vformat(fmt, std::move(args));
 
     auto const prefix = std::invoke([level]() -> std::string_view
     {
@@ -115,7 +115,7 @@ void al_print_impl(LogLevel const level, std::string_view const fmt, std::format
      * informational, warning, or error debug messages. So only print them for
      * non-Release builds.
      */
-    OutputDebugStringW(utf8_to_wstr(std::format("{}{}\n", prefix, msg)).c_str());
+    OutputDebugStringW(utf8_to_wstr(al::format("{}{}\n", prefix, msg)).c_str());
 #elif defined(__ANDROID__)
     auto android_severity = [](LogLevel l) noexcept
     {

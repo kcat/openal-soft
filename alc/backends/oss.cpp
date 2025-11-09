@@ -33,7 +33,6 @@
 #include <cerrno>
 #include <cstring>
 #include <exception>
-#include <format>
 #include <memory>
 #include <span>
 #include <string>
@@ -44,6 +43,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -161,7 +161,7 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
     auto count = 1;
     auto newname = std::string{handle};
     while(std::ranges::find(list, newname, &DevMap::name) != list.end())
-        newname = std::format("{} #{}", handle, ++count);
+        newname = al::format("{} #{}", handle, ++count);
 
     const auto &entry = list.emplace_back(std::move(newname), path);
     TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);

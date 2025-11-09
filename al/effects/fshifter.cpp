@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -9,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
 
@@ -39,7 +39,7 @@ constexpr ALenum EnumFromDirection(FShifterDirection dir)
     case FShifterDirection::Up: return AL_FREQUENCY_SHIFTER_DIRECTION_UP;
     case FShifterDirection::Off: return AL_FREQUENCY_SHIFTER_DIRECTION_OFF;
     }
-    throw std::runtime_error{std::format("Invalid direction: {}", int{al::to_underlying(dir)})};
+    throw std::runtime_error{al::format("Invalid direction: {}", int{al::to_underlying(dir)})};
 }
 
 consteval EffectProps genDefaultProps() noexcept

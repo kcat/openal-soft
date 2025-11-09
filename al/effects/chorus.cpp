@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -9,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/logging.h"
 #include "effects.h"
@@ -45,7 +45,7 @@ constexpr ALenum EnumFromWaveform(ChorusWaveform type)
     case ChorusWaveform::Sinusoid: return AL_CHORUS_WAVEFORM_SINUSOID;
     case ChorusWaveform::Triangle: return AL_CHORUS_WAVEFORM_TRIANGLE;
     }
-    throw std::runtime_error{std::format("Invalid chorus waveform: {}",
+    throw std::runtime_error{al::format("Invalid chorus waveform: {}",
         int{al::to_underlying(type)})};
 }
 

@@ -9,13 +9,13 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <format>
 #include <fstream>
 #include <iterator>
 #include <span>
 #include <sstream>
 #include <string>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
@@ -47,11 +47,11 @@ enum class ReaderScope {
 };
 
 template<typename ...Args>
-auto make_error(size_t linenum, std::format_string<Args...> fmt, Args&& ...args)
+auto make_error(size_t linenum, al::format_string<Args...> fmt, Args&& ...args)
     -> al::unexpected<std::string>
 {
-    auto str = std::format("Line {}: ", linenum);
-    str += std::format(std::move(fmt), std::forward<Args>(args)...);
+    auto str = al::format("Line {}: ", linenum);
+    str += al::format(std::move(fmt), std::forward<Args>(args)...);
     return al::unexpected(std::move(str));
 }
 
@@ -63,7 +63,7 @@ auto AmbDecConf::load(const std::string_view fname) noexcept
 {
     auto f = fs::ifstream{fs::path(al::char_as_u8(fname))};
     if(!f.is_open())
-        return al::unexpected(std::format("Failed to open file \"{}\"", fname));
+        return al::unexpected(al::format("Failed to open file \"{}\"", fname));
 
     auto scope = ReaderScope::Global;
     auto speaker_pos = 0_uz;

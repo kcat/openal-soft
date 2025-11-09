@@ -32,7 +32,6 @@
 #include <concepts>
 #include <cstdio>
 #include <iterator>
-#include <format>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -58,6 +57,7 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -915,7 +915,7 @@ auto EnumFromStereoMode(SourceStereo const mode) -> ALenum
     case SourceStereo::Normal: return AL_NORMAL_SOFT;
     case SourceStereo::Enhanced: return AL_SUPER_STEREO_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid SourceStereo: {:#x}", al::to_underlying(mode))};
+    throw std::runtime_error{al::format("Invalid SourceStereo: {:#x}", al::to_underlying(mode))};
 }
 
 auto SpatializeModeFromEnum(std::signed_integral auto const mode) noexcept
@@ -937,7 +937,7 @@ auto EnumFromSpatializeMode(SpatializeMode const mode) -> ALenum
     case SpatializeMode::On: return AL_TRUE;
     case SpatializeMode::Auto: return AL_AUTO_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid SpatializeMode: {}",
+    throw std::runtime_error{al::format("Invalid SpatializeMode: {}",
         int{al::to_underlying(mode)})};
 }
 
@@ -960,7 +960,7 @@ auto EnumFromDirectMode(DirectMode const mode) -> ALenum
     case DirectMode::DropMismatch: return AL_DROP_UNMATCHED_SOFT;
     case DirectMode::RemixMismatch: return AL_REMIX_UNMATCHED_SOFT;
     }
-    throw std::runtime_error{std::format("Invalid DirectMode: {}", int{al::to_underlying(mode)})};
+    throw std::runtime_error{al::format("Invalid DirectMode: {}", int{al::to_underlying(mode)})};
 }
 
 auto DistanceModelFromALenum(std::signed_integral auto const model) noexcept
@@ -990,7 +990,7 @@ auto ALenumFromDistanceModel(DistanceModel const model) -> ALenum
     case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
     case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
     }
-    throw std::runtime_error{std::format("Unexpected distance model: {}",
+    throw std::runtime_error{al::format("Unexpected distance model: {}",
         int{al::to_underlying(model)})};
 }
 

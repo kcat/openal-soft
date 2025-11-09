@@ -26,7 +26,6 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#include <format>
 #include <memory.h>
 #include <memory>
 #include <mutex>
@@ -36,6 +35,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -209,7 +209,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
                 continue;
 
             const auto &entry = list.emplace_back(std::string{portdev},
-                std::format("{}:", portdev));
+                al::format("{}:", portdev));
             TRACE("Got device: {} = {}", entry.mName, entry.mPattern);
         }
         /* There are ports but couldn't get device names from them. Add a
@@ -274,7 +274,7 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
                 auto name = std::string{};
                 auto count = 1_uz;
                 do {
-                    name = std::format("{} #{}", curitem->mName, ++count);
+                    name = al::format("{} #{}", curitem->mName, ++count);
                 } while(std::ranges::find(subrange, name, &DeviceEntry::mName) != subrange.end());
                 curitem->mName = std::move(name);
             }
@@ -522,14 +522,14 @@ bool JackPlayback::reset()
         const auto numchans = usize{mDevice->channelsFromFmt()};
         std::ranges::for_each(std::views::iota(0_uz, numchans), [this](usize const idx)
         {
-            auto const name = std::format("channel_{}", idx);
+            auto const name = al::format("channel_{}", idx);
             auto &newport = mPort.emplace_back();
             newport = jack_port_register(mClient, name.c_str(), JACK_DEFAULT_AUDIO_TYPE,
                 JackPortIsOutput | JackPortIsTerminal, 0);
             if(!newport)
             {
                 mPort.pop_back();
-                throw std::runtime_error{std::format(
+                throw std::runtime_error{al::format(
                     "Failed to register enough JACK ports for {} output",
                     DevFmtChannelsString(mDevice->FmtChans))};
             }

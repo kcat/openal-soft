@@ -7,14 +7,15 @@
 #include <atomic>
 #include <utility>
 
+#include "alformat.hpp"
 #include "core/devformat.h"
 
 
 namespace al {
 
-auto backend_exception::make_string(std::string_view const fmt, std::format_args args)
+auto backend_exception::make_string(al::string_view const fmt, al::format_args args)
     -> std::string
-{ return std::vformat(fmt, std::move(args)); }
+{ return al::vformat(fmt, std::move(args)); }
 
 } // namespace al
 

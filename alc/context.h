@@ -7,7 +7,6 @@
 #include <bitset>
 #include <concepts>
 #include <deque>
-#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -23,6 +22,7 @@
 #include "AL/alext.h"
 
 #include "al/listener.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althreads.h"
 #include "core/context.h"
@@ -164,18 +164,18 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
      */
     void applyAllUpdates();
 
-    void setErrorImpl(ALenum errorCode, std::string_view fmt, std::format_args args);
+    void setErrorImpl(ALenum errorCode, al::string_view fmt, al::format_args args);
 
     template<typename ...Args>
-    void setError(ALenum const errorCode, std::format_string<Args...> const msg, Args&& ...args)
-    { setErrorImpl(errorCode, msg.get(), std::make_format_args(args...)); }
+    void setError(ALenum const errorCode, al::format_string<Args...> const msg, Args&& ...args)
+    { setErrorImpl(errorCode, msg.get(), al::make_format_args(args...)); }
 
     [[noreturn]]
-    void throw_error_impl(ALenum errorCode, std::string_view fmt, std::format_args args);
+    void throw_error_impl(ALenum errorCode, al::string_view fmt, al::format_args args);
 
     template<typename ...Args> [[noreturn]]
-    void throw_error(ALenum const errorCode, std::format_string<Args...> const fmt, Args&&... args)
-    { throw_error_impl(errorCode, fmt.get(), std::make_format_args(args...)); }
+    void throw_error(ALenum const errorCode, al::format_string<Args...> const fmt, Args&&... args)
+    { throw_error_impl(errorCode, fmt.get(), al::make_format_args(args...)); }
 
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
         DebugType type, ALuint id, DebugSeverity severity, std::string_view message);

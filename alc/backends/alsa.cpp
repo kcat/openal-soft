@@ -28,7 +28,6 @@
 #include <chrono>
 #include <cstring>
 #include <exception>
-#include <format>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -39,6 +38,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
@@ -319,7 +319,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
     for(;err >= 0 && card >= 0;err = snd_card_next(&card))
     {
         auto handle = SndCtlPtr{};
-        err = snd_ctl_open(al::out_ptr(handle), std::format("hw:{}", card).c_str(), 0);
+        err = snd_ctl_open(al::out_ptr(handle), al::format("hw:{}", card).c_str(), 0);
         if(err < 0)
         {
             ERR("control open (hw:{}): {}", card, snd_strerror(err));
@@ -334,7 +334,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
 
         const auto *cardname = snd_ctl_card_info_get_name(info.get());
         const auto *cardid = snd_ctl_card_info_get_id(info.get());
-        auto name = std::format("{}-{}", prefix_name(stream), cardid);
+        auto name = al::format("{}-{}", prefix_name(stream), cardid);
         const auto card_prefix = std::string{ConfigValueStr({}, "alsa"sv, name)
             .value_or(main_prefix)};
 
@@ -357,16 +357,16 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
             }
 
             /* "prefix-cardid-dev" */
-            name = std::format("{}-{}-{}", prefix_name(stream), cardid, dev);
+            name = al::format("{}-{}-{}", prefix_name(stream), cardid, dev);
             const auto device_prefix = std::string{ConfigValueStr({}, "alsa"sv, name)
                 .value_or(card_prefix)};
 
             /* "CardName, PcmName (CARD=cardid,DEV=dev)" */
-            name = std::format("{}, {} (CARD={},DEV={})", cardname,
+            name = al::format("{}, {} (CARD={},DEV={})", cardname,
                 snd_pcm_info_get_name(pcminfo.get()), cardid, dev);
 
             /* "devprefixCARD=cardid,DEV=dev" */
-            auto device = std::format("{}CARD={},DEV={}", device_prefix, cardid, dev);
+            auto device = al::format("{}CARD={},DEV={}", device_prefix, cardid, dev);
             
             const auto &entry = devlist.emplace_back(std::move(name), std::move(device));
             TRACE(R"(Got device "{}", "{}")", entry.name, entry.device_name);

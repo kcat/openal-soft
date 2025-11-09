@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include <format>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -24,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
@@ -389,7 +389,7 @@ void AddFileEntry(std::string_view const filename)
     auto count = 1;
     auto newname = std::string{basename};
     while(checkName(newname))
-        newname = std::format("{} #{}", basename, ++count);
+        newname = al::format("{} #{}", basename, ++count);
 
     auto const &entry = EnumeratedHrtfs.emplace_back(newname, filename);
     TRACE("Adding file entry \"{}\"", entry.mFilename);
@@ -400,7 +400,7 @@ void AddFileEntry(std::string_view const filename)
  */
 void AddBuiltInEntry(std::string_view const dispname, u32 const residx)
 {
-    auto filename = std::format("!{}_{}", residx, dispname);
+    auto filename = al::format("!{}_{}", residx, dispname);
 
     if(std::ranges::find(EnumeratedHrtfs, filename,&HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
@@ -414,7 +414,7 @@ void AddBuiltInEntry(std::string_view const dispname, u32 const residx)
     auto count = 1;
     auto newname = std::string{dispname};
     while(checkName(newname))
-        newname = std::format("{} #{}", dispname, ++count);
+        newname = al::format("{} #{}", dispname, ++count);
 
     auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
     TRACE("Adding built-in entry \"{}\"", entry.mFilename);

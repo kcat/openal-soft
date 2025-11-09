@@ -6,7 +6,6 @@
 #include <bitset>
 #include <chrono>
 #include <concepts>
-#include <format>
 #include <functional>
 #include <memory>
 #include <ranges>
@@ -14,6 +13,7 @@
 #include <string>
 #include <variant>
 
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "ambidefs.h"
@@ -384,8 +384,8 @@ struct DeviceBase {
     void doDisconnect(std::string&& msg);
 
     template<typename ...Args>
-    void handleDisconnect(std::format_string<Args...> fmt, Args&& ...args)
-    { doDisconnect(std::format(std::move(fmt), std::forward<Args>(args)...)); }
+    void handleDisconnect(al::format_string<Args...> fmt, Args&& ...args)
+    { doDisconnect(al::format(std::move(fmt), std::forward<Args>(args)...)); }
 
 private:
     [[nodiscard]]

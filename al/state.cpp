@@ -26,7 +26,6 @@
 #include <atomic>
 #include <cmath>
 #include <deque>
-#include <format>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -43,6 +42,7 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
@@ -149,7 +149,7 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
     case DistanceModel::Exponent: return AL_EXPONENT_DISTANCE;
     case DistanceModel::ExponentClamped: return AL_EXPONENT_DISTANCE_CLAMPED;
     }
-    throw std::runtime_error{std::format("Unexpected distance model {:#x}",
+    throw std::runtime_error{al::format("Unexpected distance model {:#x}",
         al::to_underlying(model))};
 }
 

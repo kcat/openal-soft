@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <format>
 #include <optional>
 #include <stdexcept>
 
@@ -9,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
 #include "gsl/gsl"
@@ -40,7 +40,7 @@ constexpr auto EnumFromWaveform(ModulatorWaveform type) -> ALenum
     case ModulatorWaveform::Sawtooth: return AL_RING_MODULATOR_SAWTOOTH;
     case ModulatorWaveform::Square: return AL_RING_MODULATOR_SQUARE;
     }
-    throw std::runtime_error{std::format("Invalid modulator waveform: {}",
+    throw std::runtime_error{al::format("Invalid modulator waveform: {}",
         int{al::to_underlying(type)})};
 }
 

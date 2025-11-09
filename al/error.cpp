@@ -39,6 +39,7 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/except.h"
 #include "core/logging.h"
@@ -60,9 +61,9 @@ auto alGetError(gsl::not_null<al::Context*> context) noexcept -> ALenum
 } // namespace
 
 
-void al::Context::setErrorImpl(ALenum errorCode, const std::string_view fmt, std::format_args args)
+void al::Context::setErrorImpl(ALenum const errorCode, al::string_view const fmt, al::format_args args)
 {
-    const auto message = std::vformat(fmt, std::move(args));
+    const auto message = al::vformat(fmt, std::move(args));
 
     WARN("Error generated on context {}, code {:#04x}, \"{}\"",
         decltype(std::declval<void*>()){this}, as_unsigned(errorCode), message);
@@ -84,8 +85,8 @@ void al::Context::setErrorImpl(ALenum errorCode, const std::string_view fmt, std
         message);
 }
 
-void al::Context::throw_error_impl(ALenum errorCode, const std::string_view fmt,
-    std::format_args args)
+void al::Context::throw_error_impl(ALenum const errorCode, al::string_view const fmt,
+    al::format_args args)
 {
     setErrorImpl(errorCode, fmt, std::move(args));
     throw al::base_exception{};

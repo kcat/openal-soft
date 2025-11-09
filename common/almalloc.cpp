@@ -1,8 +1,10 @@
 
 #include "almalloc.h"
 
-#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
-    && __MAC_OS_X_VERSION_MIN_REQUIRED < 101300
+#if defined(__APPLE__)
+#include <AvailabilityMacros.h>
+
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 101300
 
 #include <stdlib.h>
 
@@ -43,4 +45,5 @@ auto operator delete(void *const ptr, std::align_val_t, std::nothrow_t const&) n
 auto operator delete[](void *const ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void
 { free(ptr); }
 
+#endif
 #endif

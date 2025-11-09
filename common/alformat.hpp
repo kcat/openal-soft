@@ -1,11 +1,14 @@
 #ifndef AL_FORMAT_HPP
 #define AL_FORMAT_HPP
 
+#if defined(__APPLE__)
+#include <AvailabilityMacros.h>
+#endif
+
 /* On macOS, std::format requires std::to_chars, which isn't available prior
- * to macOS 13.
+ * to macOS 13.3.
  */
-#if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) \
-    && __MAC_OS_X_VERSION_MIN_REQUIRED < 130000
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 130300
 #include "fmt/format.h"
 
 namespace al {

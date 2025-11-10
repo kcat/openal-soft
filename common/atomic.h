@@ -9,6 +9,7 @@
 #include "gsl/gsl"
 
 #ifdef __APPLE__
+/* See: https://outerproduct.net/futex-dictionary.html */
 #define UL_COMPARE_AND_WAIT          1
 #define UL_UNFAIR_LOCK               2
 #define UL_COMPARE_AND_WAIT_SHARED   3

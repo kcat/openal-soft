@@ -50,8 +50,8 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
         auto const evt_span = ring->getReadVector()[0];
         if(evt_span.empty())
         {
-            context->mEventsPending.wait(false, std::memory_order_acquire);
-            context->mEventsPending.store(false, std::memory_order_release);
+            al::atomic_wait(context->mEventsPending, 0_u32, std::memory_order_acquire);
+            context->mEventsPending.store(0_u32, std::memory_order_release);
             continue;
         }
 
@@ -237,8 +237,8 @@ void StopEventThrd(al::Context *ctx)
     std::ignore = InitAsyncEvent<AsyncKillThread>(evt_span[0]);
     ring->writeAdvance(1);
 
-    ctx->mEventsPending.store(true, std::memory_order_release);
-    ctx->mEventsPending.notify_all();
+    ctx->mEventsPending.store(1_u32, std::memory_order_release);
+    al::atomic_notify_all(ctx->mEventsPending);
     ctx->mEventThread.join();
 }
 

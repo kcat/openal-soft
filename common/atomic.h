@@ -5,7 +5,23 @@
 #include <cstddef>
 #include <memory>
 
-#include "almalloc.h"
+#include "alnumeric.h"
+#include "gsl/gsl"
+
+#ifdef __APPLE__
+#define UL_COMPARE_AND_WAIT          1
+#define UL_UNFAIR_LOCK               2
+#define UL_COMPARE_AND_WAIT_SHARED   3
+#define UL_UNFAIR_LOCK64_SHARED      4
+#define UL_COMPARE_AND_WAIT64        5
+#define UL_COMPARE_AND_WAIT64_SHARED 6
+
+#define ULF_WAKE_ALL 0x00000100
+
+extern "C" auto __ulock_wait(u32 op, void *addr, u64 value, u32 timeout) -> int;
+extern "C" auto __ulock_wake(u32 op, void *addr, u64 wake_value) -> int;
+#endif
+
 
 template<typename T>
 auto IncrementRef(std::atomic<T> &ref) noexcept
@@ -21,7 +37,7 @@ auto DecrementRef(std::atomic<T> &ref) noexcept
  * one (practically impossible with this little code, but...).
  */
 template<typename T>
-inline void AtomicReplaceHead(std::atomic<T> &head, T newhead)
+void AtomicReplaceHead(std::atomic<T> &head, T newhead)
 {
     T first_ = head.load(std::memory_order_acquire);
     do {
@@ -31,6 +47,64 @@ inline void AtomicReplaceHead(std::atomic<T> &head, T newhead)
 }
 
 namespace al {
+
+template<typename T>
+auto atomic_wait(std::atomic<T> &aval, T const value,
+    std::memory_order const order [[maybe_unused]] = std::memory_order_seq_cst) noexcept -> void
+{
+#ifdef __APPLE__
+    static_assert(sizeof(aval) == sizeof(T));
+
+    if constexpr(sizeof(T) == sizeof(u32))
+        __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
+    else if constexpr(sizeof(T) == sizeof(u64))
+        __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
+    else
+        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+
+#else
+
+    aval.wait(value, order);
+#endif
+}
+
+template<typename T>
+auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
+{
+#ifdef __APPLE__
+    static_assert(sizeof(aval) == sizeof(T));
+
+    if constexpr(sizeof(T) == sizeof(u32))
+        __ulock_wake(UL_COMPARE_AND_WAIT, &aval, 0);
+    else if constexpr(sizeof(T) == sizeof(u64))
+        __ulock_wake(UL_COMPARE_AND_WAIT64, &aval, 0);
+    else
+        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+
+#else
+
+    aval.notify_one();
+#endif
+}
+
+template<typename T>
+auto atomic_notify_all(std::atomic<T> &aval) noexcept -> void
+{
+#ifdef __APPLE__
+    static_assert(sizeof(aval) == sizeof(T));
+
+    if constexpr(sizeof(T) == sizeof(u32))
+        __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, &aval, 0);
+    else if constexpr(sizeof(T) == sizeof(u64))
+        __ulock_wake(UL_COMPARE_AND_WAIT64 | ULF_WAKE_ALL, &aval, 0);
+    else
+        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+
+#else
+
+    aval.notify_all();
+#endif
+}
 
 template<typename T, typename D=std::default_delete<T>>
 class atomic_unique_ptr {

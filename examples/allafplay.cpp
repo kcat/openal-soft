@@ -917,11 +917,13 @@ try {
         auto outname = fs::path(al::char_as_u8(fname)).stem();
         outname += u8".caf";
         if(fs::exists(outname) && !fs::is_fifo(outname))
-            throw std::runtime_error{fmt::format("Output file {} exists", outname)};
+            throw std::runtime_error{fmt::format("Output file {} exists",
+                al::u8_as_char(outname.u8string()))};
 
         renderFile.open(outname, std::ios_base::binary | std::ios_base::out);
         if(!renderFile.is_open())
-            throw std::runtime_error{fmt::format("Failed to create {}", outname)};
+            throw std::runtime_error{fmt::format("Failed to create {}",
+                al::u8_as_char(outname.u8string()))};
 
         renderFile.write("caff", 4);
         fwrite16be(1, renderFile);
@@ -992,7 +994,7 @@ try {
         renderStart = renderFile.tellp();
         fwrite32be(0, renderFile);
 
-        fmt::println("Rendering to {}...", outname);
+        fmt::println("Rendering to {}...", al::u8_as_char(outname.u8string()));
     }
 
     while(!laf->isAtEnd())

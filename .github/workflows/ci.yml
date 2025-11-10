@@ -73,6 +73,14 @@ jobs:
             build_type: "Release"
           }
         - {
+            name: "macOS-10.9-Release",
+            os: macos-15,
+            cmake_opts: "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
+              -DALSOFT_REQUIRE_COREAUDIO=ON \
+              -DALSOFT_TESTS=ON",
+            build_type: "Release"
+          }
+        - {
             name: "iOS-Release",
             os: macos-15,
             cmake_opts: "-GXcode \

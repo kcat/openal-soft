@@ -8,7 +8,7 @@
 
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-auto GetResource(int name [[maybe_unused]]) noexcept -> std::span<const char>
+auto GetHrtfResource(int name [[maybe_unused]]) noexcept -> std::span<const char>
 { return {}; }
 
 #else

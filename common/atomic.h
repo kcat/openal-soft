@@ -9,6 +9,29 @@
 #include "gsl/gsl"
 
 #ifdef __APPLE__
+#include <AvailabilityMacros.h>
+#endif
+
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+/* For macOS versions before 11, we can't rely on atomic::wait and friends, and
+ * need to use custom methods.
+ */
+
+#include <mutex>
+#include <condition_variable>
+
+/* These could be put into a table where, rather than one mutex/condvar/counter
+ * set that all atomic waiters use, individual waiters will use one of a number
+ * of different sets dependent on their address, reducing the number of waiters
+ * on any given set. However, we use this as a fallback for much older macOS
+ * systems and only expect one atomic waiter per device, and one device per
+ * process, which itself won't wake the atomic terribly often, so the extra
+ * complexity and resources may be best avoided if not necessary.
+ */
+inline auto gAtomicWaitMutex = std::mutex{};
+inline auto gAtomicWaitCondVar = std::condition_variable{};
+inline auto gAtomicWaitCounter = 0_u32;
+
 /* See: https://outerproduct.net/futex-dictionary.html */
 #define UL_COMPARE_AND_WAIT          1
 #define UL_UNFAIR_LOCK               2
@@ -19,8 +42,10 @@
 
 #define ULF_WAKE_ALL 0x00000100
 
-extern "C" auto __ulock_wait(u32 op, void *addr, u64 value, u32 timeout) -> int;
-extern "C" auto __ulock_wake(u32 op, void *addr, u64 wake_value) -> int;
+extern "C" {
+auto __attribute__((weak_import)) __ulock_wait(u32 op, void *addr, u64 value, u32 timeout) -> int;
+auto __attribute__((weak_import)) __ulock_wake(u32 op, void *addr, u64 wake_value) -> int;
+} /* extern "C" */
 #endif
 
 
@@ -51,17 +76,31 @@ namespace al {
 
 template<typename T>
 auto atomic_wait(std::atomic<T> &aval, T const value,
-    std::memory_order const order [[maybe_unused]] = std::memory_order_seq_cst) noexcept -> void
+    std::memory_order const order = std::memory_order_seq_cst) noexcept -> void
 {
-#ifdef __APPLE__
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
     static_assert(sizeof(aval) == sizeof(T));
 
-    if constexpr(sizeof(T) == sizeof(u32))
-        __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
-    else if constexpr(sizeof(T) == sizeof(u64))
-        __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
+    if(sizeof(T) == sizeof(u32) && __ulock_wait != nullptr)
+    {
+        while(aval.load(order) != value)
+            __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
+    }
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+    else if(sizeof(T) == sizeof(u64) && __ulock_wait != nullptr)
+    {
+        while(aval.load(order) != value)
+            __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
+    }
+#endif
     else
-        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+    {
+        auto lock = std::unique_lock{gAtomicWaitMutex};
+        ++gAtomicWaitCounter;
+        while(aval.load(order) != value)
+            gAtomicWaitCondVar.wait(lock);
+        --gAtomicWaitCounter;
+    }
 
 #else
 
@@ -72,15 +111,30 @@ auto atomic_wait(std::atomic<T> &aval, T const value,
 template<typename T>
 auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
 {
-#ifdef __APPLE__
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
     static_assert(sizeof(aval) == sizeof(T));
 
-    if constexpr(sizeof(T) == sizeof(u32))
+    if(sizeof(T) == sizeof(u32) && __ulock_wake != nullptr)
         __ulock_wake(UL_COMPARE_AND_WAIT, &aval, 0);
-    else if constexpr(sizeof(T) == sizeof(u64))
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+    else if(sizeof(T) == sizeof(u64) && __ulock_wake != nullptr)
         __ulock_wake(UL_COMPARE_AND_WAIT64, &aval, 0);
+#endif
     else
-        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+    {
+        auto lock = std::unique_lock{gAtomicWaitMutex};
+        auto const numwaits = gAtomicWaitCounter;
+        lock.unlock();
+        if(numwaits > 0)
+        {
+            /* notify_all since we can't guarantee notify_one will wake a
+             * waiter waiting on this particular object. With notify_all, we
+             * just act as all if waiters were spuriously woken up and they'll
+             * recheck.
+             */
+            gAtomicWaitCondVar.notify_all();
+        }
+    }
 
 #else
 
@@ -91,15 +145,23 @@ auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
 template<typename T>
 auto atomic_notify_all(std::atomic<T> &aval) noexcept -> void
 {
-#ifdef __APPLE__
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
     static_assert(sizeof(aval) == sizeof(T));
 
-    if constexpr(sizeof(T) == sizeof(u32))
+    if(sizeof(T) == sizeof(u32) && __ulock_wake != nullptr)
         __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, &aval, 0);
-    else if constexpr(sizeof(T) == sizeof(u64))
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+    else if(sizeof(T) == sizeof(u64) && __ulock_wake != nullptr)
         __ulock_wake(UL_COMPARE_AND_WAIT64 | ULF_WAKE_ALL, &aval, 0);
+#endif
     else
-        static_assert(sizeof(T) == sizeof(u32) || sizeof(T) == sizeof(u64));
+    {
+        auto lock = std::unique_lock{gAtomicWaitMutex};
+        auto const numwaits = gAtomicWaitCounter;
+        lock.unlock();
+        if(numwaits > 0)
+            gAtomicWaitCondVar.notify_all();
+    }
 
 #else
 

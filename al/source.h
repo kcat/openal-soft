@@ -50,10 +50,6 @@ inline constexpr auto InvalidVoiceIndex = std::numeric_limits<u32>::max();
 
 inline constinit auto sBufferSubDataCompat = false;
 
-struct ALbufferQueueItem : VoiceBufferItem {
-    al::intrusive_ptr<al::Buffer> mBuffer;
-};
-
 #if ALSOFT_EAX
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxSourceException final : public EaxException {
@@ -65,6 +61,10 @@ public:
 #endif // ALSOFT_EAX
 
 namespace al {
+
+struct BufferQueueItem : VoiceBufferItem {
+    al::intrusive_ptr<Buffer> mBuffer;
+};
 
 struct Source {
     f32 mPitch{1.0f};
@@ -149,7 +149,7 @@ struct Source {
     ALenum mState{AL_INITIAL};
 
     /** Source Buffer Queue head. */
-    std::deque<ALbufferQueueItem> mQueue;
+    std::deque<BufferQueueItem> mQueue;
 
     bool mPropsDirty{true};
 

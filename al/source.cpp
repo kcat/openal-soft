@@ -93,7 +93,7 @@ using seconds_d = std::chrono::duration<f64>;
 using namespace std::string_view_literals;
 
 
-constexpr auto HasBuffer(const ALbufferQueueItem &item) noexcept -> bool
+constexpr auto HasBuffer(al::BufferQueueItem const &item) noexcept -> bool
 { return bool{item.mBuffer}; }
 
 
@@ -283,7 +283,7 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
     Ensures(BufferFmt != nullptr);
 
     std::ignore = std::ranges::find_if(Source->mQueue,
-        [Current,&readPos](const ALbufferQueueItem &item)
+        [Current,&readPos](al::BufferQueueItem const &item)
     {
         if(&item == Current)
             return true;
@@ -330,7 +330,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
         return nullptr;
     });
     std::ignore = std::ranges::find_if(Source->mQueue,
-        [Current,&readPos](const ALbufferQueueItem &item)
+        [Current,&readPos](al::BufferQueueItem const &item)
     {
         if(&item == Current)
             return true;
@@ -394,7 +394,7 @@ auto GetSourceLength(gsl::not_null<const al::Source*> const source, ALenum const
         return T{0};
 
     const auto length = std::accumulate(source->mQueue.begin(), source->mQueue.end(), 0_u64,
-        [](u64 const count, const ALbufferQueueItem &item) { return count + item.mSampleLen; });
+        [](u64 const count, al::BufferQueueItem const &item) { return count + item.mSampleLen; });
     if(length == 0)
         return T{0};
 
@@ -431,9 +431,9 @@ auto GetSourceLength(gsl::not_null<const al::Source*> const source, ALenum const
 
 
 struct VoicePos {
-    int pos;
-    uint frac;
-    ALbufferQueueItem *bufferitem;
+    i32 pos;
+    u32 frac;
+    al::BufferQueueItem *bufferitem;
 };
 
 /**
@@ -443,7 +443,7 @@ struct VoicePos {
  * using the given offset type and offset. If the offset is out of range,
  * returns an empty optional.
  */
-auto GetSampleOffset(std::deque<ALbufferQueueItem> &BufferList, ALenum const OffsetType,
+auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const OffsetType,
     f64 const Offset) -> std::optional<VoicePos>
 {
     /* Find the first valid Buffer in the Queue */
@@ -507,7 +507,7 @@ auto GetSampleOffset(std::deque<ALbufferQueueItem> &BufferList, ALenum const Off
     if(BufferFmt->mCallback)
         return std::nullopt;
 
-    const auto iter = std::ranges::find_if(BufferList, [&offset](const ALbufferQueueItem &item)
+    const auto iter = std::ranges::find_if(BufferList, [&offset](al::BufferQueueItem const &item)
     {
         if(item.mSampleLen > offset)
             return true;
@@ -526,7 +526,7 @@ auto GetSampleOffset(std::deque<ALbufferQueueItem> &BufferList, ALenum const Off
 
 
 void InitVoice(Voice *const voice, gsl::not_null<al::Source*> const source,
-    ALbufferQueueItem const *const BufferList, gsl::not_null<al::Context*> const context,
+    al::BufferQueueItem const *const BufferList, gsl::not_null<al::Context*> const context,
     gsl::not_null<al::Device*> const device)
 {
     voice->mLoopBuffer.store(source->mLooping ? &source->mQueue.front() : nullptr,
@@ -1685,7 +1685,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
                         "Setting already-set callback buffer {}", buffer->mId);
 
                 /* Add the selected buffer to a one-item queue */
-                auto newlist = std::deque<ALbufferQueueItem>{};
+                auto newlist = std::deque<al::BufferQueueItem>{};
                 auto &item = newlist.emplace_back();
                 item.mBuffer = buffer->newReference();
                 item.mCallback = buffer->mCallback;
@@ -1704,7 +1704,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
             {
                 /* Source is now Undetermined */
                 Source->mSourceType = AL_UNDETERMINED;
-                std::deque<ALbufferQueueItem>{}.swap(Source->mQueue);
+                std::deque<al::BufferQueueItem>{}.swap(Source->mQueue);
             }
             return;
         }
@@ -2346,7 +2346,7 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            const ALbufferQueueItem *BufferList{};
+            al::BufferQueueItem const *buflist{};
             /* HACK: This query should technically only return the buffer set
              * on a static source. However, some apps had used it to detect
              * when a streaming source changed buffers, so report the current
@@ -2355,16 +2355,16 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
             if(Source->mSourceType == AL_STATIC || Source->mState == AL_INITIAL)
             {
                 if(!Source->mQueue.empty())
-                    BufferList = &Source->mQueue.front();
+                    buflist = &Source->mQueue.front();
             }
-            else if(auto *voice = GetSourceVoice(Source, Context))
+            else if(auto const *const voice = GetSourceVoice(Source, Context))
             {
                 auto *Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
                 const auto iter = std::ranges::find(Source->mQueue, Current,
-                    [](const ALbufferQueueItem &arg) { return &arg; });
-                BufferList = (iter != Source->mQueue.end()) ? &*iter : nullptr;
+                    [](al::BufferQueueItem const &arg) { return &arg; });
+                buflist = (iter != Source->mQueue.end()) ? &*iter : nullptr;
             }
-            auto *buffer = BufferList ? BufferList->mBuffer.get() : nullptr;
+            auto *buffer = buflist ? buflist->mBuffer.get() : nullptr;
             values[0] = buffer ? static_cast<T>(buffer->mId) : T{0};
             return;
         }
@@ -2392,7 +2392,7 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            auto played = 0;
+            auto played = 0_i32;
             /* Buffers on a looping source are in a perpetual state of PENDING,
              * so don't report any as PROCESSED.
              */
@@ -2405,9 +2405,9 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
                         return voice->mCurrentBuffer.load(std::memory_order_relaxed);
                     return nullptr;
                 });
-                const auto qiter = std::ranges::find(Source->mQueue, Current,
-                    [](const ALbufferQueueItem &item) { return &item; });
-                played = gsl::narrow_cast<int>(std::distance(Source->mQueue.begin(), qiter));
+                auto const qiter = std::ranges::find(Source->mQueue, Current,
+                    [](al::BufferQueueItem const &item) { return &item; });
+                played = gsl::narrow_cast<i32>(std::distance(Source->mQueue.begin(), qiter));
             }
             values[0] = played;
             return;
@@ -2580,7 +2580,7 @@ void StartSources(gsl::not_null<al::Context*> const context,
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
-        const auto BufferList = std::ranges::find_if(source->mQueue, [](ALbufferQueueItem &entry)
+        const auto BufferList = std::ranges::find_if(source->mQueue, [](al::BufferQueueItem &entry)
         { return entry.mSampleLen != 0 || entry.mCallback != nullptr; });
 
         /* If there's nothing to play, go right to stopped. */
@@ -3443,7 +3443,7 @@ try {
     const auto bids = std::views::counted(buffers, nb);
     const auto NewListStart = std::ssize(source->mQueue);
     try {
-        ALbufferQueueItem *BufferList{nullptr};
+        al::BufferQueueItem *BufferList{};
         std::ranges::for_each(bids,[context,source,&BufferFmt,&BufferList](const ALuint bid)
         {
             auto *buffer = bid ? LookupBuffer(context, bid).get() : nullptr;
@@ -3554,7 +3554,7 @@ try {
             return nullptr;
         });
         const auto qiter = std::ranges::find(source->mQueue, Current,
-            [](const ALbufferQueueItem &item) { return &item; });
+            [](al::BufferQueueItem const &item) { return &item; });
         processed = gsl::narrow_cast<usize>(std::distance(source->mQueue.begin(), qiter));
     }
     if(processed < bids.size())

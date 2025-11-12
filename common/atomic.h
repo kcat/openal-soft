@@ -83,13 +83,13 @@ auto atomic_wait(std::atomic<T> &aval, T const value,
 
     if(sizeof(T) == sizeof(u32) && __ulock_wait != nullptr)
     {
-        while(aval.load(order) != value)
+        while(aval.load(order) == value)
             __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
     }
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
     else if(sizeof(T) == sizeof(u64) && __ulock_wait != nullptr)
     {
-        while(aval.load(order) != value)
+        while(aval.load(order) == value)
             __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
     }
 #endif
@@ -97,7 +97,7 @@ auto atomic_wait(std::atomic<T> &aval, T const value,
     {
         auto lock = std::unique_lock{gAtomicWaitMutex};
         ++gAtomicWaitCounter;
-        while(aval.load(order) != value)
+        while(aval.load(order) == value)
             gAtomicWaitCondVar.wait(lock);
         --gAtomicWaitCounter;
     }
@@ -129,7 +129,7 @@ auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
         {
             /* notify_all since we can't guarantee notify_one will wake a
              * waiter waiting on this particular object. With notify_all, we
-             * just act as all if waiters were spuriously woken up and they'll
+             * just act as if all waiters were spuriously woken up and they'll
              * recheck.
              */
             gAtomicWaitCondVar.notify_all();

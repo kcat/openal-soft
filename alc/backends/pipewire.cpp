@@ -520,7 +520,7 @@ enum class NodeType : unsigned char {
     Sink, Source, Duplex
 };
 
-auto AsString(NodeType type) noexcept -> std::string_view
+auto AsString(NodeType const type) noexcept -> std::string_view
 {
     switch(type)
     {
@@ -536,9 +536,9 @@ auto AsString(NodeType type) noexcept -> std::string_view
  */
 constexpr auto InvalidChannelConfig = gsl::narrow<DevFmtChannels>(255);
 struct DeviceNode {
-    uint32_t mId{};
+    u32 mId{};
 
-    uint64_t mSerial{};
+    u64 mSerial{};
     std::string mName;
     std::string mDevName;
 
@@ -571,11 +571,11 @@ auto DefaultSourceDevice = std::string{};
  * source nodes.
  */
 struct NodeProxy {
-    uint32_t mId{};
+    u32 mId{};
     PwNodePtr mNode;
     SpaHook mListener;
 
-    NodeProxy(uint32_t const id, PwNodePtr&& node) : mId{id}, mNode{std::move(node)}
+    NodeProxy(u32 const id, PwNodePtr&& node) : mId{id}, mNode{std::move(node)}
     {
         static constexpr auto nodeEvents = std::invoke([]() -> pw_node_events
         {
@@ -593,21 +593,21 @@ struct NodeProxy {
         /* Track changes to the enumerable and current formats (indicates the
          * default and active format, which is what we're interested in).
          */
-        auto fmtids = std::to_array<uint32_t>({SPA_PARAM_EnumFormat, SPA_PARAM_Format});
+        auto fmtids = std::to_array<u32>({SPA_PARAM_EnumFormat, SPA_PARAM_Format});
         ppw_node_subscribe_params(mNode.get(), fmtids.data(), fmtids.size());
     }
 
     static void infoCallback(void *object, const pw_node_info *info) noexcept;
-    void paramCallback(int seq, uint32_t id, uint32_t index, uint32_t next, const spa_pod *param) const noexcept;
+    void paramCallback(int seq, u32 id, u32 index, u32 next, spa_pod const *param) const noexcept;
 };
 
 /* A metadata proxy object used to query the default sink and source. */
 struct MetadataProxy {
-    uint32_t mId{};
+    u32 mId{};
     PwMetadataPtr mMetadata;
     SpaHook mListener;
 
-    MetadataProxy(uint32_t const id, PwMetadataPtr&& mdata) : mId{id}, mMetadata{std::move(mdata)}
+    MetadataProxy(u32 const id, PwMetadataPtr&& mdata) : mId{id}, mMetadata{std::move(mdata)}
     {
         static constexpr auto metadataEvents = std::invoke([]() -> pw_metadata_events
         {
@@ -619,7 +619,7 @@ struct MetadataProxy {
         ppw_metadata_add_listener(mMetadata.get(), &mListener, &metadataEvents, this);
     }
 
-    static auto propertyCallback(void *object, uint32_t id, const char *key, const char *type,
+    static auto propertyCallback(void *object, u32 id, gsl::czstring key, gsl::czstring type,
         gsl::czstring value) noexcept -> int;
 };
 
@@ -651,10 +651,10 @@ struct EventManager {
     std::atomic<bool> mHasAudio{false};
     int mInitSeq{};
 
-    static auto AddDevice(uint32_t id) -> DeviceNode&;
-    static auto FindDevice(uint32_t id) -> DeviceNode*;
+    static auto AddDevice(u32 id) -> DeviceNode&;
+    static auto FindDevice(u32 id) -> DeviceNode*;
     static auto FindDevice(std::string_view devname) -> DeviceNode*;
-    static void RemoveDevice(uint32_t id);
+    static void RemoveDevice(u32 id);
     static auto GetDeviceList() noexcept { return std::span{sList}; }
 
     ~EventManager() { if(mLoop) mLoop.stop(); }
@@ -709,12 +709,12 @@ struct EventManager {
             mInitSeq = ppw_core_sync(mCore.get(), PW_ID_CORE, mInitSeq);
     }
 
-    void addCallback(uint32_t id, uint32_t permissions, const char *type, uint32_t version,
-        const spa_dict *props) noexcept;
+    void addCallback(u32 id, u32 permissions, gsl::czstring type, u32 version,
+        spa_dict const *props) noexcept;
 
-    void removeCallback(uint32_t id) noexcept;
+    void removeCallback(u32 id) noexcept;
 
-    void coreCallback(uint32_t id, int seq) noexcept;
+    void coreCallback(u32 id, int seq) noexcept;
 
 private:
     static inline auto sList = std::vector<DeviceNode>{};
@@ -724,7 +724,7 @@ using EventWatcherLockGuard = std::lock_guard<EventManager>;
 auto gEventHandler = EventManager{}; /* NOLINT(cert-err58-cpp) */
 
 
-auto EventManager::AddDevice(uint32_t const id) -> DeviceNode&
+auto EventManager::AddDevice(u32 const id) -> DeviceNode&
 {
     /* If the node is already in the list, return the existing entry. */
     const auto match = std::ranges::lower_bound(sList, id, std::less{}, &DeviceNode::mId);
@@ -736,21 +736,22 @@ auto EventManager::AddDevice(uint32_t const id) -> DeviceNode&
     return n;
 }
 
-auto EventManager::FindDevice(uint32_t const id) -> DeviceNode*
+auto EventManager::FindDevice(u32 const id) -> DeviceNode*
 {
-    const auto match = std::ranges::find(sList, id, &DeviceNode::mId);
-    if(match != sList.end()) return std::to_address(match);
+    if(auto const match = std::ranges::find(sList, id, &DeviceNode::mId); match != sList.end())
+        return std::to_address(match);
     return nullptr;
 }
 
 auto EventManager::FindDevice(std::string_view const devname) -> DeviceNode*
 {
-    const auto match = std::ranges::find(sList, devname, &DeviceNode::mDevName);
-    if(match != sList.end()) return std::to_address(match);
+    if(auto const match = std::ranges::find(sList, devname, &DeviceNode::mDevName);
+        match != sList.end())
+        return std::to_address(match);
     return nullptr;
 }
 
-void EventManager::RemoveDevice(uint32_t const id)
+void EventManager::RemoveDevice(u32 const id)
 {
     const auto end = std::ranges::remove_if(sList, [id](DeviceNode &n) noexcept -> bool
     {
@@ -800,7 +801,7 @@ constexpr auto X714Map = std::array{
  * Checks if every channel in 'map1' exists in 'map0' (that is, map0 is equal
  * to or a superset of map1).
  */
-auto MatchChannelMap(std::span<uint32_t const> const map0,
+auto MatchChannelMap(std::span<u32 const> const map0,
     std::span<spa_audio_channel const> const map1) -> bool
 {
     if(map0.size() < map1.size())
@@ -813,8 +814,8 @@ auto MatchChannelMap(std::span<uint32_t const> const map0,
 void DeviceNode::parseSampleRate(spa_pod const *value, bool const force_update) noexcept
 {
     /* TODO: Can this be anything else? Long, Float, Double? */
-    auto nvals = uint32_t{};
-    auto choiceType = uint32_t{};
+    auto nvals = u32{};
+    auto choiceType = u32{};
     value = spa_pod_get_values(value, &nvals, &choiceType);
 
     if(const auto podType = get_pod_type(value); podType != SPA_TYPE_Int)
@@ -830,7 +831,7 @@ void DeviceNode::parseSampleRate(spa_pod const *value, bool const force_update) 
             WARN("  Unexpected SPA_CHOICE_Range count: {}", nvals);
             return;
         }
-        auto srates = get_pod_body<int32_t,3>(value);
+        auto srates = get_pod_body<i32, 3>(value);
 
         /* [0] is the default, [1] is the min, and [2] is the max. */
         TRACE("  sample rate: {} ({} -> {})", srates[0], srates[1], srates[2]);
@@ -847,7 +848,7 @@ void DeviceNode::parseSampleRate(spa_pod const *value, bool const force_update) 
             WARN("  Unexpected SPA_CHOICE_Enum count: {}", nvals);
             return;
         }
-        auto srates = get_pod_body<int32_t>(value, nvals);
+        auto srates = get_pod_body<i32>(value, nvals);
 
         /* [0] is the default, [1...size()-1] are available selections. */
         TRACE("{}", fmt::format("  sample rate: {} {}", srates[0], srates.subspan(1)));
@@ -873,7 +874,7 @@ void DeviceNode::parseSampleRate(spa_pod const *value, bool const force_update) 
             WARN("  Unexpected SPA_CHOICE_None count: {}", nvals);
             return;
         }
-        auto srates = get_pod_body<int32_t,1>(value);
+        auto srates = get_pod_body<i32, 1>(value);
 
         TRACE("  sample rate: {}", srates[0]);
         if(!mSampleRate || force_update)
@@ -887,8 +888,8 @@ void DeviceNode::parseSampleRate(spa_pod const *value, bool const force_update) 
 
 void DeviceNode::parsePositions(spa_pod const *value, bool const force_update) noexcept
 {
-    auto choiceCount = uint32_t{};
-    auto choiceType = uint32_t{};
+    auto choiceCount = u32{};
+    auto choiceType = u32{};
     value = spa_pod_get_values(value, &choiceCount, &choiceType);
 
     if(choiceType != SPA_CHOICE_None || choiceCount != 1)
@@ -931,8 +932,8 @@ void DeviceNode::parsePositions(spa_pod const *value, bool const force_update) n
 void DeviceNode::parseChannelCount(spa_pod const *value, bool const force_update) noexcept
 {
     /* As a fallback with just a channel count, just assume mono or stereo. */
-    auto choiceCount = uint32_t{};
-    auto choiceType = uint32_t{};
+    auto choiceCount = u32{};
+    auto choiceType = u32{};
     value = spa_pod_get_values(value, &choiceCount, &choiceType);
 
     if(choiceType != SPA_CHOICE_None || choiceCount != 1)
@@ -1070,8 +1071,8 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
     }
 }
 
-void NodeProxy::paramCallback(int, uint32_t const id, uint32_t, uint32_t,
-    spa_pod const *const param) const noexcept
+void NodeProxy::paramCallback(int, u32 const id, u32, u32, spa_pod const *const param) const
+    noexcept
 {
     if(id == SPA_PARAM_EnumFormat || id == SPA_PARAM_Format)
     {
@@ -1097,8 +1098,8 @@ void NodeProxy::paramCallback(int, uint32_t const id, uint32_t, uint32_t,
 }
 
 
-auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const char *type,
-    const char *value) noexcept -> int
+auto MetadataProxy::propertyCallback(void*, u32 id, gsl::czstring key, gsl::czstring type,
+    gsl::czstring value) noexcept -> int
 {
     if(id != PW_ID_CORE)
         return 0;
@@ -1124,12 +1125,12 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, const char *key, const 
         return 0;
     }
 
-    auto it = std::array<spa_json,2>{};
+    auto it = std::array<spa_json, 2>{};
     spa_json_init(it.data(), value, strlen(value));
     if(spa_json_enter_object(&std::get<0>(it), &std::get<1>(it)) <= 0)
         return 0;
 
-    static constexpr auto get_json_string = [](spa_json *iter)
+    static constexpr auto get_json_string = [](spa_json *const iter)
     {
         auto str = std::optional<std::string>{};
 
@@ -1216,7 +1217,7 @@ auto EventManager::init() -> bool
     {
         auto ret = pw_core_events{};
         ret.version = PW_VERSION_CORE_EVENTS;
-        ret.done = [](void *const object, uint32_t const id, int const seq) noexcept -> void
+        ret.done = [](void *const object, u32 const id, int const seq) noexcept -> void
         { static_cast<EventManager*>(object)->coreCallback(id, seq); };
         return ret;
     });
@@ -1233,8 +1234,8 @@ auto EventManager::init() -> bool
     {
         auto ret = pw_registry_events{};
         ret.version = PW_VERSION_REGISTRY_EVENTS;
-        ret.global = [](void *const object, uint32_t const id, uint32_t const permissions,
-            gsl::czstring const type, uint32_t const version, spa_dict const *const props) noexcept
+        ret.global = [](void *const object, u32 const id, u32 const permissions,
+            gsl::czstring const type, u32 const version, spa_dict const *const props) noexcept
             -> void
         { static_cast<EventManager*>(object)->addCallback(id, permissions, type, version, props); };
         ret.global_remove = [](void *const object, uint32_t const id) noexcept -> void
@@ -1276,8 +1277,8 @@ void EventManager::kill()
     mLoop = nullptr;
 }
 
-void EventManager::addCallback(uint32_t const id, uint32_t, gsl::czstring const type,
-    uint32_t const version, spa_dict const *const props) noexcept
+void EventManager::addCallback(u32 const id, u32, gsl::czstring const type, u32 const version,
+    spa_dict const *const props) noexcept
 {
     /* We're only interested in interface nodes. */
     if(std::strcmp(type, PW_TYPE_INTERFACE_Node) == 0)
@@ -1349,11 +1350,11 @@ void EventManager::addCallback(uint32_t const id, uint32_t, gsl::czstring const 
     }
 }
 
-void EventManager::removeCallback(uint32_t const id) noexcept
+void EventManager::removeCallback(u32 const id) noexcept
 {
     RemoveDevice(id);
 
-    auto node_end = std::ranges::remove_if(mNodeList, [id](NodeProxy &node) noexcept
+    auto node_end = std::ranges::remove_if(mNodeList, [id](NodeProxy const &node) noexcept
     { return node.mId == id; }, &std::unique_ptr<NodeProxy>::operator*);
     mNodeList.erase(node_end.begin(), node_end.end());
 
@@ -1361,7 +1362,7 @@ void EventManager::removeCallback(uint32_t const id) noexcept
         mDefaultMetadata.reset();
 }
 
-void EventManager::coreCallback(uint32_t const id, int const seq) noexcept
+void EventManager::coreCallback(u32 const id, int const seq) noexcept
 {
     if(id == PW_ID_CORE && seq == mInitSeq)
     {
@@ -1430,7 +1431,7 @@ auto make_spa_info(DeviceBase *const device, bool const is51rear, use_f32p_e con
 
 class PipeWirePlayback final : public BackendBase {
     void stateChangedCallback(pw_stream_state old, pw_stream_state state, gsl::czstring error) const noexcept;
-    void ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept;
+    void ioChangedCallback(u32 id, void *area, u32 size) noexcept;
     void outputCallback() noexcept;
 
     void open(std::string_view name) override;
@@ -1461,11 +1462,11 @@ public:
 };
 
 
-void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, const char*) const noexcept
+void PipeWirePlayback::stateChangedCallback(pw_stream_state, pw_stream_state, gsl::czstring) const
+    noexcept
 { mLoop.signal(false); }
 
-void PipeWirePlayback::ioChangedCallback(uint32_t const id, void *const area, uint32_t const size)
-    noexcept
+void PipeWirePlayback::ioChangedCallback(u32 const id, void *const area, u32 const size) noexcept
 {
     switch(id)
     {
@@ -1577,7 +1578,7 @@ void PipeWirePlayback::open(std::string_view name)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to start PipeWire mainloop (res: {})", res};
     }
-    MainloopUniqueLock mlock{mLoop};
+    auto mlock = MainloopUniqueLock{mLoop};
     if(!mContext)
     {
         auto *cprops = pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr);
@@ -1618,7 +1619,7 @@ auto PipeWirePlayback::reset() -> bool
     /* If connecting to a specific device, update various device parameters to
      * match its format.
      */
-    bool is51rear{false};
+    auto is51rear = false;
     mDevice->Flags.reset(DirectEar);
     if(mTargetId != PwIdAny)
     {
@@ -1676,7 +1677,7 @@ auto PipeWirePlayback::reset() -> bool
      * be useful?
      */
     auto&& binary = GetProcBinary();
-    auto const *appname = !binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft";
+    auto *const appname = !binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft";
     auto *props = pw_properties_new(PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,
         PW_KEY_MEDIA_TYPE, "Audio",
@@ -1711,8 +1712,8 @@ auto PipeWirePlayback::reset() -> bool
         ret.state_changed = [](void *const data, pw_stream_state const old,
             pw_stream_state const state, gsl::czstring const error) noexcept -> void
         { static_cast<PipeWirePlayback*>(data)->stateChangedCallback(old, state, error); };
-        ret.io_changed = [](void *const data, uint32_t const id, void *const area,
-            uint32_t const size) noexcept -> void
+        ret.io_changed = [](void *const data, u32 const id, void *const area, u32 const size)
+            noexcept -> void
         { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
         ret.process = [](void *const data) noexcept -> void
         { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
@@ -1731,8 +1732,8 @@ auto PipeWirePlayback::reset() -> bool
     /* Wait for the stream to become paused (ready to start streaming). */
     plock.wait([stream=mStream.get()]
     {
-        const char *error{};
-        const auto state = pw_stream_get_state(stream, &error);
+        auto *error = gsl::czstring{};
+        auto const state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"{}\"", error};
@@ -1766,8 +1767,8 @@ void PipeWirePlayback::start()
      */
     plock.wait([stream=mStream.get()]
     {
-        const char *error{};
-        const auto state = pw_stream_get_state(stream, &error);
+        auto *error = gsl::czstring{};
+        auto const state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "PipeWire stream error: {}", error ? error : "(unknown)"};
@@ -1815,7 +1816,7 @@ void PipeWirePlayback::start()
         if(ptime.rate.denom > 0 && updatesize > 0)
         {
             /* Ensure the delay is in sample frames. */
-            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
+            const auto delay = gsl::narrow_cast<u64>(ptime.delay) * mDevice->mSampleRate *
                 ptime.rate.num / ptime.rate.denom;
 
             mDevice->mUpdateSize = updatesize;
@@ -1942,7 +1943,7 @@ class PipeWireCapture final : public BackendBase {
     void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> usize override;
 
-    uint64_t mTargetId{PwIdAny};
+    u64 mTargetId{PwIdAny};
     ThreadMainloop mLoop;
     PwContextPtr mContext;
     PwCorePtr mCore;
@@ -2052,10 +2053,10 @@ void PipeWireCapture::open(std::string_view name)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Failed to start PipeWire mainloop (res: {})", res};
     }
-    MainloopUniqueLock mlock{mLoop};
+    auto mlock = MainloopUniqueLock{mLoop};
     if(!mContext)
     {
-        pw_properties *cprops{pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr)};
+        auto *cprops = pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr);
         mContext = mLoop.newContext(cprops);
         if(!mContext)
             throw al::backend_exception{al::backend_error::DeviceError,
@@ -2079,7 +2080,7 @@ void PipeWireCapture::open(std::string_view name)
         mDeviceName = "PipeWire Input"sv;
 
 
-    bool is51rear{false};
+    auto is51rear = false;
     if(mTargetId != PwIdAny)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
@@ -2098,7 +2099,7 @@ void PipeWireCapture::open(std::string_view name)
             "Failed to set PipeWire audio format parameters"};
 
     auto&& binary = GetProcBinary();
-    const char *appname{!binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft"};
+    auto *appname = !binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft";
     pw_properties *props{pw_properties_new(
         PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,
@@ -2124,7 +2125,7 @@ void PipeWireCapture::open(std::string_view name)
     pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
 #endif
 
-    MainloopUniqueLock plock{mLoop};
+    auto plock = MainloopUniqueLock{mLoop};
     mStream = PwStreamPtr{pw_stream_new(mCore.get(), "Capture Stream", props)};
     if(!mStream)
         throw al::backend_exception{al::backend_error::NoDevice,
@@ -2134,10 +2135,10 @@ void PipeWireCapture::open(std::string_view name)
     {
         auto ret = pw_stream_events{};
         ret.version = PW_VERSION_STREAM_EVENTS;
-        ret.state_changed = [](void *data, pw_stream_state old, pw_stream_state state,
-            const char *error) noexcept -> void
+        ret.state_changed = [](void *const data, pw_stream_state const old,
+            pw_stream_state const state, gsl::czstring const error) noexcept -> void
         { static_cast<PipeWireCapture*>(data)->stateChangedCallback(old, state, error); };
-        ret.process = [](void *data) noexcept -> void
+        ret.process = [](void *const data) noexcept -> void
         { static_cast<PipeWireCapture*>(data)->inputCallback(); };
         return ret;
     });
@@ -2153,8 +2154,8 @@ void PipeWireCapture::open(std::string_view name)
     /* Wait for the stream to become paused (ready to start streaming). */
     plock.wait([stream=mStream.get()]
     {
-        const char *error{};
-        const auto state = pw_stream_get_state(stream, &error);
+        auto *error = gsl::czstring{};
+        auto const state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Error connecting PipeWire stream: \"{}\"", error};
@@ -2180,8 +2181,8 @@ void PipeWireCapture::start()
 
     plock.wait([stream=mStream.get()]
     {
-        const char *error{};
-        const auto state = pw_stream_get_state(stream, &error);
+        auto *error = gsl::czstring{};
+        auto const state = pw_stream_get_state(stream, &error);
         if(state == PW_STREAM_STATE_ERROR)
             throw al::backend_exception{al::backend_error::DeviceError,
                 "PipeWire stream error: {}", error ? error : "(unknown)"};
@@ -2302,7 +2303,7 @@ auto PipeWireBackendFactory::createBackend(gsl::not_null<DeviceBase*> const devi
 
 auto PipeWireBackendFactory::getFactory() -> BackendFactory&
 {
-    static PipeWireBackendFactory factory{};
+    static auto factory = PipeWireBackendFactory{};
     return factory;
 }
 

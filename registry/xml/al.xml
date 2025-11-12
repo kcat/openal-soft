@@ -1325,12 +1325,12 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x1009" name="ALC_SYNC" group="ContextPName,ContextBoolean,ContextAttribute" comment="Context attribute: AL_TRUE or AL_FALSE synchronous context?"/>
         <enum value="0x1010" name="ALC_MONO_SOURCES" group="ContextPName,ContextInteger,ContextAttribute" comment="Context attribute: &lt;int&gt; requested Mono (3D) Sources."/>
         <enum value="0x1011" name="ALC_STEREO_SOURCES" group="ContextPName,ContextInteger,ContextAttribute" comment="Context attribute: &lt;int&gt; requested Stereo Sources."/>
-        <enum value="0" name="ALC_NO_ERROR" group="ErrorCode" comment="No error."/>
-        <enum value="0xA001" name="ALC_INVALID_DEVICE" group="ErrorCode" comment="Invalid device handle."/>
-        <enum value="0xA002" name="ALC_INVALID_CONTEXT" group="ErrorCode" comment="Invalid context handle."/>
-        <enum value="0xA003" name="ALC_INVALID_ENUM" group="ErrorCode" comment="Invalid enumeration passed to an ALC call."/>
-        <enum value="0xA004" name="ALC_INVALID_VALUE" group="ErrorCode" comment="Invalid value passed to an ALC call."/>
-        <enum value="0xA005" name="ALC_OUT_OF_MEMORY" group="ErrorCode" comment="Out of memory."/>
+        <enum value="0" name="ALC_NO_ERROR" group="ContextErrorCode" comment="No error."/>
+        <enum value="0xA001" name="ALC_INVALID_DEVICE" group="ContextErrorCode" comment="Invalid device handle."/>
+        <enum value="0xA002" name="ALC_INVALID_CONTEXT" group="ContextErrorCode" comment="Invalid context handle."/>
+        <enum value="0xA003" name="ALC_INVALID_ENUM" group="ContextErrorCode" comment="Invalid enumeration passed to an ALC call."/>
+        <enum value="0xA004" name="ALC_INVALID_VALUE" group="ContextErrorCode" comment="Invalid value passed to an ALC call."/>
+        <enum value="0xA005" name="ALC_OUT_OF_MEMORY" group="ContextErrorCode" comment="Out of memory."/>
         <enum value="0x1000" name="ALC_MAJOR_VERSION" group="ContextPName,ContextInteger" comment="Runtime ALC major version."/>
         <enum value="0x1001" name="ALC_MINOR_VERSION" group="ContextPName,ContextInteger" comment="Runtime ALC minor version."/>
         <enum value="0x1002" name="ALC_ATTRIBUTES_SIZE" group="ContextPName,ContextInteger" comment="Context attribute list size."/>
@@ -1447,9 +1447,9 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x0001" name="ALC_CONTEXT_DEBUG_BIT_EXT" group="ContextFlagsEXT"/>
         <enum value="0x19D4" name="ALC_PLAYBACK_DEVICE_SOFT" group="DeviceTypeSOFT"/>
         <enum value="0x19D5" name="ALC_CAPTURE_DEVICE_SOFT" group="DeviceTypeSOFT"/>
-        <enum value="0x19D6" name="ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT" group="EventTypeSOFT"/>
-        <enum value="0x19D7" name="ALC_EVENT_TYPE_DEVICE_ADDED_SOFT" group="EventTypeSOFT"/>
-        <enum value="0x19D8" name="ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT" group="EventTypeSOFT"/>
+        <enum value="0x19D6" name="ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT" group="SystemEventTypeSOFT"/>
+        <enum value="0x19D7" name="ALC_EVENT_TYPE_DEVICE_ADDED_SOFT" group="SystemEventTypeSOFT"/>
+        <enum value="0x19D8" name="ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT" group="SystemEventTypeSOFT"/>
         <enum value="0x19D9" name="ALC_EVENT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
         <enum value="0x19DA" name="ALC_EVENT_NOT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
     </enums>
@@ -3368,7 +3368,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
         <command export="alc" comment="Obtain the most recent Device error.">
-            <proto group="ErrorCode"><ptype>ALCenum</ptype> <name>alcGetError</name></proto>
+            <proto group="ContextErrorCode"><ptype>ALCenum</ptype> <name>alcGetError</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
         </command>
         <command export="alc">
@@ -3491,7 +3491,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         </command>
         <command>
             <proto group="EventSupportSOFT"><ptype>ALCenum</ptype> <name>alcEventIsSupportedSOFT</name></proto>
-            <param group="EventTypeSOFT"><ptype>ALCenum</ptype> <name>eventType</name></param>
+            <param group="SystemEventTypeSOFT"><ptype>ALCenum</ptype> <name>eventType</name></param>
             <param group="DeviceTypeSOFT"><ptype>ALCenum</ptype> <name>deviceType</name></param>
         </command>
         <command>

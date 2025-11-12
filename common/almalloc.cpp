@@ -30,19 +30,21 @@ auto operator new(std::size_t const len, std::align_val_t const align) -> gsl::o
 auto operator new[](std::size_t const len, std::align_val_t const align) -> gsl::owner<void*>
 { return operator new(len, align); }
 
-auto operator delete(void *const ptr, std::align_val_t) noexcept -> void
+auto operator delete(gsl::owner<void*> const ptr, std::align_val_t) noexcept -> void
 { free(ptr); }
-auto operator delete[](void *const ptr, std::align_val_t) noexcept -> void
-{ free(ptr); }
-
-auto operator delete(void *const ptr, std::size_t, std::align_val_t) noexcept -> void
-{ free(ptr); }
-auto operator delete[](void *const ptr, std::size_t, std::align_val_t) noexcept -> void
+auto operator delete[](gsl::owner<void*> const ptr, std::align_val_t) noexcept -> void
 { free(ptr); }
 
-auto operator delete(void *const ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void
+auto operator delete(gsl::owner<void*> const ptr, std::size_t, std::align_val_t) noexcept -> void
 { free(ptr); }
-auto operator delete[](void *const ptr, std::align_val_t, std::nothrow_t const&) noexcept -> void
+auto operator delete[](gsl::owner<void*> const ptr, std::size_t, std::align_val_t) noexcept -> void
+{ free(ptr); }
+
+auto operator delete(gsl::owner<void*> const ptr, std::align_val_t, std::nothrow_t const&) noexcept
+    -> void
+{ free(ptr); }
+auto operator delete[](gsl::owner<void*> const ptr, std::align_val_t, std::nothrow_t const&)
+    noexcept -> void
 { free(ptr); }
 
 #endif

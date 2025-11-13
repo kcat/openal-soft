@@ -203,6 +203,8 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
+auto *gConfigFileName = gsl::czstring{};
+
 
 auto check_version(gsl::czstring const version) -> bool
 {
@@ -214,9 +216,17 @@ auto check_version(gsl::czstring const version) -> bool
     auto minor = int{};
     auto revision = int{};
     /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
-    const auto ret = sscanf(version, "%d.%d.%d", &major, &minor, &revision);
-    return ret == 3 && (major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
-        || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO));
+    if(auto const ret = sscanf(version, "%d.%d.%d", &major, &minor, &revision); ret != 3)
+        return false;
+
+    /* client-rt.conf is deprecated since PipeWire 1.3.81, and we should just
+     * use the default.
+     */
+    if(!(major > 1 || (major == 1 && minor > 3) || (major == 1 && minor == 3 && revision >= 81)))
+        gConfigFileName = "client-rt.conf";
+
+    return major > PW_MAJOR || (major == PW_MAJOR && minor > PW_MINOR)
+        || (major == PW_MAJOR && minor == PW_MINOR && revision >= PW_MICRO);
 }
 
 #if HAVE_DYNLOAD
@@ -1579,21 +1589,15 @@ void PipeWirePlayback::open(std::string_view name)
                 "Failed to start PipeWire mainloop (res: {})", res};
     }
     auto mlock = MainloopUniqueLock{mLoop};
+    mContext = mLoop.newContext(!gConfigFileName ? nullptr
+        : pw_properties_new(PW_KEY_CONFIG_NAME, gConfigFileName, nullptr));
     if(!mContext)
-    {
-        auto *cprops = pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr);
-        mContext = mLoop.newContext(cprops);
-        if(!mContext)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire event context (errno: {})\n", errno};
-    }
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create PipeWire event context (errno: {})\n", errno};
+    mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
     if(!mCore)
-    {
-        mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
-        if(!mCore)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to connect PipeWire event context (errno: {})\n", errno};
-    }
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to connect PipeWire event context (errno: {})\n", errno};
     mlock.unlock();
 
     /* TODO: Ensure the target ID is still valid/usable and accepts streams. */
@@ -2054,21 +2058,15 @@ void PipeWireCapture::open(std::string_view name)
                 "Failed to start PipeWire mainloop (res: {})", res};
     }
     auto mlock = MainloopUniqueLock{mLoop};
+    mContext = mLoop.newContext(!gConfigFileName ? nullptr
+        : pw_properties_new(PW_KEY_CONFIG_NAME, gConfigFileName, nullptr));
     if(!mContext)
-    {
-        auto *cprops = pw_properties_new(PW_KEY_CONFIG_NAME, "client-rt.conf", nullptr);
-        mContext = mLoop.newContext(cprops);
-        if(!mContext)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to create PipeWire event context (errno: {})\n", errno};
-    }
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create PipeWire event context (errno: {})\n", errno};
+    mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
     if(!mCore)
-    {
-        mCore = PwCorePtr{pw_context_connect(mContext.get(), nullptr, 0)};
-        if(!mCore)
-            throw al::backend_exception{al::backend_error::DeviceError,
-                "Failed to connect PipeWire event context (errno: {})\n", errno};
-    }
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to connect PipeWire event context (errno: {})\n", errno};
     mlock.unlock();
 
     /* TODO: Ensure the target ID is still valid/usable and accepts streams. */

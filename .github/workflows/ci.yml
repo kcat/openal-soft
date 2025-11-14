@@ -18,8 +18,12 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
-            build_type: "Release"
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DJACK_INCLUDE_DIR=\"C:\\Program Files (x86)\\JACK2\\include\" \
+              -DJACK_LIBRARY=\"C:\\Program Files\\JACK2\\lib32\\libjack.lib\"",
+            build_type: "Release",
+            architecture: "Win32"
           }
         - {
             name: "Win32-Debug",
@@ -29,8 +33,12 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
-            build_type: "Debug"
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DJACK_INCLUDE_DIR=\"C:\\Program Files (x86)\\JACK2\\include\" \
+              -DJACK_LIBRARY=\"C:\\Program Files\\JACK2\\lib32\\libjack.lib\"",
+            build_type: "Debug",
+            architecture: "Win32"
           }
         - {
             name: "Win64-Release",
@@ -40,8 +48,12 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
-            build_type: "Release"
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DJACK_INCLUDE_DIR=\"C:\\Program Files\\JACK2\\include\" \
+              -DJACK_LIBRARY=\"C:\\Program Files\\JACK2\\lib\\libjack64.lib\"",
+            build_type: "Release",
+            architecture: "Win64"
           }
         - {
             name: "Win64-Debug",
@@ -51,8 +63,12 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
-            build_type: "Debug"
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DJACK_INCLUDE_DIR=\"C:\\Program Files\\JACK2\\include\" \
+              -DJACK_LIBRARY=\"C:\\Program Files\\JACK2\\lib\\libjack64.lib\"",
+            build_type: "Debug",
+            architecture: "Win64"
           }
         - {
             name: "Win64-UWP",
@@ -62,8 +78,12 @@ jobs:
               -DCMAKE_SYSTEM_NAME=WindowsStore \
               \"-DCMAKE_SYSTEM_VERSION=10.0\" \
               -DALSOFT_BUILD_ROUTER=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
-            build_type: "Release"
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DALSOFT_REQUIRE_JACK=ON \
+              -DJACK_INCLUDE_DIR=\"C:\\Program Files\\JACK2\\include\" \
+              -DJACK_LIBRARY=\"C:\\Program Files\\JACK2\\lib\\libjack64.lib\"",
+            build_type: "Release",
+            architecture: "Win64"
           }
         - {
             name: "macOS-Release",
@@ -158,6 +178,13 @@ jobs:
         if [[ ! -z "${{matrix.config.deps_cmdline}}" ]]; then
           eval ${{matrix.config.deps_cmdline}}
         fi
+
+    - name: Install Jack
+      if: ${{ contains(matrix.config.name, 'Win') }}
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Method Get -Uri https://github.com/jackaudio/jack2-releases/releases/download/v1.9.22/jack2-${{matrix.config.architecture}}-v1.9.22.exe -UseBasicParsing -OutFile jack.exe
+        Start-Process -Wait jack.exe -ArgumentList "/VERYSILENT"
 
     - name: Configure
       shell: bash

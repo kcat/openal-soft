@@ -357,13 +357,21 @@ else()
     # we'll have to ignore inline warning.
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93008
     set(C_FLAGS ${C_FLAGS} -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align -Wpedantic
-        $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual>)
+        -Wformat=2 $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor
+            -Woverloaded-virtual>)
 
-    check_cxx_compiler_flag(-Warith-conversion HAVE_WARITH_CONVERSION)
+    check_c_compiler_flag(-Wtrampolines HAVE_WTRAMPOLINES)
+    if(HAVE_WTRAMPOLINES)
+        set(C_FLAGS ${C_FLAGS} -Wtrampolines)
+    endif()
+    check_c_compiler_flag(-Warith-conversion HAVE_WARITH_CONVERSION)
     if(HAVE_WARITH_CONVERSION)
         set(C_FLAGS ${C_FLAGS} -Warith-conversion)
     endif()
-
+    check_c_compiler_flag(-Wbidi-chars=any HAVE_WBIDI_CHARS_ANY)
+    if(HAVE_WBIDI_CHARS_ANY)
+        set(C_FLAGS ${C_FLAGS} -Wbidi-chars=any)
+    endif()
     check_cxx_compiler_flag(-Wno-interference-size HAVE_WNO_INTERFERENCE_SIZE)
     if(HAVE_WNO_INTERFERENCE_SIZE)
         set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wno-interference-size>)
@@ -372,7 +380,9 @@ else()
     if(ALSOFT_WERROR)
         set(C_FLAGS ${C_FLAGS} -Werror)
     else()
-        set(C_FLAGS ${C_FLAGS} -Werror=undef)
+        set(C_FLAGS ${C_FLAGS} -Werror=undef -Werror=format-security
+            $<$<COMPILE_LANGUAGE:C>:-Werror=implicit -Werror=incompatible-pointer-types
+                -Werror=int-conversion>)
     endif()
 
     # NOTE: This essentially provides the equivalent of the C++26 feature to

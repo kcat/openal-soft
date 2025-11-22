@@ -357,12 +357,16 @@ else()
     # we'll have to ignore inline warning.
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93008
     set(C_FLAGS ${C_FLAGS} -Wunused -Wall -Wextra -Wshadow -Wconversion -Wcast-align -Wpedantic
-        -Wformat=2 $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor
+        -Wformat -Wformat=2 $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast -Wnon-virtual-dtor
             -Woverloaded-virtual>)
 
     check_c_compiler_flag(-Wtrampolines HAVE_WTRAMPOLINES)
     if(HAVE_WTRAMPOLINES)
         set(C_FLAGS ${C_FLAGS} -Wtrampolines)
+    endif()
+    check_c_compiler_flag(-Wconversion HAVE_WCONVERSION)
+    if(HAVE_WCONVERSION)
+        set(C_FLAGS ${C_FLAGS} -Wconversion)
     endif()
     check_c_compiler_flag(-Warith-conversion HAVE_WARITH_CONVERSION)
     if(HAVE_WARITH_CONVERSION)

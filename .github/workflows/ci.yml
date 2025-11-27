@@ -235,6 +235,8 @@ jobs:
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/LICENSE-pffft           -o "build/release/OpenALSoft/Documentation/License_PFFFT.txt"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win32/alsoft.ini"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/alsoftrc.sample         -o "build/release/OpenALSoft/Win64/alsoft.ini"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/logging/log.cmd         -o "build/release/OpenALSoft/Win32/log.cmd"
+        curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/logging/log.cmd         -o "build/release/OpenALSoft/Win64/log.cmd"
         cp "build/soft_oal-Win32-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win32/OpenAL32.dll"
         cp "build/soft_oal-Win64-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win64/OpenAL32.dll"
         cp -r "build/release/OpenALSoft"                                                                              "build/release/OpenALSoft+HRTF"

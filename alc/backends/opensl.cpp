@@ -856,35 +856,10 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
     const auto update_size = usize{mDevice->mUpdateSize};
     const auto chunk_size = update_size * mFrameSize;
 
-    /* Read the desired samples from the ring buffer then advance its read
-     * pointer.
-     */
-    auto adv_count = 0_uz;
-    auto rdata = mRing->getReadVector();
-    while(!outbuffer.empty())
-    {
-        const auto rem = std::min(outbuffer.size(), usize{chunk_size}-mByteOffset);
-        std::ranges::copy(rdata[0].subspan(mByteOffset, rem), outbuffer.begin());
-
-        mByteOffset += rem;
-        if(mByteOffset == chunk_size)
-        {
-            /* Finished a chunk, reset the offset and advance the read pointer. */
-            mByteOffset = 0;
-
-            ++adv_count;
-            rdata[0] = rdata[0].subspan(chunk_size);
-            if(rdata[0].empty())
-                rdata[0] = rdata[1];
-        }
-
-        outbuffer = outbuffer.subspan(rem);
-    }
-
     auto bufferQueue = SLAndroidSimpleBufferQueueItf{};
     if(mDevice->Connected.load(std::memory_order_acquire)) [[likely]]
     {
-        const auto result = VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+        auto const result = VCALL(mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
             static_cast<void*>(&bufferQueue));
         PrintErr(result, "recordObj->GetInterface");
         if(SL_RESULT_SUCCESS != result) [[unlikely]]
@@ -893,45 +868,39 @@ void OpenSLCapture::captureSamples(std::span<std::byte> outbuffer)
             bufferQueue = nullptr;
         }
     }
-    if(!bufferQueue || adv_count == 0)
-        return;
 
-    /* For each buffer chunk that was fully read, queue another writable buffer
-     * chunk to keep the OpenSL queue full. This is rather convoluted, as a
-     * result of the ring buffer holding more elements than are writable at a
-     * given time. The end of the write vector increments when the read pointer
-     * advances, which will "expose" a previously unwritable element. So for
-     * every element that we've finished reading, we queue that many elements
-     * from the end of the write vector.
+    /* Read the desired samples from the ring buffer then advance its read
+     * pointer.
      */
-    mRing->readAdvance(adv_count);
+    auto rdata = mRing->getReadVector();
+    while(!outbuffer.empty())
+    {
+        auto const rem = std::min(outbuffer.size(), usize{chunk_size}-mByteOffset);
+        auto const oiter = std::ranges::copy(rdata[0].subspan(mByteOffset, rem),
+            outbuffer.begin()).out;
+        outbuffer = {oiter, outbuffer.end()};
 
-    auto result = SLresult{SL_RESULT_SUCCESS};
-    auto wdata = mRing->getWriteVector();
-    if(chunk_size*adv_count > wdata[1].size()) [[likely]]
-    {
-        auto len1 = std::min(wdata[0].size(), chunk_size*adv_count - wdata[1].size());
-        auto buf1 = wdata[0].begin();
-        std::advance(buf1, wdata[0].size() - len1);
-        for(const auto i [[maybe_unused]] : std::views::iota(0_uz, len1/chunk_size))
+        mByteOffset += rem;
+        if(mByteOffset == chunk_size)
         {
-            result = VCALL(bufferQueue,Enqueue)(std::to_address(buf1), chunk_size);
-            PrintErr(result, "bufferQueue->Enqueue");
-            if(result != SL_RESULT_SUCCESS) break;
-            std::advance(buf1, chunk_size);
-        }
-    }
-    if(!wdata[1].empty() && result == SL_RESULT_SUCCESS)
-    {
-        auto len2 = std::min(wdata[1].size(), chunk_size*adv_count);
-        auto buf2 = wdata[1].begin();
-        std::advance(buf2, wdata[1].size() - len2);
-        for(const auto i [[maybe_unused]] : std::views::iota(0_uz, len2/chunk_size))
-        {
-            result = VCALL(bufferQueue,Enqueue)(std::to_address(buf2), chunk_size);
-            PrintErr(result, "bufferQueue->Enqueue");
-            if(result != SL_RESULT_SUCCESS) break;
-            std::advance(buf2, chunk_size);
+            /* Finished a chunk, reset the offset and advance the read pointer. */
+            mByteOffset = 0;
+
+            mRing->readAdvance(1);
+            if(bufferQueue)
+            {
+                auto const result = VCALL(bufferQueue,Enqueue)(rdata[0].data(), chunk_size);
+                PrintErr(result, "bufferQueue->Enqueue");
+                if(SL_RESULT_SUCCESS != result) [[unlikely]]
+                {
+                    bufferQueue = nullptr;
+                    mDevice->handleDisconnect("Failed to queue capture buffer: {:#08x}", result);
+                }
+            }
+
+            rdata[0] = rdata[0].subspan(chunk_size);
+            if(rdata[0].empty())
+                rdata[0] = rdata[1];
         }
     }
 }

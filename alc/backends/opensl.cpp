@@ -316,7 +316,8 @@ void OpenSLPlayback::mixerProc()
             mDevice->renderSamples(data[1].data(),
                 gsl::narrow_cast<u32>(data[1].size()/mFrameSize), frame_step);
 
-        const auto todo = usize{data[0].size() + data[1].size()} / mRing->getElemSize();
+        const auto updatebytes = mRing->getElemSize();
+        const auto todo = usize{data[0].size() + data[1].size()} / updatebytes;
         mRing->writeAdvance(todo);
         dlock.unlock();
 
@@ -328,7 +329,6 @@ void OpenSLPlayback::mixerProc()
                 data[1] = {};
             }
 
-            const auto updatebytes = mDevice->mUpdateSize*mFrameSize;
             result = VCALL(bufferQueue,Enqueue)(data[0].data(), updatebytes);
             PrintErr(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)

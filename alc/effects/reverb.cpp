@@ -1123,11 +1123,12 @@ auto GetTransformFromVector(const std::span<f32 const, 3> vec) -> Array4x4
         norm[2] *= std::numbers::sqrt3_v<f32>;
     }
 
+    /* NOTE: This is transposed from a typical transform matrix. */
     return Array4x4{{
-        {{1.0f,   0.0f,    0.0f,   0.0f}},
-        {{norm[0], 1.0f-mag, 0.0f, 0.0f}},
-        {{norm[1], 0.0f, 1.0f-mag, 0.0f}},
-        {{norm[2], 0.0f, 0.0f, 1.0f-mag}}
+        {{1.0f, norm[0], norm[1], norm[2]}},
+        {{0.0f,    1.0f-mag,  0.0f,  0.0f}},
+        {{0.0f,    0.0f,  1.0f-mag,  0.0f}},
+        {{0.0f,    0.0f,  0.0f,  1.0f-mag}}
     }};
 }
 
@@ -1139,8 +1140,8 @@ void ReverbPipeline::update3DPanning(std::span<f32 const, 3> const ReflectionsPa
     /* Create matrices that transform a B-Format signal according to the
      * panning vectors.
      */
-    const auto earlymat = GetTransformFromVector(ReflectionsPan);
-    const auto latemat = GetTransformFromVector(LateReverbPan);
+    auto const earlymat = GetTransformFromVector(ReflectionsPan);
+    auto const latemat = GetTransformFromVector(LateReverbPan);
 
     auto get_coeffs = [doUpmix](std::span<std::array<f32, 4> const, 4> const a2bmatrix,
         std::span<std::array<f32, 4> const, 4> const matrix)
@@ -1155,37 +1156,36 @@ void ReverbPipeline::update3DPanning(std::span<f32 const, 3> const ReflectionsPa
              */
             const auto mtx2 = std::span{AmbiScale::FirstOrderUp};
 
-            for(const auto i : std::views::iota(0_uz, matrix[0].size()))
+            for(const auto i : std::views::iota(0_uz, matrix.size()))
             {
                 const auto dst = std::span{res[i]};
                 static_assert(dst.size() >= std::tuple_size_v<decltype(mtx2)::element_type>);
-                for(const auto k : std::views::iota(0_uz, matrix.size()))
+                for(const auto j : std::views::iota(0_uz, matrix[i].size()))
                 {
-                    std::ranges::transform(mtx2[k], dst, dst.begin(),
-                        [a=matrix[k][i]](f32 const in, f32 const out) noexcept -> f32
-                    { return a*in + out; });
+                    auto const a = matrix[i][j];
+                    std::ranges::transform(mtx2[j], dst, dst.begin(),
+                        [a](f32 const in, f32 const out) noexcept -> f32 { return a*in + out; });
                 }
             }
-
-            return res;
         }
-
-        /* When not upsampling, combine the A-to-B-Format conversion with its
-         * respective transform. This results panning gains that convert A-
-         * Format to B-Format, which is then panned.
-         */
-        for(const auto i : std::views::iota(0_uz, a2bmatrix[0].size()))
+        else
         {
-            const auto dst = std::span{res[i]};
-            static_assert(dst.size() >= std::tuple_size_v<decltype(matrix)::element_type>);
-            for(const auto k : std::views::iota(0_uz, a2bmatrix.size()))
+            /* When not upsampling, combine the A-to-B-Format conversion with
+             * its respective transform. This results in panning gains that
+             * convert A-Format to B-Format, which is then panned.
+             */
+            for(const auto i : std::views::iota(0_uz, a2bmatrix[0].size()))
             {
-                std::ranges::transform(matrix[k], dst, dst.begin(),
-                    [a=a2bmatrix[k][i]](f32 const in, f32 const out) noexcept -> f32
-                { return a*in + out; });
+                const auto dst = std::span{res[i]};
+                static_assert(dst.size() >= std::tuple_size_v<decltype(matrix)::element_type>);
+                for(const auto j : std::views::iota(0_uz, a2bmatrix.size()))
+                {
+                    auto const a = a2bmatrix[j][i];
+                    std::ranges::transform(matrix[j], dst, dst.begin(),
+                        [a](f32 const in, f32 const out) noexcept -> f32 { return a*in + out; });
+                }
             }
         }
-
         return res;
     };
 

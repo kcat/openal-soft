@@ -30,7 +30,8 @@ jobs:
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
               -DALSOFT_REQUIRE_WASAPI=ON \
-              -DFORCE_STATIC_VCRT=ON",
+              -DFORCE_STATIC_VCRT=ON \
+              -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug",
             build_type: "Debug"
           }
         - {
@@ -53,7 +54,8 @@ jobs:
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
               -DALSOFT_REQUIRE_WASAPI=ON \
-              -DFORCE_STATIC_VCRT=ON",
+              -DFORCE_STATIC_VCRT=ON \
+              -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug",
             build_type: "Debug"
           }
         - {

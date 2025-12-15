@@ -29,7 +29,8 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DFORCE_STATIC_VCRT=ON",
             build_type: "Debug"
           }
         - {
@@ -51,7 +52,8 @@ jobs:
               -DALSOFT_BUILD_ROUTER=ON \
               -DALSOFT_REQUIRE_WINMM=ON \
               -DALSOFT_REQUIRE_DSOUND=ON \
-              -DALSOFT_REQUIRE_WASAPI=ON",
+              -DALSOFT_REQUIRE_WASAPI=ON \
+              -DFORCE_STATIC_VCRT=ON",
             build_type: "Debug"
           }
         - {

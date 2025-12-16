@@ -516,7 +516,8 @@ void DSoundPlayback::stop()
         return;
     mThread.join();
 
-    mBuffer->Stop();
+    if(auto const hr = mBuffer->Stop(); FAILED(hr))
+        ERR("Failed to stop DirectSound buffer playback: {:#x}", as_unsigned(hr));
 }
 
 
@@ -651,7 +652,7 @@ void DSoundCapture::open(std::string_view name)
     //DirectSoundCapture Init code
     hr = DirectSoundCaptureCreate(guid, al::out_ptr(mDSC), nullptr);
     if(SUCCEEDED(hr))
-        mDSC->CreateCaptureBuffer(&DSCBDescription, al::out_ptr(mDSCbuffer), nullptr);
+        hr = mDSC->CreateCaptureBuffer(&DSCBDescription, al::out_ptr(mDSCbuffer), nullptr);
     if(SUCCEEDED(hr))
          mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, InputType.Format.nBlockAlign,
             false);

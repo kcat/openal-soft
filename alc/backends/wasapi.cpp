@@ -211,22 +211,17 @@ public:
     [[nodiscard]] auto str() const noexcept -> const std::string& { return mMsg; }
 };
 
-struct PropVariant {
+class PropVariant {
     PROPVARIANT mProp{};
 
 public:
     PropVariant() { PropVariantInit(&mProp); }
-    PropVariant(const PropVariant &rhs) : PropVariant{} { PropVariantCopy(&mProp, &rhs.mProp); }
     ~PropVariant() { clear(); }
 
-    auto operator=(const PropVariant &rhs) -> PropVariant&
-    {
-        if(this != &rhs)
-            PropVariantCopy(&mProp, &rhs.mProp);
-        return *this;
-    }
+    PropVariant(const PropVariant &rhs) = delete;
+    auto operator=(const PropVariant &rhs) -> PropVariant& = delete;
 
-    void clear() { PropVariantClear(&mProp); }
+    void clear() { std::ignore = PropVariantClear(&mProp); }
 
     auto get() noexcept -> PROPVARIANT* { return &mProp; }
 
@@ -254,6 +249,7 @@ public:
     {
         if constexpr(sizeof(usize) > sizeof(ULONG))
             Expects(data.size() <= std::numeric_limits<ULONG>::max());
+        clear();
         mProp.vt = VT_BLOB;
         mProp.blob.cbSize = gsl::narrow_cast<ULONG>(data.size());
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
@@ -583,7 +579,11 @@ struct DeviceEnumHelper final : private IMMNotificationClient {
         const auto hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER,
             __uuidof(IMMDeviceEnumerator), al::out_ptr(mEnumerator));
         if(SUCCEEDED(hr))
-            mEnumerator->RegisterEndpointNotificationCallback(this);
+        {
+            if(auto const hr2 = mEnumerator->RegisterEndpointNotificationCallback(this);
+                FAILED(hr2))
+                ERR("Failed to register endpoint notification callback: {:#x}", as_unsigned(hr));
+        }
         else
             WARN("Failed to create IMMDeviceEnumerator instance: {:#x}", as_unsigned(hr));
         return hr;
@@ -1351,7 +1351,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
         {
             prefilling = false;
             ResetEvent(mNotifyEvent);
-            if(auto hr = audio.mClient->Start(); FAILED(hr))
+            if(auto const hr = audio.mClient->Start(); FAILED(hr))
             {
                 ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
                 mDevice->handleDisconnect("Failed to start audio client: {:#x}",
@@ -1360,11 +1360,12 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             }
         }
 
-        if(DWORD res{WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE)}; res != WAIT_OBJECT_0)
+        if(auto const res = WaitForSingleObjectEx(mNotifyEvent, 2000, FALSE); res != WAIT_OBJECT_0)
             ERR("WaitForSingleObjectEx error: {:#x}", res);
     }
     mPadding.store(0u, std::memory_order_release);
-    audio.mClient->Stop();
+    if(auto const hr = audio.mClient->Stop(); FAILED(hr))
+        ERR("Failed to stop audio client: {:#x}", as_unsigned(hr));
 }
 
 FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)

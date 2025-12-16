@@ -195,13 +195,16 @@ struct SDLProps {
     [[nodiscard]]
     auto getid() const noexcept -> SDL_PropertiesID { return mProperties; }
 
-    auto setPointer(const char *name, void *value) const
+    [[nodiscard]]
+    auto setPointer(gsl::czstring const name, void *value) const
     { return SDL_SetPointerProperty(mProperties, name, value); }
 
-    auto setString(const char *name, const char *value) const
+    [[nodiscard]]
+    auto setString(gsl::czstring const name, gsl::czstring const value) const
     { return SDL_SetStringProperty(mProperties, name, value); }
 
-    auto setInt(const char *name, Sint64 value) const
+    [[nodiscard]]
+    auto setInt(gsl::czstring const name, Sint64 const value) const
     { return SDL_SetNumberProperty(mProperties, name, value); }
 };
 
@@ -1576,11 +1579,13 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 &TextureFormatEntry::avformat);
             if(fmtiter != TextureFormatMap.end())
             {
-                auto props = SDLProps{};
-                props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, fmtiter->sdlformat);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER, SDL_TEXTUREACCESS_STREAMING);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
+                auto const props = SDLProps{};
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER,
+                    fmtiter->sdlformat);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER,
+                    SDL_TEXTUREACCESS_STREAMING);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
 
                 /* Should be a better way to check YCbCr vs RGB. */
                 const auto ctype = (frame->format == AV_PIX_FMT_YUV420P
@@ -1692,7 +1697,7 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
                 const auto colorspace = DefineSDLColorspace(ctype, crange, cprims, ctransfer,
                     cmatrix, cchromaloc);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_COLORSPACE_NUMBER, colorspace);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_COLORSPACE_NUMBER, colorspace);
 
                 mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)
@@ -1708,11 +1713,13 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
                 fmt::println(std::cerr, "Could not find SDL format for pix_fmt {0:#x} ({0})",
                     as_unsigned(frame->format));
 
-                auto props = SDLProps{};
-                props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_RGB24);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER, SDL_TEXTUREACCESS_STREAMING);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
-                props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
+                auto const props = SDLProps{};
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER,
+                    SDL_PIXELFORMAT_RGB24);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER,
+                    SDL_TEXTUREACCESS_STREAMING);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width);
+                std::ignore = props.setInt(SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height);
 
                 mImage = SDL_CreateTextureWithProperties(renderer, props.getid());
                 if(!mImage)

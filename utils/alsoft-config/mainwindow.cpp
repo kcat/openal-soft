@@ -551,7 +551,7 @@ auto MainWindow::collectHrtfs() const -> QStringList
     {
         const auto dir = QDir(ui->hrtfFileList->item(i)->text());
         const auto fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
-        Q_FOREACH(const QString &fname, fnames)
+        for(const auto &fname : fnames)
         {
             if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                 continue;
@@ -565,15 +565,14 @@ auto MainWindow::collectHrtfs() const -> QStringList
                 ret.push_back(name);
             else
             {
-                size_t i{2};
+                auto j = size_t{2};
                 do {
-                    const auto s = name+" #"+QString::number(i);
-                    if(!ret.contains(s))
+                    if(const auto s = name+" #"+QString::number(j); !ret.contains(s))
                     {
                         ret.push_back(s);
                         break;
                     }
-                    ++i;
+                    ++j;
                 } while(true);
             }
         }
@@ -582,11 +581,11 @@ auto MainWindow::collectHrtfs() const -> QStringList
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
         const auto paths = getAllDataPaths(QStringLiteral("/openal/hrtf"));
-        Q_FOREACH(const QString &name, paths)
+        for(auto const &pathname : paths)
         {
-            const auto dir = QDir{name};
+            const auto dir = QDir{pathname};
             const auto fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
-            Q_FOREACH(const QString &fname, fnames)
+            for(auto const &fname : fnames)
             {
                 if(!fname.endsWith(QStringLiteral(".mhr"), Qt::CaseInsensitive))
                     continue;

@@ -1979,6 +1979,21 @@ if(ALSOFT_UTILS)
 
     if(NOT ALSOFT_NO_CONFIG_UTIL)
         add_subdirectory(utils/alsoft-config)
+        if(TARGET alsoft-config)
+            target_compile_definitions(alsoft-config PRIVATE ${CPP_DEFS})
+            target_compile_options(alsoft-config PRIVATE ${C_FLAGS})
+            # Don't include LINKER_FLAGS, which can unnecessarily static link
+            # libgcc, libwinpthreads, and libstdc++, since Qt will dynamic link
+            # them regardless.
+            set_target_properties(alsoft-config PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+                RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
+
+            message(STATUS "Building configuration program")
+
+            if(ALSOFT_INSTALL_UTILS)
+                set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alsoft-config)
+            endif()
+        endif()
     endif()
     message(STATUS "")
 endif()

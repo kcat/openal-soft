@@ -577,7 +577,8 @@ void JackPlayback::start()
         while(*pnames_end) ++pnames_end;
         const auto pnames = std::span{pnamesptr.get(), pnames_end};
 
-        std::ranges::mismatch(mPort, pnames, [this](jack_port_t *port, const char *portname)
+        std::ignore = std::ranges::mismatch(mPort, pnames,
+            [this](jack_port_t *const port, gsl::czstring const portname)
         {
             if(!portname)
             {

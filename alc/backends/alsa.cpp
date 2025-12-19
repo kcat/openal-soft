@@ -983,8 +983,9 @@ void AlsaCapture::stop()
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage.
          */
-        auto temp = std::vector<std::byte>(
-            as_unsigned(snd_pcm_frames_to_bytes(mPcmHandle, avail)));
+        auto const savail = al::saturate_cast<snd_pcm_sframes_t>(avail);
+        auto const numbytes = snd_pcm_frames_to_bytes(mPcmHandle, savail);
+        auto temp = std::vector<std::byte>(al::saturate_cast<usize>(numbytes));
         captureSamples(temp);
         mBuffer = std::move(temp);
     }

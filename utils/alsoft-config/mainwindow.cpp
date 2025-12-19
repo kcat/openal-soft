@@ -690,10 +690,10 @@ void MainWindow::loadConfig(const QString &fname)
         resampler = QStringLiteral("bsinc12");
     for(int i = 0;i < std::ssize(resamplerList);i++)
     {
-        if(resampler == resamplerList[i].value)
+        if(auto& [name, value] = resamplerList[gsl::narrow<size_t>(i)]; resampler == value)
         {
             ui->resamplerSlider->setValue(i);
-            ui->resamplerLabel->setText(resamplerList[i].name);
+            ui->resamplerLabel->setText(name);
             break;
         }
     }
@@ -999,7 +999,8 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue(QStringLiteral("sources"), ui->srcCountLineEdit->text());
     settings.setValue(QStringLiteral("slots"), ui->effectSlotLineEdit->text());
 
-    settings.setValue(QStringLiteral("resampler"), resamplerList[ui->resamplerSlider->value()].value);
+    settings.setValue(QStringLiteral("resampler"),
+        resamplerList[gsl::narrow<size_t>(ui->resamplerSlider->value())].value);
 
     settings.setValue(QStringLiteral("stereo-mode"), getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
     settings.setValue(QStringLiteral("stereo-encoding"), getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
@@ -1035,7 +1036,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append(QStringLiteral("neon"));
     settings.setValue(QStringLiteral("disable-cpu-exts"), strlist.join(QChar(',')));
 
-    settings.setValue(QStringLiteral("hrtf-mode"), hrtfModeList[ui->hrtfmodeSlider->value()].value);
+    settings.setValue(QStringLiteral("hrtf-mode"),
+        hrtfModeList[gsl::narrow<size_t>(ui->hrtfmodeSlider->value())].value);
 
     if(ui->preferredHrtfComboBox->currentIndex() == 0)
         settings.setValue(QStringLiteral("default-hrtf"), QString{});
@@ -1177,7 +1179,7 @@ void MainWindow::enableApplyButton()
 
 void MainWindow::updateResamplerLabel(int num)
 {
-    ui->resamplerLabel->setText(resamplerList[num].name);
+    ui->resamplerLabel->setText(resamplerList[gsl::narrow<size_t>(num)].name);
     enableApplyButton();
 }
 

@@ -160,67 +160,74 @@ endif()
 # really only be used where maximum performance is critical and the extra
 # safety can be sacrificed.
 #
-# ALSOFT_STL_HARDENING=Default enables some STL hardening, checking for more
+# ALSOFT_STL_HARDENING=Performance enables some STL hardening, checking for more
 # significant issues that can also be done "fast", that's easier to optimize
 # away when unneeded and/or not become a bottleneck. This is generally
-# considered fine for production use, hence being the default here.
+# considered fine for production use, and is the default here.
 #
 # ALSOFT_STL_HARDENING=Debug enables even more STL hardening, which has a much
 # higher runtime cost for less benefit. It's not intended for production use.
-set(ALSOFT_STL_HARDENING "Default" CACHE STRING
-    "Specifies the level of C++ STL hardening. None, Default, Debug")
+set(ALSOFT_STL_HARDENING "Performance" CACHE STRING
+    "Specifies the level of C++ STL hardening. None, Performance, Debug")
+if(ALSOFT_STL_HARDENING STREQUAL "Default")
+    message(NOTICE "STL hardening option \"${ALSOFT_STL_HARDENING}\" deprecated, please set \"Performance\"")
+    set(ALSOFT_STL_HARDENING "Performance" CACHE STRING
+        "Specifies the level of C++ STL hardening. None, Performance, Debug" FORCE)
+endif()
 
-set(HARDENING_LEVEL "None")
 check_cxx_symbol_exists(__GLIBCXX__ "version" HAVE_LIBSTDCXX)
 check_cxx_symbol_exists(_LIBCPP_VERSION "version" HAVE_LIBCXX)
 check_cxx_symbol_exists(_MSVC_STL_UPDATE "version" HAVE_MSSTL)
-if(HAVE_LIBSTDCXX)
-    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
-        add_compile_definitions("_GLIBCXX_DEBUG=1")
-        set(HARDENING_LEVEL "Debug")
-    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
-        # TODO: Not sure how to fully disable STL hardening with libstdc++,
-        # aside from not defining anything and using the compiler's default.
-        # _GLIBCXX_NO_ASSERTIONS can explicitly disable the hardening
-        # assertions, but not all STL debugging functionality.
-        add_compile_definitions("_GLIBCXX_NO_ASSERTIONS=1")
-        set(HARDENING_LEVEL "None")
-    else()
-        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
-            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+set(HARDENING_LEVEL "Default")
+if(NOT (ALSOFT_STL_HARDENING STREQUAL ""))
+    if(HAVE_LIBSTDCXX)
+        if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+            add_compile_definitions("_GLIBCXX_DEBUG=1")
+            set(HARDENING_LEVEL "Debug")
+        elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+            # TODO: Not sure how to fully disable STL hardening with libstdc++,
+            # aside from not defining anything and using the compiler's
+            # default. _GLIBCXX_NO_ASSERTIONS can explicitly disable the
+            # hardening assertions, but not all STL debugging functionality.
+            add_compile_definitions("_GLIBCXX_NO_ASSERTIONS=1")
+            set(HARDENING_LEVEL "None")
+        else()
+            if(NOT (ALSOFT_STL_HARDENING STREQUAL "Performance"))
+                message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Performance")
+            endif()
+            add_compile_definitions("_GLIBCXX_ASSERTIONS=1")
+            set(HARDENING_LEVEL "Performance")
         endif()
-        add_compile_definitions("_GLIBCXX_ASSERTIONS=1")
-        set(HARDENING_LEVEL "Default")
-    endif()
-elseif(HAVE_LIBCXX)
-    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
-        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
-        set(HARDENING_LEVEL "Debug")
-    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
-        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")
-        set(HARDENING_LEVEL "None")
-    else()
-        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
-            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+    elseif(HAVE_LIBCXX)
+        if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+            add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
+            set(HARDENING_LEVEL "Debug")
+        elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+            add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")
+            set(HARDENING_LEVEL "None")
+        else()
+            if(NOT (ALSOFT_STL_HARDENING STREQUAL "Performance"))
+                message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Performance")
+            endif()
+            add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")
+            set(HARDENING_LEVEL "Performance")
         endif()
-        add_compile_definitions("_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")
-        set(HARDENING_LEVEL "Default")
-    endif()
-elseif(HAVE_MSSTL)
-    if(ALSOFT_STL_HARDENING STREQUAL "Debug")
-        # TODO: Is there anything more reasonable for heavier debugging (non-
-        # production use) checks, where performance is not so important?
-        add_compile_definitions("_MSVC_STL_HARDENING=1")
-        set(HARDENING_LEVEL "Default")
-    elseif(ALSOFT_STL_HARDENING STREQUAL "None")
-        add_compile_definitions("_MSVC_STL_HARDENING=0")
-        set(HARDENING_LEVEL "None")
-    else()
-        if(NOT (ALSOFT_STL_HARDENING STREQUAL "Default"))
-            message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Default")
+    elseif(HAVE_MSSTL)
+        # MSVC doesn't seem to have anything more than an on/off switch for STL
+        # hardening, so Debug and Performance are the same here.
+        if(ALSOFT_STL_HARDENING STREQUAL "Debug")
+            add_compile_definitions("_MSVC_STL_HARDENING=1")
+            set(HARDENING_LEVEL "Enabled")
+        elseif(ALSOFT_STL_HARDENING STREQUAL "None")
+            add_compile_definitions("_MSVC_STL_HARDENING=0")
+            set(HARDENING_LEVEL "None")
+        else()
+            if(NOT (ALSOFT_STL_HARDENING STREQUAL "Performance"))
+                message(NOTICE "Unsupported STL hardening option \"${ALSOFT_STL_HARDENING}\", using Performance")
+            endif()
+            add_compile_definitions("_MSVC_STL_HARDENING=1")
+            set(HARDENING_LEVEL "Enabled")
         endif()
-        add_compile_definitions("_MSVC_STL_HARDENING=1")
-        set(HARDENING_LEVEL "Default")
     endif()
 endif()
 

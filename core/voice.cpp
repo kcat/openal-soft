@@ -513,7 +513,7 @@ void LoadBufferStatic(VoiceBufferItem const *const buffer,
             : (((dataPosInt-loopStart)%(loopEnd-loopStart)) + loopStart);
 
         /* Load what's left of this loop iteration */
-        auto const remaining = std::min(voiceSamples.size(), loopEnd-dataPosInt);
+        auto const remaining = std::min(voiceSamples.size(), loopEnd-intPos);
         LoadSamples(voiceSamples.first(remaining), buffer->mSamples, srcChannel, intPos, srcStep,
             buffer->mBlockAlign);
         voiceSamples = voiceSamples.subspan(remaining);

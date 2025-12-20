@@ -292,20 +292,20 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed(?)
          * 16-bit table index. The table index needs to be clamped.
          */
-        auto prevSample = std::to_integer<i32>(src[srcChan*4 + 0].value)
+        auto sample = std::to_integer<i32>(src[srcChan*4 + 0].value)
             | (std::to_integer<i32>(src[srcChan*4 + 1].value) << 8);
-        auto prevIndex = std::to_integer<i32>(src[srcChan*4 + 2].value)
+        auto ima_idx = std::to_integer<i32>(src[srcChan*4 + 2].value)
             | (std::to_integer<i32>(src[srcChan*4 + 3].value) << 8);
         auto const nibbleData = src.subspan((srcStep+srcChan)*4);
         src = src.subspan(blockBytes);
 
         /* Sign-extend the 16-bit sample and index values. */
-        prevSample = (prevSample^0x8000) - 32768;
-        prevIndex = std::clamp((prevIndex^0x8000) - 32768, 0, MaxStepIndex);
+        sample = (sample^0x8000) - 32768;
+        ima_idx = std::clamp((ima_idx^0x8000) - 32768, 0, MaxStepIndex);
 
         if(skip == 0)
         {
-            dstSamples[0] = gsl::narrow_cast<f32>(prevSample) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<f32>(sample) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -316,7 +316,7 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
          * in 4 *bytes* per channel interleaved. So every 8 nibbles we need to
          * skip 4 bytes per channel to get the next nibbles for this channel.
          */
-        auto decode_nibble = [&prevSample,&prevIndex,srcStep,nibbleData](usize const nibbleOffset)
+        auto decode_nibble = [&sample,&ima_idx,srcStep,nibbleData](usize const nibbleOffset)
             noexcept -> i32
         {
             static constexpr auto NibbleMask = std::byte{0xf};
@@ -327,13 +327,12 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
             auto const byteval = nibbleData[byteOffset].value >> byteShift;
             auto const nibble = std::to_integer<usize>(byteval & NibbleMask);
 
-            prevSample += IMA4Codeword[nibble] * IMAStep_size[gsl::narrow_cast<u32>(prevIndex)]/8;
-            prevSample = std::clamp(prevSample, -32768, 32767);
+            sample += IMA4Codeword[nibble] * IMAStep_size[gsl::narrow_cast<u32>(ima_idx)] / 8;
+            sample = std::clamp(sample, -32768, 32767);
 
-            prevIndex += IMA4Index_adjust[nibble];
-            prevIndex = std::clamp(prevIndex, 0, MaxStepIndex);
+            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[nibble], 0, MaxStepIndex);
 
-            return prevSample;
+            return sample;
         };
 
         /* First, decode the samples that we need to skip in the block (will
@@ -354,10 +353,10 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         auto const dst = std::ranges::generate(dstSamples
             | std::views::take(samplesPerBlock - startOffset), [&]
         {
-            auto const sample = decode_nibble(nibbleOffset);
+            auto const decspl = decode_nibble(nibbleOffset);
             ++nibbleOffset;
 
-            return gsl::narrow_cast<f32>(sample) / 32768.0f;
+            return gsl::narrow_cast<f32>(decspl) / 32768.0f;
         });
         dstSamples = std::span{dst, dstSamples.end()};
     }
@@ -433,8 +432,8 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
             auto const byteOffset = nibbleOffset>>1;
             auto const byteShift = ((nibbleOffset&1)^1) * 4;
 
-            auto const byteval = nibbleData[byteOffset].value;
-            auto const nibble = std::to_integer<u8>((byteval>>byteShift)&NibbleMask);
+            auto const byteval = nibbleData[byteOffset].value >> byteShift;
+            auto const nibble = std::to_integer<u8>(byteval & NibbleMask);
 
             auto const pred = ((nibble^0x08) - 0x08) * scale;
             auto const diff = (sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256;

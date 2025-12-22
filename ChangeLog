@@ -1,3 +1,54 @@
+openal-soft-1.25.0:
+
+    Updated library codebase to C++20.
+
+    Fixed alcIsExtensionPresent to do a case-insensitive compare.
+
+    Fixed potential noise when switching reverbs.
+
+    Fixed reverb panning with certain output modes.
+
+    Fixed retrieving the alGetProcAddressDirect extension function.
+
+    Fixed negative source offsets with a callback buffer.
+
+    Fixed a memory issue that could occur in rare situations with looping
+    sources.
+
+    Fixed compiling for and running on older macOS versions.
+
+    Fixed using unicode in environment variable values on Windows.
+
+    Fixed memory alignment issues with 32-bit MinGW builds.
+
+    Fixed a crash in sofa-info with SOFA files that have null strings.
+
+    Updated alsoft-config to Qt6.
+
+    Added build options for STL hardening. Performant checks meant for
+    production are enabled by default.
+
+    Added support for fourth-order ambisonics.
+
+    Added support for CAF files to the Wave Writer backend.
+
+    Added optional support for C++20 modules. These are intended to be copied
+    into projects wishing to use them, since modules depend on being built with
+    compatible compile flags as the sources they're imported into.
+
+    Added a .note.dlopen section to ELF shared library builds to record dynamic
+    dependencies for build maintainers.
+
+    Converted the headers to XML files, which are used to generate the headers
+    (and modules) with a script. Other scripts can be made to generate bindings
+    for various other languages.
+
+    Changed AL_PANNING_ENABLED_SOFT to allow being toggled on playing sources.
+
+    Changed the default period size to 512 sample frames.
+
+    Changed the default Super Stereo width to 0.46.
+
 openal-soft-1.24.3:
 
     Fixed using as a static library when linked into another project that uses

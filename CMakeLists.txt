@@ -41,7 +41,7 @@ else()
 endif()
 
 project(OpenAL
-    VERSION 1.24.3
+    VERSION 1.25.0
     LANGUAGES C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)

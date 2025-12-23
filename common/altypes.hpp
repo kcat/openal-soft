@@ -2,8 +2,8 @@
 #define AL_TYPES_HPP
 
 #include <cstdint>
-#include <cstdio>
 #include <cstddef>
+#include <type_traits>
 
 #include "gsl/gsl"
 

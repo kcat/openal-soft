@@ -1,6 +1,7 @@
 #ifndef AL_TYPES_HPP
 #define AL_TYPES_HPP
 
+#include <cstdint>
 #include <cstdio>
 #include <cstddef>
 

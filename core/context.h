@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "async_event.h"
 #include "atomic.h"
 #include "flexarray.h"
@@ -118,7 +119,7 @@ struct ContextBase {
 
     using VoiceArray = al::FlexArray<Voice*>;
     al::atomic_unique_ptr<VoiceArray> mVoices;
-    std::atomic<size_t> mActiveVoiceCount;
+    std::atomic<usize> mActiveVoiceCount;
 
     void allocVoices(usize addcount);
     [[nodiscard]] auto getVoicesSpan() const noexcept LIFETIMEBOUND -> std::span<Voice*>

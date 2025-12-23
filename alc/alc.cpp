@@ -1112,7 +1112,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         if(auto numperopt = device->configValue<u32>({}, "periods"))
             buffer_size = std::clamp(*numperopt, 2_u32, 16_u32) * period_size;
         else
-            buffer_size = period_size * uint{DefaultNumUpdates};
+            buffer_size = period_size * u32{DefaultNumUpdates};
 
         if(auto typeopt = device->configValue<std::string>({}, "sample-type"))
         {
@@ -1300,7 +1300,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
                 if(const auto val = attrparam.value; val >= 0)
-                    numSends = std::min(gsl::narrow_cast<u32>(val), uint{MaxSendCount});
+                    numSends = std::min(gsl::narrow_cast<u32>(val), u32{MaxSendCount});
                 else
                     numSends = 0;
                 break;
@@ -1388,7 +1388,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 else if(outmode == ALC_STEREO_HRTF_SOFT)
                     stereomode = StereoEncoding::Hrtf;
             }
-            optsrate = gsl::narrow_cast<uint>(freqAttr);
+            optsrate = gsl::narrow_cast<u32>(freqAttr);
         }
         else
         {
@@ -1433,12 +1433,12 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             if(freqAttr > 0)
             {
                 auto oldrate = optsrate.value_or(DefaultOutputRate);
-                freqAttr = std::clamp<int>(freqAttr, MinOutputRate, MaxOutputRate);
+                freqAttr = std::clamp<i32>(freqAttr, MinOutputRate, MaxOutputRate);
 
-                const auto scale = gsl::narrow_cast<double>(freqAttr) / oldrate;
-                period_size = gsl::narrow_cast<uint>(std::lround(period_size * scale));
-                buffer_size = gsl::narrow_cast<uint>(std::lround(buffer_size * scale));
-                optsrate = gsl::narrow_cast<uint>(freqAttr);
+                const auto scale = gsl::narrow_cast<f64>(freqAttr) / oldrate;
+                period_size = gsl::narrow_cast<u32>(std::lround(period_size * scale));
+                buffer_size = gsl::narrow_cast<u32>(std::lround(buffer_size * scale));
+                optsrate = gsl::narrow_cast<u32>(freqAttr);
             }
         }
 
@@ -1515,7 +1515,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
         if(device->FmtChans == DevFmtAmbi3D)
         {
-            device->mAmbiOrder = std::clamp(aorder, 1u, uint{MaxAmbiOrder});
+            device->mAmbiOrder = std::clamp(aorder, 1_u32, u32{MaxAmbiOrder});
             device->mAmbiLayout = optlayout.value_or(DevAmbiLayout::Default);
             device->mAmbiScale = optscale.value_or(DevAmbiScaling::Default);
             if(device->mAmbiOrder > 3
@@ -1722,7 +1722,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     }
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
-    sample_delay = std::min<size_t>(sample_delay, std::numeric_limits<int>::max());
+    sample_delay = std::min(sample_delay, usize{std::numeric_limits<i32>::max()});
     device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->mSampleRate;
     TRACE("Fixed device latency: {}ns", device->FixedLatency.count());
 
@@ -1737,7 +1737,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
         /* Remove unused effect slot clusters. */
         auto slotcluster_rem = std::ranges::remove_if(context->mEffectSlotClusters,
-            [](ContextBase::EffectSlotCluster &clusterptr) -> bool
+            [](ContextBase::EffectSlotCluster const &clusterptr) -> bool
         {
             return std::ranges::none_of(*clusterptr, &EffectSlotBase::InUse);
         });
@@ -1776,7 +1776,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             auto usemask = ~sublist.mFreeMask;
             while(usemask)
             {
-                const auto idx = gsl::narrow_cast<uint>(std::countr_zero(usemask));
+                const auto idx = gsl::narrow_cast<unsigned>(std::countr_zero(usemask));
                 auto &slot = (*sublist.mEffectSlots)[idx];
                 usemask &= ~(1_u64 << idx);
 
@@ -1805,7 +1805,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             auto usemask = ~sublist.mFreeMask;
             while(usemask)
             {
-                const auto idx = gsl::narrow_cast<uint>(std::countr_zero(usemask));
+                const auto idx = gsl::narrow_cast<unsigned>(std::countr_zero(usemask));
                 auto &source = (*sublist.mSources)[idx];
                 usemask &= ~(1_u64 << idx);
 
@@ -1912,14 +1912,14 @@ auto ResetDeviceParams(gsl::not_null<al::Device*> device,
             ctx->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
 
             ctx->mVoiceClusters.clear();
-            ctx->allocVoices(std::max<size_t>(256,
+            ctx->allocVoices(std::max(256_uz,
                 ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
         });
 
         device->Connected.store(true);
     }
 
-    auto err = UpdateDeviceParams(device, attrList);
+    auto const err = UpdateDeviceParams(device, attrList);
     if(err == ALC_NO_ERROR) [[likely]]
         return ALC_TRUE;
 
@@ -2154,7 +2154,8 @@ catch(al::base_exception&) {
 }
 
 namespace {
-auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values) -> size_t
+auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<i32> const values)
+    -> usize
 {
     Expects(!values.empty());
 
@@ -2238,7 +2239,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             return 1;
 
         case ALC_CAPTURE_SAMPLES:
-            values[0] = gsl::narrow_cast<int>(device->Backend->availableSamples());
+            values[0] = al::saturate_cast<i32>(device->Backend->availableSamples());
             return 1;
 
         case ALC_CONNECTED:
@@ -2252,11 +2253,11 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
     }
 
     /* render device */
-    auto NumAttrsForDevice = [device]() noexcept -> uint8_t
+    auto NumAttrsForDevice = [device]
     {
         if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
-            return 37;
-        return 31;
+            return 37_u8;
+        return 31_u8;
     };
     switch(param)
     {
@@ -2278,11 +2279,11 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             values[i++] = alcEFXMinorVersion;
 
             values[i++] = ALC_FREQUENCY;
-            values[i++] = gsl::narrow_cast<int>(device->mSampleRate);
+            values[i++] = gsl::narrow_cast<i32>(device->mSampleRate);
             if(device->Type != DeviceType::Loopback)
             {
                 values[i++] = ALC_REFRESH;
-                values[i++] = gsl::narrow_cast<int>(device->mSampleRate / device->mUpdateSize);
+                values[i++] = gsl::narrow_cast<i32>(device->mSampleRate / device->mUpdateSize);
 
                 values[i++] = ALC_SYNC;
                 values[i++] = ALC_FALSE;
@@ -2298,7 +2299,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
                     values[i++] = EnumFromDevAmbi(device->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                    values[i++] = gsl::narrow_cast<int>(device->mAmbiOrder);
+                    values[i++] = gsl::narrow_cast<i32>(device->mAmbiOrder);
                 }
 
                 values[i++] = ALC_FORMAT_CHANNELS_SOFT;
@@ -2309,13 +2310,13 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             }
 
             values[i++] = ALC_MONO_SOURCES;
-            values[i++] = gsl::narrow_cast<int>(device->NumMonoSources);
+            values[i++] = gsl::narrow_cast<i32>(device->NumMonoSources);
 
             values[i++] = ALC_STEREO_SOURCES;
-            values[i++] = gsl::narrow_cast<int>(device->NumStereoSources);
+            values[i++] = gsl::narrow_cast<i32>(device->NumStereoSources);
 
             values[i++] = ALC_MAX_AUXILIARY_SENDS;
-            values[i++] = gsl::narrow_cast<int>(device->NumAuxSends);
+            values[i++] = gsl::narrow_cast<i32>(device->NumAuxSends);
 
             values[i++] = ALC_HRTF_SOFT;
             values[i++] = device->mHrtf ? ALC_TRUE : ALC_FALSE;
@@ -2356,7 +2357,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
         return 1;
 
     case ALC_FREQUENCY:
-        values[0] = gsl::narrow_cast<int>(device->mSampleRate);
+        values[0] = gsl::narrow_cast<i32>(device->mSampleRate);
         return 1;
 
     case ALC_REFRESH:
@@ -2365,7 +2366,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             device->setError(ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = gsl::narrow_cast<int>(device->mSampleRate / device->mUpdateSize);
+        values[0] = gsl::narrow_cast<i32>(device->mSampleRate / device->mUpdateSize);
         return 1;
 
     case ALC_SYNC:
@@ -2419,19 +2420,19 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
             device->setError(ALC_INVALID_DEVICE);
             return 0;
         }
-        values[0] = gsl::narrow_cast<int>(device->mAmbiOrder);
+        values[0] = gsl::narrow_cast<i32>(device->mAmbiOrder);
         return 1;
 
     case ALC_MONO_SOURCES:
-        values[0] = gsl::narrow_cast<int>(device->NumMonoSources);
+        values[0] = gsl::narrow_cast<i32>(device->NumMonoSources);
         return 1;
 
     case ALC_STEREO_SOURCES:
-        values[0] = gsl::narrow_cast<int>(device->NumStereoSources);
+        values[0] = gsl::narrow_cast<i32>(device->NumStereoSources);
         return 1;
 
     case ALC_MAX_AUXILIARY_SENDS:
-        values[0] = gsl::narrow_cast<int>(device->NumAuxSends);
+        values[0] = gsl::narrow_cast<i32>(device->NumAuxSends);
         return 1;
 
     case ALC_CONNECTED:
@@ -2448,7 +2449,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
         device->enumerateHrtfs();
-        values[0] = al::saturate_cast<int>(device->mHrtfList.size());
+        values[0] = al::saturate_cast<i32>(device->mHrtfList.size());
         return 1;
 
     case ALC_OUTPUT_LIMITER_SOFT:
@@ -2473,7 +2474,7 @@ auto GetIntegerv(al::Device *device, ALCenum param, const std::span<int> values)
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size,
     ALCint *values) noexcept
 try {
-    auto dev = device ? VerifyDevice(device).get() : DeviceRef{};
+    auto const dev = device ? VerifyDevice(device).get() : DeviceRef{};
     if(size <= 0 || values == nullptr)
     {
         if(dev)
@@ -2508,11 +2509,11 @@ try {
         return;
     }
     /* render device */
-    auto NumAttrsForDevice = [&dev]() noexcept -> uint8_t
+    auto NumAttrsForDevice = [&dev]
     {
         if(dev->Type == DeviceType::Loopback && dev->FmtChans == DevFmtAmbi3D)
-            return 41;
-        return 35;
+            return 41_u8;
+        return 35_u8;
     };
     auto statelock = std::lock_guard{dev->StateLock};
     switch(pname)
@@ -2594,8 +2595,8 @@ try {
 
     case ALC_DEVICE_CLOCK_SOFT:
     {
-        auto samplecount = uint{};
-        auto refcount = uint{};
+        auto samplecount = u32{};
+        auto refcount = u32{};
         auto clocksec = seconds{};
         auto clocknsec = nanoseconds{};
         do {
@@ -2627,7 +2628,7 @@ try {
         break;
 
     default:
-        auto ivals = std::vector<int>(valuespan.size());
+        auto ivals = std::vector<i32>(valuespan.size());
         if(const auto got = GetIntegerv(dev.get(), pname, ivals))
             std::ranges::copy(ivals | std::views::take(got), valuespan.begin());
         break;
@@ -2980,9 +2981,9 @@ try {
 
     const auto DefaultSends =
 #if ALSOFT_EAX
-        eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
+        eax_g_is_enabled ? u32{EAX_MAX_FXSLOTS} :
 #endif // ALSOFT_EAX
-        uint{DefaultSendCount};
+        u32{DefaultSendCount};
 
     auto device = al::Device::Create(DeviceType::Playback);
 
@@ -3151,7 +3152,7 @@ try {
 
     auto device = al::Device::Create(DeviceType::Capture);
 
-    auto decompfmt = DecomposeDevFormat(format);
+    auto const decompfmt = DecomposeDevFormat(format);
     if(!decompfmt)
     {
         al::Device::SetGlobalError(ALC_INVALID_ENUM);
@@ -3165,8 +3166,8 @@ try {
     device->Flags.set(ChannelsRequest);
     device->Flags.set(SampleTypeRequest);
 
-    device->mUpdateSize = gsl::narrow_cast<uint>(samples);
-    device->mBufferSize = gsl::narrow_cast<uint>(samples);
+    device->mUpdateSize = gsl::narrow_cast<u32>(samples);
+    device->mBufferSize = gsl::narrow_cast<u32>(samples);
 
     TRACE("Capture format: {}, {}, {}hz, {} / {} buffer",
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
@@ -3309,7 +3310,7 @@ try {
     auto statelock = std::lock_guard{dev->StateLock};
     auto *backend = dev->Backend.get();
 
-    const auto usamples = gsl::narrow_cast<uint>(samples);
+    const auto usamples = gsl::narrow_cast<u32>(samples);
     if(usamples > backend->availableSamples())
     {
         dev->setError(ALC_INVALID_VALUE);
@@ -3317,7 +3318,7 @@ try {
     }
 
     backend->captureSamples(std::span{static_cast<std::byte*>(buffer),
-        size_t{usamples}*dev->frameSizeFromFmt()});
+        usize{usamples}*dev->frameSizeFromFmt()});
 }
 catch(al::base_exception&) {
 }
@@ -3342,9 +3343,9 @@ try {
 
     const auto DefaultSends =
 #if ALSOFT_EAX
-        eax_g_is_enabled ? uint{EAX_MAX_FXSLOTS} :
+        eax_g_is_enabled ? u32{EAX_MAX_FXSLOTS} :
 #endif // ALSOFT_EAX
-        uint{DefaultSendCount};
+        u32{DefaultSendCount};
 
     auto device = al::Device::Create(DeviceType::Loopback);
 
@@ -3445,7 +3446,7 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
         return dev->setError(ALC_INVALID_DEVICE);
     if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
         return dev->setError(ALC_INVALID_VALUE);
-    dev->renderSamples(buffer, gsl::narrow_cast<uint>(samples), dev->channelsFromFmt());
+    dev->renderSamples(buffer, gsl::narrow_cast<u32>(samples), dev->channelsFromFmt());
 }
 
 
@@ -3529,14 +3530,13 @@ catch(al::base_exception&) {
 ALC_API auto ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
     noexcept -> const ALCchar*
 try {
-    auto dev = VerifyDevice(device);
-    if(dev->Type == DeviceType::Capture)
+    if(auto const dev = VerifyDevice(device); dev->Type == DeviceType::Capture)
         dev->setError(ALC_INVALID_ENUM);
     else switch(paramName)
     {
     case ALC_HRTF_SPECIFIER_SOFT:
         if(index >= 0 && std::cmp_less(index, dev->mHrtfList.size()))
-            return dev->mHrtfList[gsl::narrow_cast<uint>(index)].c_str();
+            return dev->mHrtfList[gsl::narrow_cast<u32>(index)].c_str();
         dev->setError(ALC_INVALID_VALUE);
         break;
 

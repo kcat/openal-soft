@@ -1241,7 +1241,7 @@ if(ALSOFT_BACKEND_COREAUDIO)
         set(BACKENDS  "${BACKENDS} CoreAudio,")
 
         set(EXTRA_LIBS -Wl,-framework,CoreAudio ${EXTRA_LIBS})
-        if(CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$")
+        if(CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS|visionOS)$")
             find_library(COREFOUNDATION_FRAMEWORK NAMES CoreFoundation)
             if(COREFOUNDATION_FRAMEWORK)
                 set(EXTRA_LIBS -Wl,-framework,CoreFoundation ${EXTRA_LIBS})

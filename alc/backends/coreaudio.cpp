@@ -48,7 +48,7 @@
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
 
-#if TARGET_OS_IOS || TARGET_OS_TV
+#if TARGET_OS_IOS || TARGET_OS_TV || TARGET_OS_VISION
 #define CAN_ENUMERATE 0
 #else
 #include <IOKit/audio/IOAudioTypes.h>

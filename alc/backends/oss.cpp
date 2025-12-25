@@ -121,7 +121,7 @@ public:
     ~FileHandle() { if(mFd != -1) ::close(mFd); }
 
     template<typename ...Args>
-    [[nodiscard]] auto open(const char *fname, Args&& ...args) -> bool
+    [[nodiscard]] auto open(gsl::czstring const fname, Args&& ...args) -> bool
     {
         close();
         mFd = ::open(fname, std::forward<Args>(args)...);
@@ -149,21 +149,25 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
             if(strncmp(path.data() + i, handle.data() + hoffset, path.size() - i) == 0)
                 handle = handle.substr(0, hoffset);
             path = path.substr(0, i);
+            break;
         }
     }
 #endif
-    if(handle.empty())
-        handle = path;
+    if(path.empty())
+        return;
 
     if(std::ranges::find(list, path, &DevMap::device_name) != list.end())
         return;
+
+    if(handle.empty())
+        handle = path;
 
     auto count = 1;
     auto newname = std::string{handle};
     while(std::ranges::find(list, newname, &DevMap::name) != list.end())
         newname = al::format("{} #{}", handle, ++count);
 
-    const auto &entry = list.emplace_back(std::move(newname), path);
+    const auto &entry = list.emplace_back(std::move(newname), std::string{path});
     TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
 }
 

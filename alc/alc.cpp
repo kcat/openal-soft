@@ -1825,12 +1825,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 VoiceProps::SendData{});
 
             std::ranges::fill(voice->mSend | std::views::drop(num_sends), Voice::TargetData{});
-            /* FIXME: Not sure why fill(..., SendParams{}); doesn't work here,
-             * while this does?
-             */
             for(auto &chan : voice->mChans)
-                std::ranges::for_each(chan.mWetParams | std::views::drop(num_sends),
-                    [](SendParams &params) { params = SendParams{}; });
+                std::ranges::fill(chan.mWetParams | std::views::drop(num_sends), SendParams{});
 
             if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_relaxed))
                 AtomicReplaceHead(context->mFreeVoiceProps, props);

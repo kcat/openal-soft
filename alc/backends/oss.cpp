@@ -212,16 +212,12 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
 done:
     file.close();
 
-    const char *defdev{((type_flag==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback).c_str()};
-    auto iter = std::ranges::find(devlist, defdev, &DevMap::device_name);
-    if(iter == devlist.end())
-        devlist.insert(devlist.begin(), DevMap{GetDefaultName(), defdev});
+    auto const &defdev = (type_flag == DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback;
+    if(auto const iter = std::ranges::find(devlist, defdev, &DevMap::device_name);
+        iter != devlist.end())
+        std::ranges::rotate(devlist.begin, iter, iter+1);
     else
-    {
-        auto entry = DevMap{std::move(*iter)};
-        devlist.erase(iter);
-        devlist.insert(devlist.begin(), std::move(entry));
-    }
+        devlist.insert(devlist.begin(), DevMap{std::string{GetDefaultName()}, defdev});
     devlist.shrink_to_fit();
 }
 

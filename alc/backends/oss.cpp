@@ -160,14 +160,13 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
 void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::string_view path)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC
-    for(usize i{0};i < path.size();++i)
+    for(auto pos = path.find('.'); pos < path.size(); pos = path.find('.', pos+1))
     {
-        if(path[i] == '.' && handle.size() >= path.size() - i)
+        if(auto const endlen = path.size() - pos; handle.size() >= endlen)
         {
-            auto const hoffset = handle.size() + i - path.size();
-            if(strncmp(path.data() + i, handle.data() + hoffset, path.size() - i) == 0)
-                handle = handle.substr(0, hoffset);
-            path = path.substr(0, i);
+            if(handle.ends_with(path.substr(pos)))
+                handle = handle.substr(0, handle.size() - endlen);
+            path = path.substr(0, pos);
             break;
         }
     }

@@ -33,6 +33,7 @@
 #include <cerrno>
 #include <cstring>
 #include <exception>
+#include <functional>
 #include <memory>
 #include <span>
 #include <string>
@@ -65,10 +66,7 @@
 #define SOUND_MIXER_WRITE MIXER_WRITE
 #endif
 
-#if defined(SOUND_VERSION) && (SOUND_VERSION < 0x040000)
-#define ALC_OSS_COMPAT
-#endif
-#ifndef SNDCTL_AUDIOINFO
+#if (defined(SOUND_VERSION) && (SOUND_VERSION < 0x040000)) || !defined(SNDCTL_AUDIOINFO)
 #define ALC_OSS_COMPAT
 #endif
 
@@ -124,6 +122,7 @@ public:
     [[nodiscard]] auto open(gsl::czstring const fname, Args&& ...args) -> bool
     {
         close();
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
         mFd = ::open(fname, std::forward<Args>(args)...);
         return mFd != -1;
     }
@@ -134,8 +133,12 @@ public:
         mFd = -1;
     }
 
-    [[nodiscard]]
-    auto get() const noexcept -> int { return mFd; }
+    template<typename ...Args>
+    [[nodiscard]] auto ioctl(Args&& ...args)
+    {
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+        return ::ioctl(mFd, std::forward<Args>(args)...);
+    }
 };
 
 void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::string_view path)
@@ -168,30 +171,44 @@ void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::s
         newname = al::format("{} #{}", handle, ++count);
 
     const auto &entry = list.emplace_back(std::move(newname), std::string{path});
-    TRACE("Got device \"{}\", \"{}\"", entry.name, entry.device_name);
+    TRACE(R"(Got device "{}", "{}")", entry.name, entry.device_name);
 }
 
-void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
+void ALCossListPopulate(std::vector<DevMap> &devlist, int const type_flag)
 {
+    /* Make sure to move the default device to the start of the devlist (or
+     * adding the default if it doesn't exist) before returning.
+     */
+    auto _ = gsl::finally([&devlist, type_flag]
+    {
+        auto const &defdev = (type_flag == DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback;
+        if(auto const iter = std::ranges::find(devlist, defdev, &DevMap::device_name);
+            iter != devlist.end())
+            std::ranges::rotate(devlist.begin(), iter, iter+1);
+        else
+            devlist.insert(devlist.begin(), DevMap{std::string{GetDefaultName()}, defdev});
+        devlist.shrink_to_fit();
+    });
+
     auto si = oss_sysinfo{};
     auto file = FileHandle{};
     if(!file.open("/dev/mixer", O_RDONLY))
     {
         TRACE("Could not open /dev/mixer: {}", std::generic_category().message(errno));
-        goto done;
+        return;
     }
 
-    if(ioctl(file.get(), SNDCTL_SYSINFO, &si) == -1)
+    if(file.ioctl(SNDCTL_SYSINFO, &si) == -1)
     {
         TRACE("SNDCTL_SYSINFO failed: {}", std::generic_category().message(errno));
-        goto done;
+        return;
     }
 
-    for(int i{0};i < si.numaudios;i++)
+    for(auto const i : std::views::iota(0, si.numaudios))
     {
-        oss_audioinfo ai{};
+        auto ai = oss_audioinfo{};
         ai.dev = i;
-        if(ioctl(file.get(), SNDCTL_AUDIOINFO, &ai) == -1)
+        if(file.ioctl(SNDCTL_AUDIOINFO, &ai) == -1)
         {
             ERR("SNDCTL_AUDIOINFO ({}) failed: {}", i, std::generic_category().message(errno));
             continue;
@@ -199,26 +216,17 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int type_flag)
         if(!(ai.caps&type_flag) || ai.devnode[0] == '\0')
             continue;
 
-        std::string_view handle;
-        if(ai.handle[0] != '\0')
-            handle = {ai.handle, strnlen(ai.handle, sizeof(ai.handle))};
-        else
-            handle = {ai.name, strnlen(ai.name, sizeof(ai.name))};
-        const std::string_view devnode{ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode))};
+        auto const handle = std::invoke([&ai]() -> std::string_view
+        {
+            if(ai.handle[0] != '\0')
+                return {std::data(ai.handle), strnlen(std::data(ai.handle), std::size(ai.handle))};
+            return {std::data(ai.name), strnlen(std::data(ai.name), std::size(ai.name))};
+        });
+        auto const devnode = std::string_view{std::data(ai.devnode),
+            strnlen(std::data(ai.devnode), std::size(ai.devnode))};
 
         ALCossListAppend(devlist, handle, devnode);
     }
-
-done:
-    file.close();
-
-    auto const &defdev = (type_flag == DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback;
-    if(auto const iter = std::ranges::find(devlist, defdev, &DevMap::device_name);
-        iter != devlist.end())
-        std::ranges::rotate(devlist.begin, iter, iter+1);
-    else
-        devlist.insert(devlist.begin(), DevMap{std::string{GetDefaultName()}, defdev});
-    devlist.shrink_to_fit();
 }
 
 #endif
@@ -332,7 +340,8 @@ void OSSPlayback::open(std::string_view name)
         devname = iter->device_name.c_str();
     }
 
-    const auto fd = ::open(devname, O_WRONLY); /* NOLINT(cppcoreguidelines-pro-type-vararg) */
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    const auto fd = ::open(devname, O_WRONLY);
     if(fd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};

@@ -205,6 +205,14 @@ void PPhaseResampler::process(const std::span<const double> in, const std::span<
             j_s -= skip;
             filt_len -= skip;
         }
+
+        /* Safety check. If filt_len == 0, no input samples are contributing to
+         * the filter for this output sample. j_s+1 > in.size() should only
+         * happen if filt_len == 0, but check just to be sure.
+         */
+        if(filt_len == 0 || j_s+1 > in.size())
+            return 0.0;
+
         /* Get the range of input samples being used for this output sample.
          * j_s is the first sample and iterates backwards toward 0.
          */

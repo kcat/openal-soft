@@ -143,9 +143,9 @@ public:
              * ptr, plus some from the start of the buffer.
              */
             return DataPair{std::span{mBuffer}.subspan(read_idx*mElemSize),
-                std::span{mBuffer}.first(rdend&mSizeMask)};
+                std::span{mBuffer}.first((rdend&mSizeMask)*mElemSize)};
         }
-        return DataPair{std::span{mBuffer}.subspan(read_idx*mElemSize, readable), {}};
+        return DataPair{std::span{mBuffer}.subspan(read_idx*mElemSize, readable*mElemSize), {}};
     }
 
     /** Advance the read pointer `count' places. */
@@ -210,9 +210,9 @@ public:
              * ptr, plus some from the start of the buffer.
              */
             return DataPair{std::span{mBuffer}.subspan(write_idx*mElemSize),
-                std::span{mBuffer}.first(wrend&mSizeMask)};
+                std::span{mBuffer}.first((wrend&mSizeMask)*mElemSize)};
         }
-        return DataPair{std::span{mBuffer}.subspan(write_idx*mElemSize, writable), {}};
+        return DataPair{std::span{mBuffer}.subspan(write_idx*mElemSize, writable*mElemSize), {}};
     }
 
     /** Advance the write pointer `count' places. */

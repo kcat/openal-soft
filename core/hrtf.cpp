@@ -190,7 +190,7 @@ void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const dist
     auto const dirfact = 1.0f - (std::numbers::inv_pi_v<f32>/2.0f * spread);
 
     auto ebase = 0_uz;
-    auto const field = std::ranges::find_if(mFields | std::views::take(mFields.size()-1),
+    auto const field = std::ranges::find_if(mFields.begin(), mFields.end()-1,
         [&ebase,distance](Field const &fd) noexcept -> bool
     {
         if(distance >= fd.distance)
@@ -201,7 +201,7 @@ void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const dist
 
     /* Calculate the elevation indices. */
     auto const elev0 = CalcEvIndex(field->evCount, elevation);
-    auto const elev1_idx = usize{std::min(elev0.idx+1u, field->evCount-1u)};
+    auto const elev1_idx = usize{std::min(elev0.idx+1_u32, field->evCount-1_u32)};
     auto const ir0offset = usize{mElev[ebase + elev0.idx].irOffset};
     auto const ir1offset = usize{mElev[ebase + elev1_idx].irOffset};
 

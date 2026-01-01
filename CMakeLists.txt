@@ -768,6 +768,7 @@ set(COMMON_OBJS
 
 # Core library routines
 set(CORE_OBJS
+    core/allpass_iir.hpp
     core/ambdec.cpp
     core/ambdec.h
     core/ambidefs.cpp
@@ -798,6 +799,7 @@ set(CORE_OBJS
     core/effects/base.h
     core/effectslot.cpp
     core/effectslot.h
+    core/encbase.hpp
     core/except.cpp
     core/except.h
     core/filters/biquad.h

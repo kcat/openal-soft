@@ -3,18 +3,19 @@
 
 #include <array>
 #include <cstddef>
-#include <cstdint>
 #include <span>
 #include <string_view>
 
-#include "alnumeric.h"
+#include "allpass_iir.hpp"
+#include "altypes.hpp"
 #include "bufferline.h"
+#include "encbase.hpp"
 
 
 inline constexpr auto UhjLength256 = 256_uz;
 inline constexpr auto UhjLength512 = 512_uz;
 
-enum class UhjQualityType : std::uint8_t {
+enum class UhjQualityType : u8 {
     IIR = 0,
     FIR256,
     FIR512,
@@ -25,43 +26,14 @@ inline auto UhjDecodeQuality = UhjQualityType::Default;
 inline auto UhjEncodeQuality = UhjQualityType::Default;
 
 
-struct UhjAllPassFilter {
-    struct AllPassState {
-        /* Last two delayed components for direct form II. */
-        std::array<float,2> z{};
-    };
-    std::array<AllPassState,4> mState;
-};
-
-
-struct UhjEncoderBase {
-    UhjEncoderBase() = default;
-    UhjEncoderBase(const UhjEncoderBase&) = delete;
-    UhjEncoderBase(UhjEncoderBase&&) = delete;
-    virtual ~UhjEncoderBase() = default;
-
-    void operator=(const UhjEncoderBase&) = delete;
-    void operator=(UhjEncoderBase&&) = delete;
-
-    virtual std::size_t getDelay() noexcept = 0;
-
-    /**
-     * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
-     * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
-     * with an additional +3dB boost).
-     */
-    virtual void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-        const std::span<const std::span<const float>,3> InSamples) = 0;
-};
-
-template<std::size_t N>
-struct UhjEncoder final : public UhjEncoderBase {
+template<usize N>
+struct UhjEncoder final : UhjEncoderBase {
     struct Tag { using encoder_t = UhjEncoder; };
 
-    static constexpr std::size_t sFftLength{256};
-    static constexpr std::size_t sSegmentSize{sFftLength/2};
-    static constexpr std::size_t sNumSegments{N/sSegmentSize};
-    static constexpr std::size_t sFilterDelay{N/2 + sSegmentSize};
+    static constexpr auto sFftLength = 256_uz;
+    static constexpr auto sSegmentSize = sFftLength/2_uz;
+    static constexpr auto sNumSegments = N/sSegmentSize;
+    static constexpr auto sFilterDelay = N/2_uz + sSegmentSize;
 
     static consteval auto TypeName() noexcept -> std::string_view
     {
@@ -80,7 +52,7 @@ struct UhjEncoder final : public UhjEncoderBase {
     alignas(16) std::array<float,BufferLineSize> mD{};
 
     /* History and temp storage for the convolution filter. */
-    std::size_t mFifoPos{}, mCurrentSegment{};
+    usize mFifoPos{}, mCurrentSegment{};
     alignas(16) std::array<float,sFftLength> mWXInOut{};
     alignas(16) std::array<float,sFftLength> mFftBuffer{};
     alignas(16) std::array<float,sFftLength> mWorkData{};
@@ -88,21 +60,21 @@ struct UhjEncoder final : public UhjEncoderBase {
 
     alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
-    std::size_t getDelay() noexcept override { return sFilterDelay; }
+    auto getDelay() noexcept -> usize final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-        const std::span<const std::span<const float>,3> InSamples) final;
+    auto encode(std::span<float> LeftOut, std::span<float> RightOut,
+        std::span<const std::span<const float>,3> InSamples) -> void final;
 };
 
-struct UhjEncoderIIR final : public UhjEncoderBase {
+struct UhjEncoderIIR final : UhjEncoderBase {
     struct Tag { using encoder_t = UhjEncoderIIR; };
 
-    static constexpr std::size_t sFilterDelay{1_uz};
+    static constexpr auto sFilterDelay = 1_uz;
 
     static consteval auto TypeName() noexcept -> std::string_view
     { return "IIR"; }
@@ -114,22 +86,22 @@ struct UhjEncoderIIR final : public UhjEncoderBase {
     alignas(16) std::array<float,BufferLineSize+sFilterDelay> mTemp{};
     float mDelayWX{}, mDelayY{};
 
-    UhjAllPassFilter mFilter1WX;
-    UhjAllPassFilter mFilter2WX;
-    UhjAllPassFilter mFilter1Y;
+    AllPassFilter mFilter1WX;
+    AllPassFilter mFilter2WX;
+    AllPassFilter mFilter1Y;
 
-    std::array<UhjAllPassFilter,2> mFilter1Direct;
+    std::array<AllPassFilter,2> mFilter1Direct;
     std::array<float,2> mDirectDelay{};
 
-    std::size_t getDelay() noexcept override { return sFilterDelay; }
+    auto getDelay() noexcept -> usize final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
      * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
      * with an additional +3dB boost).
      */
-    void encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-        const std::span<const std::span<const float>,3> InSamples) final;
+    auto encode(std::span<float> LeftOut, std::span<float> RightOut,
+        std::span<const std::span<const float>,3> InSamples) -> void final;
 };
 
 
@@ -148,7 +120,7 @@ struct DecoderBase {
     void operator=(const DecoderBase&) = delete;
     void operator=(DecoderBase&&) = delete;
 
-    virtual void decode(const std::span<std::span<float>> samples, const bool updateState) = 0;
+    virtual void decode(std::span<std::span<float>> samples, bool updateState) = 0;
 
     /**
      * The width factor for Super Stereo processing. Can be changed in between
@@ -164,7 +136,7 @@ struct DecoderBase {
 };
 
 template<std::size_t N>
-struct UhjDecoder final : public DecoderBase {
+struct UhjDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjDecoder; };
 
     /* The number of extra sample frames needed for input. */
@@ -206,17 +178,17 @@ struct UhjDecoderIIR final : public DecoderBase {
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mTemp{};
 
-    UhjAllPassFilter mFilter1S;
-    UhjAllPassFilter mFilter2DT;
-    UhjAllPassFilter mFilter1DT;
-    UhjAllPassFilter mFilter2S;
-    UhjAllPassFilter mFilter1Q;
+    AllPassFilter mFilter1S;
+    AllPassFilter mFilter2DT;
+    AllPassFilter mFilter1DT;
+    AllPassFilter mFilter2S;
+    AllPassFilter mFilter1Q;
 
-    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
 template<std::size_t N>
-struct UhjStereoDecoder final : public DecoderBase {
+struct UhjStereoDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoder; };
 
     static constexpr unsigned int sInputPadding{N/2u};
@@ -237,10 +209,10 @@ struct UhjStereoDecoder final : public DecoderBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
-struct UhjStereoDecoderIIR final : public DecoderBase {
+struct UhjStereoDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoderIIR; };
 
     static constexpr unsigned int sInputPadding{1u};
@@ -252,12 +224,12 @@ struct UhjStereoDecoderIIR final : public DecoderBase {
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
     alignas(16) std::array<float,BufferLineSize> mTemp{};
 
-    UhjAllPassFilter mFilter1S;
-    UhjAllPassFilter mFilter2D;
-    UhjAllPassFilter mFilter1D;
-    UhjAllPassFilter mFilter2S;
+    AllPassFilter mFilter1S;
+    AllPassFilter mFilter2D;
+    AllPassFilter mFilter1D;
+    AllPassFilter mFilter2S;
 
-    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
 #endif /* CORE_UHJFILTER_H */

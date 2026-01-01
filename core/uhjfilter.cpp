@@ -117,57 +117,6 @@ const SegmentedFilter<N> gSegmentedFilter;
 template<size_t N>
 const PhaseShifterT<N> PShifter;
 
-
-/* Filter coefficients for the 'base' all-pass IIR, which applies a frequency-
- * dependent phase-shift of N degrees. The output of the filter requires a 1-
- * sample delay.
- */
-constexpr auto Filter1Coeff = std::array{
-    0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
-};
-/* Filter coefficients for the offset all-pass IIR, which applies a frequency-
- * dependent phase-shift of N+90 degrees.
- */
-constexpr auto Filter2Coeff = std::array{
-    0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156684f
-};
-
-
-void processOne(UhjAllPassFilter &self, const std::span<const float,4> coeffs, float x)
-{
-    auto state = self.mState;
-    static_assert(state.size() == coeffs.size());
-    for(const auto i : std::views::iota(0_uz, coeffs.size()))
-    {
-        const auto y = x*coeffs[i] + state[i].z[0];
-        state[i].z[0] = state[i].z[1];
-        state[i].z[1] = y*coeffs[i] - x;
-        x = y;
-    }
-    self.mState = state;
-}
-
-void process(UhjAllPassFilter &self, const std::span<const float,4> coeffs,
-    const std::span<const float> src, const bool updateState, const std::span<float> dst)
-{
-    auto state = self.mState;
-    static_assert(state.size() == coeffs.size());
-    std::ranges::transform(src | std::views::take(dst.size()), dst.begin(),
-        [&state,coeffs](float x) noexcept -> float
-    {
-        for(const auto i : std::views::iota(0_uz, coeffs.size()))
-        {
-            const auto y = x*coeffs[i] + state[i].z[0];
-            state[i].z[0] = state[i].z[1];
-            state[i].z[1] = y*coeffs[i] - x;
-            x = y;
-        }
-        return x;
-    });
-    if(updateState) [[likely]]
-        self.mState = state;
-}
-
 } // namespace
 
 /* Encoding UHJ from B-Format is done as:

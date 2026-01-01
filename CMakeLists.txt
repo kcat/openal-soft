@@ -799,7 +799,7 @@ set(CORE_OBJS
     core/effects/base.h
     core/effectslot.cpp
     core/effectslot.h
-    core/encbase.hpp
+    core/encoderbase.hpp
     core/except.cpp
     core/except.h
     core/filters/biquad.h

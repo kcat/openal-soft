@@ -164,7 +164,7 @@ struct HrtfPostProcess {
 };
 
 struct UhjPostProcess {
-    std::unique_ptr<UhjEncoderBase> mUhjEncoder;
+    std::unique_ptr<EncoderBase> mUhjEncoder;
 };
 
 struct StablizerPostProcess {

@@ -9,7 +9,7 @@
 #include "allpass_iir.hpp"
 #include "altypes.hpp"
 #include "bufferline.h"
-#include "encbase.hpp"
+#include "encoderbase.hpp"
 
 
 inline constexpr auto UhjLength256 = 256_uz;
@@ -27,7 +27,7 @@ inline auto UhjEncodeQuality = UhjQualityType::Default;
 
 
 template<usize N>
-struct UhjEncoder final : UhjEncoderBase {
+struct UhjEncoder final : EncoderBase {
     struct Tag { using encoder_t = UhjEncoder; };
 
     static constexpr auto sFftLength = 256_uz;
@@ -71,7 +71,7 @@ struct UhjEncoder final : UhjEncoderBase {
         std::span<const std::span<const float>,3> InSamples) -> void final;
 };
 
-struct UhjEncoderIIR final : UhjEncoderBase {
+struct UhjEncoderIIR final : EncoderBase {
     struct Tag { using encoder_t = UhjEncoderIIR; };
 
     static constexpr auto sFilterDelay = 1_uz;

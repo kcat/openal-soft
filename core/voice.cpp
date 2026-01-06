@@ -350,9 +350,8 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         /* Second, decode the rest of the block and write to the output, until
          * the end of the block or the end of output.
          */
-        auto const written   = (std::min)(samplesPerBlock - startOffset, dstSamples.size());
-        auto const dst = std::ranges::generate(dstSamples
-            | std::views::take(samplesPerBlock - startOffset), [&]
+        auto const written = std::min(samplesPerBlock-startOffset, dstSamples.size());
+        std::ranges::generate(dstSamples.first(written), [&]
         {
             auto const decspl = decode_nibble(nibbleOffset);
             ++nibbleOffset;
@@ -423,7 +422,7 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
         else
             skip -= 2;
 
-        /* The rest of the block is a series of nibbles, interleaved per-
+        /* The rest of the block is a series of nibbles, interleaved per
          * channel.
          */
         auto decode_nibble = [&sampleHistory,&scale,coeffs,nibbleData](usize const nibbleOffset)
@@ -461,9 +460,8 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
         /* Now decode the rest of the block, until the end of the block or the
          * dst buffer is filled.
          */
-        auto const written = (std::min)(samplesPerBlock - startOffset, dstSamples.size());
-        auto const dst = std::ranges::generate(dstSamples
-            | std::views::take(samplesPerBlock - startOffset), [&]
+        auto const written = std::min(samplesPerBlock-startOffset, dstSamples.size());
+        std::ranges::generate(dstSamples.first(written), [&]
         {
             auto const sample = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;

@@ -350,6 +350,7 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         /* Second, decode the rest of the block and write to the output, until
          * the end of the block or the end of output.
          */
+        auto const written   = (std::min)(samplesPerBlock - startOffset, dstSamples.size());
         auto const dst = std::ranges::generate(dstSamples
             | std::views::take(samplesPerBlock - startOffset), [&]
         {
@@ -358,7 +359,7 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
 
             return gsl::narrow_cast<f32>(decspl) / 32768.0f;
         });
-        dstSamples = std::span{dst, dstSamples.end()};
+        dstSamples = dstSamples.subspan(written);
     }
 }
 
@@ -460,6 +461,7 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
         /* Now decode the rest of the block, until the end of the block or the
          * dst buffer is filled.
          */
+        auto const written = (std::min)(samplesPerBlock - startOffset, dstSamples.size());
         auto const dst = std::ranges::generate(dstSamples
             | std::views::take(samplesPerBlock - startOffset), [&]
         {
@@ -468,7 +470,7 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
 
             return gsl::narrow_cast<f32>(sample) / 32768.0f;
         });
-        dstSamples = std::span{dst, dstSamples.end()};
+        dstSamples = dstSamples.subspan(written);
     }
 }
 

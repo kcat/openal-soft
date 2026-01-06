@@ -274,15 +274,15 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
-    static constexpr auto MaxStepIndex = gsl::narrow<i32>(IMAStep_size.size()) - 1;
+    static constexpr auto MaxStepIndex = gsl::narrow<isize>(IMAStep_size.size()) - 1;
 
-    Expects(srcStep > 0 || srcStep <= 2);
+    Expects(srcStep > 0 && srcStep <= 2);
     Expects(srcChan < srcStep);
     Expects(samplesPerBlock > 1);
     auto const blockBytes = ((samplesPerBlock-1_uz)/2_uz + 4_uz)*srcStep;
 
     /* Skip to the ADPCM block containing the srcOffset sample. */
-    src = src.subspan(srcOffset/samplesPerBlock*blockBytes);
+    src = src.subspan(srcOffset / samplesPerBlock * blockBytes);
     /* Calculate how many samples need to be skipped in the block. */
     auto skip = srcOffset % samplesPerBlock;
 
@@ -292,16 +292,12 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed(?)
          * 16-bit table index. The table index needs to be clamped.
          */
-        auto sample = std::to_integer<i32>(src[srcChan*4 + 0].value)
-            | (std::to_integer<i32>(src[srcChan*4 + 1].value) << 8);
-        auto ima_idx = std::to_integer<i32>(src[srcChan*4 + 2].value)
-            | (std::to_integer<i32>(src[srcChan*4 + 3].value) << 8);
+        auto sample = i32{bit_pack<i16>(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value)};
+        auto ima_idx = isize{bit_pack<i16>(src[srcChan*4 + 3].value, src[srcChan*4 + 2].value)};
+        ima_idx = std::clamp(ima_idx, 0_z, MaxStepIndex);
+
         auto const nibbleData = src.subspan((srcStep+srcChan)*4);
         src = src.subspan(blockBytes);
-
-        /* Sign-extend the 16-bit sample and index values. */
-        sample = (sample^0x8000) - 32768;
-        ima_idx = std::clamp((ima_idx^0x8000) - 32768, 0, MaxStepIndex);
 
         if(skip == 0)
         {
@@ -324,13 +320,13 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
             auto const wordOffset = (nibbleOffset>>1) & ~3_uz;
             auto const byteOffset = wordOffset*srcStep + ((nibbleOffset>>1)&3);
 
-            auto const byteval = nibbleData[byteOffset].value >> byteShift;
-            auto const nibble = std::to_integer<usize>(byteval & NibbleMask);
+            auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
+            auto const codeidx = to_integer<usize>(nibble);
 
-            sample += IMA4Codeword[nibble] * IMAStep_size[gsl::narrow_cast<u32>(ima_idx)] / 8;
+            sample += IMA4Codeword[codeidx] * IMAStep_size[gsl::narrow_cast<u32>(ima_idx)] / 8;
             sample = std::clamp(sample, -32768, 32767);
 
-            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[nibble], 0, MaxStepIndex);
+            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[codeidx], 0_z, MaxStepIndex);
 
             return sample;
         };
@@ -367,12 +363,12 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
-    Expects(srcStep > 0 || srcStep <= 2);
+    Expects(srcStep > 0 && srcStep <= 2);
     Expects(srcChan < srcStep);
     Expects(samplesPerBlock > 2);
     auto const blockBytes = ((samplesPerBlock-2_uz)/2_uz + 7_uz)*srcStep;
 
-    src = src.subspan(srcOffset/samplesPerBlock*blockBytes);
+    src = src.subspan(srcOffset / samplesPerBlock * blockBytes);
     auto skip = srcOffset % samplesPerBlock;
 
     while(!dstSamples.empty())
@@ -383,23 +379,21 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
          * nibble sample value. This is followed by the two initial 16-bit
          * sample history values.
          */
-        auto const blockpred = std::min(std::to_integer<u8>(src[srcChan].value),
+        auto const blockpred = std::min(to_integer<u8>(src[srcChan].value),
             u8{MSADPCMAdaptionCoeff.size()-1});
-        auto scale = std::to_integer<i32>(src[srcStep + 2*srcChan + 0].value)
-            | (std::to_integer<i32>(src[srcStep + 2*srcChan + 1].value) << 8);
+        auto scale = i32{bit_pack<i16>(src[srcStep + 2*srcChan + 1].value,
+            src[srcStep + 2*srcChan + 0].value)};
 
         auto sampleHistory = std::array{
-            std::to_integer<i32>(src[3*srcStep + 2*srcChan + 0].value)
-                | (std::to_integer<i32>(src[3*srcStep + 2*srcChan + 1].value)<<8),
-            std::to_integer<i32>(src[5*srcStep + 2*srcChan + 0].value)
-                | (std::to_integer<i32>(src[5*srcStep + 2*srcChan + 1].value)<<8)};
+            i32{bit_pack<i16>(src[3*srcStep + 2*srcChan + 1].value,
+                src[3*srcStep + 2*srcChan + 0].value)},
+            i32{bit_pack<i16>(src[5*srcStep + 2*srcChan + 1].value,
+                src[5*srcStep + 2*srcChan + 0].value)}};
+
         auto const nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);
 
         auto const coeffs = std::span{MSADPCMAdaptionCoeff[blockpred]};
-        scale = (scale^0x8000) - 32768;
-        sampleHistory[0] = (sampleHistory[0]^0x8000) - 32768;
-        sampleHistory[1] = (sampleHistory[1]^0x8000) - 32768;
 
         /* The second history sample is "older", so it's the first to be
          * written out.
@@ -432,18 +426,17 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
             auto const byteOffset = nibbleOffset>>1;
             auto const byteShift = ((nibbleOffset&1)^1) * 4;
 
-            auto const byteval = nibbleData[byteOffset].value >> byteShift;
-            auto const nibble = std::to_integer<u8>(byteval & NibbleMask);
+            auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
+            auto const nval = to_integer<u8>(nibble);
 
-            auto const pred = ((nibble^0x08) - 0x08) * scale;
+            auto const pred = ((i32{nval}^0x08) - 0x08) * scale;
             auto const diff = (sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256;
             auto const sample = std::clamp(pred + diff, -32768, 32767);
 
             sampleHistory[1] = sampleHistory[0];
             sampleHistory[0] = sample;
 
-            scale = MSADPCMAdaption[nibble] * scale / 256;
-            scale = std::max(16, scale);
+            scale = std::max(MSADPCMAdaption[nval] * scale / 256, 16);
 
             return sample;
         };

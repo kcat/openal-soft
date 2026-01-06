@@ -92,6 +92,17 @@ constexpr auto saturate_cast(T val) noexcept -> R
 
 } /* namespace al */
 
+
+template<std::integral R> requires (sizeof(R) == 2) [[nodiscard]]
+constexpr auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> R
+{
+    using unsigned_t = std::make_unsigned_t<R>;
+    auto ret = static_cast<unsigned_t>((to_integer<unsigned_t>(hi)<<8)
+        | to_integer<unsigned_t>(lo));
+    return std::bit_cast<R>(ret);
+}
+
+
 template<std::integral T> [[nodiscard]]
 constexpr auto as_unsigned(T value) noexcept
 { return static_cast<std::make_unsigned_t<T>>(value); }

@@ -65,6 +65,7 @@ enum class StereoEncoding : u8 {
     Basic,
     Uhj,
     Hrtf,
+    Tsme,
 
     Default = Basic
 };
@@ -167,6 +168,10 @@ struct UhjPostProcess {
     std::unique_ptr<EncoderBase> mUhjEncoder;
 };
 
+struct TsmePostProcess {
+    std::unique_ptr<EncoderBase> mUhjEncoder;
+};
+
 struct StablizerPostProcess {
     std::unique_ptr<BFormatDec> mAmbiDecoder;
     std::unique_ptr<FrontStablizer> mStablizer;
@@ -181,6 +186,7 @@ using PostProcess = std::variant<std::monostate,
     AmbiDecPostProcess,
     HrtfPostProcess,
     UhjPostProcess,
+    TsmePostProcess,
     StablizerPostProcess,
     Bs2bPostProcess>;
 
@@ -374,6 +380,7 @@ struct DeviceBase {
     void Process(AmbiDecPostProcess const &proc, usize SamplesToDo) const;
     void Process(HrtfPostProcess const &proc, usize SamplesToDo);
     void Process(UhjPostProcess const &proc, usize SamplesToDo);
+    void Process(TsmePostProcess const &proc, usize SamplesToDo);
     void Process(StablizerPostProcess const &proc, usize SamplesToDo);
     void Process(Bs2bPostProcess const &proc, usize SamplesToDo);
 

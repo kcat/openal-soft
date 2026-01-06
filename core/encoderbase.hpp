@@ -19,7 +19,7 @@ struct EncoderBase {
 
     /** Encodes a 2-channel output signal from a B-Format input signal. */
     virtual auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<std::span<float const> const, 3> InSamples) -> void = 0;
+        std::span<std::span<float const> const> InSamples) -> void = 0;
 };
 
 #endif /* CORE_ENCODERBASE_HPP */

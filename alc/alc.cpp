@@ -1236,6 +1236,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             stereomode = StereoEncoding::Basic;
         else if(al::case_compare(*encopt, "uhj") == 0)
             stereomode = StereoEncoding::Uhj;
+        else if(al::case_compare(*encopt, "tsme") == 0)
+            stereomode = StereoEncoding::Tsme;
         else if(al::case_compare(*encopt, "hrtf") == 0)
             stereomode = StereoEncoding::Hrtf;
         else

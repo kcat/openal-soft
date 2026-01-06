@@ -829,6 +829,8 @@ set(CORE_OBJS
     core/resampler_limits.h
     core/storage_formats.cpp
     core/storage_formats.h
+    core/tsmefilter.cpp
+    core/tsmefilter.hpp
     core/uhjfilter.cpp
     core/uhjfilter.h
     core/uiddefs.cpp

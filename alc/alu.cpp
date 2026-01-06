@@ -310,6 +310,21 @@ void DeviceBase::Process(UhjPostProcess const &proc, usize const SamplesToDo)
             std::span{Dry.Buffer[2]}.first(SamplesToDo)}});
 }
 
+void DeviceBase::Process(TsmePostProcess const &proc, usize const SamplesToDo)
+{
+    /* TSME is stereo output only. */
+    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
+    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
+
+    /* Encode to stereo-compatible 2-channel output. */
+    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
+        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo),
+        {{std::span{Dry.Buffer[0]}.first(SamplesToDo),
+            std::span{Dry.Buffer[1]}.first(SamplesToDo),
+            std::span{Dry.Buffer[2]}.first(SamplesToDo),
+            std::span{Dry.Buffer[3]}.first(SamplesToDo)}});
+}
+
 void DeviceBase::Process(StablizerPostProcess const &proc, usize const SamplesToDo)
 {
     /* Decode with front image stabilization. */

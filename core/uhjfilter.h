@@ -68,7 +68,7 @@ struct UhjEncoder final : EncoderBase {
      * with an additional +3dB boost).
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>,3> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) -> void final;
 };
 
 struct UhjEncoderIIR final : EncoderBase {
@@ -101,7 +101,7 @@ struct UhjEncoderIIR final : EncoderBase {
      * with an additional +3dB boost).
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>,3> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) -> void final;
 };
 
 

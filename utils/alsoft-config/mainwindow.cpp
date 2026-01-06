@@ -132,6 +132,7 @@ const auto stereoEncList = std::array{
     NameValuePair{ QStringLiteral("Default"), QStringLiteral("") },
     NameValuePair{ QStringLiteral("Basic"), QStringLiteral("panpot") },
     NameValuePair{ QStringLiteral("UHJ"), QStringLiteral("uhj") },
+    NameValuePair{ QStringLiteral("Matrixed"), QStringLiteral("tsme") },
     NameValuePair{ QStringLiteral("Binaural"), QStringLiteral("hrtf") },
 };
 const auto ambiFormatList = std::array{

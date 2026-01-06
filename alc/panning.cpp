@@ -58,6 +58,7 @@
 #include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
 #include "device.h"
 #include "flexarray.h"
@@ -1149,6 +1150,20 @@ void InitUhjPanning(al::Device *const device)
     InitNearFieldCtrl(device, spkr_dist, device->mAmbiOrder, Pantaphonic);
 }
 
+void InitTsmePanning(al::Device *const device)
+{
+    /* TSME is always 3D first-order. */
+    static constexpr auto count = AmbiChannelsFromOrder(1);
+
+    device->mAmbiOrder = 1;
+    device->m2DMixing = false;
+
+    std::ranges::transform(AmbiIndex::FromACN | std::views::take(count),
+        device->Dry.AmbiMap.begin(), [](u8 const acn) noexcept -> BFChannelConfig
+    { return BFChannelConfig{1.0f/AmbiScale::FromN3D[acn], acn}; });
+    AllocChannels(device, count, device->channelsFromFmt());
+}
+
 auto LoadAmbDecConfig(std::string_view const config, al::Device *const device,
     std::unique_ptr<DecoderConfig<DualBand, MaxOutputChannels>> &decoder_store,
     DecoderView &decoder, std::span<f32, MaxOutputChannels> const speakerdists) -> bool
@@ -1331,35 +1346,51 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
     }
     old_hrtf = nullptr;
 
-    if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Uhj)
+    static constexpr auto init_encoder = []<typename T>(T arg [[maybe_unused]])
+        -> std::pair<std::unique_ptr<EncoderBase>, std::string_view>
     {
-        static constexpr auto init_encoder = []<typename T>(T arg [[maybe_unused]])
-            -> std::pair<std::unique_ptr<EncoderBase>, std::string_view>
-        {
-            using encoder_t = T::encoder_t;
-            return {std::make_unique<encoder_t>(), encoder_t::TypeName()};
-        };
+        using encoder_t = T::encoder_t;
+        return {std::make_unique<encoder_t>(), encoder_t::TypeName()};
+    };
+    switch(stereomode.value_or(StereoEncoding::Default))
+    {
+    case StereoEncoding::Basic:
+    case StereoEncoding::Hrtf:
+        break;
 
-        auto proc = std::unique_ptr<EncoderBase>{};
-        auto ftype = std::string_view{};
-        switch(UhjEncodeQuality)
+    case StereoEncoding::Uhj:
         {
-        case UhjQualityType::IIR:
-            std::tie(proc, ftype) = init_encoder(UhjEncoderIIR::Tag{});
-            break;
-        case UhjQualityType::FIR256:
-            std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength256>::Tag{});
-            break;
-        case UhjQualityType::FIR512:
-            std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength512>::Tag{});
-            break;
+            auto proc = std::unique_ptr<EncoderBase>{};
+            auto ftype = std::string_view{};
+            switch(UhjEncodeQuality)
+            {
+            case UhjQualityType::IIR:
+                std::tie(proc, ftype) = init_encoder(UhjEncoderIIR::Tag{});
+                break;
+            case UhjQualityType::FIR256:
+                std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength256>::Tag{});
+                break;
+            case UhjQualityType::FIR512:
+                std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength512>::Tag{});
+                break;
+            }
+            Ensures(proc != nullptr);
+
+            TRACE("UHJ enabled ({} encoder)", ftype);
+            InitUhjPanning(device);
+            device->mPostProcess.emplace<UhjPostProcess>(std::move(proc));
+            return;
         }
-        Ensures(proc != nullptr);
+    case StereoEncoding::Tsme:
+        {
+            auto [proc, ftype] = init_encoder(TsmeEncoderIIR::Tag{});
+            Ensures(proc != nullptr);
 
-        TRACE("UHJ enabled ({} encoder)", ftype);
-        InitUhjPanning(device);
-        device->mPostProcess.emplace<UhjPostProcess>(std::move(proc));
-        return;
+            TRACE("Tetraphonic surround matrix encoding enabled ({} encoder)", ftype);
+            InitTsmePanning(device);
+            device->mPostProcess.emplace<TsmePostProcess>(std::move(proc));
+            return;
+        }
     }
 
     device->mRenderMode = RenderMode::Pairwise;

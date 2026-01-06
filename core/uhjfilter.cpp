@@ -138,7 +138,7 @@ const PhaseShifterT<N> PShifter;
 
 template<size_t N>
 void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>,3> InSamples)
+    const std::span<const std::span<const float>> InSamples)
 {
     static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
     static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
@@ -286,7 +286,7 @@ void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float
  * inputs.
  */
 void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>,3> InSamples)
+    const std::span<const std::span<const float>> InSamples)
 {
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);

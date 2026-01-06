@@ -104,8 +104,12 @@
 #  basic - Standard amplitude panning (aka pair-wise, stereo pair, etc) between
 #          -30 and +30 degrees.
 #  uhj - Creates a stereo-compatible two-channel UHJ mix, which encodes some
-#        surround sound information into stereo output that can be decoded with
-#        a surround sound receiver.
+#        continuous surround sound information into stereo output that can be
+#        decoded with a surround sound receiver.
+#  tsme - Creates a stereo-compatible two-channel surround matrix encoded mix,
+#         which encodes some discrete surround sound and height information
+#         into the stereo output that can be decoded with a surround sound
+#         receiver.
 #  hrtf - Uses filters to provide better spatialization of sounds while using
 #         stereo headphones.
 #  If crossfeed filters are used, basic stereo mixing is used.

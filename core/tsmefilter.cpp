@@ -109,8 +109,8 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * produce the desired relative phase shift. See uhjfilter.cpp for more
  * details.
  */
-void TsmeEncoderIIR::encode(std::span<float> LeftOut, std::span<float> RightOut,
-     std::span<const std::span<const float>> InSamples)
+void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+    const std::span<const std::span<const float>> InSamples)
 {
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);

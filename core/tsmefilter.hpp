@@ -36,9 +36,9 @@ struct TsmeEncoderIIR final : EncoderBase {
     auto getDelay() noexcept -> usize final { return sFilterDelay; }
 
     /**
-     * Encodes a 2-channel tetraphonic surround matrix-encoded (stereo-
+     * Encodes a 2-channel tetraphonic surround matrix-encoded (stereo
      * compatible) signal from a B-Format input signal. The input must use ACN
-     * channel ordering and SN3D scaling.
+     * channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;

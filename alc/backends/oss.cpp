@@ -96,22 +96,27 @@ struct DevMap {
 std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
 
+
+#ifdef ALC_OSS_COMPAT
+
+#define DSP_CAP_OUTPUT 0x00020000
+#define DSP_CAP_INPUT 0x00010000
+void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
+{
+    devlist.emplace_back(std::string{GetDefaultName()},
+        (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
+}
+
+#else
+
 class FileHandle {
     int mFd{-1};
 
 public:
     FileHandle() = default;
     FileHandle(const FileHandle&) = delete;
-    FileHandle(FileHandle&& rhs) noexcept : mFd{std::exchange(rhs.mFd, -1)} { }
+    FileHandle& operator=(const FileHandle&) = delete;
     ~FileHandle() { if(mFd != -1) ::close(mFd); }
-
-    auto operator=(const FileHandle&) -> FileHandle& = delete;
-    auto operator=(FileHandle&& rhs) noexcept -> FileHandle&
-    {
-        close();
-        mFd = std::exchange(rhs.mFd, -1);
-        return *this;
-    }
 
     template<typename ...Args>
     [[nodiscard]] auto open(gsl::czstring const fname, Args&& ...args) -> bool
@@ -129,33 +134,12 @@ public:
     }
 
     template<typename ...Args>
-    [[nodiscard]] auto ioctl(Args&& ...args) const
+    [[nodiscard]] auto ioctl(Args&& ...args)
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
         return ::ioctl(mFd, std::forward<Args>(args)...);
     }
-
-    [[nodiscard]] auto read(std::span<std::byte> const bytes) const
-    { return ::read(mFd, bytes.data(), bytes.size()); }
-
-    [[nodiscard]] auto write(std::span<std::byte const> const bytes) const
-    { return ::write(mFd, bytes.data(), bytes.size()); }
-
-    [[nodiscard]] auto get() const noexcept -> int { return mFd; }
 };
-
-
-#ifdef ALC_OSS_COMPAT
-
-#define DSP_CAP_OUTPUT 0x00020000
-#define DSP_CAP_INPUT 0x00010000
-void ALCossListPopulate(std::vector<DevMap> &devlist, int type)
-{
-    devlist.emplace_back(std::string{GetDefaultName()},
-        (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
-}
-
-#else
 
 void ALCossListAppend(std::vector<DevMap> &list, std::string_view handle, std::string_view path)
 {
@@ -270,7 +254,7 @@ struct OSSPlayback final : BackendBase {
     void start() override;
     void stop() override;
 
-    FileHandle mFd;
+    int mFd{-1};
 
     std::vector<std::byte> mMixData;
 
@@ -278,7 +262,12 @@ struct OSSPlayback final : BackendBase {
     std::thread mThread;
 };
 
-OSSPlayback::~OSSPlayback() = default;
+OSSPlayback::~OSSPlayback()
+{
+    if(mFd != -1)
+        ::close(mFd);
+    mFd = -1;
+}
 
 
 void OSSPlayback::mixerProc()
@@ -293,7 +282,7 @@ void OSSPlayback::mixerProc()
         && mDevice->Connected.load(std::memory_order_acquire))
     {
         auto pollitem = pollfd{};
-        pollitem.fd = mFd.get();
+        pollitem.fd = mFd;
         pollitem.events = POLLOUT;
 
         if(const auto pret = poll(&pollitem, 1, 1000); pret < 0)
@@ -316,7 +305,7 @@ void OSSPlayback::mixerProc()
             gsl::narrow_cast<u32>(write_buf.size()/frame_size), frame_step);
         while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))
         {
-            const auto wrote = mFd.write(write_buf);
+            const auto wrote = write(mFd, write_buf.data(), write_buf.size());
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -350,9 +339,15 @@ void OSSPlayback::open(std::string_view name)
         devname = iter->device_name.c_str();
     }
 
-    if(not mFd.open(devname, O_WRONLY))
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) */
+    const auto fd = ::open(devname, O_WRONLY);
+    if(fd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};
+
+    if(mFd != -1)
+        ::close(mFd);
+    mFd = fd;
 
     mDeviceName = name;
 }
@@ -362,21 +357,21 @@ auto OSSPlayback::reset() -> bool
     auto ossFormat = int{};
     switch(mDevice->FmtType)
     {
-    case DevFmtByte:
-        ossFormat = AFMT_S8;
-        break;
-    case DevFmtUByte:
-        ossFormat = AFMT_U8;
-        break;
-    case DevFmtUShort:
-    case DevFmtInt:
-    case DevFmtUInt:
-    case DevFmtFloat:
-        mDevice->FmtType = DevFmtShort;
-        [[fallthrough]];
-    case DevFmtShort:
-        ossFormat = AFMT_S16_NE;
-        break;
+        case DevFmtByte:
+            ossFormat = AFMT_S8;
+            break;
+        case DevFmtUByte:
+            ossFormat = AFMT_U8;
+            break;
+        case DevFmtUShort:
+        case DevFmtInt:
+        case DevFmtUInt:
+        case DevFmtFloat:
+            mDevice->FmtType = DevFmtShort;
+            [[fallthrough]];
+        case DevFmtShort:
+            ossFormat = AFMT_S16_NE;
+            break;
     }
 
     auto numChannels = mDevice->channelsFromFmt();
@@ -386,20 +381,22 @@ auto OSSPlayback::reset() -> bool
     auto numFragmentsLogSize = ((mDevice->mBufferSize + mDevice->mUpdateSize/2)
         / mDevice->mUpdateSize) << 16u;
     /* According to the OSS spec, 16 bytes is the minimum period size. */
-    numFragmentsLogSize |= std::max(log2i(mDevice->mUpdateSize * frameSize), 4_u32);
+    numFragmentsLogSize |= std::max(log2i(mDevice->mUpdateSize * frameSize), 4u);
 
     auto info = audio_buf_info{};
 #define CHECKERR(func) if((func) < 0)                                         \
     throw al::backend_exception{al::backend_error::DeviceError, #func " failed: {}", \
         std::generic_category().message(errno)};
+
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-vararg) */
     /* Don't fail if SETFRAGMENT fails. We can handle just about anything
-     * that's reported back via GETOSPACE.
-     */
-    std::ignore = mFd.ioctl(SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_SETFMT, &ossFormat));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_CHANNELS, &numChannels));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_SPEED, &ossSpeed));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_GETOSPACE, &info));
+     * that's reported back via GETOSPACE */
+    ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize);
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_GETOSPACE, &info));
+    /* NOLINTEND(cppcoreguidelines-pro-type-vararg) */
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
@@ -447,14 +444,14 @@ void OSSPlayback::stop()
         return;
     mThread.join();
 
-    if(mFd.ioctl(SNDCTL_DSP_RESET) != 0)
+    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0) /* NOLINT(cppcoreguidelines-pro-type-vararg) */
         ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
 
-struct OSSCapture final : BackendBase {
-    explicit OSSCapture(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device} { }
-    ~OSSCapture() override;
+struct OSScapture final : public BackendBase {
+    explicit OSScapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+    ~OSScapture() override;
 
     void recordProc() const;
 
@@ -464,7 +461,7 @@ struct OSSCapture final : BackendBase {
     void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> usize override;
 
-    FileHandle mFd;
+    int mFd{-1};
 
     RingBufferPtr<std::byte> mRing;
 
@@ -472,10 +469,15 @@ struct OSSCapture final : BackendBase {
     std::thread mThread;
 };
 
-OSSCapture::~OSSCapture() = default;
+OSScapture::~OSScapture()
+{
+    if(mFd != -1)
+        close(mFd);
+    mFd = -1;
+}
 
 
-void OSSCapture::recordProc() const
+void OSScapture::recordProc() const
 {
     SetRTPriority();
     althrd_setname(GetRecordThreadName());
@@ -484,7 +486,7 @@ void OSSCapture::recordProc() const
     while(!mKillNow.load(std::memory_order_acquire))
     {
         auto pollitem = pollfd{};
-        pollitem.fd = mFd.get();
+        pollitem.fd = mFd;
         pollitem.events = POLLIN;
 
         if(auto const pret = poll(&pollitem, 1, 1000); pret < 0)
@@ -502,9 +504,10 @@ void OSSCapture::recordProc() const
             continue;
         }
 
-        if(auto const vec = mRing->getWriteVector(); !vec[0].empty())
+        auto vec = mRing->getWriteVector();
+        if(!vec[0].empty())
         {
-            auto const amt = mFd.read(vec[0]);
+            auto amt = read(mFd, vec[0].data(), vec[0].size());
             if(amt < 0)
             {
                 auto const errstr = std::generic_category().message(errno);
@@ -518,7 +521,7 @@ void OSSCapture::recordProc() const
 }
 
 
-void OSSCapture::open(std::string_view name)
+void OSScapture::open(std::string_view name)
 {
     auto *devname = DefaultCapture.c_str();
     if(name.empty())
@@ -528,14 +531,15 @@ void OSSCapture::open(std::string_view name)
         if(CaptureDevices.empty())
             ALCossListPopulate(CaptureDevices, DSP_CAP_INPUT);
 
-        auto const iter = std::ranges::find(CaptureDevices, name, &DevMap::name);
+        auto iter = std::ranges::find(CaptureDevices, name, &DevMap::name);
         if(iter == CaptureDevices.end())
             throw al::backend_exception{al::backend_error::NoDevice,
                 "Device name \"{}\" not found", name};
         devname = iter->device_name.c_str();
     }
 
-    if(not mFd.open(devname, O_RDONLY))
+    mFd = ::open(devname, O_RDONLY); /* NOLINT(cppcoreguidelines-pro-type-vararg) */
+    if(mFd == -1)
         throw al::backend_exception{al::backend_error::NoDevice, "Could not open {}: {}", devname,
             std::generic_category().message(errno)};
 
@@ -572,11 +576,13 @@ void OSSCapture::open(std::string_view name)
     throw al::backend_exception{al::backend_error::DeviceError, #func " failed: {}", \
         std::generic_category().message(errno)};                              \
 }
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_SETFMT, &ossFormat));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_CHANNELS, &numChannels));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_SPEED, &ossSpeed));
-    CHECKERR(mFd.ioctl(SNDCTL_DSP_GETISPACE, &info));
+    /* NOLINTBEGIN(cppcoreguidelines-pro-type-vararg) */
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFRAGMENT, &numFragmentsLogSize));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_SETFMT, &ossFormat));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_CHANNELS, &numChannels));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_SPEED, &ossSpeed));
+    CHECKERR(ioctl(mFd, SNDCTL_DSP_GETISPACE, &info));
+    /* NOLINTEND(cppcoreguidelines-pro-type-vararg) */
 #undef CHECKERR
 
     if(mDevice->channelsFromFmt() != numChannels)
@@ -596,11 +602,11 @@ void OSSCapture::open(std::string_view name)
     mDeviceName = name;
 }
 
-void OSSCapture::start()
+void OSScapture::start()
 {
     try {
         mKillNow.store(false, std::memory_order_release);
-        mThread = std::thread{&OSSCapture::recordProc, this};
+        mThread = std::thread{&OSScapture::recordProc, this};
     }
     catch(std::exception& e) {
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -608,20 +614,20 @@ void OSSCapture::start()
     }
 }
 
-void OSSCapture::stop()
+void OSScapture::stop()
 {
     if(mKillNow.exchange(true, std::memory_order_acq_rel) || !mThread.joinable())
         return;
     mThread.join();
 
-    if(mFd.ioctl(SNDCTL_DSP_RESET) != 0)
+    if(ioctl(mFd, SNDCTL_DSP_RESET) != 0) /* NOLINT(cppcoreguidelines-pro-type-vararg) */
         ERR("Error resetting device: {}", std::generic_category().message(errno));
 }
 
-void OSSCapture::captureSamples(std::span<std::byte> outbuffer)
+void OSScapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto OSSCapture::availableSamples() -> usize
+auto OSScapture::availableSamples() -> usize
 { return mRing->readSpace(); }
 
 } // namespace
@@ -674,12 +680,12 @@ auto OSSBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
     if(type == BackendType::Playback)
         return BackendPtr{new OSSPlayback{device}};
     if(type == BackendType::Capture)
-        return BackendPtr{new OSSCapture{device}};
+        return BackendPtr{new OSScapture{device}};
     return nullptr;
 }
 
 auto OSSBackendFactory::getFactory() -> BackendFactory&
 {
-    static auto factory = OSSBackendFactory{};
+    static OSSBackendFactory factory{};
     return factory;
 }

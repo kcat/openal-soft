@@ -1,6 +1,7 @@
 
 #include <algorithm>
 
+#include "allpass_conv.hpp"
 #include "altypes.hpp"
 #include "tsmefilter.hpp"
 
@@ -108,6 +109,145 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * Right = S - D
  */
 
+template<usize N>
+void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
+    const std::span<const std::span<const float>> InSamples)
+{
+    static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
+    static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
+    static_assert(sNumSegments == gSegmentedFilter<N>.sNumSegments);
+
+    const auto samplesToDo = InSamples[0].size();
+    const auto winput = assume_aligned_span<16>(InSamples[0]);
+    const auto yinput = assume_aligned_span<16>(InSamples[1].first(samplesToDo));
+    const auto zinput = assume_aligned_span<16>(InSamples[2].first(samplesToDo));
+    const auto xinput = assume_aligned_span<16>(InSamples[3].first(samplesToDo));
+
+    std::ranges::copy(winput, std::next(mW.begin(), sFilterDelay));
+    std::ranges::copy(yinput, std::next(mY.begin(), sFilterDelay));
+    std::ranges::copy(zinput, std::next(mZ.begin(), sFilterDelay));
+    std::ranges::copy(xinput, std::next(mX.begin(), sFilterDelay));
+
+    /* S = 0.288397341271*W + 0.166565447888*X - 0.187684284734*Z */
+    std::ranges::transform(mW | std::views::take(samplesToDo), mX, mS.begin(),
+        [](const float w, const float x) { return 0.288397341271f*w + 0.166565447888f*x; });
+    std::ranges::transform(mS | std::views::take(samplesToDo), mZ, mS.begin(),
+        [](const float wx, const float z) { return wx - 0.187684284734f*z; });
+
+    /* Precompute j(0.444008050325*W - 0.256439256487*X) and store in mD. */
+    auto dstore = mD.begin();
+    auto curseg = mCurrentSegment;
+    for(auto base = 0_uz;base < samplesToDo;)
+    {
+        const auto todo = std::min(sSegmentSize-mFifoPos, samplesToDo-base);
+        const auto wseg = winput.subspan(base, todo);
+        const auto xseg = xinput.subspan(base, todo);
+        const auto wxio = std::span{mWXInOut}.subspan(mFifoPos, todo);
+
+        /* Copy out the samples that were previously processed by the FFT. */
+        dstore = std::ranges::copy(wxio, dstore).out;
+
+        /* Transform the non-delayed input and store in the front half of the
+         * filter input.
+         */
+        std::ranges::transform(wseg, xseg, wxio.begin(), [](const float w, const float x) noexcept
+        { return 0.444008050325f*w - 0.256439256487f*x; });
+
+        mFifoPos += todo;
+        base += todo;
+
+        /* Check whether the input buffer is filled with new samples. */
+        if(mFifoPos < sSegmentSize) break;
+        mFifoPos = 0;
+
+        /* Copy the new input to the next history segment, clearing the back
+         * half of the segment, and convert to the frequency domain.
+         */
+        auto input = mWXHistory.begin() + curseg*sFftLength;
+        auto initer = std::ranges::copy(mWXInOut | std::views::take(sSegmentSize), input).out;
+        std::ranges::fill(std::views::counted(initer, sSegmentSize), 0.0f);
+
+        gSegmentedFilter<N>.mFft.transform(input, input, mWorkData.begin(), PFFFT_FORWARD);
+
+        /* Convolve each input segment with its IR filter counterpart (aligned
+         * in time, from newest to oldest).
+         */
+        mFftBuffer.fill(0.0f);
+        auto filter = gSegmentedFilter<N>.mFilterData.begin();
+        for(const auto s [[maybe_unused]] : std::views::iota(curseg, sNumSegments))
+        {
+            gSegmentedFilter<N>.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
+            std::advance(input, sFftLength);
+            std::advance(filter, sFftLength);
+        }
+        input = mWXHistory.begin();
+        for(const auto s [[maybe_unused]] : std::views::iota(0_uz, curseg))
+        {
+            gSegmentedFilter<N>.mFft.zconvolve_accumulate(input, filter, mFftBuffer.begin());
+            std::advance(input, sFftLength);
+            std::advance(filter, sFftLength);
+        }
+
+        /* Convert back to samples, writing to the output and storing the extra
+         * for next time.
+         */
+        gSegmentedFilter<N>.mFft.transform(mFftBuffer.begin(), mFftBuffer.begin(),
+            mWorkData.begin(), PFFFT_BACKWARD);
+
+        const auto wxiter = std::ranges::transform(mFftBuffer | std::views::take(sSegmentSize),
+            mWXInOut | std::views::drop(sSegmentSize), mWXInOut.begin(), std::plus{}).out;
+        std::ranges::copy(mFftBuffer | std::views::drop(sSegmentSize), wxiter);
+
+        /* Shift the input history. */
+        curseg = curseg ? (curseg-1) : (sNumSegments-1);
+    }
+    mCurrentSegment = curseg;
+
+    /* D = j(0.444008050325*W - 0.256439256487*X) + 0.333238912931*Y */
+    std::ranges::transform(mD | std::views::take(samplesToDo), mY, mD.begin(),
+        [](const float jwx, const float y) noexcept { return jwx + 0.333238912931f*y; });
+
+    /* Copy the future samples to the front for next time. */
+    const auto take_end = std::views::drop(samplesToDo) | std::views::take(sFilterDelay);
+    std::ranges::copy(mW | take_end, mW.begin());
+    std::ranges::copy(mY | take_end, mY.begin());
+    std::ranges::copy(mZ | take_end, mZ.begin());
+    std::ranges::copy(mX | take_end, mX.begin());
+
+    /* Apply a delay to the existing output to align with the input delay. */
+    std::ignore = std::ranges::mismatch(mDirectDelay, std::array{LeftOut, RightOut},
+        [](std::span<float,sFilterDelay> delayBuffer, const std::span<float> buffer)
+    {
+        const auto distbuf = assume_aligned_span<16>(delayBuffer);
+
+        const auto inout = assume_aligned_span<16>(buffer);
+        if(inout.size() >= sFilterDelay)
+        {
+            const auto inout_start = std::prev(inout.end(), sFilterDelay);
+            const auto delay_end = std::ranges::rotate(inout, inout_start).begin();
+            std::ranges::swap_ranges(std::span{inout.begin(), delay_end}, distbuf);
+        }
+        else
+        {
+            const auto delay_start = std::ranges::swap_ranges(inout, distbuf).in2;
+            std::ranges::rotate(distbuf, delay_start);
+        }
+        return true;
+    });
+
+    /* Combine the direct signal with the produced output. */
+
+    /* Left = S + D */
+    const auto left = assume_aligned_span<16>(LeftOut);
+    for(auto i = 0_uz;i < samplesToDo;++i)
+        left[i] += mS[i] + mD[i];
+
+    /* Right = S - D */
+    const auto right = assume_aligned_span<16>(RightOut);
+    for(auto i = 0_uz;i < samplesToDo;++i)
+        right[i] += mS[i] - mD[i];
+}
+
 /* This encoding implementation uses two sets of four chained IIR filters to
  * produce the desired relative phase shift. See uhjfilter.cpp for more
  * details.
@@ -162,3 +302,7 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
     for(auto i = 0_uz;i < samplesToDo;++i)
         right[i] = mS[i] - mD[i] + mTemp[i];
 }
+
+template struct TsmeEncoder<TsmeLength256>;
+
+template struct TsmeEncoder<TsmeLength512>;

@@ -385,6 +385,22 @@
 #encode-filter = iir
 
 ##
+## Tetraphonic surround matrix encoding stuff
+##
+[tsme]
+
+## encode-filter: (global)
+#  Specifies the all-pass filter type for TSME output encoding. Valid values
+#  are:
+#  iir - utilizes dual IIR filters, providing a wide pass-band with low CPU
+#        use, but causes additional phase shifts on the signal.
+#  fir256 - utilizes a 256-point FIR filter, providing more stable results but
+#           exhibiting attenuation in the lower and higher frequency bands.
+#  fir512 - utilizes a 512-point FIR filter, providing a wider pass-band than
+#           fir256, at the cost of more CPU use.
+#encode-filter = iir
+
+##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]

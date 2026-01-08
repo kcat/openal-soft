@@ -96,6 +96,7 @@
 #include "core/hrtf.h"
 #include "core/logging.h"
 #include "core/mastering.h"
+#include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
 #include "core/voice.h"
 #include "core/voice_change.h"
@@ -542,6 +543,17 @@ void alc_initconfig()
             UhjEncodeQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/encode-filter: {}", *uhjfiltopt);
+    }
+    if(auto tsmefiltopt = ConfigValueStr({}, "tsme"sv, "encode-filter"sv))
+    {
+        if(al::case_compare(*tsmefiltopt, "fir256"sv) == 0)
+            TsmeEncodeQuality = TsmeQualityType::FIR256;
+        else if(al::case_compare(*tsmefiltopt, "fir512"sv) == 0)
+            TsmeEncodeQuality = TsmeQualityType::FIR512;
+        else if(al::case_compare(*tsmefiltopt, "iir"sv) == 0)
+            TsmeEncodeQuality = TsmeQualityType::IIR;
+        else
+            WARN("Unsupported tsme/encode-filter: {}", *tsmefiltopt);
     }
 
     if(auto traperr = al::getenv("ALSOFT_TRAP_ERROR"); traperr

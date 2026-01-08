@@ -1383,7 +1383,20 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
         }
     case StereoEncoding::Tsme:
         {
-            auto [proc, ftype] = init_encoder(TsmeEncoderIIR::Tag{});
+            auto proc = std::unique_ptr<EncoderBase>{};
+            auto ftype = std::string_view{};
+            switch(TsmeEncodeQuality)
+            {
+                case TsmeQualityType::IIR:
+                    std::tie(proc, ftype) = init_encoder(TsmeEncoderIIR::Tag{});
+                    break;
+                case TsmeQualityType::FIR256:
+                    std::tie(proc, ftype) = init_encoder(TsmeEncoder<TsmeLength256>::Tag{});
+                    break;
+                case TsmeQualityType::FIR512:
+                    std::tie(proc, ftype) = init_encoder(TsmeEncoder<TsmeLength512>::Tag{});
+                    break;
+            }
             Ensures(proc != nullptr);
 
             TRACE("Tetraphonic surround matrix encoding enabled ({} encoder)", ftype);

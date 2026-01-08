@@ -1740,11 +1740,12 @@ else()
             set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
         endif()
 
+        set(_alsoft_bundle_id "org.openal-soft.openal")
         set_target_properties(${IMPL_TARGET} PROPERTIES
             FRAMEWORK TRUE
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_NAME "${IMPL_TARGET}"
-            MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
+            MACOSX_FRAMEWORK_IDENTIFIER "${_alsoft_bundle_id}"
             MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${OpenAL_VERSION}"
             MACOSX_FRAMEWORK_BUNDLE_VERSION "${BUNDLE_VERSION}"
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
@@ -1755,6 +1756,7 @@ else()
             XCODE_ATTRIBUTE_GCC_GENERATE_DEBUGGING_SYMBOLS "YES"
             XCODE_ATTRIBUTE_ENABLE_STDEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
             XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "$(inherited)"
+            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${_alsoft_bundle_id}"
             PUBLIC_HEADER "${TARGET_PUBLIC_HEADERS}"
             MACOSX_RPATH TRUE)
     endif()

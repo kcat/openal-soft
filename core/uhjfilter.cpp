@@ -16,6 +16,7 @@
 
 #include "alcomplex.h"
 #include "alnumeric.h"
+#include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
 #include "phase_shifter.h"
@@ -27,95 +28,6 @@ namespace {
 template<std::size_t A, typename T, std::size_t N>
 constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span<T,N>
 { return std::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
-
-/* Convolution is implemented using a segmented overlap-add method. The filter
- * response is broken up into multiple segments of 128 samples, and each
- * segment has an FFT applied with a 256-sample buffer (the latter half left
- * silent) to get its frequency-domain response.
- *
- * Input samples are similarly broken up into 128-sample segments, with a 256-
- * sample FFT applied to each new incoming segment to get its frequency-domain
- * response. A history of FFT'd input segments is maintained, equal to the
- * number of filter response segments.
- *
- * To apply the convolution, each filter response segment is convolved with its
- * paired input segment (using complex multiplies, far cheaper than time-domain
- * FIRs), accumulating into an FFT buffer. The input history is then shifted to
- * align with later filter response segments for the next input segment.
- *
- * An inverse FFT is then applied to the accumulated FFT buffer to get a 256-
- * sample time-domain response for output, which is split in two halves. The
- * first half is the 128-sample output, and the second half is a 128-sample
- * (really, 127) delayed extension, which gets added to the output next time.
- * Convolving two time-domain responses of length N results in a time-domain
- * signal of length N*2 - 1, and this holds true regardless of the convolution
- * being applied in the frequency domain, so these "overflow" samples need to
- * be accounted for.
- */
-template<size_t FilterSize>
-struct SegmentedFilter {
-    static constexpr size_t sFftLength{256};
-    static constexpr size_t sSampleLength{sFftLength / 2};
-    static constexpr size_t sNumSegments{FilterSize/sSampleLength};
-    static_assert(FilterSize >= sFftLength);
-    static_assert((FilterSize % sSampleLength) == 0);
-
-    PFFFTSetup mFft;
-    alignas(16) std::array<float,sFftLength*sNumSegments> mFilterData;
-
-    SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
-    {
-        /* To set up the filter, we first need to generate the desired
-         * response (not reversed).
-         */
-        auto tmpBuffer = std::vector(FilterSize, 0.0);
-        for(const auto i : std::views::iota(0_uz, FilterSize/2))
-        {
-            const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);
-
-            const auto w = 2.0*std::numbers::pi/double{FilterSize}
-                * gsl::narrow_cast<double>(i*2 + 1);
-            const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
-                - 0.0106411*std::cos(3.0*w);
-
-            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
-            tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
-        }
-
-        /* The response is split into segments that are converted to the
-         * frequency domain, each on their own (0 stuffed).
-         */
-        using complex_d = std::complex<double>;
-        auto fftBuffer = std::vector<complex_d>(sFftLength);
-        auto fftTmp = al::vector<float,16>(sFftLength);
-        auto filter = mFilterData.begin();
-        for(const auto s : std::views::iota(0_uz, sNumSegments))
-        {
-            const auto tmpspan = std::span{tmpBuffer}.subspan(sSampleLength*s, sSampleLength);
-            auto iter = std::ranges::copy(tmpspan, fftBuffer.begin()).out;
-            std::ranges::fill(iter, fftBuffer.end(), complex_d{});
-            forward_fft(fftBuffer);
-
-            /* Convert to zdomain data for PFFFT, scaled by the FFT length so
-             * the iFFT result will be normalized.
-             */
-            for(const auto i : std::views::iota(0_uz, sSampleLength))
-            {
-                fftTmp[i*2 + 0] = gsl::narrow_cast<float>(fftBuffer[i].real()) / float{sFftLength};
-                fftTmp[i*2 + 1] = gsl::narrow_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
-                    : fftBuffer[i].imag()) / float{sFftLength};
-            }
-            mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);
-            std::advance(filter, sFftLength);
-        }
-    }
-};
-
-template<size_t N>
-const SegmentedFilter<N> gSegmentedFilter;
-
-template<size_t N>
-const PhaseShifterT<N> PShifter;
 
 } // namespace
 
@@ -136,7 +48,7 @@ const PhaseShifterT<N> PShifter;
  * segmented FFT'd response for the desired shift.
  */
 
-template<size_t N>
+template<usize N>
 void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
     const std::span<const std::span<const float>> InSamples)
 {
@@ -379,7 +291,7 @@ void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
             mDTHistory.begin());
-    PShifter<N>.process(xoutput, mTemp);
+    gPShifter<N>.process(xoutput, mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     std::ranges::transform(mS | std::views::take(samplesToDo), xoutput, woutput.begin(),
@@ -395,7 +307,7 @@ void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
             mSHistory.begin());
-    PShifter<N>.process(youtput, mTemp);
+    gPShifter<N>.process(youtput, mTemp);
 
     /* Y = 0.795968*D - 0.676392*T + j(0.186633*S) */
     for(auto i = 0_uz;i < samplesToDo;++i)
@@ -544,7 +456,7 @@ void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, cons
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
             mDTHistory.begin());
-    PShifter<N>.process(xoutput, mTemp);
+    gPShifter<N>.process(xoutput, mTemp);
 
     /* W = 0.6098637*S + 0.6896511*j*w*D */
     std::ranges::transform(mS, xoutput, woutput.begin(), [](const float s, const float jd) noexcept
@@ -559,7 +471,7 @@ void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, cons
     if(updateState) [[likely]]
         std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
             mSHistory.begin());
-    PShifter<N>.process(youtput, mTemp);
+    gPShifter<N>.process(youtput, mTemp);
 
     /* Y = 1.6822415*w*D + 0.2156194*j*S */
     std::ranges::transform(mD, youtput, youtput.begin(), [](const float d, const float js) noexcept

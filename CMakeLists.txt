@@ -768,6 +768,7 @@ set(COMMON_OBJS
 
 # Core library routines
 set(CORE_OBJS
+    core/allpass_conv.hpp
     core/allpass_iir.hpp
     core/ambdec.cpp
     core/ambdec.h

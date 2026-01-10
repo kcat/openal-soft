@@ -8,8 +8,8 @@
 #include "makemhr.h"
 
 
-bool LoadDefInput(std::istream &istream, const std::span<const char> startbytes,
-    const std::string_view filename, const uint fftSize, const uint truncSize, const uint outRate,
-    const ChannelModeT chanMode, HrirDataT *hData);
+auto LoadDefInput(std::istream &istream, std::span<char const> startbytes,
+    std::string_view filename, unsigned fftSize, unsigned truncSize, unsigned outRate,
+    ChannelModeT chanMode, HrirDataT *hData) -> bool;
 
 #endif /* LOADDEF_H */

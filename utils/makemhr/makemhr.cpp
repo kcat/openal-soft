@@ -107,26 +107,26 @@ namespace {
 using namespace std::string_view_literals;
 
 // The epsilon used to maintain signal stability.
-constexpr double Epsilon{1e-9};
+constexpr auto Epsilon = 1e-9;
 
 // The limits to the FFT window size override on the command line.
-constexpr uint MinFftSize{65536};
-constexpr uint MaxFftSize{131072};
+constexpr auto MinFftSize = 65536u;
+constexpr auto MaxFftSize = 131072u;
 
 // The limits to the equalization range limit on the command line.
-constexpr double MinLimit{2.0};
-constexpr double MaxLimit{120.0};
+constexpr auto MinLimit = 2.0;
+constexpr auto MaxLimit = 120.0;
 
 // The limits to the truncation window size on the command line.
-constexpr uint MinTruncSize{16};
-constexpr uint MaxTruncSize{128};
+constexpr auto MinTruncSize = 16u;
+constexpr auto MaxTruncSize = 128u;
 
 // The limits to the custom head radius on the command line.
-constexpr double MinCustomRadius{0.05};
-constexpr double MaxCustomRadius{0.15};
+constexpr auto MinCustomRadius = 0.05;
+constexpr auto MaxCustomRadius = 0.15;
 
 // The maximum propagation delay value supported by OpenAL Soft.
-constexpr double MaxHrtd{63.0};
+constexpr auto MaxHrtd = 63.0;
 
 // The OpenAL Soft HRTF format marker.  It stands for minimum-phase head
 // response protocol 03.
@@ -144,12 +144,12 @@ enum HeadModelT {
 
 
 // The defaults for the command line options.
-constexpr uint DefaultFftSize{65536};
-constexpr bool DefaultEqualize{true};
-constexpr bool DefaultSurface{true};
-constexpr double DefaultLimit{24.0};
-constexpr uint DefaultTruncSize{64};
-constexpr double DefaultCustomRadius{0.0};
+constexpr auto DefaultFftSize = 65536u;
+constexpr auto DefaultEqualize = true;
+constexpr auto DefaultSurface = true;
+constexpr auto DefaultLimit = 24.0;
+constexpr auto DefaultTruncSize = 64u;
+constexpr auto DefaultCustomRadius = 0.0;
 
 
 /* Performs a string substitution.  Any case-insensitive occurrences of the
@@ -187,7 +187,7 @@ auto StrSubst(std::string_view in, const std::string_view pat, const std::string
  *** Math routines ***
  *********************/
 
-inline uint dither_rng(uint *seed)
+inline auto dither_rng(unsigned *seed) -> unsigned
 {
     *seed = *seed * 96314165 + 907633515;
     return *seed;
@@ -196,9 +196,9 @@ inline uint dither_rng(uint *seed)
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
 void TpdfDither(const std::span<double> out, const std::span<const double> in, const double scale,
-    const size_t channel, const size_t step, uint *seed)
+    const size_t channel, const size_t step, unsigned *seed)
 {
-    static constexpr auto PRNG_SCALE = 1.0 / std::numeric_limits<uint>::max();
+    static constexpr auto PRNG_SCALE = 1.0 / std::numeric_limits<unsigned>::max();
     Expects(channel < step);
 
     for(size_t i{0};i < in.size();++i)
@@ -213,26 +213,29 @@ void TpdfDither(const std::span<double> out, const std::span<const double> in, c
  * to adjust the effects of the diffuse-field average on the equalization
  * process.
  */
-void LimitMagnitudeResponse(const uint n, const uint m, const double limit,
+void LimitMagnitudeResponse(const unsigned n, const unsigned m, const double limit,
     const std::span<double> inout)
 {
-    const double halfLim{limit / 2.0};
+    auto const halfLim = limit / 2.0;
+
     // Convert the response to dB.
-    for(uint i{0};i < m;++i)
-        inout[i] = 20.0 * std::log10(inout[i]);
+    std::ranges::transform(inout | std::views::take(m), inout.begin(), [](double const d) -> double
+    { return 20.0 * std::log10(d); });
+
     // Use six octaves to calculate the average magnitude of the signal.
-    const auto lower = (static_cast<uint>(std::ceil(n / std::pow(2.0, 8.0)))) - 1;
-    const auto upper = (static_cast<uint>(std::floor(n / std::pow(2.0, 2.0)))) - 1;
-    double ave{0.0};
-    for(uint i{lower};i <= upper;++i)
-        ave += inout[i];
-    ave /= upper - lower + 1;
+    auto const lower = static_cast<unsigned>(std::ceil(n / std::pow(2.0, 8.0))) - 1u;
+    auto const upper = static_cast<unsigned>(std::floor(n / std::pow(2.0, 2.0))) - 1u;
+    auto const subrange = inout | std::views::take(upper+1) | std::views::drop(lower);
+    auto const ave = std::accumulate(subrange.begin(), subrange.end(), 0.0) / (upper-lower+1);
+
     // Keep the response within range of the average magnitude.
-    for(uint i{0};i < m;++i)
-        inout[i] = std::clamp(inout[i], ave - halfLim, ave + halfLim);
+    std::ranges::transform(inout | std::views::take(m), inout.begin(),
+        [minval=ave-halfLim, maxval=ave+halfLim](double const d) -> double
+    { return std::clamp(d, minval, maxval); });
+
     // Convert the response back to linear magnitude.
-    for(uint i{0};i < m;++i)
-        inout[i] = std::pow(10.0, inout[i] / 20.0);
+    std::ranges::transform(inout | std::views::take(m), inout.begin(), [](double const d) -> double
+    { return std::pow(10.0, d / 20.0); });
 }
 
 /* Reconstructs the minimum-phase component for the given magnitude response
@@ -279,11 +282,11 @@ auto WriteAscii(const std::string_view out, std::ostream &ostream, const std::st
 
 // Write a binary value of the given byte order and byte size to a file,
 // loading it from a 32-bit unsigned integer.
-auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
-    const std::string_view filename) -> int
+auto WriteBin4(unsigned const bytes, uint32_t const in, std::ostream &ostream,
+    std::string_view const filename) -> int
 {
-    std::array<char,4> out{};
-    for(uint i{0};i < bytes;i++)
+    auto out = std::array<char,4>{};
+    for(auto i=0u;i < bytes;i++)
         out[i] = static_cast<char>((in>>(i*8)) & 0x000000FF);
 
     if(!ostream.write(out.data(), gsl::narrow<std::streamsize>(bytes)) || ostream.bad())
@@ -297,9 +300,9 @@ auto WriteBin4(const uint bytes, const uint32_t in, std::ostream &ostream,
 // Store the OpenAL Soft HRTF data set.
 auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    const uint n{hData->mIrPoints};
-    uint dither_seed{22222};
+    auto const channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
+    auto const n = hData->mIrPoints;
+    auto dither_seed = 22222u;
 
     auto ostream = fs::ofstream{fs::path(al::char_as_u8(filename)), std::ios::binary};
     if(!ostream.is_open())
@@ -315,7 +318,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
         return false;
     if(!WriteBin4(1, hData->mIrPoints, ostream, filename))
         return false;
-    if(!WriteBin4(1, static_cast<uint>(hData->mFds.size()), ostream, filename))
+    if(!WriteBin4(1, static_cast<unsigned>(hData->mFds.size()), ostream, filename))
         return false;
     for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
@@ -334,8 +337,8 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
 
     for(size_t fi{hData->mFds.size()-1};fi < hData->mFds.size();--fi)
     {
-        static constexpr double scale{8388607.0};
-        static constexpr uint bps{3u};
+        static constexpr auto scale = 8388607.0;
+        static constexpr auto bps = 3u;
 
         for(const auto &evd : hData->mFds[fi].mEvs)
         {
@@ -364,11 +367,11 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
         {
             for(const auto &azd : evd.mAzs)
             {
-                auto v = static_cast<uint>(std::round(azd.mDelays[0]*DelayPrecScale));
+                auto v = static_cast<unsigned>(std::round(azd.mDelays[0]*DelayPrecScale));
                 if(!WriteBin4(1, v, ostream, filename)) return false;
                 if(hData->mChannelType == CT_STEREO)
                 {
-                    v = static_cast<uint>(std::round(azd.mDelays[1]*DelayPrecScale));
+                    v = static_cast<unsigned>(std::round(azd.mDelays[1]*DelayPrecScale));
                     if(!WriteBin4(1, v, ostream, filename)) return false;
                 }
             }
@@ -386,7 +389,7 @@ auto StoreMhr(const HrirDataT *hData, const std::string_view filename) -> bool
  * independently normalizing each field in relation to the overall maximum.
  * This is done to ignore distance attenuation.
  */
-void BalanceFieldMagnitudes(const HrirDataT *hData, const uint channels, const uint m)
+void BalanceFieldMagnitudes(HrirDataT const *hData, unsigned const channels, unsigned const m)
 {
     std::array<double,MAX_FD_COUNT> maxMags{};
     double maxMag{0.0};
@@ -483,8 +486,8 @@ void CalculateDfWeights(const HrirDataT *hData, const std::span<double> weights)
  * coverage of each HRIR.  The final average can then be limited by the
  * specified magnitude range (in positive dB; 0.0 to skip).
  */
-void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, const uint m,
-    const bool weighted, const double limit, const std::span<double> dfa)
+void CalculateDiffuseFieldAverage(HrirDataT const *hData, unsigned const channels,
+    unsigned const m, bool const weighted, double const limit, std::span<double> const dfa)
 {
     auto weights = std::vector(hData->mFds.size() * MAX_EV_COUNT, double{});
 
@@ -501,7 +504,7 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
         for(size_t fi{0};fi < hData->mFds.size();++fi)
         {
             for(size_t ei{0};ei < hData->mFds[fi].mEvStart;++ei)
-                count -= static_cast<uint>(hData->mFds[fi].mEvs[ei].mAzs.size());
+                count -= static_cast<unsigned>(hData->mFds[fi].mEvs[ei].mAzs.size());
         }
         auto const weight = 1.0 / count;
 
@@ -543,8 +546,8 @@ void CalculateDiffuseFieldAverage(const HrirDataT *hData, const uint channels, c
 
 // Perform diffuse-field equalization on the magnitude responses of the HRIR
 // set using the given average response.
-void DiffuseFieldEqualize(const uint channels, const uint m, const std::span<const double> dfa,
-    const HrirDataT *hData)
+void DiffuseFieldEqualize(unsigned const channels, unsigned const m,
+    std::span<const double> const dfa, HrirDataT const *hData)
 {
     for(size_t fi{0};fi < hData->mFds.size();++fi)
     {
@@ -566,14 +569,14 @@ void DiffuseFieldEqualize(const uint channels, const uint m, const std::span<con
  * the two HRIRs that bound the coordinate along with a factor for
  * calculating the continuous HRIR using interpolation.
  */
-void CalcAzIndices(const HrirEvT &elev, const double az, uint *a0, uint *a1, double *af)
+void CalcAzIndices(const HrirEvT &elev, const double az, unsigned *a0, unsigned *a1, double *af)
 {
     auto f = (std::numbers::inv_pi*0.5*az + 1.0) * static_cast<double>(elev.mAzs.size());
     const auto fact = std::modf(f, &f);
 
-    const auto i = static_cast<uint>(f) % static_cast<uint>(elev.mAzs.size());
+    const auto i = static_cast<unsigned>(f) % static_cast<unsigned>(elev.mAzs.size());
     *a0 = i;
-    *a1 = (i+1) % static_cast<uint>(elev.mAzs.size());
+    *a1 = (i+1) % static_cast<unsigned>(elev.mAzs.size());
     *af = fact;
 }
 
@@ -583,21 +586,21 @@ void CalcAzIndices(const HrirEvT &elev, const double az, uint *a0, uint *a1, dou
  */
 void SynthesizeOnsets(HrirDataT *hData)
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    const auto channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
 
     auto proc_field = [channels](HrirFdT &field) -> void
     {
         /* Get the starting elevation from the measurements, and use it as the
          * upper elevation limit for what needs to be calculated.
          */
-        const uint upperElevReal{field.mEvStart};
+        auto const upperElevReal = field.mEvStart;
         if(upperElevReal <= 0) return;
 
         /* Get the lowest half of the missing elevations' delays by mirroring
          * the top elevation delays. The responses are on a spherical grid
          * centered between the ears, so these should align.
          */
-        uint ei{};
+        auto ei = unsigned{};
         if(channels > 1)
         {
             /* Take the polar opposite position of the desired measurement and
@@ -607,19 +610,19 @@ void SynthesizeOnsets(HrirDataT *hData)
             field.mEvs[0].mAzs[0].mDelays[1] = field.mEvs[field.mEvs.size()-1].mAzs[0].mDelays[0];
             for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
             {
-                const uint topElev{static_cast<uint>(field.mEvs.size()-ei-1)};
+                const auto topElev = static_cast<unsigned>(field.mEvs.size()-ei-1);
 
-                for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
+                for(auto ai=0u;ai < field.mEvs[ei].mAzs.size();ai++)
                 {
-                    uint a0;
-                    uint a1;
-                    double af;
+                    auto a0 = unsigned{};
+                    auto a1 = unsigned{};
+                    auto af = double{};
 
                     /* Rotate this current azimuth by a half-circle, and lookup
                      * the mirrored elevation to find the indices for the polar
                      * opposite position (may need blending).
                      */
-                    const double az{field.mEvs[ei].mAzs[ai].mAzimuth + std::numbers::pi};
+                    auto const az = field.mEvs[ei].mAzs[ai].mAzimuth + std::numbers::pi;
                     CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
 
                     /* Blend the delays, and again, swap the ears. */
@@ -637,13 +640,13 @@ void SynthesizeOnsets(HrirDataT *hData)
             field.mEvs[0].mAzs[0].mDelays[0] = field.mEvs[field.mEvs.size()-1].mAzs[0].mDelays[0];
             for(ei = 1u;ei < (upperElevReal+1)/2;++ei)
             {
-                const uint topElev{static_cast<uint>(field.mEvs.size()-ei-1)};
+                auto const topElev = static_cast<unsigned>(field.mEvs.size()-ei-1);
 
-                for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
+                for(auto ai=0u;ai < field.mEvs[ei].mAzs.size();ai++)
                 {
-                    uint a0;
-                    uint a1;
-                    double af;
+                    auto a0 = unsigned{};
+                    auto a1 = unsigned{};
+                    auto af = double{};
 
                     /* For mono data sets, mirror the azimuth front<->back
                      * since the other ear is a mirror of what we have (e.g.
@@ -651,7 +654,7 @@ void SynthesizeOnsets(HrirDataT *hData)
                      * ear's front-right, which uses the left ear's front-left
                      * measurement).
                      */
-                    double az{field.mEvs[ei].mAzs[ai].mAzimuth};
+                    auto az = field.mEvs[ei].mAzs[ai].mAzimuth;
                     if(az <= std::numbers::pi) az = std::numbers::pi - az;
                     else az = (std::numbers::pi*2.0)-az + std::numbers::pi;
                     CalcAzIndices(field.mEvs[topElev], az, &a0, &a1, &af);
@@ -663,36 +666,36 @@ void SynthesizeOnsets(HrirDataT *hData)
             }
         }
         /* Record the lowest elevation filled in with the mirrored top. */
-        const uint lowerElevFake{ei-1u};
+        auto const lowerElevFake = ei-1u;
 
         /* Fill in the remaining delays using bilinear interpolation. This
          * helps smooth the transition back to the real delays.
          */
         for(;ei < upperElevReal;++ei)
         {
-            const double ef{(field.mEvs[upperElevReal].mElevation - field.mEvs[ei].mElevation) /
-                (field.mEvs[upperElevReal].mElevation - field.mEvs[lowerElevFake].mElevation)};
+            auto const ef = (field.mEvs[upperElevReal].mElevation - field.mEvs[ei].mElevation) /
+                (field.mEvs[upperElevReal].mElevation - field.mEvs[lowerElevFake].mElevation);
 
-            for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
+            for(auto ai=0u;ai < field.mEvs[ei].mAzs.size();ai++)
             {
-                uint a0;
-                uint a1;
-                uint a2;
-                uint a3;
-                double af0;
-                double af1;
+                auto a0 = unsigned{};
+                auto a1 = unsigned{};
+                auto a2 = unsigned{};
+                auto a3 = unsigned{};
+                auto af0 = double{};
+                auto af1 = double{};
 
                 const auto az = field.mEvs[ei].mAzs[ai].mAzimuth;
                 CalcAzIndices(field.mEvs[upperElevReal], az, &a0, &a1, &af0);
                 CalcAzIndices(field.mEvs[lowerElevFake], az, &a2, &a3, &af1);
-                std::array<double,4> blend{{
+                auto blend = std::array{
                     (1.0-ef) * (1.0-af0),
                     (1.0-ef) * (    af0),
                     (    ef) * (1.0-af1),
                     (    ef) * (    af1)
-                }};
+                };
 
-                for(uint ti{0u};ti < channels;ti++)
+                for(auto ti=0u;ti < channels;++ti)
                 {
                     field.mEvs[ei].mAzs[ai].mDelays[ti] =
                         field.mEvs[upperElevReal].mAzs[a0].mDelays[ti]*blend[0] +
@@ -713,22 +716,22 @@ void SynthesizeOnsets(HrirDataT *hData)
  */
 void SynthesizeHrirs(HrirDataT *hData)
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    auto const channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
     auto htemp = std::vector<complex_d>(hData->mFftSize);
-    const uint m{hData->mFftSize/2u + 1u};
+    auto const m = hData->mFftSize/2u + 1u;
     auto filter = std::vector<double>(m);
-    const double beta{3.5e-6 * hData->mIrRate};
+    auto const beta = 3.5e-6 * hData->mIrRate;
 
     auto proc_field = [channels,m,beta,&htemp,&filter](HrirFdT &field) -> void
     {
-        const uint oi{field.mEvStart};
+        auto const oi = field.mEvStart;
         if(oi <= 0) return;
 
-        for(uint ti{0u};ti < channels;ti++)
+        for(auto ti=0u;ti < channels;++ti)
         {
-            uint a0;
-            uint a1;
-            double af;
+            auto a0 = unsigned{};
+            auto a1 = unsigned{};
+            auto af = double{};
 
             /* Use the lowest immediate-left response for the left ear and
              * lowest immediate-right response for the right ear. Given no comb
@@ -737,18 +740,18 @@ void SynthesizeHrirs(HrirDataT *hData)
              * underneath the head.
              */
             CalcAzIndices(field.mEvs[oi], std::numbers::pi/((ti==0) ? -2.0 : 2.0), &a0, &a1, &af);
-            for(uint i{0u};i < m;i++)
+            for(auto i=0u;i < m;++i)
             {
                 field.mEvs[0].mAzs[0].mIrs[ti][i] = std::lerp(field.mEvs[oi].mAzs[a0].mIrs[ti][i],
                     field.mEvs[oi].mAzs[a1].mIrs[ti][i], af);
             }
         }
 
-        for(uint ei{1u};ei < field.mEvStart;ei++)
+        for(auto ei=1u;ei < field.mEvStart;++ei)
         {
-            const double of{static_cast<double>(ei) / field.mEvStart};
-            const double b{(1.0 - of) * beta};
-            std::array<double,4> lp{};
+            auto const of = static_cast<double>(ei) / field.mEvStart;
+            auto const b = (1.0 - of) * beta;
+            auto lp = std::array<double,4>{};
 
             /* Calculate a low-pass filter to simulate body occlusion. */
             lp[0] = std::lerp(1.0, lp[0], b);
@@ -767,20 +770,20 @@ void SynthesizeHrirs(HrirDataT *hData)
             /* Get the filter's frequency-domain response and extract the
              * frequency magnitudes (phase will be reconstructed later)).
              */
-            FftForward(static_cast<uint>(htemp.size()), htemp.data());
+            FftForward(static_cast<unsigned>(htemp.size()), htemp.data());
             std::ranges::transform(htemp | std::views::take(m), filter.begin(),
                 [](const complex_d c) -> double { return std::abs(c); });
 
-            for(uint ai{0u};ai < field.mEvs[ei].mAzs.size();ai++)
+            for(auto ai=0u;ai < field.mEvs[ei].mAzs.size();++ai)
             {
-                uint a0;
-                uint a1;
-                double af;
+                auto a0 = unsigned{};
+                auto a1 = unsigned{};
+                auto af = double{};
 
                 CalcAzIndices(field.mEvs[oi], field.mEvs[ei].mAzs[ai].mAzimuth, &a0, &a1, &af);
-                for(uint ti{0u};ti < channels;ti++)
+                for(auto ti=0u;ti < channels;++ti)
                 {
-                    for(uint i{0u};i < m;i++)
+                    for(auto i=0u;i < m;++i)
                     {
                         /* Blend the two defined HRIRs closest to this azimuth,
                          * then blend that with the synthesized -90 elevation.
@@ -793,8 +796,8 @@ void SynthesizeHrirs(HrirDataT *hData)
                 }
             }
         }
-        const double b{beta};
-        std::array<double,4> lp{};
+        auto const b = beta;
+        auto lp = std::array<double,4>{};
         lp[0] = std::lerp(1.0, lp[0], b);
         lp[1] = std::lerp(lp[0], lp[1], b);
         lp[2] = std::lerp(lp[1], lp[2], b);
@@ -808,14 +811,14 @@ void SynthesizeHrirs(HrirDataT *hData)
             lp[3] = std::lerp(lp[2], lp[3], b);
             htemp[i] = lp[3];
         }
-        FftForward(static_cast<uint>(htemp.size()), htemp.data());
+        FftForward(static_cast<unsigned>(htemp.size()), htemp.data());
         std::ranges::transform(htemp | std::views::take(m), filter.begin(),
             [](const complex_d c) -> double { return std::abs(c); });
 
-        for(uint ti{0u};ti < channels;ti++)
+        for(auto &irs : field.mEvs[0].mAzs[0].mIrs | std::views::take(channels))
         {
-            for(uint i{0u};i < m;i++)
-                field.mEvs[0].mAzs[0].mIrs[ti][i] *= filter[i];
+            std::ranges::transform(irs | std::views::take(m), filter, irs.begin(),
+                std::multiplies{});
         }
     };
     std::ranges::for_each(hData->mFds, proc_field);
@@ -831,8 +834,8 @@ struct HrirReconstructor {
     std::vector<std::span<double>> mIrs;
     std::atomic<size_t> mCurrent;
     std::atomic<size_t> mDone;
-    uint mFftSize{};
-    uint mIrPoints{};
+    unsigned mFftSize{};
+    unsigned mIrPoints{};
 
     void Worker()
     {
@@ -843,7 +846,7 @@ struct HrirReconstructor {
         while(true)
         {
             /* Load the current index to process. */
-            size_t idx{mCurrent.load()};
+            auto idx = mCurrent.load();
             do {
                 /* If the index is at the end, we're done. */
                 if(idx >= mIrs.size())
@@ -862,7 +865,7 @@ struct HrirReconstructor {
                 mags[i] = std::max(mIrs[idx][i], Epsilon);
             MinimumPhase(mags, h);
             FftInverse(mFftSize, h.data());
-            for(uint i{0u};i < mIrPoints;++i)
+            for(auto i=0u;i < mIrPoints;++i)
                 mIrs[idx][i] = h[i].real();
 
             /* Increment the number of IRs done. */
@@ -871,9 +874,9 @@ struct HrirReconstructor {
     }
 };
 
-void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
+void ReconstructHrirs(HrirDataT const *hData, unsigned const numThreads)
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
+    auto const channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
 
     /* Set up the reconstructor with the needed size info and pointers to the
      * IRs to process.
@@ -889,7 +892,7 @@ void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
         {
             for(const auto &azd : elev.mAzs)
             {
-                for(uint ti{0u};ti < channels;ti++)
+                for(auto ti=0u;ti < channels;++ti)
                     reconstructor.mIrs.push_back(azd.mIrs[ti]);
             }
         }
@@ -924,8 +927,8 @@ void ReconstructHrirs(const HrirDataT *hData, const uint numThreads)
 // Normalize the HRIR set and slightly attenuate the result.
 void NormalizeHrirs(HrirDataT *hData)
 {
-    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
-    const uint irSize{hData->mIrPoints};
+    auto const channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
+    auto const irSize = hData->mIrPoints;
 
     /* Find the maximum amplitude and RMS out of all the IRs. */
     struct LevelPair { double amp, rms; };
@@ -1001,7 +1004,7 @@ void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hDat
 {
     const auto channels = (hData->mChannelType == CT_STEREO) ? 2u : 1u;
     const auto customRatio = radius / hData->mRadius;
-    uint ti;
+    auto ti = unsigned{};
 
     if(model == HM_Sphere)
     {
@@ -1079,8 +1082,9 @@ void CalculateHrtds(const HeadModelT model, const double radius, HrirDataT *hDat
 
 // Allocate and configure dynamic HRIR structures.
 bool PrepareHrirData(const std::span<const double> distances,
-    const std::span<const uint,MAX_FD_COUNT> evCounts,
-    const std::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData)
+    const std::span<unsigned const, MAX_FD_COUNT> evCounts,
+    const std::span<std::array<unsigned, MAX_EV_COUNT> const, MAX_FD_COUNT> azCounts,
+    HrirDataT *hData)
 {
     auto evTotal = 0u;
     auto azTotal = 0u;
@@ -1106,14 +1110,14 @@ bool PrepareHrirData(const std::span<const double> distances,
         hData->mFds[fi].mEvStart = 0;
         hData->mFds[fi].mEvs = std::span{hData->mEvsBase}.subspan(evTotal, evCounts[fi]);
         evTotal += evCounts[fi];
-        for(uint ei{0};ei < evCounts[fi];++ei)
+        for(auto ei=0u;ei < evCounts[fi];++ei)
         {
             const auto azCount = azCounts[fi][ei];
 
             hData->mFds[fi].mEvs[ei].mElevation = -std::numbers::pi / 2.0 + std::numbers::pi * ei
                 / (evCounts[fi] - 1);
             hData->mFds[fi].mEvs[ei].mAzs = std::span{hData->mAzsBase}.subspan(azTotal, azCount);
-            for(uint ai{0};ai < azCount;ai++)
+            for(auto ai=0u;ai < azCount;ai++)
             {
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mAzimuth = 2.0 * std::numbers::pi * ai / azCount;
                 hData->mFds[fi].mEvs[ei].mAzs[ai].mIndex = azTotal + ai;
@@ -1135,12 +1139,13 @@ namespace {
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-bool ProcessDefinition(std::string_view inName, const uint outRate, const ChannelModeT chanMode,
-    const bool farfield, const uint numThreads, const uint fftSize, const bool equalize,
-    const bool surface, const double limit, const uint truncSize, const HeadModelT model,
-    const double radius, const std::string_view outName)
+auto ProcessDefinition(std::string_view inName, unsigned const outRate,
+    ChannelModeT const chanMode, bool const farfield, unsigned const numThreads,
+    unsigned const fftSize, bool const equalize, bool const surface, double const limit,
+    unsigned const truncSize, HeadModelT const model, double const radius,
+    std::string_view const outName) -> bool
 {
-    HrirDataT hData;
+    auto hData = HrirDataT{};
 
     fmt::println("Using {} thread{}.", numThreads, (numThreads==1)?"":"s");
     if(inName.empty() || inName == "-"sv)
@@ -1338,7 +1343,7 @@ auto main(std::span<std::string_view> args) -> int
         switch(opt)
         {
         case 'r':
-            outRate = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            outRate = static_cast<unsigned>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || outRate < MIN_RATE || outRate > MAX_RATE)
             {
                 fmt::println(std::cerr,
@@ -1357,7 +1362,7 @@ auto main(std::span<std::string_view> args) -> int
             break;
 
         case 'j':
-            numThreads = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            numThreads = static_cast<unsigned>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || numThreads > 64)
             {
                 fmt::println(std::cerr,
@@ -1370,7 +1375,7 @@ auto main(std::span<std::string_view> args) -> int
             break;
 
         case 'f':
-            fftSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            fftSize = static_cast<unsigned>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || (fftSize&(fftSize-1)) || fftSize < MinFftSize
                 || fftSize > MaxFftSize)
             {
@@ -1426,7 +1431,7 @@ auto main(std::span<std::string_view> args) -> int
             break;
 
         case 'w':
-            truncSize = static_cast<uint>(std::stoul(std::string{optarg}, &endpos, 10));
+            truncSize = static_cast<unsigned>(std::stoul(std::string{optarg}, &endpos, 10));
             if(endpos != optarg.size() || truncSize < MinTruncSize || truncSize > MaxTruncSize)
             {
                 fmt::println(std::cerr,

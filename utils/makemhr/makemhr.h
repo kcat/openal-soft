@@ -42,8 +42,6 @@ inline constexpr auto MIN_POINTS = 16u;
 inline constexpr auto MAX_POINTS = 8192u;
 
 
-using uint = unsigned int;
-
 /* Complex double type. */
 using complex_d = std::complex<double>;
 
@@ -69,7 +67,7 @@ enum ChannelTypeT {
 // Structured HRIR storage for stereo azimuth pairs, elevations, and fields.
 struct HrirAzT {
     double mAzimuth{0.0};
-    uint mIndex{0u};
+    unsigned mIndex{0u};
     std::array<double,2> mDelays{};
     std::array<std::span<double>,2> mIrs{};
 };
@@ -81,21 +79,21 @@ struct HrirEvT {
 
 struct HrirFdT {
     double mDistance{0.0};
-    uint mEvStart{0u};
+    unsigned mEvStart{0u};
     std::span<HrirEvT> mEvs;
 };
 
 // The HRIR metrics and data set used when loading, processing, and storing
 // the resulting HRTF.
 struct HrirDataT {
-    uint mIrRate{0u};
+    unsigned mIrRate{0u};
     SampleTypeT mSampleType{ST_S24};
     ChannelTypeT mChannelType{CT_NONE};
-    uint mIrPoints{0u};
-    uint mFftSize{0u};
-    uint mIrSize{0u};
+    unsigned mIrPoints{0u};
+    unsigned mFftSize{0u};
+    unsigned mIrSize{0u};
     double mRadius{0.0};
-    uint mIrCount{0u};
+    unsigned mIrCount{0u};
 
     std::vector<double> mHrirsBase;
     std::vector<HrirEvT> mEvsBase;
@@ -108,9 +106,9 @@ struct HrirDataT {
 };
 
 
-bool PrepareHrirData(const std::span<const double> distances,
-    const std::span<const uint,MAX_FD_COUNT> evCounts,
-    const std::span<const std::array<uint,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
+bool PrepareHrirData(std::span<const double> distances,
+    std::span<const unsigned,MAX_FD_COUNT> evCounts,
+    std::span<const std::array<unsigned,MAX_EV_COUNT>,MAX_FD_COUNT> azCounts, HrirDataT *hData);
 
 /* Calculate the magnitude response of the given input.  This is used in
  * place of phase decomposition, since the phase residuals are discarded for
@@ -125,11 +123,11 @@ inline void MagnitudeResponse(const std::span<const complex_d> in, const std::sp
 }
 
 // Performs a forward FFT.
-inline void FftForward(const uint n, complex_d *inout)
+inline void FftForward(unsigned const n, complex_d *inout)
 { forward_fft(std::span{inout, n}); }
 
 // Performs an inverse FFT, scaling the result by the number of elements.
-inline void FftInverse(const uint n, complex_d *inout)
+inline void FftInverse(unsigned const n, complex_d *inout)
 {
     const auto values = std::span{inout, n};
     inverse_fft(values);

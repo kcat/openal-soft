@@ -41,7 +41,6 @@ enum class AmbiScaling : unsigned char {
     FuMa,
     SN3D,
     N3D,
-    UHJ,
 };
 
 auto NameFromFormat(FmtType type) noexcept -> std::string_view;

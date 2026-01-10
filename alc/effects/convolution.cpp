@@ -118,7 +118,6 @@ constexpr auto GetAmbiScales(AmbiScaling scaletype) noexcept
     {
     case AmbiScaling::FuMa: return std::span{AmbiScale::FromFuMa};
     case AmbiScaling::SN3D: return std::span{AmbiScale::FromSN3D};
-    case AmbiScaling::UHJ: return std::span{AmbiScale::FromUHJ};
     case AmbiScaling::N3D: break;
     }
     return std::span{AmbiScale::FromN3D};
@@ -294,7 +293,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
     mChannels = buffer->mChannels;
     mAmbiLayout = IsUHJ(mChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
-    mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
+    mAmbiScaling = IsUHJ(mChannels) ? AmbiScaling::N3D : buffer->mAmbiScaling;
     mAmbiOrder = std::min(buffer->mAmbiOrder, MaxConvolveAmbiOrder);
 
     const auto realChannels = buffer->channelsFromFmt();

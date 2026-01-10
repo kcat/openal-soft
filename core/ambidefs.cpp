@@ -17,7 +17,6 @@ namespace {
 static_assert(AmbiScale::FromN3D.size() == MaxAmbiChannels);
 static_assert(AmbiScale::FromSN3D.size() == MaxAmbiChannels);
 static_assert(AmbiScale::FromFuMa.size() == MaxAmbiChannels);
-static_assert(AmbiScale::FromUHJ.size() == MaxAmbiChannels);
 
 static_assert(AmbiIndex::FromFuMa.size() == MaxAmbiChannels);
 static_assert(AmbiIndex::FromFuMa2D.size() == MaxAmbi2DChannels);

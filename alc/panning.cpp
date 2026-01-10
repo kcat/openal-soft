@@ -1136,7 +1136,7 @@ void InitUhjPanning(al::Device *const device)
 
     std::ranges::transform(AmbiIndex::FromFuMa2D | std::views::take(count),
         device->Dry.AmbiMap.begin(), [](u8 const acn) noexcept -> BFChannelConfig
-    { return BFChannelConfig{1.0f/AmbiScale::FromUHJ[acn], acn}; });
+    { return BFChannelConfig{1.0f/AmbiScale::FromN3D[acn], acn}; });
     AllocChannels(device, count, device->channelsFromFmt());
 
     /* TODO: Should this default to something else? This is simply a regular

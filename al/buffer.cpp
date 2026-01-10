@@ -114,7 +114,6 @@ constexpr auto EnumFromAmbiScaling(AmbiScaling const scale) -> ALenum
     case AmbiScaling::FuMa: return AL_FUMA_SOFT;
     case AmbiScaling::SN3D: return AL_SN3D_SOFT;
     case AmbiScaling::N3D: return AL_N3D_SOFT;
-    case AmbiScaling::UHJ: break;
     }
     throw std::runtime_error{al::format("Invalid AmbiScaling: {}",
         int{al::to_underlying(scale)})};

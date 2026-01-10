@@ -542,7 +542,7 @@ void InitVoice(Voice *const voice, gsl::not_null<al::Source*> const source,
     voice->mBytesPerBlock = buffer->blockSizeFromFmt();
     voice->mSamplesPerBlock = buffer->mBlockAlign;
     voice->mAmbiLayout = IsUHJ(voice->mFmtChannels) ? AmbiLayout::FuMa : buffer->mAmbiLayout;
-    voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::UHJ : buffer->mAmbiScaling;
+    voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::N3D : buffer->mAmbiScaling;
     voice->mAmbiOrder = (voice->mFmtChannels == FmtSuperStereo) ? 1 : buffer->mAmbiOrder;
 
     if(buffer->mCallback) voice->mFlags.set(VoiceIsCallback);

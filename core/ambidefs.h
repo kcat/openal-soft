@@ -124,16 +124,6 @@ namespace AmbiScale {
         1.0f, /* 2.037849855f, ACN 23, sqrt(8505/2048) */
         1.0f, /* 2.218529919f, ACN 24, sqrt(315)/8 */
     };
-    inline constexpr auto FromUHJ = std::array{
-        1.000000000f, /* ACN  0 (W), sqrt(1) */
-        1.224744871f, /* ACN  1 (Y), sqrt(3/2) */
-        1.224744871f, /* ACN  2 (Z), sqrt(3/2) */
-        1.224744871f, /* ACN  3 (X), sqrt(3/2) */
-        /* Higher orders not relevant for UHJ. */
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    };
 
     template<usize N>
     using UpsamplerArrays = std::array<std::array<f32, MaxAmbiChannels>, N>;

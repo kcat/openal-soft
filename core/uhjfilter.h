@@ -64,8 +64,7 @@ struct UhjEncoder final : EncoderBase {
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
-     * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
-     * with an additional +3dB boost).
+     * signal. The input must use FuMa channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;
@@ -97,8 +96,7 @@ struct UhjEncoderIIR final : EncoderBase {
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
-     * signal. The input must use FuMa channel ordering and UHJ scaling (FuMa
-     * with an additional +3dB boost).
+     * signal. The input must use FuMa channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;
@@ -126,7 +124,7 @@ struct DecoderBase {
      * The width factor for Super Stereo processing. Can be changed in between
      * calls to decode, with valid values being between 0...0.7.
      *
-     * 0.46 seens to produce the least amount of channel bleed when the output
+     * 0.46 seems to produce the least amount of channel bleed when the output
      * is subsequently UHJ encoded (given a stereo sound with a noise on the
      * left buffer channel, for instance, when decoded with UhjStereoDecoder
      * and then encoded with UhjEncoder, the right output channel was at its
@@ -153,13 +151,13 @@ struct UhjDecoder final : DecoderBase {
 
     /**
      * Decodes a 3- or 4-channel UHJ signal into a B-Format signal with FuMa
-     * channel ordering and UHJ scaling. For 3-channel, the 3rd channel may be
+     * channel ordering and N3D scaling. For 3-channel, the 3rd channel may be
      * attenuated by 'n', where 0 <= n <= 1. So to decode 2-channel UHJ, supply
      * 3 channels with the 3rd channel silent (n=0). The B-Format signal
      * reconstructed from 2-channel UHJ should not be run through a normal
      * B-Format decoder, as it needs different shelf filters.
      */
-    void decode(const std::span<std::span<float>> samples, const bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
 struct UhjDecoderIIR final : public DecoderBase {
@@ -205,7 +203,7 @@ struct UhjStereoDecoder final : DecoderBase {
 
     /**
      * Applies Super Stereo processing on a stereo signal to create a B-Format
-     * signal with FuMa channel ordering and UHJ scaling. The samples span
+     * signal with FuMa channel ordering and N3D scaling. The samples span
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */

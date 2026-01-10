@@ -483,7 +483,6 @@ constexpr auto GetAmbiScales(AmbiScaling const scaletype) noexcept
     {
     case AmbiScaling::FuMa: return std::span{AmbiScale::FromFuMa};
     case AmbiScaling::SN3D: return std::span{AmbiScale::FromSN3D};
-    case AmbiScaling::UHJ: return std::span{AmbiScale::FromUHJ};
     case AmbiScaling::N3D: break;
     }
     return std::span{AmbiScale::FromN3D};

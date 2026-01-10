@@ -13,15 +13,13 @@
 #include <vector>
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "bsinc_defs.h"
 #include "gsl/gsl"
 #include "resampler_limits.h"
 
 
 namespace {
-
-using uint = unsigned int;
-
 
 /* The zero-order modified Bessel function of the first kind, used for the
  * Kaiser window.
@@ -96,7 +94,7 @@ constexpr auto Kaiser(const double beta, const double k, const double besseli_0_
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
  * Rejection is in dB.
  */
-constexpr auto CalcKaiserWidth(const double rejection, const uint order) noexcept -> double
+constexpr auto CalcKaiserWidth(double const rejection, u32 const order) noexcept -> double
 {
     if(rejection > 21.19)
         return (rejection - 7.95) / (2.285 * std::numbers::pi*2.0 * order);
@@ -120,23 +118,23 @@ struct BSincHeader {
     double scaleBase{};
     double scaleLimit{};
 
-    std::array<double,BSincScaleCount> a{};
-    std::array<uint,BSincScaleCount> m{};
-    uint total_size{};
+    std::array<double, BSincScaleCount> a{};
+    std::array<u32, BSincScaleCount> m{};
+    u32 total_size{};
 
-    constexpr BSincHeader(uint rejection, uint order, uint maxScale) noexcept
+    constexpr BSincHeader(u32 const rejection, u32 const order, u32 const maxScale) noexcept
         : beta{CalcKaiserBeta(rejection)}, scaleBase{CalcKaiserWidth(rejection, order) / 2.0}
         , scaleLimit{1.0 / maxScale}
     {
         const auto base_a = (order+1.0) / 2.0;
-        for(const auto si : std::views::iota(0u, BSincScaleCount))
+        for(const auto si : std::views::iota(0_u32, BSincScaleCount))
         {
             const auto scale = std::lerp(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
             a[si] = std::min(base_a/scale, base_a*maxScale);
             /* std::ceil() isn't constexpr until C++23, this should behave the
              * same.
              */
-            auto a_ = gsl::narrow_cast<uint>(a[si]);
+            auto a_ = gsl::narrow_cast<u32>(a[si]);
             a_ += (gsl::narrow_cast<double>(a_) != a[si]);
             m[si] = a_ * 2u;
 

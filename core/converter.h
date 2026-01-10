@@ -37,7 +37,7 @@ public:
     al::FlexArray<ChanSamples> mChan;
 
     [[nodiscard]] auto convert(const void **src, u32 *srcframes, void *dst, u32 dstframes) -> u32;
-    [[nodiscard]] auto convertPlanar(const void **src, uint *srcframes, void *const*dst, uint dstframes) -> u32;
+    [[nodiscard]] auto convertPlanar(const void **src, u32 *srcframes, void *const*dst, u32 dstframes) -> u32;
     [[nodiscard]] auto availableOut(u32 srcframes) const -> u32;
 
     using SampleOffset = std::chrono::duration<i64, std::ratio<1,MixerFracOne>>;

@@ -599,7 +599,7 @@ try {
 
     handle = LoadedHrtfs.emplace(handle, fname, devrate, std::move(hrtf));
     TRACE("Loaded HRTF {} for sample rate {}hz, {}-sample filter", name,
-        uint{handle->mEntry->mSampleRate}, uint{handle->mEntry->mIrSize});
+        u32{handle->mEntry->mSampleRate}, u32{handle->mEntry->mIrSize});
 
     return HrtfStorePtr{handle->mEntry.get()};
 }

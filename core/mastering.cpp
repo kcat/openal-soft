@@ -13,6 +13,7 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "gsl/gsl"
 #include "opthelpers.h"
 
@@ -22,10 +23,10 @@ static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not
 
 struct SlidingHold {
     alignas(16) FloatBufferLine mValues;
-    std::array<uint,BufferLineSize> mExpiries;
-    uint mLowerIndex;
-    uint mUpperIndex;
-    uint mLength;
+    std::array<u32, BufferLineSize> mExpiries;
+    u32 mLowerIndex;
+    u32 mUpperIndex;
+    u32 mLength;
 };
 
 
@@ -42,9 +43,9 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
+float UpdateSlidingHold(SlidingHold *Hold, u32 const i, f32 const in)
 {
-    static constexpr auto mask = uint{BufferLineSize - 1};
+    static constexpr auto mask = u32{BufferLineSize - 1};
     const auto length = Hold->mLength;
     const auto values = std::span{Hold->mValues};
     const auto expiries = std::span{Hold->mExpiries};
@@ -84,20 +85,20 @@ float UpdateSlidingHold(SlidingHold *Hold, const uint i, const float in)
     return values[upperIndex];
 }
 
-void ShiftSlidingHold(SlidingHold *Hold, const uint n)
+void ShiftSlidingHold(SlidingHold *Hold, u32 const n)
 {
     if(Hold->mLowerIndex < Hold->mUpperIndex)
     {
         auto expiries = std::span{Hold->mExpiries}.first(Hold->mLowerIndex+1);
-        std::ranges::transform(expiries, expiries.begin(), [n](const uint e) { return e - n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](u32 const e) { return e - n; });
         expiries = std::span{Hold->mExpiries}.subspan(Hold->mUpperIndex);
-        std::ranges::transform(expiries, expiries.begin(), [n](const uint e) { return e - n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](u32 const e) { return e - n; });
     }
     else
     {
         const auto expiries = std::span{Hold->mExpiries}.first(Hold->mLowerIndex+1)
             .subspan(Hold->mUpperIndex);
-        std::ranges::transform(expiries, expiries.begin(), [n](const uint e) { return e - n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](u32 const e) { return e - n; });
     }
 }
 
@@ -108,9 +109,9 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
     const float ThresholdDb, const float Ratio, const float KneeDb, const float AttackTime,
     const float ReleaseTime) -> std::unique_ptr<Compressor>
 {
-    const auto lookAhead = gsl::narrow_cast<uint>(std::clamp(std::round(LookAheadTime*SampleRate),
+    const auto lookAhead = gsl::narrow_cast<u32>(std::clamp(std::round(LookAheadTime*SampleRate),
         0.0f, BufferLineSize-1.0f));
-    const auto hold = gsl::narrow_cast<uint>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
+    const auto hold = gsl::narrow_cast<u32>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
         BufferLineSize-1.0f));
 
     auto Comp = std::make_unique<Compressor>(PrivateToken{});
@@ -167,7 +168,7 @@ Compressor::~Compressor() = default;
  * to knee width, attack/release times, make-up/post gain, and clipping
  * reduction.
  */
-void Compressor::gainCompressor(const uint SamplesToDo)
+void Compressor::gainCompressor(u32 const SamplesToDo)
 {
     const auto autoKnee = mAuto.Knee;
     const auto autoAttack = mAuto.Attack;
@@ -259,7 +260,7 @@ void Compressor::gainCompressor(const uint SamplesToDo)
     mLastGainDev = c_dev;
 }
 
-void Compressor::process(const uint SamplesToDo, const std::span<FloatBufferLine> InOut)
+void Compressor::process(u32 const SamplesToDo, std::span<FloatBufferLine> const InOut)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);

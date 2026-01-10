@@ -6,13 +6,12 @@
 #include <string>
 #include <variant>
 
+#include "altypes.hpp"
 
 struct EffectState;
 
-using uint = unsigned int;
 
-
-enum class AsyncEnableBits : std::uint8_t {
+enum class AsyncEnableBits : u8 {
     SourceState,
     BufferCompleted,
     Disconnected,
@@ -20,7 +19,7 @@ enum class AsyncEnableBits : std::uint8_t {
 };
 
 
-enum class AsyncSrcState : std::uint8_t {
+enum class AsyncSrcState : u8 {
     Reset,
     Stop,
     Play,
@@ -30,13 +29,13 @@ enum class AsyncSrcState : std::uint8_t {
 using AsyncKillThread = std::monostate;
 
 struct AsyncSourceStateEvent {
-    uint mId;
+    u32 mId;
     AsyncSrcState mState;
 };
 
 struct AsyncBufferCompleteEvent {
-    uint mId;
-    uint mCount;
+    u32 mId;
+    u32 mCount;
 };
 
 struct AsyncDisconnectEvent {

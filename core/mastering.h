@@ -7,12 +7,11 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "bufferline.h"
 #include "vector.h"
 
 struct SlidingHold;
-
-using uint = unsigned int;
 
 
 /* General topology and basic automation was based on the following paper:
@@ -35,7 +34,7 @@ class Compressor {
     };
     AutoFlags mAuto{};
 
-    uint mLookAhead{0};
+    u32 mLookAhead{0};
 
     float mPreGain{0.0f};
     float mPostGain{0.0f};
@@ -63,7 +62,7 @@ class Compressor {
     float mLastAttack{0.0f};
     float mLastGainDev{0.0f};
 
-    void gainCompressor(const uint SamplesToDo);
+    void gainCompressor(u32 SamplesToDo);
 
     struct PrivateToken { };
 public:
@@ -73,13 +72,14 @@ public:
     using FlagBits = std::bitset<FlagsCount>;
 
     Compressor() = delete;
-    Compressor(const Compressor&) = delete;
     explicit Compressor(PrivateToken);
     ~Compressor();
+
+    Compressor(const Compressor&) = delete;
     auto operator=(const Compressor&) -> Compressor& = delete;
 
-    void process(const uint SamplesToDo, std::span<FloatBufferLine> InOut);
-    [[nodiscard]] auto getLookAhead() const noexcept -> uint { return mLookAhead; }
+    void process(u32 SamplesToDo, std::span<FloatBufferLine> InOut);
+    [[nodiscard]] auto getLookAhead() const noexcept -> u32 { return mLookAhead; }
 
     /**
      * The compressor is initialized with the following settings:

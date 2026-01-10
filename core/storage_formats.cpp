@@ -10,7 +10,7 @@ namespace {
 using namespace std::string_view_literals;
 } // namespace
 
-auto NameFromFormat(FmtType type) noexcept -> std::string_view
+auto NameFromFormat(FmtType const type) noexcept -> std::string_view
 {
     switch(type)
     {
@@ -27,7 +27,7 @@ auto NameFromFormat(FmtType type) noexcept -> std::string_view
     return "<internal error>"sv;
 }
 
-auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view
+auto NameFromFormat(FmtChannels const channels) noexcept -> std::string_view
 {
     switch(channels)
     {
@@ -48,7 +48,7 @@ auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view
     return "<internal error>"sv;
 }
 
-uint BytesFromFmt(FmtType type) noexcept
+auto BytesFromFmt(FmtType const type) noexcept -> u32
 {
     switch(type)
     {
@@ -65,7 +65,7 @@ uint BytesFromFmt(FmtType type) noexcept
     return 0;
 }
 
-uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept
+auto ChannelsFromFmt(FmtChannels const chans, u32 const ambiorder) noexcept -> u32
 {
     switch(chans)
     {

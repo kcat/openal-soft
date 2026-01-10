@@ -3,10 +3,10 @@
 
 #include <string_view>
 
-using uint = unsigned int;
+#include "altypes.hpp"
 
 /* Storable formats */
-enum FmtType : unsigned char {
+enum FmtType : u8 {
     FmtUByte,
     FmtShort,
     FmtInt,
@@ -17,7 +17,7 @@ enum FmtType : unsigned char {
     FmtIMA4,
     FmtMSADPCM,
 };
-enum FmtChannels : unsigned char {
+enum FmtChannels : u8 {
     FmtMono,
     FmtStereo,
     FmtRear,
@@ -33,11 +33,11 @@ enum FmtChannels : unsigned char {
     FmtSuperStereo, /* Stereo processed with Super Stereo. */
 };
 
-enum class AmbiLayout : unsigned char {
+enum class AmbiLayout : u8 {
     FuMa,
     ACN,
 };
-enum class AmbiScaling : unsigned char {
+enum class AmbiScaling : u8 {
     FuMa,
     SN3D,
     N3D,
@@ -46,9 +46,13 @@ enum class AmbiScaling : unsigned char {
 auto NameFromFormat(FmtType type) noexcept -> std::string_view;
 auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view;
 
-uint BytesFromFmt(FmtType type) noexcept;
-uint ChannelsFromFmt(FmtChannels chans, uint ambiorder) noexcept;
-inline uint FrameSizeFromFmt(FmtChannels chans, FmtType type, uint ambiorder) noexcept
+[[nodiscard]]
+auto BytesFromFmt(FmtType type) noexcept -> u32;
+[[nodiscard]]
+auto ChannelsFromFmt(FmtChannels chans, u32 ambiorder) noexcept -> u32;
+[[nodiscard]]
+inline auto FrameSizeFromFmt(FmtChannels const chans, FmtType const type, u32 const ambiorder)
+    noexcept -> u32
 { return ChannelsFromFmt(chans, ambiorder) * BytesFromFmt(type); }
 
 #endif /* CORE_STORAGE_FORMATS_H */

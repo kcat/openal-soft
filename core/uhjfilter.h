@@ -104,11 +104,11 @@ struct UhjEncoderIIR final : EncoderBase {
 
 
 struct DecoderBase {
-    static constexpr std::size_t sMaxPadding{256};
+    static constexpr auto sMaxPadding = 256_uz;
 
     /* For 2-channel UHJ, shelf filters should use these LF responses. */
-    static constexpr float sWLFScale{0.661f};
-    static constexpr float sXYLFScale{1.293f};
+    static constexpr auto sWLFScale = 0.661f;
+    static constexpr auto sXYLFScale = 1.293f;
 
     DecoderBase() = default;
     DecoderBase(const DecoderBase&) = delete;
@@ -133,12 +133,12 @@ struct DecoderBase {
     float mWidthControl{0.46f};
 };
 
-template<std::size_t N>
+template<usize N>
 struct UhjDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjDecoder; };
 
     /* The number of extra sample frames needed for input. */
-    static constexpr unsigned int sInputPadding{N/2u};
+    static constexpr auto sInputPadding = N/2_uz;
 
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
@@ -160,7 +160,7 @@ struct UhjDecoder final : DecoderBase {
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
-struct UhjDecoderIIR final : public DecoderBase {
+struct UhjDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = UhjDecoderIIR; };
 
     /* These IIR decoder filters normally have a 1-sample delay on the non-
@@ -169,7 +169,7 @@ struct UhjDecoderIIR final : public DecoderBase {
      * by one sample. The first filtered output sample is cut to align it with
      * the first non-filtered sample, similar to the FIR filters.
      */
-    static constexpr unsigned int sInputPadding{1u};
+    static constexpr auto sInputPadding = 1_uz;
 
     bool mFirstRun{true};
     alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
@@ -185,11 +185,11 @@ struct UhjDecoderIIR final : public DecoderBase {
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
-template<std::size_t N>
+template<usize N>
 struct UhjStereoDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoder; };
 
-    static constexpr unsigned int sInputPadding{N/2u};
+    static constexpr auto sInputPadding = N/2_uz;
 
     float mCurrentWidth{-1.0f};
 
@@ -213,7 +213,7 @@ struct UhjStereoDecoder final : DecoderBase {
 struct UhjStereoDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoderIIR; };
 
-    static constexpr unsigned int sInputPadding{1u};
+    static constexpr auto sInputPadding = 1_uz;
 
     bool mFirstRun{true};
     float mCurrentWidth{-1.0f};

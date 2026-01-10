@@ -38,8 +38,6 @@
 #include "direct_defs.h"
 #include "gsl/gsl"
 
-using uint = unsigned int;
-
 
 namespace {
 

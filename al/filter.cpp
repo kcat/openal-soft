@@ -48,8 +48,6 @@
 #include "gsl/gsl"
 #include "opthelpers.h"
 
-using uint = unsigned int;
-
 
 /* Null filter parameter handlers */
 template<>
@@ -285,11 +283,11 @@ void InitFilterParams(gsl::not_null<al::Filter*> const filter, ALenum const type
 }
 
 [[nodiscard]]
-auto EnsureFilters(gsl::not_null<al::Device*> device, size_t needed) noexcept -> bool
+auto EnsureFilters(gsl::not_null<al::Device*> const device, usize const needed) noexcept -> bool
 try {
     auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
-        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.mFreeMask)); });
+        [](usize const cur, const FilterSubList &sublist) noexcept -> usize
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(sublist.mFreeMask)); });
 
     while(needed > count)
     {

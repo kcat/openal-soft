@@ -204,7 +204,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null message pointer");
 
     const auto msgview = (length < 0) ? std::string_view{message}
-        : std::string_view{message, gsl::narrow_cast<uint>(length)};
+        : std::string_view{message, gsl::narrow_cast<usize>(length)};
     if(msgview.size() >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", msgview.size(),
             MaxDebugMessageLength);
@@ -256,7 +256,7 @@ try {
         context->throw_error(AL_INVALID_ENUM, "Invalid debug enable {}", enable);
 
     static constexpr auto ElemCount = DebugSourceCount + DebugTypeCount + DebugSeverityCount;
-    static constexpr auto Values = make_array_sequence<uint8_t,ElemCount>();
+    static constexpr auto Values = make_array_sequence<u8,ElemCount>();
 
     auto srcIdxs = std::span{Values}.subspan(DebugSourceBase,DebugSourceCount);
     if(source != AL_DONT_CARE_EXT)
@@ -294,9 +294,9 @@ try {
         const auto filterbase = (1u<<srcIdxs[0]) | (1u<<typeIdxs[0]);
 
         std::ranges::for_each(std::views::counted(ids, count),
-            [enable,filterbase,&debug](const uint id)
+            [enable,filterbase,&debug](const u32 id)
         {
-            const auto filter = uint64_t{filterbase} | (uint64_t{id} << 32);
+            const auto filter = u64{filterbase} | (u64{id} << 32);
 
             const auto iter = std::ranges::lower_bound(debug.mIdFilters, filter);
             if(!enable && (iter == debug.mIdFilters.cend() || *iter != filter))
@@ -310,15 +310,15 @@ try {
         /* C++23 has std::views::cartesian(srcIdxs, typeIdxs, svrIdxs) for a
          * range that gives all value combinations of the given ranges.
          */
-        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](const uint srcidx)
+        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](const u32 srcidx)
         {
-            const auto srcfilt = 1u<<srcidx;
-            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](const uint typeidx)
+            const auto srcfilt = 1_u32<<srcidx;
+            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](const u32 typeidx)
             {
-                const auto srctype = srcfilt | (1u<<typeidx);
-                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](const uint svridx)
+                const auto srctype = srcfilt | (1_u32<<typeidx);
+                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](const u32 svridx)
                 {
-                    const auto filter = srctype | (1u<<svridx);
+                    const auto filter = srctype | (1_u32<<svridx);
                     auto iter = std::ranges::lower_bound(debug.mFilters, filter);
                     if(!enable && (iter == debug.mFilters.cend() || *iter != filter))
                         debug.mFilters.insert(iter, filter);
@@ -363,7 +363,7 @@ try {
         context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
 
     context->mDebugGroups.emplace_back(*dsource, id,
-        std::string_view{message, gsl::narrow_cast<uint>(length)});
+        std::string_view{message, gsl::narrow_cast<usize>(length)});
     auto &oldback = *(context->mDebugGroups.end()-2);
     auto &newback = context->mDebugGroups.back();
 
@@ -502,7 +502,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null label pointer");
 
     auto objname = (length < 0) ? std::string_view{label}
-        : std::string_view{label, gsl::narrow_cast<uint>(length)};
+        : std::string_view{label, gsl::narrow_cast<usize>(length)};
     if(objname.size() >= MaxObjectLabelLength)
         context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
             objname.size(), MaxObjectLabelLength);
@@ -616,14 +616,14 @@ void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debu
 
     const auto idfilter = (1_u64 << (DebugSourceBase+al::to_underlying(source)))
         | (1_u64 << (DebugTypeBase+al::to_underlying(type)))
-        | (uint64_t{id} << 32);
+        | (u64{id} << 32);
     const auto iditer = std::ranges::lower_bound(debug.mIdFilters, idfilter);
     if(iditer != debug.mIdFilters.cend() && *iditer == idfilter)
         return;
 
-    const auto filter = (1u << (DebugSourceBase+al::to_underlying(source)))
-        | (1u << (DebugTypeBase+al::to_underlying(type)))
-        | (1u << (DebugSeverityBase+al::to_underlying(severity)));
+    const auto filter = (1_u32 << (DebugSourceBase+al::to_underlying(source)))
+        | (1_u32 << (DebugTypeBase+al::to_underlying(type)))
+        | (1_u32 << (DebugSeverityBase+al::to_underlying(severity)));
     const auto iter = std::ranges::lower_bound(debug.mFilters, filter);
     if(iter != debug.mFilters.cend() && *iter == filter)
         return;

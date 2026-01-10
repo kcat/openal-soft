@@ -70,8 +70,6 @@
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
-using uint = unsigned int;
-
 
 namespace {
 

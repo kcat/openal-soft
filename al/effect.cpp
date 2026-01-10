@@ -56,8 +56,6 @@
 #include "gsl/gsl"
 #include "opthelpers.h"
 
-using uint = unsigned int;
-
 
 constinit const std::array<EffectList,16> gEffectList{{
     { "eaxreverb",   EAXREVERB_EFFECT,   AL_EFFECT_EAXREVERB },
@@ -147,7 +145,7 @@ auto EnsureEffects(gsl::not_null<al::Device*> const device, usize const needed) 
 try {
     auto count = std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
         [](usize const cur, const EffectSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<uint>(std::popcount(sublist.mFreeMask)); });
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(sublist.mFreeMask)); });
 
     while(needed > count)
     {

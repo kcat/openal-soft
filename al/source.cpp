@@ -82,7 +82,6 @@
 #include "eax/utils.h"
 #endif
 
-using uint = unsigned int;
 
 namespace {
 
@@ -213,8 +212,8 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
-    auto readPosFrac = uint{};
-    auto refcount = uint{};
+    auto readPosFrac = u32{};
+    auto refcount = u32{};
 
     do {
         refcount = device->waitForMix();
@@ -230,7 +229,7 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
 
     if(readPos < 0)
-        return (readPos * (std::numeric_limits<uint>::max()+1_i64))
+        return (readPos * (std::numeric_limits<u32>::max()+1_i64))
             + (i64{readPosFrac} << (32-MixerFracBits));
 
     std::ignore = std::ranges::find_if(Source->mQueue,
@@ -257,8 +256,8 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
-    auto readPosFrac = uint{};
-    auto refcount = uint{};
+    auto readPosFrac = u32{};
+    auto refcount = u32{};
 
     do {
         refcount = device->waitForMix();
@@ -307,8 +306,8 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
-    auto readPosFrac = uint{};
-    auto refcount = uint{};
+    auto readPosFrac = u32{};
+    auto refcount = u32{};
 
     do {
         refcount = device->waitForMix();
@@ -358,7 +357,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
 
     case AL_BYTE_OFFSET:
         /* Round down to the block boundary. */
-        const auto BlockSize = uint{BufferFmt->blockSizeFromFmt()};
+        const auto BlockSize = u32{BufferFmt->blockSizeFromFmt()};
         readPos = readPos / BufferFmt->mBlockAlign * BlockSize;
 
         if constexpr(std::is_floating_point_v<T>)
@@ -458,7 +457,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
         return std::nullopt;
 
     /* Get sample frame offset */
-    auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<i64,uint>
+    auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<i64,u32>
     {
         auto dbloff = f64{};
         auto dblfrac = f64{};
@@ -476,7 +475,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
                 dblfrac += 1.0;
             }
             return {gsl::narrow_cast<i64>(dbloff),
-                gsl::narrow_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
+                gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case AL_SAMPLE_OFFSET:
             dblfrac = std::modf(Offset, &dbloff);
@@ -486,22 +485,22 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
                 dblfrac += 1.0;
             }
             return {gsl::narrow_cast<i64>(dbloff),
-                gsl::narrow_cast<uint>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
+                gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case AL_BYTE_OFFSET:
             /* Determine the ByteOffset (and ensure it is block aligned) */
             const auto blockoffset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
-            return {gsl::narrow_cast<i64>(blockoffset) * BufferFmt->mBlockAlign, 0u};
+            return {gsl::narrow_cast<i64>(blockoffset) * BufferFmt->mBlockAlign, 0_u32};
         }
-        return {0_i64, 0u};
+        return {0_i64, 0_u32};
     });
 
     /* Find the bufferlist item this offset belongs to. */
     if(offset < 0)
     {
-        if(offset < std::numeric_limits<int>::min())
+        if(offset < std::numeric_limits<i32>::min())
             return std::nullopt;
-        return VoicePos{gsl::narrow_cast<int>(offset), frac, &BufferList.front()};
+        return VoicePos{gsl::narrow_cast<i32>(offset), frac, &BufferList.front()};
     }
 
     if(BufferFmt->mCallback)
@@ -517,7 +516,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     if(iter != BufferList.end())
     {
         /* Offset is in this buffer */
-        return VoicePos{gsl::narrow_cast<int>(offset), frac, &*iter};
+        return VoicePos{gsl::narrow_cast<i32>(offset), frac, &*iter};
     }
 
     /* Offset is out of range of the queue */
@@ -559,9 +558,9 @@ void InitVoice(Voice *const voice, gsl::not_null<al::Source*> const source,
 }
 
 
-auto GetVoiceChanger(gsl::not_null<al::Context*> ctx) -> VoiceChange*
+auto GetVoiceChanger(gsl::not_null<al::Context*> const ctx) -> VoiceChange*
 {
-    VoiceChange *vchg{ctx->mVoiceChangeTail};
+    auto *vchg = ctx->mVoiceChangeTail;
     if(vchg == ctx->mCurrentVoiceChange.load(std::memory_order_acquire)) [[unlikely]]
     {
         ctx->allocVoiceChanges();
@@ -728,7 +727,7 @@ auto EnsureSources(gsl::not_null<al::Context*> const context, usize const needed
 {
     auto count = std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(), 0_uz,
         [](usize const cur, const SourceSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<ALuint>(std::popcount(sublist.mFreeMask)); });
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(sublist.mFreeMask)); });
 
     try {
         while(needed > count)

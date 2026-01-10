@@ -15,12 +15,10 @@ using MySofaHrtfPtr = std::unique_ptr<MYSOFA_HRTF,MySofaDeleter>;
 
 // Per-field measurement info.
 struct SofaField {
-    using uint = unsigned int;
-
     double mDistance{0.0};
-    uint mEvCount{0u};
-    uint mEvStart{0u};
-    std::vector<uint> mAzCounts;
+    unsigned mEvCount{0u};
+    unsigned mEvStart{0u};
+    std::vector<unsigned> mAzCounts;
 };
 
 const char *SofaErrorStr(int err);

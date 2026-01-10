@@ -64,8 +64,6 @@ using namespace std::string_view_literals;
 using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 
-using uint = unsigned int;
-
 constexpr auto BufferLineSize = 1024u;
 
 using FloatBufferLine = std::array<float,BufferLineSize>;
@@ -311,7 +309,7 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
         fmt::println("Converting {} to {}...", arg, outname);
-        const auto inchannels = gsl::narrow<uint>(ininfo.channels);
+        const auto inchannels = gsl::narrow<unsigned>(ininfo.channels);
 
         /* Work out the channel map, preferably using the actual channel map
          * from the file/format, but falling back to assuming WFX order.

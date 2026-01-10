@@ -48,7 +48,6 @@ import gsl;
 namespace {
 
 using namespace std::string_view_literals;
-using uint = unsigned int;
 
 void PrintSofaAttributes(const std::string_view prefix, MYSOFA_ATTRIBUTE *attribute)
 {
@@ -90,10 +89,10 @@ void PrintCompatibleLayout(const std::span<const float> xyzs)
         return;
     }
 
-    uint used_elems{0};
+    auto used_elems = 0u;
     for(size_t fi{0u};fi < fds.size();++fi)
     {
-        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
+        for(unsigned ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
             used_elems += fds[fi].mAzCounts[ei];
     }
 
@@ -105,9 +104,9 @@ void PrintCompatibleLayout(const std::span<const float> xyzs)
     fmt::print("\nazimuths = ");
     for(size_t fi{0u};fi < fds.size();++fi)
     {
-        for(uint ei{0u};ei < fds[fi].mEvStart;++ei)
+        for(unsigned ei{0u};ei < fds[fi].mEvStart;++ei)
             fmt::print("{}{}", fds[fi].mAzCounts[fds[fi].mEvCount - 1 - ei], ", ");
-        for(uint ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
+        for(unsigned ei{fds[fi].mEvStart};ei < fds[fi].mEvCount;++ei)
             fmt::print("{}{}", fds[fi].mAzCounts[ei],
                 (ei < (fds[fi].mEvCount - 1)) ? ", " :
                 (fi < (fds.size() - 1)) ? ";\n           " : "\n");

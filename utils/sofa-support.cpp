@@ -41,7 +41,6 @@
 
 namespace {
 
-using uint = unsigned int;
 using double3 = std::array<double,3>;
 
 
@@ -50,7 +49,7 @@ using double3 = std::array<double,3>;
  * of other axes as necessary.  The epsilons are used to constrain the
  * equality of unique elements.
  */
-std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, const uint axis,
+std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, const unsigned axis,
     const std::array<const double*,3> &filters, const std::array<double,3> &epsilons)
 {
     std::vector<double> elems;
@@ -58,7 +57,7 @@ std::vector<double> GetUniquelySortedElems(const std::vector<double3> &aers, con
     {
         const double elem{aer[axis]};
 
-        uint j;
+        auto j = unsigned{};
         for(j = 0;j < 3;j++)
         {
             if(filters[j] && std::abs(aer[j] - *filters[j]) > epsilons[j])
@@ -95,7 +94,7 @@ double GetUniformAzimStep(const double epsilon, const std::vector<double> &elems
      * be impossible to have more than this since the first element must be
      * included.
      */
-    uint count{static_cast<uint>(std::ceil(360.0 / (elems[1]-elems[0])))};
+    auto count = static_cast<unsigned>(std::ceil(360.0 / (elems[1]-elems[0])));
     count = std::min(count, 255u);
 
     for(;count >= 5;--count)
@@ -106,7 +105,7 @@ double GetUniformAzimStep(const double epsilon, const std::vector<double> &elems
         const double step{360.0 / count};
         bool good{true};
         size_t idx{1u};
-        for(uint mult{1u};mult < count && good;++mult)
+        for(auto mult=1u;mult < count && good;++mult)
         {
             const double target{step*mult + elems[0]};
             while(idx < elems.size() && target-elems[idx] > epsilon)
@@ -133,7 +132,7 @@ double GetUniformElevStep(const double epsilon, std::vector<double> &elems)
     std::ranges::reverse(elems);
     for(auto &v : elems) v *= -1.0;
 
-    uint count{static_cast<uint>(std::ceil(180.0 / (elems[1]-elems[0])))};
+    auto count = static_cast<unsigned>(std::ceil(180.0 / (elems[1]-elems[0])));
     count = std::min(count, 255u);
 
     double ret{0.0};
@@ -145,7 +144,7 @@ double GetUniformElevStep(const double epsilon, std::vector<double> &elems)
         /* Elevations don't need to match all multiples if there's not enough
          * elements to check. Missing elevations can be synthesized.
          */
-        for(uint mult{1u};mult <= count && idx < elems.size() && good;++mult)
+        for(auto mult=1u;mult <= count && idx < elems.size() && good;++mult)
         {
             const double target{step*mult + elems[0]};
             while(idx < elems.size() && target-elems[idx] > epsilon)
@@ -226,8 +225,8 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
             continue;
         }
 
-        uint evStart{0u};
-        for(uint ei{0u};ei < elevs.size();ei++)
+        auto evStart = 0u;
+        for(auto ei=0u;ei < elevs.size();ei++)
         {
             if(!(elevs[ei] < 0.0))
             {
@@ -240,12 +239,12 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
 
             if(std::abs(eif - ev_start) < (0.1/step))
             {
-                evStart = static_cast<uint>(ev_start);
+                evStart = static_cast<unsigned>(ev_start);
                 break;
             }
         }
 
-        const auto evCount = static_cast<uint>(std::round(180.0 / step)) + 1;
+        const auto evCount = static_cast<unsigned>(std::round(180.0 / step)) + 1;
         if(evCount < 5)
         {
             fmt::println("Too few uniform elevations on field distance {:f}.", dist);
@@ -259,7 +258,7 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
         field.mAzCounts.resize(evCount, 0u);
         auto &azCounts = field.mAzCounts;
 
-        for(uint ei{evStart};ei < evCount;ei++)
+        for(unsigned ei{evStart};ei < evCount;ei++)
         {
             double ev{-90.0 + ei*180.0/(evCount - 1)};
             auto azims = GetUniquelySortedElems(aers, 0, {nullptr, &ev, &dist}, {0.1, 0.1, 0.001});
@@ -282,7 +281,7 @@ auto GetCompatibleLayout(const std::span<const float> xyzs) -> std::vector<SofaF
                         ev, dist);
                     return fds;
                 }
-                azCounts[ei] = static_cast<uint>(std::round(360.0f / step));
+                azCounts[ei] = static_cast<unsigned>(std::round(360.0f / step));
             }
         }
 

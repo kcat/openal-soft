@@ -149,8 +149,8 @@ Context::~Context()
     deinit();
 
     auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
-        [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
+        [](usize const cur, SourceSubList const &sublist) noexcept -> size_t
+    { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -163,7 +163,7 @@ Context::~Context()
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
+    { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -519,7 +519,7 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
     case DevFmtAmbi3D: return SPEAKERS_7;
     }
     ERR(EAX_PREFIX "Unexpected device channel format {:#x}.",
-        uint{al::to_underlying(mDevice->FmtChans)});
+        unsigned{al::to_underlying(mDevice->FmtChans)});
     return HEADPHONES;
 
 #undef EAX_PREFIX

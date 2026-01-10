@@ -88,7 +88,7 @@ namespace {
 
 struct EqualizerState final : public EffectState {
     struct OutParams {
-        uint mTargetChannel{InvalidChannelIndex};
+        u32 mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
         std::array<BiquadFilter,4> mFilter;
@@ -157,7 +157,7 @@ void EqualizerState::update(const ContextBase *context, const EffectSlotBase *sl
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](const size_t idx, const uint outchan, const float outgain)
+        [this](usize const idx, u32 const outchan, f32 const outgain)
     {
         mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;

@@ -48,7 +48,6 @@ struct ContextBase;
 
 namespace {
 
-using uint = unsigned int;
 using complex_f = std::complex<float>;
 
 constexpr auto StftSize = 1024_uz;
@@ -66,8 +65,8 @@ struct Windower {
     {
         static constexpr auto scale = std::numbers::pi / double{StftSize};
         /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0u, uint{StftHalfSize}), mData.begin(),
-            [](const uint i) -> float
+        std::ranges::transform(std::views::iota(0_u32, u32{StftHalfSize}), mData.begin(),
+            [](u32 const i) -> float
         {
             const auto val = std::sin((i+0.5) * scale);
             return static_cast<float>(val * val);
@@ -86,9 +85,9 @@ struct FrequencyBin {
 
 struct PshifterState final : public EffectState {
     /* Effect parameters */
-    size_t mCount{};
-    size_t mPos{};
-    uint mPitchShiftI{};
+    usize mCount{};
+    usize mPos{};
+    u32 mPitchShiftI{};
     float mPitchShift{};
 
     /* Effects buffers */

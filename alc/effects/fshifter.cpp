@@ -48,7 +48,6 @@ struct BufferStorage;
 
 namespace {
 
-using uint = unsigned int;
 using complex_d = std::complex<double>;
 
 constexpr auto HilSize = 1024_uz;
@@ -66,8 +65,8 @@ struct Windower {
     {
         static constexpr auto scale = std::numbers::pi / double{HilSize};
         /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0u, uint{HilHalfSize}), mData.begin(),
-            [](const uint i) -> float
+        std::ranges::transform(std::views::iota(0_u32, u32{HilHalfSize}), mData.begin(),
+            [](u32 const i) -> float
         {
             const auto val = std::sin((i+0.5) * scale);
             return static_cast<float>(val * val);
@@ -94,8 +93,8 @@ struct FshifterState final : public EffectState {
 
     /* Effect gains for each output channel */
     struct OutParams {
-        uint mPhaseStep{};
-        uint mPhase{};
+        u32 mPhaseStep{};
+        u32 mPhase{};
         double mSign{};
         std::array<float,MaxAmbiChannels> Current{};
         std::array<float,MaxAmbiChannels> Target{};

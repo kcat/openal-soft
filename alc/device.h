@@ -29,8 +29,6 @@ struct BufferSubList;
 struct EffectSubList;
 struct FilterSubList;
 
-using uint = unsigned int;
-
 
 struct ALCdevice { };
 

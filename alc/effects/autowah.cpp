@@ -67,7 +67,7 @@ struct AutowahState final : public EffectState {
     std::array<FilterParam,BufferLineSize> mEnv;
 
     struct ChannelData {
-        uint mTargetChannel{InvalidChannelIndex};
+        u32 mTargetChannel{InvalidChannelIndex};
 
         struct FilterHistory {
             float z1{}, z2{};
@@ -125,7 +125,7 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](const size_t idx, const uint outchan, const float outgain)
+        [this](usize const idx, u32 const outchan, float const outgain)
     {
         mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;

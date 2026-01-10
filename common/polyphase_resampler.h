@@ -4,8 +4,7 @@
 #include <span>
 #include <vector>
 
-
-using uint = unsigned int;
+#include "altypes.hpp"
 
 /* This is a polyphase sinc-filtered resampler. It is built for very high
  * quality results, rather than real-time performance.
@@ -35,13 +34,13 @@ using uint = unsigned int;
  */
 
 struct PPhaseResampler {
-    void init(const uint srcRate, const uint dstRate);
-    void process(const std::span<const double> in, const std::span<double> out) const;
+    void init(u32 srcRate, u32 dstRate);
+    void process(std::span<const double> in, std::span<double> out) const;
 
     explicit operator bool() const noexcept { return !mF.empty(); }
 
 private:
-    uint mP{}, mQ{}, mM{}, mL{};
+    u32 mP{}, mQ{}, mM{}, mL{};
     std::vector<double> mF;
 };
 

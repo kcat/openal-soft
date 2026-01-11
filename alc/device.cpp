@@ -51,20 +51,20 @@ Device::~Device()
     Backend = nullptr;
 
     auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
-        [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
+        [](usize const cur, const BufferSubList &sublist) noexcept -> usize
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_uz,
-        [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
+        [](usize const cur, const EffectSubList &sublist) noexcept -> usize
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
     count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_uz,
-        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
-        { return cur + gsl::narrow_cast<uint>(std::popcount(~sublist.mFreeMask)); });
+        [](usize const cur, const FilterSubList &sublist) noexcept -> usize
+        { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
     if(count > 0)
         WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }

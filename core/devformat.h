@@ -85,19 +85,19 @@ template<DevFmtType>
 struct DevFmtTypeTraits { };
 
 template<>
-struct DevFmtTypeTraits<DevFmtByte> { using Type = int8_t; };
+struct DevFmtTypeTraits<DevFmtByte> { using Type = i8; };
 template<>
-struct DevFmtTypeTraits<DevFmtUByte> { using Type = uint8_t; };
+struct DevFmtTypeTraits<DevFmtUByte> { using Type = u8; };
 template<>
-struct DevFmtTypeTraits<DevFmtShort> { using Type = int16_t; };
+struct DevFmtTypeTraits<DevFmtShort> { using Type = i16; };
 template<>
-struct DevFmtTypeTraits<DevFmtUShort> { using Type = uint16_t; };
+struct DevFmtTypeTraits<DevFmtUShort> { using Type = u16; };
 template<>
-struct DevFmtTypeTraits<DevFmtInt> { using Type = int32_t; };
+struct DevFmtTypeTraits<DevFmtInt> { using Type = i32; };
 template<>
-struct DevFmtTypeTraits<DevFmtUInt> { using Type = uint32_t; };
+struct DevFmtTypeTraits<DevFmtUInt> { using Type = u32; };
 template<>
-struct DevFmtTypeTraits<DevFmtFloat> { using Type = float; };
+struct DevFmtTypeTraits<DevFmtFloat> { using Type = f32; };
 
 template<DevFmtType T>
 using DevFmtType_t = DevFmtTypeTraits<T>::Type;

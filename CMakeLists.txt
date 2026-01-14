@@ -1595,8 +1595,8 @@ set(NEED_ANALYZE_SOURCE_FILES "")
 foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS} ${MODULES_OBJS})
     # CMake 3.20+ can use cmake_path(COMPARE ...), or CMake 3.24+ can use
     # PATH_EQUAL.
-    if(NOT obj STREQUAL "${CMAKE_BINARY_DIR}/default_hrtf.txt")
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${obj}")
+    if(NOT obj STREQUAL "${OpenAL_BINARY_DIR}/default_hrtf.txt")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/${obj}")
     endif()
 endforeach()
 
@@ -1641,7 +1641,7 @@ else()
             target_link_libraries(alsoft.router-modules PRIVATE alsoft::fmt alsoft.modules)
             set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
                 POSITION_INDEPENDENT_CODE TRUE)
-            list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/alsoft-modules/router.cppm")
+            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/alsoft-modules/router.cppm")
         endif()
 
         add_library(OpenAL SHARED
@@ -1912,7 +1912,7 @@ if(ALSOFT_UTILS)
     target_compile_options(openal-info PRIVATE ${C_FLAGS})
     target_link_libraries(openal-info PRIVATE ${LINKER_FLAGS} OpenAL ${UNICODE_FLAG})
     set_target_properties(openal-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/openal-info.c")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/openal-info.c")
     if(ALSOFT_INSTALL_UTILS)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
     endif()
@@ -1926,7 +1926,7 @@ if(ALSOFT_UTILS)
         target_link_libraries(uhjdecoder PUBLIC alsoft.common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjdecoder PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/uhjdecoder.cpp")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/uhjdecoder.cpp")
 
         add_executable(uhjencoder utils/uhjencoder.cpp)
         target_compile_definitions(uhjencoder PRIVATE ${CPP_DEFS})
@@ -1936,7 +1936,7 @@ if(ALSOFT_UTILS)
         target_link_libraries(uhjencoder PUBLIC alsoft.common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjencoder PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/uhjencoder.cpp")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/uhjencoder.cpp")
     endif()
 
     if(MYSOFA_FOUND)
@@ -1950,8 +1950,8 @@ if(ALSOFT_UTILS)
         target_link_libraries(alsoft.sofa-support PUBLIC alsoft.common MySOFA::MySOFA
             PRIVATE ${LINKER_FLAGS} alsoft::fmt)
         set_target_properties(alsoft.sofa-support PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/sofa-support.cpp"
-            "${CMAKE_SOURCE_DIR}/utils/sofa-support.h")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/sofa-support.cpp"
+            "${OpenAL_SOURCE_DIR}/utils/sofa-support.h")
 
         set(MAKEMHR_SRCS
             utils/makemhr/loaddef.cpp
@@ -1968,12 +1968,12 @@ if(ALSOFT_UTILS)
         target_link_libraries(makemhr PRIVATE ${LINKER_FLAGS} alsoft.sofa-support ${UNICODE_FLAG}
             alsoft::fmt)
         set_target_properties(makemhr PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/makemhr/loaddef.cpp"
-            "${CMAKE_SOURCE_DIR}/utils/makemhr/loaddef.h"
-            "${CMAKE_SOURCE_DIR}/utils/makemhr/loadsofa.cpp"
-            "${CMAKE_SOURCE_DIR}/utils/makemhr/loadsofa.h"
-            "${CMAKE_SOURCE_DIR}/utils/makemhr/makemhr.cpp"
-            "${CMAKE_SOURCE_DIR}/utils/makemhr/makemhr.h")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/makemhr/loaddef.cpp"
+            "${OpenAL_SOURCE_DIR}/utils/makemhr/loaddef.h"
+            "${OpenAL_SOURCE_DIR}/utils/makemhr/loadsofa.cpp"
+            "${OpenAL_SOURCE_DIR}/utils/makemhr/loadsofa.h"
+            "${OpenAL_SOURCE_DIR}/utils/makemhr/makemhr.cpp"
+            "${OpenAL_SOURCE_DIR}/utils/makemhr/makemhr.h")
         if(ALSOFT_INSTALL_UTILS)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
         endif()
@@ -1987,7 +1987,7 @@ if(ALSOFT_UTILS)
         target_link_libraries(sofa-info PRIVATE alsoft.common ${LINKER_FLAGS} alsoft.sofa-support
             ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(sofa-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/utils/sofa-info.cpp")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/sofa-info.cpp")
     endif()
     message(STATUS "Building utility programs")
 
@@ -2025,31 +2025,31 @@ target_link_libraries(alsoft.excommon PUBLIC OpenAL PRIVATE ${RT_LIB})
 set_target_properties(alsoft.excommon PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
 
 if(ALSOFT_EXAMPLES)
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/common/alhelpers.c"
-        "${CMAKE_SOURCE_DIR}/examples/common/alhelpers.h")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/common/alhelpers.c"
+        "${OpenAL_SOURCE_DIR}/examples/common/alhelpers.h")
 
     add_executable(altonegen examples/altonegen.c)
     target_link_libraries(altonegen PRIVATE ${LINKER_FLAGS} ${MATH_LIB} alsoft.excommon
         ${UNICODE_FLAG})
     set_target_properties(altonegen PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/altonegen.c")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/altonegen.c")
 
     add_executable(alrecord examples/alrecord.c)
     target_link_libraries(alrecord PRIVATE ${LINKER_FLAGS} alsoft.excommon ${UNICODE_FLAG})
     set_target_properties(alrecord PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alrecord.c")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alrecord.c")
 
     add_executable(aldebug examples/aldebug.cpp)
     target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
         ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(aldebug PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldebug.cpp")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/aldebug.cpp")
 
     add_executable(allafplay examples/allafplay.cpp)
     target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
         ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(allafplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/allafplay.cpp")
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/allafplay.cpp")
 
     if(ALSOFT_INSTALL_EXAMPLES)
         set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord aldebug allafplay)
@@ -2062,55 +2062,55 @@ if(ALSOFT_EXAMPLES)
         target_link_libraries(alplay PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
             ${UNICODE_FLAG})
         set_target_properties(alplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alplay.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alplay.c")
 
         add_executable(alstream examples/alstream.c)
         target_link_libraries(alstream PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
             ${UNICODE_FLAG})
         set_target_properties(alstream PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alstream.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alstream.c")
 
         add_executable(alreverb examples/alreverb.c)
         target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
             ${UNICODE_FLAG})
         set_target_properties(alreverb PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alreverb.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alreverb.c")
 
         add_executable(almultireverb examples/almultireverb.c)
         target_link_libraries(almultireverb
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon ${MATH_LIB} ${UNICODE_FLAG})
         set_target_properties(almultireverb PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/almultireverb.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/almultireverb.c")
 
         add_executable(allatency examples/allatency.c)
         target_link_libraries(allatency PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon
             ${UNICODE_FLAG})
         set_target_properties(allatency PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/allatency.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/allatency.c")
 
         add_executable(alhrtf examples/alhrtf.c)
         target_link_libraries(alhrtf
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.excommon ${MATH_LIB} ${UNICODE_FLAG})
         set_target_properties(alhrtf PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alhrtf.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alhrtf.c")
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
         target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
             alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(alstreamcb PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alstreamcb.cpp")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alstreamcb.cpp")
 
         add_executable(aldirect examples/aldirect.cpp)
         target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
             alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(aldirect PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/aldirect.cpp")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/aldirect.cpp")
 
         add_executable(alconvolve examples/alconvolve.c)
         target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} alsoft.common SndFile::SndFile
             alsoft.excommon ${UNICODE_FLAG})
         set_target_properties(alconvolve PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alconvolve.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alconvolve.c")
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
@@ -2128,7 +2128,7 @@ if(ALSOFT_EXAMPLES)
         target_link_libraries(alloopback
             PRIVATE ${LINKER_FLAGS} SDL3::SDL3 alsoft.excommon ${MATH_LIB})
         set_target_properties(alloopback PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-        list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alloopback.c")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alloopback.c")
 
         if(ALSOFT_INSTALL_EXAMPLES)
             set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
@@ -2165,7 +2165,7 @@ if(ALSOFT_EXAMPLES)
                 PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft.common
                 alsoft.excommon alsoft::fmt ${MODULES_TARGET})
             set_target_properties(alffplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
-            list(APPEND NEED_ANALYZE_SOURCE_FILES "${CMAKE_SOURCE_DIR}/examples/alffplay.cpp")
+            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alffplay.cpp")
 
             if(ALSOFT_INSTALL_EXAMPLES)
                 set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)

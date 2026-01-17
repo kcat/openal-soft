@@ -3406,7 +3406,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <command export="alc" comment="Returns information about the device and the version of OpenAL.">
             <proto>void <name>alcGetIntegerv</name></proto>
             <param><ptype>ALCdevice</ptype> *<name>device</name></param>
-            <param group="ContextFloat"><ptype>ALCenum</ptype> <name>param</name></param>
+            <param group="ContextInteger"><ptype>ALCenum</ptype> <name>param</name></param>
             <param><ptype>ALCsizei</ptype> <name>size</name></param>
             <param len="size"><ptype>ALCint</ptype> *<name>values</name></param>
         </command>

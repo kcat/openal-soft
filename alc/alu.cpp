@@ -2330,7 +2330,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i32
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i16
 { return gsl::narrow_cast<i16>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i8
-{ return gsl::narrow_cast<i8>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f))); }
+{ return i8{static_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
 /* Define unsigned output variations. */
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32
@@ -2338,7 +2338,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u16
 { return gsl::narrow_cast<u16>(SampleConv<i16>(val) + 32768); }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u8
-{ return gsl::narrow_cast<u8>(SampleConv<i8>(val) + 128); }
+{ return gsl::narrow_cast<u8>(SampleConv<i8>(val).get() + 128); }
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffer,

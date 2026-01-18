@@ -14,6 +14,7 @@
 namespace al {
 
 using fmt::format;
+using fmt::formatter;
 using fmt::format_args;
 using fmt::format_string;
 using fmt::make_format_args;
@@ -29,6 +30,7 @@ using fmt::vformat;
 namespace al {
 
 using std::format;
+using std::formatter;
 using std::format_args;
 using std::format_string;
 using std::make_format_args;

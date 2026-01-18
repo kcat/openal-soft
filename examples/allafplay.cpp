@@ -515,7 +515,7 @@ void LafStream::convertPositions(std::span<f32> const dst) const
         [dst](vector<i8> const &src)
         {
             std::ranges::transform(src, dst.begin(), [](i8 const in) noexcept -> f32
-            { return gsl::narrow_cast<f32>(in) / 127.0f; });
+            { return gsl::narrow_cast<f32>(in.get()) / 127.0f; });
         },
         [dst](vector<i16> const &src)
         {

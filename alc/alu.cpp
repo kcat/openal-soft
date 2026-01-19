@@ -2338,7 +2338,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u16
 { return gsl::narrow_cast<u16>(SampleConv<i16>(val) + 32768); }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u8
-{ return gsl::narrow_cast<u8>(SampleConv<i8>(val).get() + 128); }
+{ return gsl::narrow_cast<u8>(SampleConv<i8>(val).c_val + 128); }
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffer,

@@ -69,15 +69,11 @@ auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
  * value doesn't fit the type it's paired against.
  */
 template<weak_number T>
-class ConstantNum {
-    T mValue;
+struct ConstantNum {
+    T const c_val;
 
-public:
     /* NOLINTNEXTLINE(*-explicit-constructor) */
-    consteval ConstantNum(weak_number auto const &value) noexcept : mValue{convert_to<T>(value)} {}
-
-    [[nodiscard]] force_inline constexpr
-    auto get() const noexcept LIFETIMEBOUND -> T const& { return mValue; }
+    consteval ConstantNum(weak_number auto const &value) noexcept : c_val{convert_to<T>(value)} { }
 };
 
 
@@ -122,8 +118,6 @@ class number_base {
 
     friend SelfType;
 
-    T mValue;
-
     /* Defaulted constructor/destructor/copy assignment functions, which will be
      * inherited by the parent type. Allows the type to be trivial.
      */
@@ -134,9 +128,10 @@ class number_base {
 
 public:
     using value_t = T;
+    T c_val;
 
     template<weak_number U> force_inline constexpr explicit
-    number_base(U const &value) noexcept(not can_narrow<T, U>) : mValue{convert_to<T>(value)} { }
+    number_base(U const &value) noexcept(not can_narrow<T, U>) : c_val{convert_to<T>(value)} { }
 
     /* Copy assignment from another strong number type, only for types that
      * won't narrow.
@@ -146,7 +141,7 @@ public:
     {
         static_assert(not can_narrow<T, typename U::value_t>,
             "Invalid narrowing assignment; use .cast_to<U>() or .reinterpret_as<U>() to convert");
-        mValue = static_cast<T>(rhs.get());
+        c_val = static_cast<T>(rhs.c_val);
         return *this;
     }
 
@@ -155,20 +150,11 @@ public:
      */
     template<strong_number U> force_inline constexpr explicit
     operator U() noexcept(not can_narrow<typename U::value_t, T>)
-    { return U{convert_to<typename U::value_t>(mValue)}; }
-
-    /* Methods to access the underlying weak number. */
-    [[nodiscard]] constexpr auto get() & noexcept LIFETIMEBOUND -> T& { return mValue; }
-    [[nodiscard]] constexpr
-    auto get() const & noexcept LIFETIMEBOUND -> T const& { return mValue; }
-    [[nodiscard]] constexpr
-    auto get() && noexcept LIFETIMEBOUND -> T&& { return std::move(mValue); }
-    [[nodiscard]] constexpr
-    auto get() const && noexcept LIFETIMEBOUND -> T const&& { return std::move(mValue); }
+    { return U{convert_to<typename U::value_t>(c_val)}; }
 
     /* Non-narrowing conversion method. */
     template<strong_number U> requires(not can_narrow<typename U::value_t, T>) [[nodiscard]]
-    constexpr auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(mValue)}; }
+    constexpr auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
 
     /* Potentially narrowing conversion method. Throws if the converted value
      * narrows.
@@ -185,16 +171,16 @@ public:
          * being modulo wrapped, this should be considered fine.
          */
         if constexpr(std::floating_point<typename U::value_t>)
-            return U{static_cast<U::value_t>(mValue)};
+            return U{static_cast<U::value_t>(c_val)};
         else
-            return U{convert_to<typename U::value_t>(mValue)};
+            return U{convert_to<typename U::value_t>(c_val)};
     }
 
     /* "Raw" conversion method, essentially applying a static_cast to the
      * underlying type.
      */
     template<strong_number U> [[nodiscard]] constexpr
-    auto reinterpret_as() const noexcept -> U { return U{static_cast<U::value_t>(mValue)}; }
+    auto reinterpret_as() const noexcept -> U { return U{static_cast<U::value_t>(c_val)}; }
 
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
@@ -220,21 +206,21 @@ public:
     auto operator<=>(SelfType const &lhs, U const &rhs) noexcept
     {
         if constexpr(not can_narrow<T, typename U::value_t>)
-            return lhs.mValue <=> convert_to<T>(rhs.get());
+            return lhs.c_val <=> convert_to<T>(rhs.c_val);
         else if constexpr(not can_narrow<typename U::value_t, T>)
-            return convert_to<typename U::value_t>(lhs.mValue) <=> rhs.get();
+            return convert_to<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
         else if constexpr(std::signed_integral<T> and std::unsigned_integral<typename U::value_t>)
         {
-            if(lhs.mValue < T{0})
+            if(lhs.c_val < T{0})
                 return std::strong_ordering::less;
-            return static_cast<std::make_unsigned_t<T>>(lhs.mValue) <=> rhs.get();
+            return static_cast<std::make_unsigned_t<T>>(lhs.c_val) <=> rhs.c_val;
         }
         else if constexpr(std::unsigned_integral<T> and std::signed_integral<typename U::value_t>)
         {
-            if(typename U::value_t{0} > rhs.get())
+            if(typename U::value_t{0} > rhs.c_val)
                 return std::strong_ordering::greater;
             using unsigned_t = std::make_unsigned_t<typename U::value_t>;
-            return lhs.mValue <=> static_cast<unsigned_t>(rhs.get());
+            return lhs.c_val <=> static_cast<unsigned_t>(rhs.c_val);
         }
         /* FIXME: Allow comparing more "incompatible" types. This is difficult
          * with floating point because, e.g. 2147483647_i32 < 2147483648.0_f32
@@ -253,29 +239,29 @@ public:
      */
     [[nodiscard]] force_inline friend constexpr
     auto operator<=>(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept
-    { return lhs.mValue <=> rhs.get(); }
+    { return lhs.c_val <=> rhs.c_val; }
 
     /* Prefix and postfix increment and decrement operators. Only valid for
      * integral types.
      */
     force_inline friend constexpr
     auto operator++(SelfType &self LIFETIMEBOUND) noexcept -> SelfType& requires std::integral<T>
-    { ++self.mValue; return self; }
+    { ++self.c_val; return self; }
     [[nodiscard]] force_inline friend constexpr
     auto operator++(SelfType &self, int) noexcept -> SelfType requires std::integral<T>
     {
         auto const old = self;
-        ++self.mValue;
+        ++self.c_val;
         return old;
     }
     force_inline friend constexpr
     auto operator--(SelfType &self LIFETIMEBOUND) noexcept -> SelfType& requires std::integral<T>
-    { --self.mValue; return self; }
+    { --self.c_val; return self; }
     [[nodiscard]] force_inline friend constexpr
     auto operator--(SelfType &self, int) noexcept -> SelfType requires std::integral<T>
     {
         auto const old = self;
-        --self.mValue;
+        --self.c_val;
         return old;
     }
 
@@ -285,7 +271,7 @@ public:
 #define DECL_UNARY(op, Req)                                                   \
     [[nodiscard]] force_inline friend constexpr                               \
     auto operator op(SelfType const &value) noexcept -> SelfType Req          \
-    { return SelfType{static_cast<T>(op value.mValue)}; }
+    { return SelfType{static_cast<T>(op value.c_val)}; }
     DECL_UNARY(-, requires std::is_signed_v<T>)
     DECL_UNARY(~, requires std::integral<T>)
 #undef DECL_UNARY
@@ -305,9 +291,9 @@ public:
         static_assert(has_common<T, typename U::value_t>,                     \
             "Incompatible operands");                                         \
         if constexpr(not can_narrow<T, typename U::value_t>)                  \
-            return SelfType{static_cast<T>(lhs.mValue op rhs.get())};         \
+            return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};          \
         else if constexpr(not can_narrow<typename U::value_t, T>)             \
-            return U{static_cast<typename U::value_t>(lhs.mValue op rhs.get())}; \
+            return U{static_cast<typename U::value_t>(lhs.c_val op rhs.c_val)}; \
         else                                                                  \
             return SelfType{};                                                \
     }
@@ -329,7 +315,7 @@ public:
     {                                                                         \
         static_assert(std::unsigned_integral<typename U::value_t>,            \
             "Right-side operand must be an unsigned integer");                \
-        return SelfType{static_cast<T>(lhs.mValue op rhs.get())};             \
+        return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};              \
     }
     DECL_BINARY(>>, requires std::integral<T>)
     DECL_BINARY(<<, requires std::integral<T>)
@@ -341,10 +327,10 @@ public:
 #define DECL_BINARY(op, Req)                                                  \
     [[nodiscard]] force_inline friend constexpr                               \
     auto operator op(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept Req \
-    { return SelfType{static_cast<T>(lhs.mValue op rhs.get())}; }             \
+    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }              \
     [[nodiscard]] force_inline friend constexpr                               \
     auto operator op(ConstantNum<T> const &lhs, SelfType const &rhs) noexcept Req \
-    { return SelfType{static_cast<T>(lhs.get() op rhs.mValue)}; }
+    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
     DECL_BINARY(+, )
     DECL_BINARY(-, )
     DECL_BINARY(*, )
@@ -360,7 +346,7 @@ public:
 #define DECL_BINARY(op, Req)                                                  \
     [[nodiscard]] force_inline friend constexpr                               \
     auto operator op(SelfType const &lhs, ConstantNum<std::uint8_t> const &rhs) noexcept Req \
-    { return SelfType{static_cast<T>(lhs.mValue op rhs.get())};  }
+    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};  }
     DECL_BINARY(>>, requires std::integral<T>)
     DECL_BINARY(<<, requires std::integral<T>)
 #undef DECL_BINARY
@@ -380,7 +366,7 @@ public:
     {                                                                         \
         static_assert(not can_narrow<T, typename U::value_t>,                 \
             "Incompatible right side operand");                               \
-        lhs.mValue op rhs.get();                                              \
+        lhs.c_val op rhs.c_val;                                               \
         return lhs;                                                           \
     }
     DECL_BINASSIGN(+=, )
@@ -403,7 +389,7 @@ public:
     {                                                                         \
         static_assert(std::unsigned_integral<typename U::value_t>,            \
             "Right side operand must be unsigned");                           \
-        lhs.mValue op rhs.get();                                              \
+        lhs.c_val op rhs.c_val;                                               \
         return lhs;                                                           \
     }
     DECL_BINASSIGN(>>=, requires std::integral<T>)
@@ -417,7 +403,7 @@ public:
     force_inline friend constexpr                                             \
     auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<T> const &rhs)  \
         noexcept -> SelfType& Req                                             \
-    { lhs.mValue op rhs.get(); return lhs; }
+    { lhs.c_val op rhs.c_val; return lhs; }
     DECL_BINASSIGN(+=, )
     DECL_BINASSIGN(-=, )
     DECL_BINASSIGN(*=, )
@@ -435,7 +421,7 @@ public:
     force_inline friend constexpr                                             \
     auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<std::uint8_t> const &rhs)  \
         noexcept -> SelfType& Req                                             \
-    { lhs.mValue op rhs.get(); return lhs; }
+    { lhs.c_val op rhs.c_val; return lhs; }
     DECL_BINASSIGN(>>=, requires std::integral<T>)
     DECL_BINASSIGN(<<=, requires std::integral<T>)
 #undef DECL_BINASSIGN
@@ -448,7 +434,7 @@ public:
     struct formatter : al::formatter<fmttype_t, CharT> {
         auto format(SelfType const &obj, auto& ctx) const
         {
-            return al::formatter<fmttype_t,CharT>::format(al::convert_to<fmttype_t>(obj.get()),
+            return al::formatter<fmttype_t,CharT>::format(al::convert_to<fmttype_t>(obj.c_val),
                 ctx);
         }
     };

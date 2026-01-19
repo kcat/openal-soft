@@ -265,27 +265,27 @@ public:
         return old;
     }
 
-    /* No automatic type promotion for our unary ops. Unary - is only available
-     * for signed types, and unary ~ is only available for integral types.
+    /* No automatic type promotion for our unary ops. Unary - is only valid for
+     * signed types.
      */
-#define DECL_UNARY(op, Req)                                                   \
-    [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(SelfType const &value) noexcept -> SelfType Req          \
-    { return SelfType{static_cast<T>(op value.c_val)}; }
-    DECL_UNARY(-, requires std::is_signed_v<T>)
-    DECL_UNARY(~, requires std::integral<T>)
-#undef DECL_UNARY
+    [[nodiscard]] force_inline friend constexpr
+    auto operator-(SelfType const &value) noexcept -> SelfType
+    {
+        static_assert(std::is_signed_v<T>, "operator- is only valid for signed types");
+        return SelfType{static_cast<T>(-value.c_val)};
+    }
+    [[nodiscard]] force_inline friend constexpr
+    auto operator~(SelfType const &value) noexcept -> SelfType
+    { return SelfType{static_cast<T>(~value.c_val)}; }
 
     /* Our binary ops only promote to the larger of the two operands, when the
      * conversion can't narrow (e.g. signed char + short = short, while
      * unsigned + short = error).
      */
 
-    /* Binary ops +, -, *, /, %, |, &, and ^ between strong number types. %, |,
-     * &, and ^ are only available for integer types.
-     */
-#define DECL_BINARY(op, Req)                                                  \
-    template<strong_number U> Req [[nodiscard]] force_inline friend constexpr \
+    /* Binary ops +, -, *, /, %, |, &, and ^ between strong number types. */
+#define DECL_BINARY(op)                                                       \
+    template<strong_number U> [[nodiscard]] force_inline friend constexpr     \
     auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
     {                                                                         \
         static_assert(has_common<T, typename U::value_t>,                     \
@@ -297,58 +297,58 @@ public:
         else                                                                  \
             return SelfType{};                                                \
     }
-    DECL_BINARY(+, )
-    DECL_BINARY(-, )
-    DECL_BINARY(*, )
-    DECL_BINARY(/, )
-    DECL_BINARY(%, requires(std::integral<T> and std::integral<typename U::value_t>))
-    DECL_BINARY(|, requires(std::integral<T> and std::integral<typename U::value_t>))
-    DECL_BINARY(&, requires(std::integral<T> and std::integral<typename U::value_t>))
-    DECL_BINARY(^, requires(std::integral<T> and std::integral<typename U::value_t>))
+    DECL_BINARY(+)
+    DECL_BINARY(-)
+    DECL_BINARY(*)
+    DECL_BINARY(/)
+    DECL_BINARY(%)
+    DECL_BINARY(|)
+    DECL_BINARY(&)
+    DECL_BINARY(^)
 #undef DECL_BINARY
     /* Binary ops >> and << between strong number types. Only available for
      * integer types, and the right-side operand must be an unsigned type.
      */
-#define DECL_BINARY(op, Req)                                                  \
-    template<strong_number U> Req [[nodiscard]] force_inline friend constexpr \
+#define DECL_BINARY(op)                                                       \
+    template<strong_number U> [[nodiscard]] force_inline friend constexpr     \
     auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
     {                                                                         \
         static_assert(std::unsigned_integral<typename U::value_t>,            \
             "Right-side operand must be an unsigned integer");                \
         return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};              \
     }
-    DECL_BINARY(>>, requires std::integral<T>)
-    DECL_BINARY(<<, requires std::integral<T>)
+    DECL_BINARY(>>)
+    DECL_BINARY(<<)
 #undef DECL_BINARY
 
     /* Binary ops +, -, *, /, %, |, &, and ^ between a strong number type and
      * numeric constant.
      */
-#define DECL_BINARY(op, Req)                                                  \
+#define DECL_BINARY(op)                                                       \
     [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept Req \
+    auto operator op(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept \
     { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }              \
     [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(ConstantNum<T> const &lhs, SelfType const &rhs) noexcept Req \
+    auto operator op(ConstantNum<T> const &lhs, SelfType const &rhs) noexcept \
     { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
-    DECL_BINARY(+, )
-    DECL_BINARY(-, )
-    DECL_BINARY(*, )
-    DECL_BINARY(/, )
-    DECL_BINARY(%, requires std::integral<T>)
-    DECL_BINARY(|, requires std::integral<T>)
-    DECL_BINARY(&, requires std::integral<T>)
-    DECL_BINARY(^, requires std::integral<T>)
+    DECL_BINARY(+)
+    DECL_BINARY(-)
+    DECL_BINARY(*)
+    DECL_BINARY(/)
+    DECL_BINARY(%)
+    DECL_BINARY(|)
+    DECL_BINARY(&)
+    DECL_BINARY(^)
 #undef DECL_BINARY
     /* Binary ops >> and << between a strong number type and integer constant.
      * The shift amount must fit into an u8 regardless of the left-side type.
      */
-#define DECL_BINARY(op, Req)                                                  \
+#define DECL_BINARY(op)                                                       \
     [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(SelfType const &lhs, ConstantNum<std::uint8_t> const &rhs) noexcept Req \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};  }
-    DECL_BINARY(>>, requires std::integral<T>)
-    DECL_BINARY(<<, requires std::integral<T>)
+    auto operator op(SelfType const &lhs, ConstantNum<std::uint8_t> const &rhs) noexcept \
+    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
+    DECL_BINARY(>>)
+    DECL_BINARY(<<)
 #undef DECL_BINARY
 
     /* Our binary assignment ops only promote the rhs value to the lhs type
@@ -359,8 +359,8 @@ public:
     /* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between strong
      * number types. %=, |=, &=, and ^= are only available for integer types.
      */
-#define DECL_BINASSIGN(op, Req)                                               \
-    template<strong_number U> Req force_inline friend constexpr               \
+#define DECL_BINASSIGN(op)                                                    \
+    template<strong_number U> force_inline friend constexpr                   \
     auto operator op(SelfType &lhs LIFETIMEBOUND, U const &rhs) noexcept      \
         -> SelfType&                                                          \
     {                                                                         \
@@ -369,21 +369,21 @@ public:
         lhs.c_val op rhs.c_val;                                               \
         return lhs;                                                           \
     }
-    DECL_BINASSIGN(+=, )
-    DECL_BINASSIGN(-=, )
-    DECL_BINASSIGN(*=, )
-    DECL_BINASSIGN(/=, )
-    DECL_BINASSIGN(%=, requires std::integral<T>)
-    DECL_BINASSIGN(|=, requires std::integral<T>)
-    DECL_BINASSIGN(&=, requires std::integral<T>)
-    DECL_BINASSIGN(^=, requires std::integral<T>)
+    DECL_BINASSIGN(+=)
+    DECL_BINASSIGN(-=)
+    DECL_BINASSIGN(*=)
+    DECL_BINASSIGN(/=)
+    DECL_BINASSIGN(%=)
+    DECL_BINASSIGN(|=)
+    DECL_BINASSIGN(&=)
+    DECL_BINASSIGN(^=)
 #undef DECL_BINASSIGN
     /* Binary assignment ops >>= and <<= between strong number types. Only
      * available for integer types, and the right operand must be an unsigned
      * type.
      */
-#define DECL_BINASSIGN(op, Req)                                               \
-    template<strong_number U> Req force_inline friend constexpr               \
+#define DECL_BINASSIGN(op)                                                    \
+    template<strong_number U> force_inline friend constexpr                   \
     auto operator op(SelfType &lhs LIFETIMEBOUND, U const &rhs) noexcept      \
         -> SelfType&                                                          \
     {                                                                         \
@@ -392,38 +392,38 @@ public:
         lhs.c_val op rhs.c_val;                                               \
         return lhs;                                                           \
     }
-    DECL_BINASSIGN(>>=, requires std::integral<T>)
-    DECL_BINASSIGN(<<=, requires std::integral<T>)
+    DECL_BINASSIGN(>>=)
+    DECL_BINASSIGN(<<=)
 #undef DECL_BINASSIGN
 
     /* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between a
      * strong number type and numeric constant.
      */
-#define DECL_BINASSIGN(op, Req)                                               \
+#define DECL_BINASSIGN(op)                                                    \
     force_inline friend constexpr                                             \
     auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<T> const &rhs)  \
-        noexcept -> SelfType& Req                                             \
+        noexcept -> SelfType&                                                 \
     { lhs.c_val op rhs.c_val; return lhs; }
-    DECL_BINASSIGN(+=, )
-    DECL_BINASSIGN(-=, )
-    DECL_BINASSIGN(*=, )
-    DECL_BINASSIGN(/=, )
-    DECL_BINASSIGN(%=, requires std::integral<T>)
-    DECL_BINASSIGN(|=, requires std::integral<T>)
-    DECL_BINASSIGN(&=, requires std::integral<T>)
-    DECL_BINASSIGN(^=, requires std::integral<T>)
+    DECL_BINASSIGN(+=)
+    DECL_BINASSIGN(-=)
+    DECL_BINASSIGN(*=)
+    DECL_BINASSIGN(/=)
+    DECL_BINASSIGN(%=)
+    DECL_BINASSIGN(|=)
+    DECL_BINASSIGN(&=)
+    DECL_BINASSIGN(^=)
 #undef DECL_BINASSIGN
     /* Binary assignment ops >>= and <<= between a strong number type and
      * integer constant. The shift amount must fit into an u8 regardless of the
      * left operand type.
      */
-#define DECL_BINASSIGN(op, Req)                                               \
+#define DECL_BINASSIGN(op)                                                    \
     force_inline friend constexpr                                             \
     auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<std::uint8_t> const &rhs)  \
-        noexcept -> SelfType& Req                                             \
+        noexcept -> SelfType&                                                 \
     { lhs.c_val op rhs.c_val; return lhs; }
-    DECL_BINASSIGN(>>=, requires std::integral<T>)
-    DECL_BINASSIGN(<<=, requires std::integral<T>)
+    DECL_BINASSIGN(>>=)
+    DECL_BINASSIGN(<<=)
 #undef DECL_BINASSIGN
 
     /* Force printing smaller types as int. Always treat these as numeric

@@ -62,6 +62,25 @@ auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
     }
 }
 
+
+/* This ConstantNum class is a wrapper to handle various operations with
+ * numeric constants (literals, constexpr values). It can only be initialized
+ * with weak numeric constant types, and will fail to compile if the provided
+ * value doesn't fit the type it's paired against.
+ */
+template<weak_number T>
+class ConstantNum {
+    T mValue;
+
+public:
+    /* NOLINTNEXTLINE(*-explicit-constructor) */
+    consteval ConstantNum(weak_number auto const &value) noexcept : mValue{convert_to<T>(value)} {}
+
+    [[nodiscard]] force_inline constexpr
+    auto get() const noexcept LIFETIMEBOUND -> T const& { return mValue; }
+};
+
+
 /* A "strong number" is a numeric type derived from the number class below. It
  * has stronger protections from implicit conversions and automatic type
  * promotions.
@@ -81,24 +100,6 @@ concept strong_unsigned_integral = strong_number<T>
 
 template<typename T>
 concept strong_floating_point = strong_number<T> and std::floating_point<typename T::value_t>;
-
-
-/* This ConstantNum class is a wrapper to handle various operations with strong
- * numbers and numeric constants (literals, constexpr values). It can only be
- * initialized with weak numeric constant types, and will fail to compile if
- * the provided value doesn't fit the type it's paired against (e.g. trying to
- * do some_i8 + 1000 is an error since 1000 doesn't fit i8).
- */
-template<weak_number T>
-class ConstantNum {
-    T mValue;
-
-public:
-    /* NOLINTNEXTLINE(*-explicit-constructor) */
-    consteval ConstantNum(weak_number auto const &value) noexcept : mValue{convert_to<T>(value)} {}
-
-    [[nodiscard]] force_inline constexpr auto get() const noexcept -> T const& { return mValue; }
-};
 
 
 /* Strong numbers are implemented using CRTP to act as a mixin of sorts. To
@@ -218,14 +219,6 @@ public:
     template<strong_number U> [[nodiscard]] force_inline friend constexpr
     auto operator<=>(SelfType const &lhs, U const &rhs) noexcept
     {
-        /* FIXME: Allow comparing more "incompatible" types. This is difficult
-         * with floating point because, e.g. 2147483647_i32 < 2147483648.0_f32
-         * should be true, except converting 2147483647 to float to directly
-         * compare them results in 2147483648.0f, making the result false.
-         * Converting 2147483648.0f to int32_t is additionally invalid since an
-         * int32_t can't hold 2147483648. While a double would fix that, the
-         * problem remains when comparing i64 and f64.
-         */
         if constexpr(not can_narrow<T, typename U::value_t>)
             return lhs.mValue <=> convert_to<T>(rhs.get());
         else if constexpr(not can_narrow<typename U::value_t, T>)
@@ -234,21 +227,24 @@ public:
         {
             if(lhs.mValue < T{0})
                 return std::strong_ordering::less;
-            using common_t = std::common_type_t<std::make_unsigned_t<T>, typename U::value_t>;
-            return static_cast<common_t>(lhs.mValue) <=> static_cast<common_t>(rhs.get());
+            return static_cast<std::make_unsigned_t<T>>(lhs.mValue) <=> rhs.get();
         }
         else if constexpr(std::unsigned_integral<T> and std::signed_integral<typename U::value_t>)
         {
             if(typename U::value_t{0} > rhs.get())
                 return std::strong_ordering::greater;
-            using common_t = std::common_type_t<T, std::make_unsigned_t<typename U::value_t>>;
-            return static_cast<common_t>(lhs.mValue) <=> static_cast<common_t>(rhs.get());
+            using unsigned_t = std::make_unsigned_t<typename U::value_t>;
+            return lhs.mValue <=> static_cast<unsigned_t>(rhs.get());
         }
-        else if constexpr(std::common_with<T, typename U::value_t>)
-        {
-            using common_t = std::common_type_t<T, typename U::value_t>;
-            return static_cast<common_t>(lhs.mValue) <=> static_cast<common_t>(rhs.get());
-        }
+        /* FIXME: Allow comparing more "incompatible" types. This is difficult
+         * with floating point because, e.g. 2147483647_i32 < 2147483648.0_f32
+         * should be true, except converting 2147483647 to float to directly
+         * compare them results in 2147483648.0f, making the result false.
+         * Converting 2147483648.0f to int32_t is additionally invalid since an
+         * int32_t can't hold 2147483648 (at best you may get -2147483648,
+         * which also makes it false). While a double would fix this, the
+         * problem remains when comparing i64 and f64.
+         */
     }
 
     /* Three-way comparison operator between a strong number type and numeric

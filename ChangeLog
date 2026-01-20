@@ -1,3 +1,19 @@
+openal-soft-1.25.1:
+
+    Fixed the OpenSL and JACK backends.
+
+    Fixed WASAPI and CoreAudio capture.
+
+    Fixed building the OSS backend with OSS v4.
+
+    Fixed a debug assertion with HRTF enabled.
+
+    Fixed an STL hardening assertion in the polyphase resampler with certain
+    resampling ratios.
+
+    Added a new stereo-encoding option for Tetraphonic Surround Matrix
+    Encoding.
+
 openal-soft-1.25.0:
 
     Updated library codebase to C++20.

@@ -289,22 +289,23 @@ void DeviceBase::Process(AmbiDecPostProcess const &proc, usize const SamplesToDo
 void DeviceBase::Process(HrtfPostProcess const &proc, usize const SamplesToDo)
 {
     /* HRTF is stereo output only. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
+    auto const lidx = RealOut.ChannelIndex[FrontLeft];
+    auto const ridx = RealOut.ChannelIndex[FrontRight];
 
-    MixDirectHrtf(RealOut.Buffer[lidx], RealOut.Buffer[ridx], Dry.Buffer, HrtfAccumData,
-        proc.mHrtfState->mTemp, proc.mHrtfState->mChannels, proc.mHrtfState->mIrSize, SamplesToDo);
+    MixDirectHrtf(RealOut.Buffer[lidx.c_val], RealOut.Buffer[ridx.c_val], Dry.Buffer,
+        HrtfAccumData, proc.mHrtfState->mTemp, proc.mHrtfState->mChannels,
+        proc.mHrtfState->mIrSize, SamplesToDo);
 }
 
 void DeviceBase::Process(UhjPostProcess const &proc, usize const SamplesToDo)
 {
     /* UHJ is stereo output only. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
+    auto const lidx = RealOut.ChannelIndex[FrontLeft];
+    auto const ridx = RealOut.ChannelIndex[FrontRight];
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
-        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo),
+    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx.c_val]}.first(SamplesToDo),
+        std::span{RealOut.Buffer[ridx.c_val]}.first(SamplesToDo),
         {{std::span{Dry.Buffer[0]}.first(SamplesToDo),
             std::span{Dry.Buffer[1]}.first(SamplesToDo),
             std::span{Dry.Buffer[2]}.first(SamplesToDo)}});
@@ -313,12 +314,12 @@ void DeviceBase::Process(UhjPostProcess const &proc, usize const SamplesToDo)
 void DeviceBase::Process(TsmePostProcess const &proc, usize const SamplesToDo)
 {
     /* TSME is stereo output only. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
+    auto const lidx = RealOut.ChannelIndex[FrontLeft];
+    auto const ridx = RealOut.ChannelIndex[FrontRight];
 
     /* Encode to stereo-compatible 2-channel output. */
-    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx]}.first(SamplesToDo),
-        std::span{RealOut.Buffer[ridx]}.first(SamplesToDo),
+    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx.c_val]}.first(SamplesToDo),
+        std::span{RealOut.Buffer[ridx.c_val]}.first(SamplesToDo),
         {{std::span{Dry.Buffer[0]}.first(SamplesToDo),
             std::span{Dry.Buffer[1]}.first(SamplesToDo),
             std::span{Dry.Buffer[2]}.first(SamplesToDo),
@@ -328,9 +329,9 @@ void DeviceBase::Process(TsmePostProcess const &proc, usize const SamplesToDo)
 void DeviceBase::Process(StablizerPostProcess const &proc, usize const SamplesToDo)
 {
     /* Decode with front image stabilization. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
-    auto const cidx = usize{RealOut.ChannelIndex[FrontCenter]};
+    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft].c_val};
+    auto const ridx = usize{RealOut.ChannelIndex[FrontRight].c_val};
+    auto const cidx = usize{RealOut.ChannelIndex[FrontCenter].c_val};
 
     /* Move the existing direct L/R signal out so it doesn't get processed by
      * the stabilizer.
@@ -406,14 +407,14 @@ void DeviceBase::Process(StablizerPostProcess const &proc, usize const SamplesTo
 void DeviceBase::Process(Bs2bPostProcess const &proc, usize const SamplesToDo)
 {
     /* BS2B is stereo output only. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft]};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight]};
+    auto const lidx = RealOut.ChannelIndex[FrontLeft];
+    auto const ridx = RealOut.ChannelIndex[FrontRight];
 
     /* First, copy out the existing direct stereo signal so it doesn't get
      * processed by the BS2B filter.
      */
-    auto const leftout = std::span{RealOut.Buffer[lidx]}.first(SamplesToDo);
-    auto const rightout = std::span{RealOut.Buffer[ridx]}.first(SamplesToDo);
+    auto const leftout = std::span{RealOut.Buffer[lidx.c_val]}.first(SamplesToDo);
+    auto const rightout = std::span{RealOut.Buffer[ridx.c_val]}.first(SamplesToDo);
     auto const ldirect = std::span{proc.mBs2b->mStorage[0]}.first(SamplesToDo);
     auto const rdirect = std::span{proc.mBs2b->mStorage[1]}.first(SamplesToDo);
     std::ranges::copy(leftout, ldirect.begin());
@@ -744,7 +745,7 @@ struct RotatorCoeffs {
     {
         auto coeffs = mCoeffs.begin();
 
-        for(auto const l : std::views::iota(2, MaxAmbiOrder+1))
+        for(auto const l : std::views::iota(2, int{MaxAmbiOrder+1}))
         {
             for(auto const n : std::views::iota(-l, l+1))
             {
@@ -1048,7 +1049,7 @@ void CalcAmbisonicPanning(Voice *const voice, f32 const xpos, f32 const ypos, f3
 
     for(const auto c : std::views::iota(0_uz, index_map.size()))
     {
-        auto const acn = usize{index_map[c]};
+        auto const acn = usize{index_map[c].c_val};
         auto const scale = scales[acn] * coverage;
 
         /* For channel 0, combine the B-Format signal (scaled according to the
@@ -1147,7 +1148,7 @@ void CalcDirectPanning(Voice *const voice, DirectMode const directmode,
     {
         auto const pangain = ChannelPanGain(chans[c].channel);
         if(auto idx = device->RealOut.ChannelIndex[chans[c].channel]; idx != InvalidChannelIndex)
-            voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
+            voice->mChans[c].mDryParams.Gains.Target[idx.c_val] = drygain.Base * pangain;
         else if(directmode == DirectMode::RemixMismatch)
         {
             auto const remap = std::ranges::find(device->RealOut.RemixMap, chans[c].channel,
@@ -1159,7 +1160,7 @@ void CalcDirectPanning(Voice *const voice, DirectMode const directmode,
             {
                 idx = device->RealOut.ChannelIndex[target.channel];
                 if(idx != InvalidChannelIndex)
-                    voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain
+                    voice->mChans[c].mDryParams.Gains.Target[idx.c_val] = drygain.Base * pangain
                         * target.mix;
             }
         }
@@ -1364,9 +1365,9 @@ void CalcNormalPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 c
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    if(auto const idx = u32{device->RealOut.ChannelIndex[chans[c].channel]};
+                    if(auto const idx = device->RealOut.ChannelIndex[chans[c].channel];
                         idx != InvalidChannelIndex)
-                        voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
+                        voice->mChans[c].mDryParams.Gains.Target[idx.c_val] = drygain.Base*pangain;
                 }
                 continue;
             }
@@ -1436,9 +1437,9 @@ void CalcNormalPanning(Voice *const voice, f32 const xpos, f32 const ypos, f32 c
             {
                 if(device->Dry.Buffer.data() == device->RealOut.Buffer.data())
                 {
-                    if(auto const idx = usize{device->RealOut.ChannelIndex[chans[c].channel]};
+                    if(auto const idx = device->RealOut.ChannelIndex[chans[c].channel];
                         idx != InvalidChannelIndex)
-                        voice->mChans[c].mDryParams.Gains.Target[idx] = drygain.Base * pangain;
+                        voice->mChans[c].mDryParams.Gains.Target[idx.c_val] = drygain.Base*pangain;
                 }
                 continue;
             }
@@ -2338,7 +2339,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u16
 { return u16{gsl::narrow_cast<std::uint16_t>(SampleConv<i16>(val) + 32768)}; }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u8
-{ return gsl::narrow_cast<u8>(SampleConv<i8>(val).c_val + 128); }
+{ return SampleConv<i8>(val).reinterpret_as<u8>() + 128; }
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffer,

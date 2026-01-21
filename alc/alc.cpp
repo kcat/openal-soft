@@ -1159,20 +1159,20 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 u8 order;
             };
             constexpr auto chanlist = std::array{
-                ChannelMap{"mono"sv,       DevFmtMono,   0},
-                ChannelMap{"stereo"sv,     DevFmtStereo, 0},
-                ChannelMap{"quad"sv,       DevFmtQuad,   0},
-                ChannelMap{"surround51"sv, DevFmtX51,    0},
-                ChannelMap{"surround61"sv, DevFmtX61,    0},
-                ChannelMap{"surround71"sv, DevFmtX71,    0},
-                ChannelMap{"3d71"sv,         DevFmtX3D71, 0},
-                ChannelMap{"surround714"sv,  DevFmtX714,  0},
-                ChannelMap{"surround7144"sv, DevFmtX7144, 0},
-                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
-                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
-                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
-                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
-                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
+                ChannelMap{"mono"sv,       DevFmtMono,   0_u8},
+                ChannelMap{"stereo"sv,     DevFmtStereo, 0_u8},
+                ChannelMap{"quad"sv,       DevFmtQuad,   0_u8},
+                ChannelMap{"surround51"sv, DevFmtX51,    0_u8},
+                ChannelMap{"surround61"sv, DevFmtX61,    0_u8},
+                ChannelMap{"surround71"sv, DevFmtX71,    0_u8},
+                ChannelMap{"3d71"sv,         DevFmtX3D71, 0_u8},
+                ChannelMap{"surround714"sv,  DevFmtX714,  0_u8},
+                ChannelMap{"surround7144"sv, DevFmtX7144, 0_u8},
+                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1_u8},
+                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2_u8},
+                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3_u8},
+                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4_u8},
+                ChannelMap{"surround51rear"sv, DevFmtX51, 0_u8},
             };
 
             const auto iter = std::ranges::find_if(chanlist,
@@ -1183,7 +1183,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             else
             {
                 optchans = iter->chans;
-                aorder = iter->order;
+                aorder = iter->order.c_val;
             }
         }
         else if(chanopt)
@@ -2272,7 +2272,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<i32> c
     switch(param)
     {
     case ALC_ATTRIBUTES_SIZE:
-        values[0] = NumAttrsForDevice();
+        values[0] = NumAttrsForDevice().c_val;
         return 1;
 
     case ALC_ALL_ATTRIBUTES:
@@ -2529,7 +2529,7 @@ try {
     switch(pname)
     {
     case ALC_ATTRIBUTES_SIZE:
-        valuespan[0] = ALCint64SOFT{NumAttrsForDevice()};
+        valuespan[0] = ALCint64SOFT{NumAttrsForDevice().c_val};
         break;
 
     case ALC_ALL_ATTRIBUTES:

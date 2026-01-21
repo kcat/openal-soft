@@ -39,7 +39,7 @@ template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> f32
 { return val; }
 
 template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> f32
-{ return LoadSample<DevFmtByte>(i8{gsl::narrow_cast<std::int8_t>(val - 128)}); }
+{ return LoadSample<DevFmtByte>((val - 128).reinterpret_as<i8>()); }
 template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> f32
 { return LoadSample<DevFmtShort>(gsl::narrow_cast<i16>(val.c_val - 32768)); }
 template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> f32
@@ -99,7 +99,7 @@ template<> auto StoreSample<DevFmtUInt>(f32 const val) noexcept -> u32
 template<> auto StoreSample<DevFmtUShort>(f32 const val) noexcept -> u16
 { return u16{static_cast<std::uint16_t>(StoreSample<DevFmtShort>(val) + 32768)}; }
 template<> auto StoreSample<DevFmtUByte>(f32 const val) noexcept -> u8
-{ return gsl::narrow_cast<u8>(StoreSample<DevFmtByte>(val).c_val + 128); }
+{ return StoreSample<DevFmtByte>(val).reinterpret_as<u8>() + 128; }
 
 template<DevFmtType T>
 void StoreSampleArray(void *const dst, std::span<f32 const> const src, usize const channel,

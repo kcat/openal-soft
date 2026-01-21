@@ -14,7 +14,7 @@
 inline constexpr auto TsmeLength256 = 256_uz;
 inline constexpr auto TsmeLength512 = 512_uz;
 
-enum class TsmeQualityType : u8 {
+enum class TsmeQualityType : u8::value_t {
     IIR = 0,
     FIR256,
     FIR512,

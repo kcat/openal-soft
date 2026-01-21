@@ -66,9 +66,9 @@ enum : size_t {
     NumFilters
 };
 
-constexpr auto WaveformFracBits{24_uz};
-constexpr auto WaveformFracOne{1_uz<<WaveformFracBits};
-constexpr auto WaveformFracMask{WaveformFracOne-1};
+constexpr auto WaveformFracBits = 24_uz;
+constexpr auto WaveformFracOne = 1_uz << WaveformFracBits;
+constexpr auto WaveformFracMask = WaveformFracOne - 1;
 
 inline auto Sin(u32 const index) -> float
 {
@@ -147,7 +147,7 @@ struct FormantFilter {
 
 struct VmorpherState final : public EffectState {
     struct OutParams {
-        u32 mTargetChannel{InvalidChannelIndex};
+        u32 mTargetChannel{InvalidChannelIndex.c_val};
 
         /* Effect parameters */
         std::array<std::array<FormantFilter,NumFormants>,NumFilters> mFormants;
@@ -268,9 +268,9 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u32 const outchan, f32 const outgain)
+        [this](usize const idx, u8 const outchan, f32 const outgain)
     {
-        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetChannel = outchan.c_val;
         mChans[idx].mTargetGain = outgain;
     });
 }

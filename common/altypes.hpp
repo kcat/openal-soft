@@ -1,6 +1,7 @@
 #ifndef AL_TYPES_HPP
 #define AL_TYPES_HPP
 
+#include <compare>
 #include <concepts>
 #include <cstdint>
 #include <cstddef>
@@ -205,62 +206,6 @@ public:
         requires std::numeric_limits<T>::has_signaling_NaN
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
 
-    /* Three-way comparison operator between strong number types, from which
-     * other comparison operators are synthesized. Implicitly handles
-     * signedness differences.
-     */
-    template<strong_number U> [[nodiscard]] force_inline friend constexpr
-    auto operator<=>(SelfType const &lhs, U const &rhs) noexcept
-    {
-        if constexpr(not can_narrow<T, typename U::value_t>)
-            return lhs.c_val <=> convert_to<T>(rhs.c_val);
-        else if constexpr(not can_narrow<typename U::value_t, T>)
-            return convert_to<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
-        else if constexpr(std::signed_integral<T> and std::unsigned_integral<typename U::value_t>)
-        {
-            if(lhs.c_val < T{0})
-                return std::strong_ordering::less;
-            return static_cast<std::make_unsigned_t<T>>(lhs.c_val) <=> rhs.c_val;
-        }
-        else if constexpr(std::unsigned_integral<T> and std::signed_integral<typename U::value_t>)
-        {
-            if(typename U::value_t{0} > rhs.c_val)
-                return std::strong_ordering::greater;
-            using unsigned_t = std::make_unsigned_t<typename U::value_t>;
-            return lhs.c_val <=> static_cast<unsigned_t>(rhs.c_val);
-        }
-        /* FIXME: Allow comparing more "incompatible" types. This is difficult
-         * with floating point because, e.g. 2147483647_i32 < 2147483648.0_f32
-         * should be true, except converting 2147483647 to float to directly
-         * compare them results in 2147483648.0f, making the result false.
-         * Converting 2147483648.0f to int32_t is additionally invalid since an
-         * int32_t can't hold 2147483648 (at best you may get -2147483648,
-         * which also makes it false). While a double would fix this, the
-         * problem remains when comparing i64 and f64.
-         */
-    }
-
-    /* Three-way comparison operator between a strong number type and weak
-     * number type, from which other comparison operators are synthesized. Only
-     * valid when one is compatible with the other.
-     */
-    template<weak_number U> requires(has_common<T, U>) [[nodiscard]] force_inline friend constexpr
-    auto operator<=>(SelfType const &lhs, U const &rhs) noexcept
-    {
-        if constexpr(not can_narrow<T, U>)
-            return lhs.c_val <=> static_cast<T>(rhs);
-        else if constexpr(not can_narrow<U, T>)
-            return static_cast<U>(lhs.c_val) <=> rhs;
-    }
-
-    /* Three-way comparison operator between a strong number type and numeric
-     * constant, from which other comparison operators are synthesized. Only
-     * valid when the numeric constant fits the strong number type.
-     */
-    [[nodiscard]] force_inline friend constexpr
-    auto operator<=>(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept
-    { return lhs.c_val <=> rhs.c_val; }
-
     /* Prefix and postfix increment and decrement operators. Only valid for
      * integral types.
      */
@@ -462,11 +407,86 @@ public:
 
 }
 
+/* Three-way comparison operator between strong number types, from which other
+ * comparison operators are synthesized. Implicitly handles signedness
+ * differences.
+ */
+template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline constexpr
+auto operator<=>(T const &lhs, U const &rhs) noexcept
+{
+    if constexpr(not al::can_narrow<typename T::value_t, typename U::value_t>)
+        return lhs.c_val <=> static_cast<T::value_t>(rhs.c_val);
+    else if constexpr(not al::can_narrow<typename U::value_t, typename T::value_t>)
+        return static_cast<U::value_t>(lhs.c_val) <=> rhs.c_val;
+    else if constexpr(std::signed_integral<typename T::value_t>
+        and std::unsigned_integral<typename U::value_t>)
+    {
+        if(lhs.c_val < typename T::value_t{0})
+            return std::strong_ordering::less;
+        return static_cast<std::make_unsigned_t<typename T::value_t>>(lhs.c_val) <=> rhs.c_val;
+    }
+    else if constexpr(std::unsigned_integral<typename T::value_t>
+        and std::signed_integral<typename U::value_t>)
+    {
+        if(typename U::value_t{0} > rhs.c_val)
+            return std::strong_ordering::greater;
+        using unsigned_t = std::make_unsigned_t<typename U::value_t>;
+        return lhs.c_val <=> static_cast<unsigned_t>(rhs.c_val);
+    }
+    /* FIXME: Allow comparing more "incompatible" types. This is difficult with
+     * floating point because, e.g. 2147483647_i32 < 2147483648.0_f32 should be
+     * true, except converting 2147483647 to float to directly compare them
+     * results in 2147483648.0f, making the result false. Converting
+     * 2147483648.0f to int32_t is additionally invalid since an int32_t can't
+     * hold 2147483648 (at best you may get -2147483648, which also makes it
+     * false). While a double would fix this, the problem remains when
+     * comparing i64 and f64.
+     */
+}
+
+/* Three-way comparison operator between a strong number type and weak number
+ * type, from which other comparison operators are synthesized. Only valid when
+ * one is compatible with the other.
+ */
+template<al::strong_number T, al::weak_number U> requires(al::has_common<typename T::value_t, U>)
+[[nodiscard]] force_inline constexpr auto operator<=>(T const &lhs, U const &rhs) noexcept
+{
+    if constexpr(not al::can_narrow<typename T::value_t, U>)
+        return lhs.c_val <=> static_cast<T::value_t>(rhs);
+    else if constexpr(not al::can_narrow<U, typename T::value_t>)
+        return static_cast<U>(lhs.c_val) <=> rhs;
+}
+
+/* Three-way comparison operator between a strong number type and numeric
+ * constant, from which other comparison operators are synthesized. Only valid
+ * when the numeric constant fits the strong number type.
+ */
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto operator<=>(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) noexcept
+{ return lhs.c_val <=> rhs.c_val; }
+
+/* FIXME: Why do I have to define these manually instead of the compiler
+ * implicitly generating them from operator<=> like the others???
+ */
+template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline constexpr
+auto operator==(T const &lhs, U const &rhs) noexcept -> bool
+{ return (lhs <=> rhs) == 0; }
+
+template<al::strong_number T, al::weak_number U> requires(al::has_common<typename T::value_t, U>)
+[[nodiscard]] force_inline constexpr auto operator==(T const &lhs, U const &rhs) noexcept -> bool
+{ return (lhs <=> rhs) == 0; }
+
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto operator==(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) noexcept -> bool
+{ return (lhs <=> rhs) == 0; }
+
 
 struct i8 : al::number_base<std::int8_t, i8> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> { };
 
-using u8 = std::uint8_t;
+struct u8 : al::number_base<std::uint8_t, u8> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<u8, CharT> : u8::formatter<CharT> { };
+
 using i16 = std::int16_t;
 
 struct u16 : al::number_base<std::uint16_t, u16> { using number_base::number_base; using number_base::operator=; };
@@ -485,7 +505,7 @@ using f64 = double;
 [[nodiscard]] consteval
 auto operator ""_i8(unsigned long long const n) noexcept { return i8{n}; }
 [[nodiscard]] consteval
-auto operator ""_u8(unsigned long long const n) noexcept { return gsl::narrow<u8>(n); }
+auto operator ""_u8(unsigned long long const n) noexcept { return u8{n}; }
 
 [[nodiscard]] consteval
 auto operator ""_i16(unsigned long long const n) noexcept { return gsl::narrow<i16>(n); }

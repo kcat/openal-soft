@@ -15,7 +15,7 @@
 constexpr auto AmbiChannelsFromOrder(usize const order) noexcept -> usize
 { return (order+1) * (order+1); }
 
-inline constexpr auto MaxAmbiOrder = 4_u8;
+inline constexpr auto MaxAmbiOrder = 4_uz;
 inline constexpr auto MaxAmbiChannels = AmbiChannelsFromOrder(MaxAmbiOrder);
 
 /* A bitmask of ambisonic channels for 0 to 4th order. This only specifies up
@@ -136,8 +136,8 @@ namespace AmbiScale {
     DECL_HIDDEN extern constinit UpsamplerArrays<25> const FourthOrder2DUp;
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    auto GetHFOrderScales(u32 const src_order, u32 const dev_order, bool const horizontalOnly)
-        noexcept -> std::array<f32, MaxAmbiOrder+1>;
+    auto GetHFOrderScales(u32 src_order, u32 dev_order, bool horizontalOnly) noexcept
+        -> std::array<f32, MaxAmbiOrder+1>;
 } /* namespace AmbiScale */
 
 namespace AmbiIndex {
@@ -179,22 +179,25 @@ namespace AmbiIndex {
     };
 
     inline constexpr auto FromACN = std::array<u8, MaxAmbiChannels>{
-        0,
-        1, 2, 3,
-        4, 5, 6, 7, 8,
-        9, 10, 11, 12, 13, 14, 15,
-        16, 17, 18, 19, 20, 21, 22, 23, 24,
+        0_u8,
+        1_u8, 2_u8, 3_u8,
+        4_u8, 5_u8, 6_u8, 7_u8, 8_u8,
+        9_u8, 10_u8, 11_u8, 12_u8, 13_u8, 14_u8, 15_u8,
+        16_u8, 17_u8, 18_u8, 19_u8, 20_u8, 21_u8, 22_u8, 23_u8, 24_u8,
     };
     inline constexpr auto FromACN2D = std::array<u8, MaxAmbi2DChannels>{
-        0, 1,3, 4,8, 9,15, 16,24,
+        0_u8, 1_u8,3_u8, 4_u8,8_u8, 9_u8,15_u8, 16_u8,24_u8,
     };
 
 
     inline constexpr auto OrderFromChannel = std::array<u8, MaxAmbiChannels>{
-        0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,4,
+        0_u8, 1_u8,1_u8,1_u8,
+        2_u8,2_u8,2_u8,2_u8,2_u8,
+        3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,
+        4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,
     };
     inline constexpr auto OrderFrom2DChannel = std::array<u8, MaxAmbi2DChannels>{
-        0, 1,1, 2,2, 3,3, 4,4,
+        0_u8, 1_u8,1_u8, 2_u8,2_u8, 3_u8,3_u8, 4_u8,4_u8,
     };
 } /* namespace AmbiIndex */
 

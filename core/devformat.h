@@ -7,7 +7,7 @@
 
 #include "altypes.hpp"
 
-enum Channel : u8 {
+enum Channel : u8::value_t {
     FrontLeft = 0,
     FrontRight,
     FrontCenter,
@@ -53,7 +53,7 @@ enum Channel : u8 {
 
 
 /* Device formats */
-enum DevFmtType : u8 {
+enum DevFmtType : u8::value_t {
     DevFmtByte,
     DevFmtUByte,
     DevFmtShort,
@@ -64,7 +64,7 @@ enum DevFmtType : u8 {
 
     DevFmtTypeDefault = DevFmtFloat
 };
-enum DevFmtChannels : u8 {
+enum DevFmtChannels : u8::value_t {
     DevFmtMono,
     DevFmtStereo,
     DevFmtQuad,
@@ -124,7 +124,7 @@ enum class DevAmbiLayout : bool {
     Default = ACN
 };
 
-enum class DevAmbiScaling : u8 {
+enum class DevAmbiScaling : u8::value_t {
     FuMa,
     SN3D,
     N3D,

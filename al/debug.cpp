@@ -48,7 +48,7 @@ template<typename T, T ...Vals>
 constexpr auto make_array_sequence(std::integer_sequence<T, Vals...>)
 { return std::array<T,sizeof...(Vals)>{Vals...}; }
 
-template<typename T, size_t N>
+template<typename T, T N>
 constexpr auto make_array_sequence()
 { return make_array_sequence(std::make_integer_sequence<T,N>{}); }
 
@@ -256,7 +256,7 @@ try {
         context->throw_error(AL_INVALID_ENUM, "Invalid debug enable {}", enable);
 
     static constexpr auto ElemCount = DebugSourceCount + DebugTypeCount + DebugSeverityCount;
-    static constexpr auto Values = make_array_sequence<u8,ElemCount>();
+    static constexpr auto Values = make_array_sequence<u8::value_t, ElemCount>();
 
     auto srcIdxs = std::span{Values}.subspan(DebugSourceBase,DebugSourceCount);
     if(source != AL_DONT_CARE_EXT)

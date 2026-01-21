@@ -48,20 +48,20 @@ inline constexpr auto DefaultUpdateSize = 512_uz; /* ~10.7ms */
 inline constexpr auto DefaultNumUpdates = 3_uz;
 
 
-enum class DeviceType : u8 {
+enum class DeviceType : u8::value_t {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode : u8 {
+enum class RenderMode : u8::value_t {
     Normal,
     Pairwise,
     Hrtf
 };
 
-enum class StereoEncoding : u8 {
+enum class StereoEncoding : u8::value_t {
     Basic,
     Uhj,
     Hrtf,
@@ -101,7 +101,7 @@ public:
 };
 
 
-constexpr auto InvalidChannelIndex = gsl::narrow_cast<u8>(~0u);
+constexpr auto InvalidChannelIndex = ~0_u8;
 
 struct BFChannelConfig {
     f32 Scale;
@@ -136,7 +136,7 @@ struct MixParams {
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = gsl::narrow_cast<u8>(j);
+                    idx = u8{j};
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }
@@ -214,7 +214,7 @@ enum {
     DeviceFlagsCount
 };
 
-enum class DeviceState : u8 {
+enum class DeviceState : u8::value_t {
     Unprepared,
     Configured,
     Playing

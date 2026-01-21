@@ -69,10 +69,10 @@ using namespace std::string_view_literals;
 using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
 
-constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<u8>({
-    0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
-    0xca, 0x00, 0x00, 0x00
-}));
+constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(
+    std::to_array<u8::value_t>({
+        0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
+        0xca, 0x00, 0x00, 0x00}));
 
 void fwrite16le(u16 const value, std::ostream &f)
 {

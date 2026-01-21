@@ -167,7 +167,7 @@ auto GetSampleRate(MYSOFA_HRTF const *const sofaHrtf) -> f32
     return values[0];
 }
 
-enum class DelayType : u8 {
+enum class DelayType : u8::value_t {
     None,
     I_R, /* [1][Channels] */
     M_R, /* [HRIRs][Channels] */

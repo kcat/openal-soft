@@ -75,12 +75,11 @@ void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location.
          */
-        const size_t idx{target.RealOut ? target.RealOut->ChannelIndex[FrontCenter]
-            : InvalidChannelIndex};
-        if(idx != InvalidChannelIndex)
+        if(auto const idx = target.RealOut ? target.RealOut->ChannelIndex[FrontCenter]
+            : InvalidChannelIndex; idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
-            mTargetGains[idx] = Gain;
+            mTargetGains[idx.c_val] = Gain;
         }
         else
         {
@@ -93,12 +92,11 @@ void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
     }
     else if(props.Target == DedicatedProps::Lfe)
     {
-        const auto idx = size_t{target.RealOut ? target.RealOut->ChannelIndex[LFE]
-            : InvalidChannelIndex};
-        if(idx != InvalidChannelIndex)
+        if(const auto idx = target.RealOut ? target.RealOut->ChannelIndex[LFE]:InvalidChannelIndex;
+            idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
-            mTargetGains[idx] = Gain;
+            mTargetGains[idx.c_val] = Gain;
         }
     }
 }

@@ -205,7 +205,7 @@ template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
 
-enum class Quality : u8 {
+enum class Quality : u8::value_t {
     s8, s16, f32, s24
 };
 enum class Mode : bool {
@@ -412,7 +412,7 @@ auto LafStream::readChunk() -> u32
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = gsl::narrow<u32>(std::accumulate(mEnabledTracks.cbegin(),
         mEnabledTracks.cend(), 0, [](int const val, u8 const in) -> int
-    { return val + std::popcount(in); }));
+    { return val + std::popcount(in.c_val); }));
 
     /* Make sure enable bits aren't set for non-existent tracks. */
     if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= 1u<<(mNumTracks&7))
@@ -453,7 +453,7 @@ auto LafStream::readChunk() -> u32
 auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::span<std::byte>
 {
     auto const todo = std::min(usize{mSampleRate}, count);
-    if((mEnabledTracks[trackidx>>3] & (1_uz<<(trackidx&7))))
+    if((mEnabledTracks[trackidx>>3] & u8{1<<(trackidx&7)}) != 0)
     {
         /* If the track is enabled, get the real index (skipping disabled
          * tracks), and deinterlace it into the mono line.
@@ -462,8 +462,8 @@ auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::sp
         {
             auto const bits = std::span{mEnabledTracks}.first(trackidx>>3);
             auto const res = std::accumulate(bits.begin(), bits.end(), 0_i32,
-                [](int const val, u8 const in) -> int { return val + std::popcount(in); })
-                + std::popcount(mEnabledTracks[trackidx>>3] & ((1u<<(trackidx&7))-1));
+                [](int const val, u8 const in) -> int { return val + std::popcount(in.c_val); })
+                + std::popcount((mEnabledTracks[trackidx>>3] & u8{(1u<<(trackidx&7))-1}).c_val);
             return gsl::narrow_cast<u32>(res);
         });
 

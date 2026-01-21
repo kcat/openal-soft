@@ -36,7 +36,7 @@ using namespace std::string_view_literals;
 
 using lpvoid = void*;
 
-enum class LogState : u8 {
+enum class LogState : u8::value_t {
     FirstRun,
     Ready,
     Disable

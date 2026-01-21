@@ -37,7 +37,7 @@ struct Context;
 struct Buffer;
 struct EffectSlot;
 } // namespace al
-enum class Resampler : u8;
+enum class Resampler : u8::value_t;
 
 enum class SourceStereo : bool {
     Normal = AL_NORMAL_SOFT,

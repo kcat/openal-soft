@@ -15,7 +15,7 @@
 inline constexpr auto UhjLength256 = 256_uz;
 inline constexpr auto UhjLength512 = 512_uz;
 
-enum class UhjQualityType : u8 {
+enum class UhjQualityType : u8::value_t {
     IIR = 0,
     FIR256,
     FIR512,

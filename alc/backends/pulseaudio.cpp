@@ -999,7 +999,7 @@ auto PulsePlayback::reset() -> bool
         break;
     }
     mSpec.rate = mDevice->mSampleRate;
-    mSpec.channels = gsl::narrow_cast<u8>(mDevice->channelsFromFmt());
+    mSpec.channels = gsl::narrow_cast<uint8_t>(mDevice->channelsFromFmt());
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample spec"};
 
@@ -1258,7 +1258,7 @@ void PulseCapture::open(std::string_view name)
             "{} capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
     }
     mSpec.rate = mDevice->mSampleRate;
-    mSpec.channels = gsl::narrow_cast<u8>(mDevice->channelsFromFmt());
+    mSpec.channels = gsl::narrow_cast<uint8_t>(mDevice->channelsFromFmt());
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample format"};
 

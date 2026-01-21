@@ -11,7 +11,7 @@
 struct EffectState;
 
 
-enum class AsyncEnableBits : u8 {
+enum class AsyncEnableBits : u8::value_t {
     SourceState,
     BufferCompleted,
     Disconnected,
@@ -19,7 +19,7 @@ enum class AsyncEnableBits : u8 {
 };
 
 
-enum class AsyncSrcState : u8 {
+enum class AsyncSrcState : u8::value_t {
     Reset,
     Stop,
     Play,

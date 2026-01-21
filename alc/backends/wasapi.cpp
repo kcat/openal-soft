@@ -1196,7 +1196,7 @@ struct WasapiPlayback final : BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : u8 {
+    enum class ThreadState : u8::value_t {
         Initializing,
         Waiting,
         Playing,
@@ -1204,7 +1204,7 @@ struct WasapiPlayback final : BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : u8 {
+    enum class ThreadAction : u8::value_t {
         Nothing,
         Configure,
         Play,
@@ -2385,7 +2385,7 @@ struct WasapiCapture final : BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : u8 {
+    enum class ThreadState : u8::value_t {
         Initializing,
         Waiting,
         Recording,
@@ -2393,7 +2393,7 @@ struct WasapiCapture final : BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : u8 {
+    enum class ThreadAction : u8::value_t {
         Nothing,
         Record,
         Quit

@@ -27,7 +27,7 @@
 struct ContextBase;
 struct DeviceBase;
 struct EffectSlotBase;
-enum class DistanceModel : u8;
+enum class DistanceModel : u8::value_t;
 
 inline constexpr auto MaxSendCount = 6_uz;
 
@@ -35,13 +35,13 @@ inline constexpr auto MaxPitch = 10_u32;
 
 inline constinit auto ResamplerDefault = Resampler::Spline;
 
-enum class SpatializeMode : u8 {
+enum class SpatializeMode : u8::value_t {
     Off,
     On,
     Auto
 };
 
-enum class DirectMode : u8 {
+enum class DirectMode : u8::value_t {
     Off,
     DropMismatch,
     RemixMismatch

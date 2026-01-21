@@ -33,7 +33,7 @@ inline constexpr auto SpeedOfSoundMetersPerSec = 343.3f;
 
 inline constexpr auto AirAbsorbGainHF = 0.99426f; /* -0.05dB */
 
-enum class DistanceModel : u8 {
+enum class DistanceModel : u8::value_t {
     Disable,
     Inverse, InverseClamped,
     Linear, LinearClamped,

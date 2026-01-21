@@ -25,7 +25,7 @@ inline constexpr auto MixerFracHalf = MixerFracOne >> 1_i32;
 inline constexpr auto GainSilenceThreshold = 0.00001_f32; /* -100dB */
 
 
-enum class Resampler : u8 {
+enum class Resampler : u8::value_t {
     Point,
     Linear,
     Spline,

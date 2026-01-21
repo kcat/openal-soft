@@ -532,8 +532,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
         std::array<float,MaxAmbiChannels> coeffs{};
         for(size_t c{0u};c < mChans.size();++c)
         {
-            const size_t acn{index_map[c]};
-            const float scale{scales[acn]};
+            auto const acn = usize{index_map[c].c_val};
+            auto const scale = scales[acn];
 
             std::ranges::transform(mixmatrix[acn], coeffs.begin(), [scale](const float in) -> float
             { return in * scale; });

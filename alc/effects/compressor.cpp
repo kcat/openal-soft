@@ -66,7 +66,7 @@ constexpr auto ReleaseTime = 0.2f; /* 200ms to drop from max to min */
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
     struct TargetGain {
-        u32 mTarget{InvalidChannelIndex};
+        u32 mTarget{InvalidChannelIndex.c_val};
         float mGain{0.0f};
     };
     std::array<TargetGain,MaxAmbiChannels> mChans;
@@ -109,9 +109,9 @@ void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u32 const outchan, f32 const outgain)
+        [this](usize const idx, u8 const outchan, f32 const outgain)
     {
-        mChans[idx].mTarget = outchan;
+        mChans[idx].mTarget = outchan.c_val;
         mChans[idx].mGain = outgain;
     });
 }

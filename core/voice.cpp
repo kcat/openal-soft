@@ -379,8 +379,8 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
          * nibble sample value. This is followed by the two initial 16-bit
          * sample history values.
          */
-        auto const blockpred = std::min(to_integer<u8>(src[srcChan].value),
-            u8{MSADPCMAdaptionCoeff.size()-1});
+        auto const blockpred = u8{std::min(to_integer<u8::value_t>(src[srcChan].value),
+            u8::value_t{MSADPCMAdaptionCoeff.size()-1})};
         auto scale = i32{bit_pack<i16>(src[srcStep + 2*srcChan + 1].value,
             src[srcStep + 2*srcChan + 0].value)};
 
@@ -393,7 +393,7 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
         auto const nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);
 
-        auto const coeffs = std::span{MSADPCMAdaptionCoeff[blockpred]};
+        auto const coeffs = std::span{MSADPCMAdaptionCoeff[blockpred.c_val]};
 
         /* The second history sample is "older", so it's the first to be
          * written out.
@@ -427,7 +427,7 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
             auto const byteShift = ((nibbleOffset&1)^1) * 4;
 
             auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
-            auto const nval = to_integer<u8>(nibble);
+            auto const nval = to_integer<u8::value_t>(nibble);
 
             auto const pred = ((i32{nval}^0x08) - 0x08) * scale;
             auto const diff = (sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256;
@@ -1300,9 +1300,9 @@ void Voice::prepare(DeviceBase *device)
         const auto splitter = BandSplitter{device->mXOverFreq
             / gsl::narrow_cast<f32>(device->mSampleRate)};
         std::ignore = std::ranges::mismatch(mChans, ordersSpan,
-            [&scales,splitter,device](ChannelData &chandata, usize const scaleidx)
+            [&scales,splitter,device](ChannelData &chandata, u8 const scaleidx)
         {
-            chandata.mAmbiHFScale = scales[scaleidx];
+            chandata.mAmbiHFScale = scales[scaleidx.c_val];
             chandata.mAmbiLFScale = 1.0f;
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};

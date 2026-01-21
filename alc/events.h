@@ -13,7 +13,7 @@
 
 namespace alc {
 
-enum class EventType : u8 {
+enum class EventType : u8::value_t {
     DefaultDeviceChanged,
     DeviceAdded,
     DeviceRemoved,

@@ -89,32 +89,32 @@ template<typename T>
 struct SampleInfo;
 
 template<>
-struct SampleInfo<uint8_t> {
+struct SampleInfo<u8> {
     static constexpr auto format() noexcept { return FmtUByte; }
 
-    static constexpr auto silence() noexcept { return uint8_t{128}; }
+    static constexpr auto silence() noexcept { return 128_u8; }
 
-    static constexpr auto to_float(const uint8_t sample) noexcept -> float
-    { return gsl::narrow_cast<float>(sample-128) * (1.0f/128.0f); }
+    static constexpr auto to_float(u8 const sample) noexcept -> f32
+    { return gsl::narrow_cast<float>(sample.c_val-128) * (1.0f/128.0f); }
 };
 
 template<>
-struct SampleInfo<int16_t> {
+struct SampleInfo<i16> {
     static constexpr auto format() noexcept { return FmtShort; }
 
-    static constexpr auto silence() noexcept { return int16_t{}; }
+    static constexpr auto silence() noexcept { return 0_i16; }
 
-    static constexpr auto to_float(const int16_t sample) noexcept -> float
+    static constexpr auto to_float(i16 const sample) noexcept -> f32
     { return gsl::narrow_cast<float>(sample) * (1.0f/32768.0f); }
 };
 
 template<>
-struct SampleInfo<int32_t> {
+struct SampleInfo<i32> {
     static constexpr auto format() noexcept { return FmtInt; }
 
-    static constexpr auto silence() noexcept { return int32_t{}; }
+    static constexpr auto silence() noexcept { return 0_i32; }
 
-    static constexpr auto to_float(const int32_t sample) noexcept -> float
+    static constexpr auto to_float(i32 const sample) noexcept -> f32
     { return gsl::narrow_cast<float>(sample)*(1.0f/2147483648.0f); }
 };
 
@@ -122,9 +122,9 @@ template<>
 struct SampleInfo<float> {
     static constexpr auto format() noexcept { return FmtFloat; }
 
-    static constexpr auto silence() noexcept { return float{}; }
+    static constexpr auto silence() noexcept { return 0.0_f32; }
 
-    static constexpr auto to_float(const float sample) noexcept -> float { return sample; }
+    static constexpr auto to_float(f32 const sample) noexcept -> f32 { return sample; }
 };
 
 template<>

@@ -6,7 +6,7 @@
 #include "altypes.hpp"
 
 /* Storable formats */
-enum FmtType : u8 {
+enum FmtType : u8::value_t {
     FmtUByte,
     FmtShort,
     FmtInt,
@@ -17,7 +17,7 @@ enum FmtType : u8 {
     FmtIMA4,
     FmtMSADPCM,
 };
-enum FmtChannels : u8 {
+enum FmtChannels : u8::value_t {
     FmtMono,
     FmtStereo,
     FmtRear,
@@ -33,11 +33,11 @@ enum FmtChannels : u8 {
     FmtSuperStereo, /* Stereo processed with Super Stereo. */
 };
 
-enum class AmbiLayout : u8 {
+enum class AmbiLayout : u8::value_t {
     FuMa,
     ACN,
 };
-enum class AmbiScaling : u8 {
+enum class AmbiScaling : u8::value_t {
     FuMa,
     SN3D,
     N3D,

@@ -48,9 +48,9 @@ struct DebugGroup;
 struct EffectSlotSubList;
 struct SourceSubList;
 
-enum class DebugSource : u8;
-enum class DebugType : u8;
-enum class DebugSeverity : u8;
+enum class DebugSource : u8::value_t;
+enum class DebugType : u8::value_t;
+enum class DebugSeverity : u8::value_t;
 
 
 enum ContextFlags {

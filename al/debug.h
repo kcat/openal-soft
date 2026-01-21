@@ -20,7 +20,7 @@ inline constexpr auto MaxObjectLabelLength = 1024_u16;
 
 
 inline constexpr auto DebugSourceBase = 0_u32;
-enum class DebugSource : u8 {
+enum class DebugSource : u8::value_t {
     API = 0,
     System,
     ThirdParty,
@@ -30,7 +30,7 @@ enum class DebugSource : u8 {
 inline constexpr auto DebugSourceCount = 5_u32;
 
 inline constexpr auto DebugTypeBase = DebugSourceBase + DebugSourceCount;
-enum class DebugType : u8 {
+enum class DebugType : u8::value_t {
     Error = 0,
     DeprecatedBehavior,
     UndefinedBehavior,
@@ -44,7 +44,7 @@ enum class DebugType : u8 {
 inline constexpr auto DebugTypeCount = 9_u32;
 
 inline constexpr auto DebugSeverityBase = DebugTypeBase + DebugTypeCount;
-enum class DebugSeverity : u8 {
+enum class DebugSeverity : u8::value_t {
     High = 0,
     Medium,
     Low,

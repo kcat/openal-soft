@@ -566,7 +566,7 @@ struct ReverbState final : EffectState {
     };
     Params mParams;
 
-    enum PipelineState : u8 {
+    enum PipelineState : u8::value_t {
         DeviceClear,
         StartFade,
         Fading,

@@ -10,7 +10,7 @@
 #include "opthelpers.h"
 
 
-enum class LogLevel : u8 {
+enum class LogLevel : u8::value_t {
     Disable,
     Error,
     Warning,

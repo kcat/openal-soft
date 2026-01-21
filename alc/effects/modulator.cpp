@@ -81,7 +81,7 @@ struct ModulatorState final : public EffectState {
     alignas(16) FloatBufferLine mBuffer{};
 
     struct OutParams {
-        u32 mTargetChannel{InvalidChannelIndex};
+        u32 mTargetChannel{InvalidChannelIndex.c_val};
 
         BiquadFilter mFilter;
 
@@ -158,9 +158,9 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u32 const outchan, f32 const outgain)
+        [this](usize const idx, u8 const outchan, f32 const outgain)
     {
-        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetChannel = outchan.c_val;
         mChans[idx].mTargetGain = outgain;
     });
 }

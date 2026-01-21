@@ -21,7 +21,7 @@
 #include "vector.h"
 
 #if ALSOFT_EAX
-enum class EaxStorage : u8 {
+enum class EaxStorage : u8::value_t {
     Automatic,
     Accessible,
     Hardware

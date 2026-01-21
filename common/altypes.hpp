@@ -236,7 +236,7 @@ public:
     [[nodiscard]] force_inline friend constexpr
     auto operator-(SelfType const &value) noexcept -> SelfType
     {
-        static_assert(std::is_signed_v<T>, "operator- is only valid for signed types");
+        static_assert(std::is_signed_v<T>, "Unary operator- is only valid for signed types");
         return SelfType{static_cast<T>(-value.c_val)};
     }
     [[nodiscard]] force_inline friend constexpr

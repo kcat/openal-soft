@@ -202,19 +202,19 @@ void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const dist
     /* Calculate the elevation indices. */
     auto const elev0 = CalcEvIndex(field->evCount, elevation);
     auto const elev1_idx = usize{std::min(elev0.idx+1_u32, field->evCount-1_u32)};
-    auto const ir0offset = usize{mElev[ebase + elev0.idx].irOffset};
-    auto const ir1offset = usize{mElev[ebase + elev1_idx].irOffset};
+    auto const ir0offset = usize{mElev[ebase + elev0.idx].irOffset.c_val};
+    auto const ir1offset = usize{mElev[ebase + elev1_idx].irOffset.c_val};
 
     /* Calculate azimuth indices. */
-    auto const az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount, azimuth);
-    auto const az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount, azimuth);
+    auto const az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount.c_val, azimuth);
+    auto const az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount.c_val, azimuth);
 
     /* Calculate the HRIR indices to blend. */
     auto const idx = std::array{
         ir0offset + az0.idx,
-        ir0offset + ((az0.idx+1) % mElev[ebase + elev0.idx].azCount),
+        ir0offset + ((az0.idx+1) % mElev[ebase + elev0.idx].azCount.c_val),
         ir1offset + az1.idx,
-        ir1offset + ((az1.idx+1) % mElev[ebase + elev1_idx].azCount)};
+        ir1offset + ((az1.idx+1) % mElev[ebase + elev1_idx].azCount.c_val)};
 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
@@ -291,17 +291,17 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
         auto const &field = Hrtf->mFields[0];
         auto const elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
         auto const elev1_idx = std::min(elev0.idx+1_uz, field.evCount-1_uz);
-        auto const ir0offset = Hrtf->mElev[elev0.idx].irOffset;
-        auto const ir1offset = Hrtf->mElev[elev1_idx].irOffset;
+        auto const ir0offset = Hrtf->mElev[elev0.idx].irOffset.c_val;
+        auto const ir1offset = Hrtf->mElev[elev1_idx].irOffset.c_val;
 
-        auto const az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount, pt.Azim.value);
-        auto const az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount, pt.Azim.value);
+        auto const az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount.c_val, pt.Azim.value);
+        auto const az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount.c_val, pt.Azim.value);
 
         auto const idx = std::array{
             ir0offset + az0.idx,
-            ir0offset + ((az0.idx+1) % Hrtf->mElev[elev0.idx].azCount),
+            ir0offset + ((az0.idx+1) % Hrtf->mElev[elev0.idx].azCount.c_val),
             ir1offset + az1.idx,
-            ir1offset + ((az1.idx+1) % Hrtf->mElev[elev1_idx].azCount)};
+            ir1offset + ((az1.idx+1) % Hrtf->mElev[elev1_idx].azCount.c_val)};
 
         /* The largest blend factor serves as the closest HRIR. */
         const auto irOffset = idx[(elev0.blend >= 0.5f)*2_uz + (az1.blend >= 0.5f)];

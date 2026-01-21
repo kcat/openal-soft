@@ -114,8 +114,6 @@ concept strong_floating_point = strong_number<T> and std::floating_point<typenam
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>)
 class number_base {
-    static constexpr auto is_strong_number_type = true;
-
     friend SelfType;
 
     /* Defaulted constructor/destructor/copy assignment functions, which will be
@@ -127,6 +125,8 @@ class number_base {
     constexpr auto operator=(number_base const &rhs) & noexcept -> number_base& = default;
 
 public:
+    static constexpr auto is_strong_number_type = true;
+
     using value_t = T;
     T c_val;
 
@@ -142,6 +142,13 @@ public:
         static_assert(not can_narrow<T, typename U::value_t>,
             "Invalid narrowing assignment; use .cast_to<U>() or .reinterpret_as<U>() to convert");
         c_val = static_cast<T>(rhs.c_val);
+        return *this;
+    }
+
+    /* Copy assignment from a compatible constant. */
+    constexpr auto operator=(ConstantNum<T> const &rhs) & noexcept LIFETIMEBOUND -> number_base&
+    {
+        c_val = rhs.c_val;
         return *this;
     }
 
@@ -231,6 +238,19 @@ public:
          * which also makes it false). While a double would fix this, the
          * problem remains when comparing i64 and f64.
          */
+    }
+
+    /* Three-way comparison operator between a strong number type and weak
+     * number type, from which other comparison operators are synthesized. Only
+     * valid when one is compatible with the other.
+     */
+    template<weak_number U> requires(has_common<T, U>) [[nodiscard]] force_inline friend constexpr
+    auto operator<=>(SelfType const &lhs, U const &rhs) noexcept
+    {
+        if constexpr(not can_narrow<T, U>)
+            return lhs.c_val <=> static_cast<T>(rhs);
+        else if constexpr(not can_narrow<U, T>)
+            return static_cast<U>(lhs.c_val) <=> rhs;
     }
 
     /* Three-way comparison operator between a strong number type and numeric
@@ -448,7 +468,10 @@ template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> 
 
 using u8 = std::uint8_t;
 using i16 = std::int16_t;
-using u16 = std::uint16_t;
+
+struct u16 : al::number_base<std::uint16_t, u16> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
+
 using i32 = std::int32_t;
 using u32 = std::uint32_t;
 using i64 = std::int64_t;
@@ -467,7 +490,7 @@ auto operator ""_u8(unsigned long long const n) noexcept { return gsl::narrow<u8
 [[nodiscard]] consteval
 auto operator ""_i16(unsigned long long const n) noexcept { return gsl::narrow<i16>(n); }
 [[nodiscard]] consteval
-auto operator ""_u16(unsigned long long const n) noexcept { return gsl::narrow<u16>(n); }
+auto operator ""_u16(unsigned long long const n) noexcept { return u16{n}; }
 
 [[nodiscard]] consteval
 auto operator ""_i32(unsigned long long const n) noexcept { return gsl::narrow<i32>(n); }

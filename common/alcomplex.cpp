@@ -52,8 +52,8 @@ struct BitReverser {
 
             if(idx < revidx)
             {
-                mData[ret_i][0] = gsl::narrow<u16>(idx);
-                mData[ret_i][1] = gsl::narrow<u16>(revidx);
+                mData[ret_i][0] = u16{idx};
+                mData[ret_i][1] = u16{revidx};
                 ++ret_i;
             }
         }
@@ -117,7 +117,7 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
         log2_size < gBitReverses.size()) [[likely]]
     {
         for(auto &rev : gBitReverses[log2_size])
-            std::swap(buffer[rev[0]], buffer[rev[1]]);
+            std::swap(buffer[rev[0].c_val], buffer[rev[1].c_val]);
 
         /* Iterative form of Danielson-Lanczos lemma */
         for(auto const i : std::views::iota(0_uz, log2_size))

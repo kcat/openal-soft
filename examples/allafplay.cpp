@@ -926,11 +926,11 @@ try {
                 al::u8_as_char(outname.u8string()))};
 
         renderFile.write("caff", 4);
-        fwrite16be(1, renderFile);
-        fwrite16be(0, renderFile);
+        fwrite16be(1_u16, renderFile);
+        fwrite16be(0_u16, renderFile);
 
         renderFile.write("desc", 4);
-        fwrite64be(32, renderFile);
+        fwrite64be(32_u64, renderFile);
         fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(RenderSampleRate)),renderFile);
         renderFile.write("lpcm", 4);
 

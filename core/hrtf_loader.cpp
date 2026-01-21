@@ -66,7 +66,7 @@ auto CreateHrtfStore(u32 const rate, u8 const irSize,
         throw std::runtime_error{al::format("Sample rate is too large (max: {}hz)",
             MaxHrtfSampleRate)};
 
-    const auto irCount = size_t{elevs.back().azCount} + elevs.back().irOffset;
+    const auto irCount = size_t{elevs.back().azCount.c_val} + elevs.back().irOffset.c_val;
     auto total = sizeof(HrtfStore);
     total  = RoundFromZero(total, alignof(HrtfStore::Field)); /* Align for field infos */
     total += fields.size_bytes();
@@ -130,8 +130,8 @@ void MirrorLeftHrirs(std::span<HrtfStore::Elevation const> const elevs,
 {
     for(const auto &elev : elevs)
     {
-        const auto evoffset = size_t{elev.irOffset};
-        const auto azcount = size_t{elev.azCount};
+        const auto evoffset = size_t{elev.irOffset.c_val};
+        const auto azcount = size_t{elev.azCount.c_val};
         for(const auto j : std::views::iota(0_uz, azcount))
         {
             const auto lidx = evoffset + j;
@@ -180,8 +180,8 @@ auto readle<uint8_t,8>(std::istream &data) -> uint8_t
 auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
     const auto rate = readle<uint32_t>(data);
-    const auto irCount = readle<uint16_t>(data);
-    const auto irSize = readle<uint16_t>(data);
+    const auto irCount = readle<u16>(data);
+    const auto irSize = readle<u16>(data);
     const auto evCount = readle<uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
@@ -199,7 +199,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     auto elevs = std::vector<HrtfStore::Elevation>(evCount);
     std::ranges::generate(elevs | std::views::transform(&HrtfStore::Elevation::irOffset),
-        [&data] { return readle<uint16_t>(data); });
+        [&data] { return readle<u16>(data); });
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
@@ -219,7 +219,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     for(size_t i{1};i < evCount;i++)
     {
-        elevs[i-1].azCount = gsl::narrow_cast<u16>(elevs[i].irOffset - elevs[i-1].irOffset);
+        elevs[i-1].azCount = elevs[i].irOffset - elevs[i-1].irOffset;
         if(elevs[i-1].azCount < MinAzCount || elevs[i-1].azCount > MaxAzCount)
         {
             throw std::runtime_error{al::format(
@@ -227,7 +227,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MinAzCount, MaxAzCount)};
         }
     }
-    elevs.back().azCount = gsl::narrow_cast<u16>(irCount - elevs.back().irOffset);
+    elevs.back().azCount = irCount - elevs.back().irOffset;
     if(elevs.back().azCount < MinAzCount || elevs.back().azCount > MaxAzCount)
     {
         throw std::runtime_error{al::format(
@@ -235,18 +235,18 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
             elevs.back().azCount, MinAzCount, MaxAzCount)};
     }
 
-    auto coeffs = std::vector(irCount, HrirArray{});
-    auto delays = std::vector(irCount, u8x2{});
+    auto coeffs = std::vector(irCount.c_val, HrirArray{});
+    auto delays = std::vector(irCount.c_val, u8x2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
-        std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
+        std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::elements<0>,
             [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
     });
     std::ranges::generate(delays|std::views::elements<0>, [&data]{return readle<uint8_t>(data);});
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
-    for(size_t i{0};i < irCount;i++)
+    for(size_t i{0};i < irCount.c_val;i++)
     {
         if(delays[i][0] > MaxHrirDelay)
         {
@@ -260,7 +260,8 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     MirrorLeftHrirs(elevs, coeffs, delays);
 
     const auto field = std::array{HrtfStore::Field{0.0f, evCount}};
-    return CreateHrtfStore(rate, gsl::narrow_cast<uint8_t>(irSize), field, elevs, coeffs, delays);
+    return CreateHrtfStore(rate, gsl::narrow_cast<uint8_t>(irSize.c_val), field, elevs, coeffs,
+        delays);
 }
 
 auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
@@ -284,7 +285,7 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     auto elevs = std::vector<HrtfStore::Elevation>(evCount);
     std::ranges::generate(elevs | std::views::transform(&HrtfStore::Elevation::azCount),
-        [&data] { return readle<uint8_t>(data); });
+        [&data] { return u16{readle<uint8_t>(data)}; });
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
@@ -300,11 +301,11 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     elevs[0].irOffset = 0;
     for(size_t i{1};i < evCount;i++)
-        elevs[i].irOffset = gsl::narrow_cast<u16>(elevs[i-1].irOffset + elevs[i-1].azCount);
-    auto const irCount = gsl::narrow_cast<u16>(elevs.back().irOffset + elevs.back().azCount);
+        elevs[i].irOffset = elevs[i-1].irOffset + elevs[i-1].azCount;
+    auto const irCount = elevs.back().irOffset + elevs.back().azCount;
 
-    auto coeffs = std::vector(irCount, HrirArray{});
-    auto delays = std::vector(irCount, u8x2{});
+    auto coeffs = std::vector(irCount.c_val, HrirArray{});
+    auto delays = std::vector(irCount.c_val, u8x2{});
     std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
     {
         std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
@@ -367,7 +368,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
     auto elevs = std::vector<HrtfStore::Elevation>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        const auto distance = readle<uint16_t>(data);
+        const auto distance = readle<u16>(data);
         const auto evCount = readle<uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
@@ -385,7 +386,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MaxEvCount)};
         }
 
-        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
+        fields[f].distance = gsl::narrow_cast<float>(distance.c_val) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance > fields[f-1].distance))
         {
@@ -399,12 +400,12 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
         const auto new_azs = elevs | std::views::transform(&HrtfStore::Elevation::azCount)
                              | std::views::drop(ebase);
-        std::ranges::generate(new_azs, [&data] { return readle<uint8_t>(data); });
+        std::ranges::generate(new_azs, [&data] { return u16{readle<uint8_t>(data)}; });
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
         const auto invazi = std::ranges::find_if_not(new_azs, [](const auto &azi) noexcept
-                                                     { return azi >= MinAzCount && azi <= MaxAzCount; });
+        { return azi >= MinAzCount && azi <= MaxAzCount; });
         if(invazi != new_azs.end())
         {
             const auto idx = std::distance(new_azs.begin(), invazi);
@@ -418,13 +419,12 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
     std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
         [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
     {
-        return HrtfStore::Elevation{cur.azCount,
-            gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
+        return HrtfStore::Elevation{cur.azCount, last.azCount + last.irOffset};
     });
-    auto const irTotal = gsl::narrow_cast<u16>(elevs.back().azCount + elevs.back().irOffset);
+    auto const irTotal = elevs.back().azCount + elevs.back().irOffset;
 
-    auto coeffs = std::vector(irTotal, HrirArray{});
-    auto delays = std::vector(irTotal, u8x2{});
+    auto coeffs = std::vector(irTotal.c_val, HrirArray{});
+    auto delays = std::vector(irTotal.c_val, u8x2{});
     if(channelType == ChanType_LeftOnly)
     {
         if(sampleType == SampleType_S16)
@@ -533,8 +533,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)
                 -> HrtfStore::Elevation
         {
-            return HrtfStore::Elevation{cur.azCount,
-                gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
+            return HrtfStore::Elevation{cur.azCount, last.azCount + last.irOffset};
         });
 
         /* Reverse the order of each field's group of IRs. */
@@ -545,7 +544,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 const HrtfStore::Field &field) -> ptrdiff_t
         {
             auto accum_az = [](const ptrdiff_t count, const HrtfStore::Elevation &elev) noexcept
-                -> ptrdiff_t { return count + elev.azCount; };
+                -> ptrdiff_t { return count + elev.azCount.c_val; };
             const auto elev_mid = elevs.cbegin() + ebase;
             const auto abase = std::accumulate(elevs.cbegin(), elev_mid, ptrdiff_t{0}, accum_az);
             const auto num_azs = std::accumulate(elev_mid, elev_mid + field.evCount, ptrdiff_t{0},
@@ -601,7 +600,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     auto elevs = std::vector<HrtfStore::Elevation>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        const auto distance = readle<uint16_t>(data);
+        const auto distance = readle<u16>(data);
         const auto evCount = readle<uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
@@ -619,7 +618,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MaxEvCount)};
         }
 
-        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
+        fields[f].distance = gsl::narrow_cast<float>(distance.c_val) / 1000.0f;
         fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance < fields[f-1].distance))
         {
@@ -633,7 +632,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
 
         const auto new_azs = elevs | std::views::transform(&HrtfStore::Elevation::azCount)
             | std::views::drop(ebase);
-        std::ranges::generate(new_azs, [&data] { return readle<uint8_t>(data); });
+        std::ranges::generate(new_azs, [&data] { return u16{readle<uint8_t>(data)}; });
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
@@ -652,13 +651,12 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
         [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
     {
-        return HrtfStore::Elevation{cur.azCount,
-            gsl::narrow_cast<u16>(last.azCount + last.irOffset)};
+        return HrtfStore::Elevation{cur.azCount, last.azCount + last.irOffset};
     });
-    auto const irTotal = gsl::narrow_cast<u16>(elevs.back().azCount + elevs.back().irOffset);
+    auto const irTotal = elevs.back().azCount + elevs.back().irOffset;
 
-    auto coeffs = std::vector(irTotal, HrirArray{});
-    auto delays = std::vector(irTotal, u8x2{});
+    auto coeffs = std::vector(irTotal.c_val, HrirArray{});
+    auto delays = std::vector(irTotal.c_val, u8x2{});
     if(channelType == ChanType_LeftOnly)
     {
         std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)

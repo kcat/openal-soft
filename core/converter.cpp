@@ -39,9 +39,9 @@ template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> f32
 { return val; }
 
 template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> f32
-{ return LoadSample<DevFmtByte>(gsl::narrow_cast<i8>(val - 128)); }
+{ return LoadSample<DevFmtByte>(i8{gsl::narrow_cast<std::int8_t>(val - 128)}); }
 template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> f32
-{ return LoadSample<DevFmtShort>(gsl::narrow_cast<i16>(val - 32768)); }
+{ return LoadSample<DevFmtShort>(gsl::narrow_cast<i16>(val.c_val - 32768)); }
 template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> f32
 { return LoadSample<DevFmtInt>(as_signed(val - 2147483648u)); }
 
@@ -91,13 +91,13 @@ template<> auto StoreSample<DevFmtInt>(f32 const val) noexcept -> i32
 template<> auto StoreSample<DevFmtShort>(f32 const val) noexcept -> i16
 { return gsl::narrow_cast<i16>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
 template<> auto StoreSample<DevFmtByte>(f32 const val) noexcept -> i8
-{ return i8{static_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
+{ return i8{gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
 /* Define unsigned output variations. */
 template<> auto StoreSample<DevFmtUInt>(f32 const val) noexcept -> u32
 { return as_unsigned(StoreSample<DevFmtInt>(val)) + 2147483648u; }
 template<> auto StoreSample<DevFmtUShort>(f32 const val) noexcept -> u16
-{ return gsl::narrow_cast<u16>(StoreSample<DevFmtShort>(val) + 32768); }
+{ return u16{static_cast<std::uint16_t>(StoreSample<DevFmtShort>(val) + 32768)}; }
 template<> auto StoreSample<DevFmtUByte>(f32 const val) noexcept -> u8
 { return gsl::narrow_cast<u8>(StoreSample<DevFmtByte>(val).c_val + 128); }
 

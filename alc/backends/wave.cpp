@@ -335,21 +335,21 @@ auto WaveBackend::reset() -> bool
         fwrite32le(40, mFile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
-        fwrite16le(0xFFFE, mFile);
+        fwrite16le(0xFFFE_u16, mFile);
         // 16-bit val, channel count
-        fwrite16le(gsl::narrow_cast<u16>(channels), mFile);
+        fwrite16le(u16{channels}, mFile);
         // 32-bit val, frequency
         fwrite32le(mDevice->mSampleRate, mFile);
         // 32-bit val, bytes per second
         fwrite32le(mDevice->mSampleRate * channels * bytes, mFile);
         // 16-bit val, frame size
-        fwrite16le(gsl::narrow_cast<u16>(channels * bytes), mFile);
+        fwrite16le(u16{channels * bytes}, mFile);
         // 16-bit val, bits per sample
-        fwrite16le(gsl::narrow_cast<u16>(bytes * 8), mFile);
+        fwrite16le(u16{bytes * 8}, mFile);
         // 16-bit val, extra byte count
-        fwrite16le(22, mFile);
+        fwrite16le(22_u16, mFile);
         // 16-bit val, valid bits per sample
-        fwrite16le(gsl::narrow_cast<u16>(bytes * 8), mFile);
+        fwrite16le(u16{bytes * 8}, mFile);
         // 32-bit val, channel mask
         fwrite32le(chanmask, mFile);
         // 16 byte GUID, sub-type format
@@ -358,7 +358,7 @@ auto WaveBackend::reset() -> bool
             (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 16);
 
         mFile.write("data", 4);
-        fwrite32le(~0u, mFile); // 'data' header len; filled in at stop
+        fwrite32le(~0_u32, mFile); // 'data' header len; filled in at stop
 
         mDataStart = mFile.tellp();
     }
@@ -367,9 +367,9 @@ auto WaveBackend::reset() -> bool
         /* 32-bit uint, mFileType */
         mFile.write("caff", 4);
         /* 16-bit uint, mFileVersion */
-        fwrite16be(1, mFile);
+        fwrite16be(1_u16, mFile);
         /* 16-bit uint, mFileFlags */
-        fwrite16be(0, mFile);
+        fwrite16be(0_u16, mFile);
 
         /* Audio Description chunk */
         mFile.write("desc", 4);

@@ -179,14 +179,24 @@ template<typename T>
 struct PropertyCastType {
     template<typename U> [[nodiscard]]
     constexpr auto operator()(U&& value) const noexcept -> T
-    { return gsl::narrow_cast<T>(std::forward<U>(value)); }
+    {
+        if constexpr(al::strong_number<std::remove_cvref_t<U>>)
+            return gsl::narrow_cast<T>(std::forward<U>(value).c_val);
+        else
+            return gsl::narrow_cast<T>(std::forward<U>(value));
+    }
 };
 /* Special-case ALboolean to be an actual bool instead of a char type. */
 template<>
 struct PropertyCastType<ALboolean> {
     template<typename U> [[nodiscard]]
     constexpr auto operator()(U&& value) const noexcept -> ALboolean
-    { return gsl::narrow_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE; }
+    {
+        if constexpr(al::strong_number<std::remove_cvref_t<U>>)
+            return gsl::narrow_cast<bool>(std::forward<U>(value).c_val) ? AL_TRUE : AL_FALSE;
+        else
+            return gsl::narrow_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE;
+    }
 };
 
 

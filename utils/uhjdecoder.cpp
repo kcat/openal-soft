@@ -423,21 +423,21 @@ auto main(std::span<std::string_view> args) -> int
         fwrite32le(40, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
-        fwrite16le(0xFFFE, outfile);
+        fwrite16le(0xFFFE_u16, outfile);
         // 16-bit val, channel count
-        fwrite16le(gsl::narrow<u16>(outchans), outfile);
+        fwrite16le(u16{outchans}, outfile);
         // 32-bit val, frequency
         fwrite32le(gsl::narrow<u32>(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
         fwrite32le(gsl::narrow<u32>(ininfo.samplerate)*outchans*u32{sizeof(f32)}, outfile);
         // 16-bit val, frame size
-        fwrite16le(gsl::narrow<u16>(sizeof(f32)*outchans), outfile);
+        fwrite16le(u16{sizeof(f32)*outchans}, outfile);
         // 16-bit val, bits per sample
-        fwrite16le(gsl::narrow<u16>(sizeof(f32)*8), outfile);
+        fwrite16le(u16{sizeof(f32)*8}, outfile);
         // 16-bit val, extra byte count
-        fwrite16le(22, outfile);
+        fwrite16le(22_u16, outfile);
         // 16-bit val, valid bits per sample
-        fwrite16le(gsl::narrow<u16>(sizeof(f32)*8), outfile);
+        fwrite16le(u16{sizeof(f32)*8}, outfile);
         // 32-bit val, channel mask
         fwrite32le(0, outfile);
         // 16 byte GUID, sub-type format

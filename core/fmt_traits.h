@@ -105,7 +105,7 @@ struct SampleInfo<i16> {
     static constexpr auto silence() noexcept { return 0_i16; }
 
     static constexpr auto to_float(i16 const sample) noexcept -> f32
-    { return gsl::narrow_cast<float>(sample) * (1.0f/32768.0f); }
+    { return gsl::narrow_cast<float>(sample.c_val) * (1.0f/32768.0f); }
 };
 
 template<>

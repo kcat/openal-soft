@@ -292,8 +292,9 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed(?)
          * 16-bit table index. The table index needs to be clamped.
          */
-        auto sample = i32{bit_pack<i16>(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value)};
-        auto ima_idx = isize{bit_pack<i16>(src[srcChan*4 + 3].value, src[srcChan*4 + 2].value)};
+        auto sample = i32{i16::bit_pack(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value).c_val};
+        auto ima_idx = isize{i16::bit_pack(src[srcChan*4 + 3].value,
+            src[srcChan*4 + 2].value).c_val};
         ima_idx = std::clamp(ima_idx, 0_z, MaxStepIndex);
 
         auto const nibbleData = src.subspan((srcStep+srcChan)*4);
@@ -381,14 +382,14 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
          */
         auto const blockpred = u8{std::min(to_integer<u8::value_t>(src[srcChan].value),
             u8::value_t{MSADPCMAdaptionCoeff.size()-1})};
-        auto scale = i32{bit_pack<i16>(src[srcStep + 2*srcChan + 1].value,
-            src[srcStep + 2*srcChan + 0].value)};
+        auto scale = i32{i16::bit_pack(src[srcStep + 2*srcChan + 1].value,
+            src[srcStep + 2*srcChan + 0].value).c_val};
 
         auto sampleHistory = std::array{
-            i32{bit_pack<i16>(src[3*srcStep + 2*srcChan + 1].value,
-                src[3*srcStep + 2*srcChan + 0].value)},
-            i32{bit_pack<i16>(src[5*srcStep + 2*srcChan + 1].value,
-                src[5*srcStep + 2*srcChan + 0].value)}};
+            i32{i16::bit_pack(src[3*srcStep + 2*srcChan + 1].value,
+                src[3*srcStep + 2*srcChan + 0].value).c_val},
+            i32{i16::bit_pack(src[5*srcStep + 2*srcChan + 1].value,
+                src[5*srcStep + 2*srcChan + 0].value).c_val}};
 
         auto const nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);

@@ -206,6 +206,15 @@ public:
         requires std::numeric_limits<T>::has_signaling_NaN
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
 
+    [[nodiscard]] static constexpr
+    auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType requires (sizeof(SelfType) == 2)
+    {
+        using unsigned_t = std::make_unsigned_t<T>;
+        auto ret = static_cast<unsigned_t>((to_integer<unsigned_t>(hi)<<8)
+            | to_integer<unsigned_t>(lo));
+        return std::bit_cast<SelfType>(ret);
+    }
+
     /* Prefix and postfix increment and decrement operators. Only valid for
      * integral types.
      */
@@ -487,7 +496,8 @@ template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> 
 struct u8 : al::number_base<std::uint8_t, u8> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<u8, CharT> : u8::formatter<CharT> { };
 
-using i16 = std::int16_t;
+struct i16 : al::number_base<std::int16_t, i16> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<i16, CharT> : i16::formatter<CharT> { };
 
 struct u16 : al::number_base<std::uint16_t, u16> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
@@ -508,7 +518,7 @@ auto operator ""_i8(unsigned long long const n) noexcept { return i8{n}; }
 auto operator ""_u8(unsigned long long const n) noexcept { return u8{n}; }
 
 [[nodiscard]] consteval
-auto operator ""_i16(unsigned long long const n) noexcept { return gsl::narrow<i16>(n); }
+auto operator ""_i16(unsigned long long const n) noexcept { return i16{n}; }
 [[nodiscard]] consteval
 auto operator ""_u16(unsigned long long const n) noexcept { return u16{n}; }
 

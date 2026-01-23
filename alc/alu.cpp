@@ -2329,7 +2329,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i32
     return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i16
-{ return gsl::narrow_cast<i16>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f))); }
+{ return i16{gsl::narrow_cast<i16>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i8
 { return i8{gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
@@ -2337,7 +2337,7 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i8
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32
 { return as_unsigned(SampleConv<i32>(val)) + 2147483648u; }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u16
-{ return u16{gsl::narrow_cast<std::uint16_t>(SampleConv<i16>(val) + 32768)}; }
+{ return SampleConv<i16>(val).reinterpret_as<u16>() + 32768; }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u8
 { return SampleConv<i8>(val).reinterpret_as<u8>() + 128; }
 

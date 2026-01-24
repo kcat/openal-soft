@@ -13,6 +13,8 @@
 #include "gsl/gsl"
 
 
+struct UInt;
+
 namespace al {
 
 /* A "weak number" is a standard number type. They are prone to implicit
@@ -131,14 +133,41 @@ public:
     using value_t = T;
     T c_val;
 
-    template<weak_number U> force_inline constexpr explicit
-    number_base(U const &value) noexcept(not can_narrow<T, U>) : c_val{convert_to<T>(value)} { }
+    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit
+    number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
+
+    force_inline constexpr explicit
+    number_base(ConstantNum<T> const &value) noexcept : c_val{value.c_val} { }
+
+    template<weak_number U> force_inline static constexpr
+    auto make_from(U const &value) noexcept(not can_narrow<T, U>) -> SelfType
+    {
+        /* Converting to a floating point type isn't checked here because it's
+         * nearly impossible to otherwise ensure a large enough integer or
+         * precise enough double will correctly fit in the target type. Since
+         * converting to floating point results in the nearest value instead of
+         * being modulo wrapped, this should be considered fine.
+         */
+        if constexpr(std::floating_point<T>)
+            return SelfType{static_cast<T>(value)};
+        else
+            return SelfType{convert_to<T>(value)};
+    }
+
+    [[nodiscard]] static constexpr
+    auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType
+        requires(sizeof(SelfType) == 2)
+    {
+        auto const ret = static_cast<std::uint16_t>((to_integer<std::uint16_t>(hi)<<8)
+            | to_integer<std::uint16_t>(lo));
+        return std::bit_cast<SelfType>(ret);
+    }
 
     /* Copy assignment from another strong number type, only for types that
      * won't narrow.
      */
-    template<strong_number U> requires(not std::is_base_of_v<number_base, U>)
-    constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
+    template<strong_number U> requires(not std::is_base_of_v<number_base, U>) constexpr
+    auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
     {
         static_assert(not can_narrow<T, typename U::value_t>,
             "Invalid narrowing assignment; use .cast_to<U>() or .reinterpret_as<U>() to convert");
@@ -172,11 +201,8 @@ public:
         noexcept(not can_narrow<typename U::value_t,T> or std::floating_point<typename U::value_t>)
         -> U
     {
-        /* Converting to a floating point type isn't checked here because it's
-         * nearly impossible to otherwise ensure a large enough integer or
-         * precise enough double will correctly fit in the target type. Since
-         * converting to floating point results in the nearest value instead of
-         * being modulo wrapped, this should be considered fine.
+        /* Like make_from, converting to a floating point type isn't checked
+         * here.
          */
         if constexpr(std::floating_point<typename U::value_t>)
             return U{static_cast<U::value_t>(c_val)};
@@ -189,6 +215,8 @@ public:
      */
     template<strong_number U> [[nodiscard]] constexpr
     auto reinterpret_as() const noexcept -> U { return U{static_cast<U::value_t>(c_val)}; }
+
+    [[nodiscard]] constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
 
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
@@ -205,15 +233,6 @@ public:
     static consteval auto signaling_NaN() noexcept
         requires std::numeric_limits<T>::has_signaling_NaN
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
-
-    [[nodiscard]] static constexpr
-    auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType requires (sizeof(SelfType) == 2)
-    {
-        using unsigned_t = std::make_unsigned_t<T>;
-        auto ret = static_cast<unsigned_t>((to_integer<unsigned_t>(hi)<<8)
-            | to_integer<unsigned_t>(lo));
-        return std::bit_cast<SelfType>(ret);
-    }
 
     /* Prefix and postfix increment and decrement operators. Only valid for
      * integral types.
@@ -314,13 +333,15 @@ public:
     DECL_BINARY(&)
     DECL_BINARY(^)
 #undef DECL_BINARY
-    /* Binary ops >> and << between a strong number type and integer constant.
-     * The shift amount must fit into an u8 regardless of the left-side type.
+    /* Binary ops >> and << between a strong number type and weak integer.
+     * Unlike the other operations, these don't require the weak integer to be
+     * constant because the result type is always the same as the left-side
+     * operand.
      */
 #define DECL_BINARY(op)                                                       \
-    [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(SelfType const &lhs, ConstantNum<std::uint8_t> const &rhs) noexcept \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
+    template<std::unsigned_integral U> [[nodiscard]] force_inline friend      \
+    constexpr auto operator op(SelfType const &lhs, U const &rhs) noexcept    \
+    { return SelfType{static_cast<T>(lhs.c_val op rhs)}; }
     DECL_BINARY(>>)
     DECL_BINARY(<<)
 #undef DECL_BINARY
@@ -511,16 +532,30 @@ using usize = std::size_t;
 using f32 = float;
 using f64 = double;
 
+struct UInt : al::number_base<unsigned, UInt> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<UInt, CharT> : UInt::formatter<CharT> { };
+
+namespace al {
+
+template<weak_number T, typename SelfType>
+    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] constexpr
+auto number_base<T,SelfType>::popcount() const noexcept -> UInt requires(std::integral<T>)
+{
+    using unsigned_t = std::make_unsigned_t<T>;
+    return UInt{static_cast<unsigned>(std::popcount(static_cast<unsigned_t>(c_val)))};
+}
+
+} /* namespace al */
 
 [[nodiscard]] consteval
-auto operator ""_i8(unsigned long long const n) noexcept { return i8{n}; }
+auto operator ""_i8(unsigned long long const n) noexcept { return i8::make_from(n); }
 [[nodiscard]] consteval
-auto operator ""_u8(unsigned long long const n) noexcept { return u8{n}; }
+auto operator ""_u8(unsigned long long const n) noexcept { return u8::make_from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i16(unsigned long long const n) noexcept { return i16{n}; }
+auto operator ""_i16(unsigned long long const n) noexcept { return i16::make_from(n); }
 [[nodiscard]] consteval
-auto operator ""_u16(unsigned long long const n) noexcept { return u16{n}; }
+auto operator ""_u16(unsigned long long const n) noexcept { return u16::make_from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_i32(unsigned long long const n) noexcept { return gsl::narrow<i32>(n); }

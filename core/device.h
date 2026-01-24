@@ -136,7 +136,7 @@ struct MixParams {
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = u8{j};
+                    idx = u8{static_cast<u8::value_t>(j)};
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }

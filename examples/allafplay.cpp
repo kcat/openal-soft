@@ -410,12 +410,12 @@ auto LafStream::readChunk() -> u32
     }
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
-    mNumEnabled = gsl::narrow<u32>(std::accumulate(mEnabledTracks.cbegin(),
-        mEnabledTracks.cend(), 0, [](int const val, u8 const in) -> int
-    { return val + std::popcount(in.c_val); }));
+    mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(),
+        UInt{0u}, [](UInt const val, u8 const in) -> UInt
+    { return val + in.popcount(); }).c_val;
 
     /* Make sure enable bits aren't set for non-existent tracks. */
-    if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= 1u<<(mNumTracks&7))
+    if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= 1_u8<<(mNumTracks&7))
         throw std::runtime_error{"Invalid channel enable bits"};
 
     /* Each chunk is exactly one second long, with samples interleaved for each
@@ -453,7 +453,7 @@ auto LafStream::readChunk() -> u32
 auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::span<std::byte>
 {
     auto const todo = std::min(usize{mSampleRate}, count);
-    if((mEnabledTracks[trackidx>>3] & u8{1<<(trackidx&7)}) != 0)
+    if((mEnabledTracks[trackidx>>3] & (1_u8<<(trackidx&7))) != 0)
     {
         /* If the track is enabled, get the real index (skipping disabled
          * tracks), and deinterlace it into the mono line.
@@ -461,10 +461,10 @@ auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::sp
         auto const idx = std::invoke([this,trackidx]() -> u32
         {
             auto const bits = std::span{mEnabledTracks}.first(trackidx>>3);
-            auto const res = std::accumulate(bits.begin(), bits.end(), 0_i32,
-                [](int const val, u8 const in) -> int { return val + std::popcount(in.c_val); })
-                + std::popcount((mEnabledTracks[trackidx>>3] & u8{(1u<<(trackidx&7))-1}).c_val);
-            return gsl::narrow_cast<u32>(res);
+            auto const res = std::accumulate(bits.begin(), bits.end(), UInt{0},
+                [](UInt const val, u8 const in) -> UInt { return val + in.popcount(); })
+                + (mEnabledTracks[trackidx>>3] & ((1_u8<<(trackidx&7))-1)).popcount();
+            return gsl::narrow_cast<u32>(res.c_val);
         });
 
         auto const step = usize{mNumEnabled};

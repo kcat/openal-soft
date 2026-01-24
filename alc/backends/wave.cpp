@@ -334,19 +334,19 @@ auto WaveBackend::reset() -> bool
         // 16-bit val, format type id (extensible: 0xFFFE)
         fwrite16le(0xFFFE_u16, mFile);
         // 16-bit val, channel count
-        fwrite16le(u16{channels}, mFile);
+        fwrite16le(u16::make_from(channels), mFile);
         // 32-bit val, frequency
         fwrite32le(mDevice->mSampleRate, mFile);
         // 32-bit val, bytes per second
         fwrite32le(mDevice->mSampleRate * channels * bytes, mFile);
         // 16-bit val, frame size
-        fwrite16le(u16{channels * bytes}, mFile);
+        fwrite16le(u16::make_from(channels * bytes), mFile);
         // 16-bit val, bits per sample
-        fwrite16le(u16{bytes * 8}, mFile);
+        fwrite16le(u16::make_from(bytes * 8), mFile);
         // 16-bit val, extra byte count
         fwrite16le(22_u16, mFile);
         // 16-bit val, valid bits per sample
-        fwrite16le(u16{bytes * 8}, mFile);
+        fwrite16le(u16::make_from(bytes * 8), mFile);
         // 32-bit val, channel mask
         fwrite32le(chanmask, mFile);
         // 16 byte GUID, sub-type format

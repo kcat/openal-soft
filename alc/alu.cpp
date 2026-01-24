@@ -2329,9 +2329,9 @@ template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i32
     return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
 }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i16
-{ return i16{gsl::narrow_cast<i16>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
+{ return i16{gsl::narrow_cast<i16::value_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> i8
-{ return i8{gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
+{ return i8{gsl::narrow_cast<i8::value_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
 /* Define unsigned output variations. */
 template<> [[nodiscard]] auto SampleConv(f32 const val) noexcept -> u32

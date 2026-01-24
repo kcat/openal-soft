@@ -165,7 +165,12 @@ auto readle(std::istream &data) -> T
 
     alignas(T) auto ret = std::array<char,sizeof(T)>{};
     if(!data.read(ret.data(), num_bits/8))
-        return gsl::narrow_cast<T>(EOF);
+    {
+        if constexpr(al::strong_number<T>)
+            return T{gsl::narrow_cast<typename T::value_t>(EOF)};
+        else
+            return gsl::narrow_cast<T>(EOF);
+    }
     if constexpr(std::endian::native == std::endian::big)
         std::reverse(ret.begin(), ret.end());
 

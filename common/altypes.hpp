@@ -183,11 +183,11 @@ public:
         return *this;
     }
 
-    /* Conversion operator to other strong number types. Will throw if the
-     * conversion narrows.
+    /* Conversion operator to other strong number types. Only valid for
+     * non-narrowing conversions.
      */
-    template<strong_number U> force_inline constexpr explicit
-    operator U() noexcept(not can_narrow<typename U::value_t, T>)
+    template<strong_number U> requires(not can_narrow<typename U::value_t, T>) force_inline
+    constexpr explicit operator U() noexcept
     { return U{convert_to<typename U::value_t>(c_val)}; }
 
     /* Non-narrowing conversion method. */

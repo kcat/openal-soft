@@ -411,8 +411,8 @@ auto LafStream::readChunk() -> u32
 
     mEnabledTracks = std::bit_cast<decltype(mEnabledTracks)>(enableTrackBits);
     mNumEnabled = std::accumulate(mEnabledTracks.cbegin(), mEnabledTracks.cend(),
-        UInt{0u}, [](UInt const val, u8 const in) -> UInt
-    { return val + in.popcount(); }).c_val;
+        0_u32, [](u32 const val, u8 const in) -> u32
+    { return val + in.popcount().c_val; });
 
     /* Make sure enable bits aren't set for non-existent tracks. */
     if(mNumEnabled > 0 && mEnabledTracks[((mNumTracks+7_uz)>>3) - 1] >= 1_u8<<(mNumTracks&7))
@@ -461,10 +461,9 @@ auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::sp
         auto const idx = std::invoke([this,trackidx]() -> u32
         {
             auto const bits = std::span{mEnabledTracks}.first(trackidx>>3);
-            auto const res = std::accumulate(bits.begin(), bits.end(), UInt{0},
-                [](UInt const val, u8 const in) -> UInt { return val + in.popcount(); })
-                + (mEnabledTracks[trackidx>>3] & ((1_u8<<(trackidx&7))-1)).popcount();
-            return gsl::narrow_cast<u32>(res.c_val);
+            return std::accumulate(bits.begin(), bits.end(), 0_u32,
+                [](u32 const val, u8 const in) -> u32 { return val + in.popcount().c_val; })
+                + (mEnabledTracks[trackidx>>3] & ((1_u8<<(trackidx&7))-1)).popcount().c_val;
         });
 
         auto const step = usize{mNumEnabled};

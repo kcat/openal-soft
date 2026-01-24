@@ -13,8 +13,6 @@
 #include "gsl/gsl"
 
 
-struct UInt;
-
 namespace al {
 
 /* A "weak number" is a standard number type. They are prone to implicit
@@ -99,6 +97,9 @@ concept strong_unsigned_integral = strong_number<T>
 
 template<typename T>
 concept strong_floating_point = strong_number<T> and std::floating_point<typename T::value_t>;
+
+
+struct UInt;
 
 
 /* Strong numbers are implemented using CRTP to act as a mixin of sorts. To
@@ -532,10 +533,9 @@ using usize = std::size_t;
 using f32 = float;
 using f64 = double;
 
-struct UInt : al::number_base<unsigned, UInt> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<UInt, CharT> : UInt::formatter<CharT> { };
-
 namespace al {
+
+struct UInt : number_base<unsigned, UInt> { using number_base::number_base; using number_base::operator=; };
 
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] constexpr
@@ -546,6 +546,8 @@ auto number_base<T,SelfType>::popcount() const noexcept -> UInt requires(std::in
 }
 
 } /* namespace al */
+
+template<typename CharT> struct al::formatter<al::UInt, CharT> : al::UInt::formatter<CharT> { };
 
 [[nodiscard]] consteval
 auto operator ""_i8(unsigned long long const n) noexcept { return i8::make_from(n); }

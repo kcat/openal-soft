@@ -248,7 +248,7 @@ void WinMMPlayback::open(std::string_view name)
 
 auto WinMMPlayback::reset() -> bool
 {
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(u64{mDevice->mBufferSize} *
+    mDevice->mBufferSize = gsl::narrow_cast<u32>(u64::value_t{mDevice->mBufferSize} *
         mFormat.nSamplesPerSec / mDevice->mSampleRate);
     mDevice->mBufferSize = (mDevice->mBufferSize+3) & ~0x3_u32;
     mDevice->mUpdateSize = mDevice->mBufferSize / 4;

@@ -403,8 +403,8 @@ auto LafStream::readChunk() -> u32
          * more to give.
          */
         if(mSampleCount < ~0_u64 || infile.gcount() != 0)
-            fmt::println(std::cerr, "Premature end of file ({} of {} samples)", mCurrentSample,
-                mSampleCount);
+            fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
+                mCurrentSample.c_val, mSampleCount.c_val);
         mSampleCount = mCurrentSample;
         return 0_u32;
     }
@@ -423,7 +423,7 @@ auto LafStream::readChunk() -> u32
      * remaining for a full second.
      */
     auto const numsamples = gsl::narrow<usize>(std::min(u64{mSampleRate},
-        mSampleCount-mCurrentSample));
+        mSampleCount-mCurrentSample).c_val);
 
     /* Choose the smaller of std::streamsize or isize, to ensure neither the
      * read size or range drop size get truncated.
@@ -435,18 +435,18 @@ auto LafStream::readChunk() -> u32
     if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
         const auto framesize = BytesFromQuality(mQuality) * mNumEnabled;
-        const auto samplesread = al::saturate_cast<u64>(infile.gcount()) / framesize;
+        const auto samplesread = i64{infile.gcount()}.saturate_as<u64>() / u64{framesize};
         mCurrentSample += samplesread;
         if(mSampleCount < ~0_u64)
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
-                mCurrentSample, mSampleCount);
+                mCurrentSample.c_val, mSampleCount.c_val);
         mSampleCount = mCurrentSample;
         std::ranges::fill(mSampleChunk | std::views::drop(numsamples*framesize), char{});
-        return gsl::narrow<u32>(samplesread);
+        return gsl::narrow<u32>(samplesread.c_val);
     }
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
-    mCurrentSample += numsamples;
+    mCurrentSample += u64{numsamples};
     return gsl::narrow<u32>(numsamples);
 }
 
@@ -710,8 +710,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     if(laf->mSampleCount < ~0_u64)
-        fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
-            static_cast<double>(laf->mSampleCount)/static_cast<double>(laf->mSampleRate));
+        fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount.c_val,
+            static_cast<double>(laf->mSampleCount.c_val)/static_cast<double>(laf->mSampleRate));
     else
         fmt::println("Length: unbounded");
 
@@ -981,7 +981,7 @@ try {
         if(chanmask)
         {
             renderFile.write("chan", 4);
-            fwrite64be(12, renderFile);
+            fwrite64be(12_u64, renderFile);
             fwrite32be(0x10000, renderFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
             fwrite32be(chanmask, renderFile);
             fwrite32be(0, renderFile);
@@ -1215,7 +1215,7 @@ try {
             auto const dataLen = renderEnd - renderStart;
             if(renderFile.seekp(renderStart-8))
             {
-                fwrite64be(gsl::narrow<u64>(dataLen), renderFile);
+                fwrite64be(i64{dataLen}.cast_to<u64>(), renderFile);
                 renderFile.seekp(0, std::ios_base::end);
             }
         }

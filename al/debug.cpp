@@ -291,12 +291,12 @@ try {
     auto &debug = context->mDebugGroups.back();
     if(count > 0)
     {
-        const auto filterbase = (1u<<srcIdxs[0]) | (1u<<typeIdxs[0]);
+        const auto filterbase = (1_u64<<srcIdxs[0]) | (1_u64<<typeIdxs[0]);
 
         std::ranges::for_each(std::views::counted(ids, count),
             [enable,filterbase,&debug](const u32 id)
         {
-            const auto filter = u64{filterbase} | (u64{id} << 32);
+            const auto filter = filterbase | (u64{id} << 32);
 
             const auto iter = std::ranges::lower_bound(debug.mIdFilters, filter);
             if(!enable && (iter == debug.mIdFilters.cend() || *iter != filter))

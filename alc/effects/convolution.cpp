@@ -310,7 +310,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     if(device->mSampleRate != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->mSampleRate);
     const auto resampledCount = static_cast<u32>(
-        (u64{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
+        (u64::value_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
     const auto splitter = BandSplitter{device->mXOverFreq/static_cast<float>(device->mSampleRate)};

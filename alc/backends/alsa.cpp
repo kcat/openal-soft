@@ -670,9 +670,9 @@ auto AlsaPlayback::reset() -> bool
     }
 
     auto allowmmap = GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true);
-    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * 1000000_u64
+    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * u64::value_t{1000000}
         / mDevice->mSampleRate);
-    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * 1000000_u64
+    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * u64::value_t{1000000}
         / mDevice->mSampleRate);
     auto rate = mDevice->mSampleRate;
 

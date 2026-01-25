@@ -172,7 +172,7 @@ void WaveBackend::mixerProc()
         while(avail-done >= mDevice->mUpdateSize)
         {
             mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
-            done += mDevice->mUpdateSize;
+            done += i64{mDevice->mUpdateSize};
 
             if constexpr(std::endian::native != std::endian::little)
             {
@@ -214,8 +214,8 @@ void WaveBackend::mixerProc()
          */
         if(done >= mDevice->mSampleRate)
         {
-            auto const s = seconds{done/mDevice->mSampleRate};
-            done %= mDevice->mSampleRate;
+            auto const s = seconds{(done/i64{mDevice->mSampleRate}).c_val};
+            done %= i64{mDevice->mSampleRate};
             start += s;
         }
     }
@@ -370,7 +370,7 @@ auto WaveBackend::reset() -> bool
 
         /* Audio Description chunk */
         mFile.write("desc", 4);
-        fwrite64be(32, mFile);
+        fwrite64be(32_u64, mFile);
         /* 64-bit double, mSampleRate */
         fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(mDevice->mSampleRate)), mFile);
         /* 32-bit uint, mFormatID */
@@ -415,7 +415,7 @@ auto WaveBackend::reset() -> bool
         {
             /* Channel Layout chunk */
             mFile.write("chan", 4);
-            fwrite64be(12, mFile);
+            fwrite64be(12_u64, mFile);
 
             /* 32-bit uint, mChannelLayoutTag */
             fwrite32be(0x10000, mFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
@@ -481,7 +481,7 @@ void WaveBackend::stop()
             else
             {
                 if(mFile.seekp(mDataStart-8)) // 'data' header len
-                    fwrite64be(gsl::narrow_cast<u64>(dataLen), mFile);
+                    fwrite64be(i64{dataLen}.reinterpret_as<u64>(), mFile);
             }
             mFile.seekp(0, std::ios_base::end);
         }

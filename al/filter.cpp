@@ -287,7 +287,7 @@ auto EnsureFilters(gsl::not_null<al::Device*> const device, usize const needed) 
 try {
     auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
         [](usize const cur, const FilterSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<unsigned>(std::popcount(sublist.mFreeMask)); });
+        { return cur + sublist.mFreeMask.popcount().c_val; });
 
     while(needed > count)
     {
@@ -310,13 +310,14 @@ catch(...) {
 [[nodiscard]]
 auto AllocFilter(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_null<al::Filter*>
 {
-    auto const sublist = std::ranges::find_if(device->FilterList, &FilterSubList::mFreeMask);
+    auto const sublist = std::ranges::find_if(device->FilterList,
+        [](FilterSubList const &slist) { return slist.mFreeMask != 0; });
     auto const lidx = gsl::narrow_cast<u32>(std::distance(device->FilterList.begin(), sublist));
-    auto const slidx = gsl::narrow_cast<u32>(std::countr_zero(sublist->mFreeMask));
+    auto const slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
     auto filter = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mFilters->begin(), slidx))));
+        std::to_address(std::next(sublist->mFilters->begin(), as_signed(slidx)))));
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -350,9 +351,9 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
     if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->FilterList[lidx];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mFilters->begin(), slidx));
+    return std::to_address(std::next(sublist.mFilters->begin(), as_signed(slidx)));
 }
 
 [[nodiscard]]
@@ -631,10 +632,10 @@ FilterSubList::~FilterSubList()
         return;
 
     auto usemask = ~mFreeMask;
-    while(usemask)
+    while(usemask != 0)
     {
-        auto const idx = std::countr_zero(usemask);
-        std::destroy_at(std::to_address(std::next(mFilters->begin(), idx)));
+        auto const idx = usemask.countr_zero();
+        std::destroy_at(std::to_address(std::next(mFilters->begin(), as_signed(idx.c_val))));
         usemask &= ~(1_u64 << idx);
     }
     mFreeMask = ~usemask;

@@ -229,14 +229,14 @@ auto SampleConverter::availableOut(u32 const srcframes) const -> u32
     }
 
     auto DataSize64 = u64{prepcount};
-    DataSize64 += srcframes;
+    DataSize64 += u64{srcframes};
     DataSize64 -= MaxResamplerPadding;
     DataSize64 <<= MixerFracBits;
-    DataSize64 -= mFracOffset;
+    DataSize64 -= u64{mFracOffset};
 
     /* If we have a full prep, we can generate at least one sample. */
-    return gsl::narrow_cast<u32>(std::clamp((DataSize64 + mIncrement-1)/mIncrement, 1_u64,
-        u64{std::numeric_limits<i32>::max()}));
+    return gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{mIncrement}-1)/u64{mIncrement},
+        1_u64, u64{std::numeric_limits<i32>::max()}).c_val);
 }
 
 auto SampleConverter::convert(const void **const src, u32 *const srcframes, void *const dst,
@@ -274,14 +274,14 @@ auto SampleConverter::convert(const void **const src, u32 *const srcframes, void
         const auto DstData = std::span<f32>{mDstSamples};
         const auto DataPosFrac = mFracOffset;
         auto DataSize64 = u64{prepcount};
-        DataSize64 += readable;
+        DataSize64 += u64{readable};
         DataSize64 -= MaxResamplerPadding;
         DataSize64 <<= MixerFracBits;
-        DataSize64 -= DataPosFrac;
+        DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + increment-1)/increment,
-            1_u64, u64{BufferLineSize}));
+        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
+            1_u64, u64{BufferLineSize}).c_val);
         DstSize = std::min(DstSize, dstframes-pos);
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
@@ -371,14 +371,14 @@ auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes
         const auto DstData = std::span{mDstSamples};
         const auto DataPosFrac = mFracOffset;
         auto DataSize64 = u64{prepcount};
-        DataSize64 += readable;
+        DataSize64 += u64{readable};
         DataSize64 -= MaxResamplerPadding;
         DataSize64 <<= MixerFracBits;
-        DataSize64 -= DataPosFrac;
+        DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + increment-1)/increment,
-            1_u64, u64{BufferLineSize}));
+        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
+            1_u64, u64{BufferLineSize}).c_val);
         DstSize = std::min(DstSize, dstframes-pos);
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;

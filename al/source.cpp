@@ -219,10 +219,10 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
         refcount = device->waitForMix();
         *clocktime = device->getClockTime();
         auto const *const voice = GetSourceVoice(Source, context);
-        if(not voice) return 0;
+        if(not voice) return 0_i64;
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
         readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
 
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -237,11 +237,11 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
     {
         if(&item == Current)
             return true;
-        readPos += item.mSampleLen;
+        readPos += i64{item.mSampleLen};
         return false;
     });
-    if(readPos >= std::numeric_limits<i64>::max()>>32)
-        return std::numeric_limits<i64>::max();
+    if(readPos >= i64::max()>>32)
+        return i64::max();
     return (readPos<<32) + (i64{readPosFrac} << (32-MixerFracBits));
 }
 
@@ -266,7 +266,7 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
         if(not voice) return 0.0;
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
         readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
 
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -286,11 +286,11 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
     {
         if(&item == Current)
             return true;
-        readPos += item.mSampleLen;
+        readPos += i64{item.mSampleLen};
         return false;
     });
     return (gsl::narrow_cast<f64>(readPosFrac)/f64{MixerFracOne}
-        + gsl::narrow_cast<f64>(readPos)) / BufferFmt->mSampleRate;
+        + gsl::narrow_cast<f64>(readPos.c_val)) / BufferFmt->mSampleRate;
 }
 
 /* GetSourceOffset
@@ -315,7 +315,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
         if(not voice) return T{0};
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = voice->mPosition.load(std::memory_order_relaxed);
+        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
         readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
 
         std::atomic_thread_fence(std::memory_order_acquire);
@@ -333,42 +333,42 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
     {
         if(&item == Current)
             return true;
-        readPos += item.mSampleLen;
+        readPos += i64{item.mSampleLen};
         return false;
     });
 
     switch(name)
     {
-    case AL_SEC_OFFSET:
-        if constexpr(std::is_floating_point_v<T>)
+        case AL_SEC_OFFSET:
+        if constexpr(std::floating_point<T>)
         {
-            const auto offset = gsl::narrow_cast<T>(readPos)
+            const auto offset = gsl::narrow_cast<T>(readPos.c_val)
                 + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
             return offset / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         }
         else
-            return al::saturate_cast<T>(readPos / BufferFmt->mSampleRate);
+            return al::saturate_cast<T>(readPos.c_val / BufferFmt->mSampleRate);
 
     case AL_SAMPLE_OFFSET:
-        if constexpr(std::is_floating_point_v<T>)
-            return gsl::narrow_cast<T>(readPos) + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
+        if constexpr(std::floating_point<T>)
+            return gsl::narrow_cast<T>(readPos.c_val) + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
         else
-            return al::saturate_cast<T>(readPos);
+            return al::saturate_cast<T>(readPos.c_val);
 
     case AL_BYTE_OFFSET:
         /* Round down to the block boundary. */
         const auto BlockSize = u32{BufferFmt->blockSizeFromFmt()};
-        readPos = readPos / BufferFmt->mBlockAlign * BlockSize;
+        readPos = readPos / i64{BufferFmt->mBlockAlign} * i64{BlockSize};
 
-        if constexpr(std::is_floating_point_v<T>)
-            return gsl::narrow_cast<T>(readPos);
+        if constexpr(std::floating_point<T>)
+            return gsl::narrow_cast<T>(readPos.c_val);
         else
         {
             if(readPos > std::numeric_limits<T>::max())
                 return RoundToZero(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
             if(readPos < std::numeric_limits<T>::min())
                 return RoundToZero(std::numeric_limits<T>::min(), gsl::narrow_cast<T>(BlockSize));
-            return gsl::narrow_cast<T>(readPos);
+            return gsl::narrow_cast<T>(readPos.c_val);
         }
     }
     return T{0};
@@ -393,36 +393,37 @@ auto GetSourceLength(gsl::not_null<const al::Source*> const source, ALenum const
         return T{0};
 
     const auto length = std::accumulate(source->mQueue.begin(), source->mQueue.end(), 0_u64,
-        [](u64 const count, al::BufferQueueItem const &item) { return count + item.mSampleLen; });
+        [](u64 const count, al::BufferQueueItem const &item)
+        { return count + u64{item.mSampleLen}; });
     if(length == 0)
         return T{0};
 
     switch(name)
     {
     case AL_SEC_LENGTH_SOFT:
-        if constexpr(std::is_floating_point_v<T>)
-            return gsl::narrow_cast<T>(length) / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
+        if constexpr(std::floating_point<T>)
+            return gsl::narrow_cast<T>(length.c_val) / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         else
-            return al::saturate_cast<T>(length / BufferFmt->mSampleRate);
+            return al::saturate_cast<T>(length.c_val / BufferFmt->mSampleRate);
 
     case AL_SAMPLE_LENGTH_SOFT:
-        if constexpr(std::is_floating_point_v<T>)
-            return gsl::narrow_cast<T>(length);
+        if constexpr(std::floating_point<T>)
+            return gsl::narrow_cast<T>(length.c_val);
         else
-            return al::saturate_cast<T>(length);
+            return al::saturate_cast<T>(length.c_val);
 
     case AL_BYTE_LENGTH_SOFT:
         /* Round down to the block boundary. */
         const auto BlockSize = u32{BufferFmt->blockSizeFromFmt()};
-        const auto alignedlen = length / BufferFmt->mBlockAlign * BlockSize;
+        const auto alignedlen = length / u64{BufferFmt->mBlockAlign} * u64{BlockSize};
 
-        if constexpr(std::is_floating_point_v<T>)
-            return gsl::narrow_cast<T>(alignedlen);
+        if constexpr(std::floating_point<T>)
+            return gsl::narrow_cast<T>(alignedlen.c_val);
         else
         {
             if(alignedlen > u64{std::numeric_limits<T>::max()})
                 return RoundToZero(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
-            return gsl::narrow_cast<T>(alignedlen);
+            return gsl::narrow_cast<T>(alignedlen.c_val);
         }
     }
     return T{0};
@@ -474,7 +475,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {gsl::narrow_cast<i64>(dbloff),
+            return {i64{gsl::narrow_cast<i64::value_t>(dbloff)},
                 gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case AL_SAMPLE_OFFSET:
@@ -484,13 +485,14 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {gsl::narrow_cast<i64>(dbloff),
+            return {i64{gsl::narrow_cast<i64::value_t>(dbloff)},
                 gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case AL_BYTE_OFFSET:
             /* Determine the ByteOffset (and ensure it is block aligned) */
             const auto blockoffset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
-            return {gsl::narrow_cast<i64>(blockoffset) * BufferFmt->mBlockAlign, 0_u32};
+            return {i64{gsl::narrow_cast<i64::value_t>(blockoffset) * BufferFmt->mBlockAlign},
+                0_u32};
         }
         return {0_i64, 0_u32};
     });
@@ -500,7 +502,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     {
         if(offset < std::numeric_limits<i32>::min())
             return std::nullopt;
-        return VoicePos{gsl::narrow_cast<i32>(offset), frac, &BufferList.front()};
+        return VoicePos{gsl::narrow_cast<i32>(offset.c_val), frac, &BufferList.front()};
     }
 
     if(BufferFmt->mCallback)
@@ -510,13 +512,13 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     {
         if(item.mSampleLen > offset)
             return true;
-        offset -= item.mSampleLen;
+        offset -= i64{item.mSampleLen};
         return false;
     });
     if(iter != BufferList.end())
     {
         /* Offset is in this buffer */
-        return VoicePos{gsl::narrow_cast<i32>(offset), frac, &*iter};
+        return VoicePos{gsl::narrow_cast<i32>(offset.c_val), frac, &*iter};
     }
 
     /* Offset is out of range of the queue */
@@ -727,7 +729,7 @@ auto EnsureSources(gsl::not_null<al::Context*> const context, usize const needed
 {
     auto count = std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(), 0_uz,
         [](usize const cur, const SourceSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<unsigned>(std::popcount(sublist.mFreeMask)); });
+        { return cur + sublist.mFreeMask.popcount().c_val; });
 
     try {
         while(needed > count)
@@ -751,13 +753,14 @@ auto EnsureSources(gsl::not_null<al::Context*> const context, usize const needed
 [[nodiscard]]
 auto AllocSource(gsl::not_null<al::Context*> const context) noexcept -> gsl::not_null<al::Source*>
 {
-    auto const sublist = std::ranges::find_if(context->mSourceList, &SourceSubList::mFreeMask);
+    auto const sublist = std::ranges::find_if(context->mSourceList,
+        [](SourceSubList const &slist) { return slist.mFreeMask != 0; });
     auto const lidx = gsl::narrow_cast<u32>(std::distance(context->mSourceList.begin(), sublist));
-    auto const slidx = gsl::narrow_cast<u32>(std::countr_zero(sublist->mFreeMask));
+    auto const slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
-    auto source = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mSources->begin(), slidx))));
+    auto const source = gsl::make_not_null(std::construct_at(
+        std::to_address(std::next(sublist->mSources->begin(), as_signed(slidx)))));
 #if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX
@@ -808,9 +811,9 @@ auto LookupSource(std::nothrow_t, gsl::not_null<al::Context*> const context, u32
     if(lidx >= context->mSourceList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = context->mSourceList[lidx];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.mSources->begin() + slidx);
+    return std::to_address(sublist.mSources->begin() + as_signed(slidx));
 }
 
 [[nodiscard]]
@@ -832,7 +835,7 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device,
     if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->BufferList[gsl::narrow_cast<usize>(lidx)];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mBuffers->begin(),
         gsl::narrow_cast<isize>(slidx)));
@@ -857,7 +860,7 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device,
     if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->FilterList[gsl::narrow_cast<usize>(lidx)];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mFilters->begin(),
         gsl::narrow_cast<isize>(slidx)));
@@ -882,7 +885,7 @@ auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = context->mEffectSlotList[gsl::narrow_cast<usize>(lidx)];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(sublist.mEffectSlots->begin() + gsl::narrow_cast<isize>(slidx));
 }
@@ -2212,14 +2215,14 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         break;
 
     case AL_SAMPLE_OFFSET_LATENCY_SOFT:
-        if constexpr(std::is_same_v<T,i64>)
+        if constexpr(std::is_same_v<T, ALint64SOFT>)
         {
             CheckSize(2);
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
             auto srcclock = nanoseconds{};
-            values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
+            values[0] = GetSourceSampleOffset(Source, Context, &srcclock).c_val;
             const auto clocktime = std::invoke([device]() -> ClockLatency
             {
                 auto statelock = std::lock_guard{device->StateLock};
@@ -2241,18 +2244,18 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         break;
 
     case AL_SAMPLE_OFFSET_CLOCK_SOFT:
-        if constexpr(std::is_same_v<T,i64>)
+        if constexpr(std::is_same_v<T, ALint64SOFT>)
         {
             CheckSize(2);
             auto srcclock = nanoseconds{};
-            values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
+            values[0] = GetSourceSampleOffset(Source, Context, &srcclock).c_val;
             values[1] = srcclock.count();
             return;
         }
         break;
 
     case AL_SEC_OFFSET_LATENCY_SOFT:
-        if constexpr(std::is_same_v<T,f64>)
+        if constexpr(std::is_same_v<T, ALdouble>)
         {
             CheckSize(2);
             /* Get the source offset with the clock time first. Then get the
@@ -2281,7 +2284,7 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         break;
 
     case AL_SEC_OFFSET_CLOCK_SOFT:
-        if constexpr(std::is_same_v<T,f64>)
+        if constexpr(std::is_same_v<T, ALdouble>)
         {
             CheckSize(2);
             auto srcclock = nanoseconds{};
@@ -2763,7 +2766,7 @@ try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
 
-    SetProperty<f32>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
+    SetProperty<ALfloat>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2778,7 +2781,7 @@ try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
     const auto fvals = std::array{value1, value2, value3};
-    SetProperty<f32>(LookupSource(context, source), context, SourceProp{param}, fvals);
+    SetProperty<ALfloat>(LookupSource(context, source), context, SourceProp{param}, fvals);
 }
 catch(al::base_exception&) {
 }
@@ -2812,7 +2815,7 @@ try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
 
-    SetProperty<f64>(LookupSource(context, source), context, SourceProp{param}, {&value, 1});
+    SetProperty<ALdouble>(LookupSource(context, source), context, SourceProp{param}, {&value, 1});
 }
 catch(al::base_exception&) {
 }
@@ -2827,7 +2830,7 @@ try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
     const auto dvals = std::array{value1, value2, value3};
-    SetProperty<f64>(LookupSource(context, source), context, SourceProp{param}, dvals);
+    SetProperty<ALdouble>(LookupSource(context, source), context, SourceProp{param}, dvals);
 }
 catch(al::base_exception&) {
 }
@@ -2861,7 +2864,7 @@ try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
 
-    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
+    SetProperty<ALint>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2876,7 +2879,7 @@ try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
     const auto ivals = std::array{value1, value2, value3};
-    SetProperty<int>(LookupSource(context, source), context, SourceProp{param}, ivals);
+    SetProperty<ALint>(LookupSource(context, source), context, SourceProp{param}, ivals);
 }
 catch(al::base_exception&) {
 }
@@ -2910,7 +2913,7 @@ try {
     auto proplock = std::lock_guard{context->mPropLock};
     auto srclock = std::lock_guard{context->mSourceLock};
 
-    SetProperty<i64>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
+    SetProperty<ALint64SOFT>(LookupSource(context, source), context, SourceProp{param}, {&value, 1u});
 }
 catch(al::base_exception&) {
 }
@@ -2925,7 +2928,7 @@ try {
     auto srclock = std::lock_guard{context->mSourceLock};
 
     const auto i64vals = std::array{value1, value2, value3};
-    SetProperty<i64>(LookupSource(context, source), context, SourceProp{param}, i64vals);
+    SetProperty<ALint64SOFT>(LookupSource(context, source), context, SourceProp{param}, i64vals);
 }
 catch(al::base_exception&) {
 }
@@ -2979,8 +2982,8 @@ try {
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    auto fvals = std::array<f32, 3>{};
-    GetProperty<f32>(Source, context, SourceProp{param}, fvals);
+    auto fvals = std::array<ALfloat, 3>{};
+    GetProperty<ALfloat>(Source, context, SourceProp{param}, fvals);
     *value1 = fvals[0];
     *value2 = fvals[1];
     *value3 = fvals[2];
@@ -3036,8 +3039,8 @@ try {
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    auto dvals = std::array<f64, 3>{};
-    GetProperty<f64>(Source, context, SourceProp{param}, dvals);
+    auto dvals = std::array<ALdouble, 3>{};
+    GetProperty<ALdouble>(Source, context, SourceProp{param}, dvals);
     *value1 = dvals[0];
     *value2 = dvals[1];
     *value3 = dvals[2];
@@ -3093,8 +3096,8 @@ try {
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    auto ivals = std::array<int,3>{};
-    GetProperty<int>(Source, context, SourceProp{param}, ivals);
+    auto ivals = std::array<ALint,3>{};
+    GetProperty<ALint>(Source, context, SourceProp{param}, ivals);
     *value1 = ivals[0];
     *value2 = ivals[1];
     *value3 = ivals[2];
@@ -3150,8 +3153,8 @@ try {
     if(!(value1 && value2 && value3))
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    auto i64vals = std::array<i64, 3>{};
-    GetProperty<i64>(Source, context, SourceProp{param}, i64vals);
+    auto i64vals = std::array<ALint64SOFT, 3>{};
+    GetProperty<ALint64SOFT>(Source, context, SourceProp{param}, i64vals);
     *value1 = i64vals[0];
     *value2 = i64vals[1];
     *value3 = i64vals[2];
@@ -3689,11 +3692,11 @@ SourceSubList::~SourceSubList()
         return;
 
     auto usemask = ~mFreeMask;
-    while(usemask)
+    while(usemask != 0)
     {
-        const auto idx = std::countr_zero(usemask);
+        const auto idx = usemask.countr_zero();
         usemask &= ~(1_u64 << idx);
-        std::destroy_at(std::to_address(mSources->begin() + idx));
+        std::destroy_at(std::to_address(mSources->begin() + as_signed(idx.c_val)));
     }
     mFreeMask = ~usemask;
     SubListAllocator{}.deallocate(mSources, 1);

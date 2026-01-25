@@ -1930,7 +1930,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
 
-    mDevice->mUpdateSize = gsl::narrow_cast<u32>((u64{mOutUpdateSize}*mDevice->mSampleRate
+    mDevice->mUpdateSize = gsl::narrow_cast<u32>((u64::value_t{mOutUpdateSize}*mDevice->mSampleRate
         + (mFormat.Format.nSamplesPerSec-1)) / mFormat.Format.nSamplesPerSec);
     mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
@@ -2278,16 +2278,16 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
          * implicitly two update periods on the device.
          */
         mOutUpdateSize = buffer_len;
-        mDevice->mUpdateSize = gsl::narrow_cast<u32>(u64{buffer_len} * mDevice->mSampleRate /
-            mFormat.Format.nSamplesPerSec);
+        mDevice->mUpdateSize = gsl::narrow_cast<u32>(u64::value_t{buffer_len}
+            * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
         mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     }
     else
     {
         mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
-        mDevice->mBufferSize = gsl::narrow_cast<u32>(u64{buffer_len} * mDevice->mSampleRate /
-            mFormat.Format.nSamplesPerSec);
+        mDevice->mBufferSize = gsl::narrow_cast<u32>(u64::value_t{buffer_len}
+            * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
         mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
             mDevice->mBufferSize/2u);
     }

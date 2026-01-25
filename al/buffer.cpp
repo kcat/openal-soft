@@ -186,7 +186,7 @@ auto EnsureBuffers(gsl::not_null<al::Device*> const device, usize const needed) 
 try {
     auto count = std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
         [](usize const cur, const BufferSubList &sublist) noexcept -> usize
-        { return cur + gsl::narrow_cast<u32>(std::popcount(sublist.mFreeMask)); });
+        { return cur + sublist.mFreeMask.popcount().c_val; });
 
     while(needed > count)
     {
@@ -208,13 +208,14 @@ catch(...) {
 [[nodiscard]]
 auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_null<al::Buffer*>
 {
-    auto sublist = std::ranges::find_if(device->BufferList, &BufferSubList::mFreeMask);
-    auto lidx = std::distance(device->BufferList.begin(), sublist);
-    auto slidx = std::countr_zero(sublist->mFreeMask);
+    auto sublist = std::ranges::find_if(device->BufferList,
+        [](BufferSubList const &slist) { return slist.mFreeMask != 0; });
+    auto lidx = gsl::narrow_cast<u32>(std::distance(device->BufferList.begin(), sublist));
+    auto slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
     auto const buffer = gsl::make_not_null(std::construct_at(
-        std::to_address(sublist->mBuffers->begin() + slidx)));
+        std::to_address(sublist->mBuffers->begin() + as_signed(slidx))));
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->mId = gsl::narrow_cast<u32>((lidx<<6) | slidx) + 1;
@@ -251,9 +252,9 @@ inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device
     if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device->BufferList[lidx];
-    if(sublist.mFreeMask & (1_u64 << slidx)) [[unlikely]]
+    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mBuffers->begin(), slidx));
+    return std::to_address(std::next(sublist.mBuffers->begin(), as_signed(slidx)));
 }
 
 [[nodiscard]]
@@ -1753,10 +1754,10 @@ BufferSubList::~BufferSubList()
         return;
 
     auto usemask = ~mFreeMask;
-    while(usemask)
+    while(usemask != 0)
     {
-        auto const idx = std::countr_zero(usemask);
-        std::destroy_at(std::to_address(mBuffers->begin() + idx));
+        auto const idx = usemask.countr_zero();
+        std::destroy_at(std::to_address(mBuffers->begin() + as_signed(idx.c_val)));
         usemask &= ~(1_u64 << idx);
     }
     mFreeMask = ~usemask;

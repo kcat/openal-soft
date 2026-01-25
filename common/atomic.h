@@ -43,8 +43,8 @@ inline auto gAtomicWaitCounter = 0_u32;
 #define ULF_WAKE_ALL 0x00000100
 
 extern "C" {
-auto __attribute__((weak_import)) __ulock_wait(u32 op, void *addr, u64 value, u32 timeout) -> int;
-auto __attribute__((weak_import)) __ulock_wake(u32 op, void *addr, u64 wake_value) -> int;
+auto __attribute__((weak_import)) __ulock_wait(std::uint32_t op, void *addr, std::uint64_t value, std::uint32_t timeout) -> int;
+auto __attribute__((weak_import)) __ulock_wake(std::uint32_t op, void *addr, std::uint64_t wake_value) -> int;
 } /* extern "C" */
 #endif
 

@@ -107,7 +107,7 @@ DIAGNOSTIC_POP
 namespace {
 
 using voidp = void*;
-using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1_i64<<32)>>;
+using fixed32 = std::chrono::duration<int64_t, std::ratio<1, (int64_t{1}<<32)>>;
 using nanoseconds = std::chrono::nanoseconds;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
@@ -1007,7 +1007,7 @@ void AudioState::handler()
         auto chansvar = layout.getChannels();
         if(auto *mask = std::get_if<uint64_t>(&chansvar))
             return *mask;
-        return 0_u64;
+        return uint64_t{0};
     });
     mDstChanLayout = 0;
     mFormat = AL_NONE;

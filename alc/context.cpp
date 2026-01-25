@@ -150,7 +150,7 @@ Context::~Context()
 
     auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
         [](usize const cur, SourceSubList const &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
+    { return cur + (~sublist.mFreeMask).popcount().c_val; });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -163,7 +163,7 @@ Context::~Context()
     mDefaultSlot = nullptr;
     count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
         [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-    { return cur + gsl::narrow_cast<unsigned>(std::popcount(~sublist.mFreeMask)); });
+    { return cur + (~sublist.mFreeMask).popcount().c_val; });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -308,12 +308,12 @@ void ForEachSource(al::Context *context, std::invocable<al::Source&> auto&& func
     std::ranges::for_each(context->mSourceList, [&func](SourceSubList &sublist)
     {
         auto usemask = ~sublist.mFreeMask;
-        while(usemask)
+        while(usemask != 0)
         {
-            const auto idx = as_unsigned(std::countr_zero(usemask));
+            const auto idx = usemask.countr_zero();
             usemask ^= 1_u64 << idx;
 
-            std::invoke(func, (*sublist.mSources)[idx]);
+            std::invoke(func, (*sublist.mSources)[idx.c_val]);
         }
     });
 }

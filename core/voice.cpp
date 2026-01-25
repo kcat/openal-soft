@@ -810,25 +810,25 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
                  */
                 const auto ext = increment <= MixerFracOne;
                 auto dataSize64 = u64{dstRemaining - ext};
-                dataSize64 = (dataSize64*increment + fracPos) >> MixerFracBits;
+                dataSize64 = (dataSize64*u64{increment} + u64{fracPos}) >> MixerFracBits;
                 /* Also include resampler padding. */
-                dataSize64 += ext + MaxResamplerEdge;
+                dataSize64 += u64{ext + MaxResamplerEdge};
 
                 if(dataSize64 <= SrcSizeMax)
-                    return std::array{dstRemaining, gsl::narrow_cast<u32>(dataSize64)};
+                    return std::array{dstRemaining, gsl::narrow_cast<u32>(dataSize64.c_val)};
 
                 /* If the source size got saturated, we can't fill the desired
                  * dst size. Figure out how many dst samples we can fill.
                  */
                 dataSize64 = SrcSizeMax - MaxResamplerEdge;
-                dataSize64 = ((dataSize64<<MixerFracBits) - fracPos) / increment;
+                dataSize64 = ((dataSize64<<MixerFracBits) - u64{fracPos}) / u64{increment};
                 if(dataSize64 < dstRemaining)
                 {
                     /* Some resamplers require the destination being 16-byte
                      * aligned, so limit to a multiple of 4 samples to maintain
                      * alignment if we need to do another iteration after this.
                      */
-                    return std::array{gsl::narrow_cast<u32>(dataSize64)&~3_u32, SrcSizeMax};
+                    return std::array{gsl::narrow_cast<u32>(dataSize64.c_val)&~3_u32, SrcSizeMax};
                 }
                 return std::array{dstRemaining, SrcSizeMax};
             });

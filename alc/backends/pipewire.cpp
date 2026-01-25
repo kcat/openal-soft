@@ -1019,11 +1019,11 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         {
             errno = 0;
             auto *serial_end = gsl::zstring{};
-            serial_id = std::strtoull(serial_str, &serial_end, 0);
+            serial_id = u64{std::strtoull(serial_str, &serial_end, 0)};
             if(*serial_end != '\0' || errno == ERANGE)
             {
                 ERR("Unexpected object serial: {}", serial_str);
-                serial_id = info->id;
+                serial_id = u64{info->id};
             }
         }
 #endif
@@ -1450,7 +1450,7 @@ class PipeWirePlayback final : public BackendBase {
     void stop() override;
     auto getClockLatency() -> ClockLatency override;
 
-    uint64_t mTargetId{PwIdAny};
+    u64 mTargetId{PwIdAny};
     nanoseconds mTimeBase{0};
     ThreadMainloop mLoop;
     PwContextPtr mContext;
@@ -1697,9 +1697,9 @@ auto PipeWirePlayback::reset() -> bool
         mDevice->mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
 #else
-    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId.c_val).c_str());
 #endif
 
     auto plock = MainloopUniqueLock{mLoop};
@@ -1810,7 +1810,7 @@ void PipeWirePlayback::start()
 
             mDevice->mUpdateSize = updatesize;
             mDevice->mBufferSize = gsl::narrow_cast<u32>(ptime.buffered + delay +
-                u64{totalbuffers}*updatesize);
+                uint64_t{totalbuffers}*updatesize);
             break;
         }
 #else
@@ -2118,9 +2118,9 @@ void PipeWireCapture::open(std::string_view name)
         mDevice->mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
 #else
-    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId.c_val).c_str());
 #endif
 
     auto plock = MainloopUniqueLock{mLoop};

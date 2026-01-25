@@ -371,7 +371,7 @@ auto eax_create_al_effect_slot(gsl::not_null<al::Context*> context) -> EaxAlEffe
 #endif // ALSOFT_EAX
 
 struct EffectSlotSubList {
-    uint64_t mFreeMask{~0_u64};
+    u64 mFreeMask{~0_u64};
     gsl::owner<std::array<al::EffectSlot,64>*> mEffectSlots{nullptr};
 
     EffectSlotSubList() noexcept = default;

@@ -120,7 +120,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
     const auto samplesPerCycle = props.Frequency > 0.0f
         ? samplerate/props.Frequency + 0.5f : 1.0f;
     const auto range = static_cast<u32>(std::clamp(samplesPerCycle, 1.0f, samplerate));
-    mIndex = static_cast<u32>(u64{mIndex} * range / mRange);
+    mIndex = static_cast<u32>((u64{mIndex} * u64{range} / u64{mRange}).c_val);
     mRange = range;
 
     if(mRange == 1)

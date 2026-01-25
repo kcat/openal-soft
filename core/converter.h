@@ -40,11 +40,11 @@ public:
     [[nodiscard]] auto convertPlanar(const void **src, u32 *srcframes, void *const*dst, u32 dstframes) -> u32;
     [[nodiscard]] auto availableOut(u32 srcframes) const -> u32;
 
-    using SampleOffset = std::chrono::duration<i64, std::ratio<1,MixerFracOne>>;
+    using SampleOffset = std::chrono::duration<std::int64_t, std::ratio<1,MixerFracOne>>;
     [[nodiscard]] auto currentInputDelay() const noexcept -> SampleOffset
     {
         auto const prep = i64{mSrcPrepCount} - MaxResamplerEdge;
-        return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
+        return SampleOffset{(prep<<MixerFracBits).c_val + mFracOffset};
     }
 
     static auto Create(DevFmtType srcType, DevFmtType dstType, usize numchans, u32 srcRate,

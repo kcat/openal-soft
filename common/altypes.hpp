@@ -155,7 +155,7 @@ public:
             return SelfType{convert_to<T>(value)};
     }
 
-    [[nodiscard]] static constexpr
+    [[nodiscard]] force_inline static constexpr
     auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType
         requires(sizeof(SelfType) == 2)
     {
@@ -167,8 +167,8 @@ public:
     /* Copy assignment from another strong number type, only for types that
      * won't narrow.
      */
-    template<strong_number U> requires(not std::is_base_of_v<number_base, U>) constexpr
-    auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
+    template<strong_number U> requires(not std::is_base_of_v<number_base, U>) force_inline
+    constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
     {
         static_assert(not can_narrow<T, typename U::value_t>,
             "Invalid narrowing assignment; use .cast_to<U>() or .reinterpret_as<U>() to convert");
@@ -177,7 +177,8 @@ public:
     }
 
     /* Copy assignment from a compatible constant. */
-    constexpr auto operator=(ConstantNum<T> const &rhs) & noexcept LIFETIMEBOUND -> number_base&
+    force_inline constexpr
+    auto operator=(ConstantNum<T> const &rhs) & noexcept LIFETIMEBOUND -> number_base&
     {
         c_val = rhs.c_val;
         return *this;
@@ -191,13 +192,17 @@ public:
     { return U{convert_to<typename U::value_t>(c_val)}; }
 
     /* Non-narrowing conversion method. */
-    template<strong_number U> requires(not can_narrow<typename U::value_t, T>) [[nodiscard]]
-    constexpr auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
+    template<strong_number U> requires(not can_narrow<typename U::value_t, T>)
+    [[nodiscard]] force_inline constexpr
+    auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
+
+    template<strong_number U> [[nodiscard]] consteval
+    auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
 
     /* Potentially narrowing conversion method. Throws if the converted value
      * narrows.
      */
-    template<strong_number U> [[nodiscard]] constexpr
+    template<strong_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
         noexcept(not can_narrow<typename U::value_t,T> or std::floating_point<typename U::value_t>)
         -> U
@@ -214,10 +219,34 @@ public:
     /* "Raw" conversion method, essentially applying a static_cast to the
      * underlying type.
      */
-    template<strong_number U> [[nodiscard]] constexpr
+    template<strong_number U> [[nodiscard]] force_inline constexpr
     auto reinterpret_as() const noexcept -> U { return U{static_cast<U::value_t>(c_val)}; }
 
-    [[nodiscard]] constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
+    template<strong_number U> [[nodiscard]] constexpr
+    auto saturate_as() const noexcept -> U
+    {
+        static_assert(not std::floating_point<T> or strong_floating_point<U>,
+            "Floating point to integer is not currently handled in .saturate_as()");
+        if constexpr(strong_integral<U> and U::digits < std::numeric_limits<T>::digits)
+        {
+            if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+            {
+                if(c_val < U::min().template as<SelfType>().c_val)
+                    return U::min();
+            }
+            if(c_val > U::max().template as<SelfType>().c_val)
+                return U::max();
+        }
+        if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+        {
+            if(c_val < 0)
+                return U{0};
+        }
+        return U{static_cast<U::value_t>(c_val)};
+    }
+
+    [[nodiscard]] force_inline constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
+    [[nodiscard]] force_inline constexpr auto countr_zero() const noexcept -> UInt requires(std::integral<T>);
 
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
@@ -234,6 +263,7 @@ public:
     static consteval auto signaling_NaN() noexcept
         requires std::numeric_limits<T>::has_signaling_NaN
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
+    static constexpr auto digits = std::numeric_limits<T>::digits;
 
     /* Prefix and postfix increment and decrement operators. Only valid for
      * integral types.
@@ -340,8 +370,8 @@ public:
      * operand.
      */
 #define DECL_BINARY(op)                                                       \
-    template<std::unsigned_integral U> [[nodiscard]] force_inline friend      \
-    constexpr auto operator op(SelfType const &lhs, U const &rhs) noexcept    \
+    template<std::integral U> [[nodiscard]] force_inline friend constexpr     \
+    auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
     { return SelfType{static_cast<T>(lhs.c_val op rhs)}; }
     DECL_BINARY(>>)
     DECL_BINARY(<<)
@@ -362,7 +392,7 @@ public:
     {                                                                         \
         static_assert(not can_narrow<T, typename U::value_t>,                 \
             "Incompatible right side operand");                               \
-        lhs.c_val op rhs.c_val;                                               \
+        lhs.c_val op static_cast<T>(rhs.c_val);                               \
         return lhs;                                                           \
     }
     DECL_BINASSIGN(+=)
@@ -417,7 +447,7 @@ public:
     force_inline friend constexpr                                             \
     auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<std::uint8_t> const &rhs)  \
         noexcept -> SelfType&                                                 \
-    { lhs.c_val op rhs.c_val; return lhs; }
+    { lhs.c_val op static_cast<T>(rhs.c_val); return lhs; }
     DECL_BINASSIGN(>>=)
     DECL_BINASSIGN(<<=)
 #undef DECL_BINASSIGN
@@ -526,8 +556,13 @@ template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT
 
 using i32 = std::int32_t;
 using u32 = std::uint32_t;
-using i64 = std::int64_t;
-using u64 = std::uint64_t;
+
+struct i64 : al::number_base<std::int64_t, i64> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT> { };
+
+struct u64 : al::number_base<std::uint64_t, u64> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
+
 using isize = std::make_signed_t<std::size_t>;
 using usize = std::size_t;
 using f32 = float;
@@ -538,11 +573,21 @@ namespace al {
 struct UInt : number_base<unsigned, UInt> { using number_base::number_base; using number_base::operator=; };
 
 template<weak_number T, typename SelfType>
-    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] constexpr
-auto number_base<T,SelfType>::popcount() const noexcept -> UInt requires(std::integral<T>)
+    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
+constexpr auto number_base<T,SelfType>::popcount() const noexcept -> UInt
+    requires(std::integral<T>)
 {
     using unsigned_t = std::make_unsigned_t<T>;
     return UInt{static_cast<unsigned>(std::popcount(static_cast<unsigned_t>(c_val)))};
+}
+
+template<weak_number T, typename SelfType>
+    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
+constexpr auto number_base<T,SelfType>::countr_zero() const noexcept -> UInt
+    requires(std::integral<T>)
+{
+    using unsigned_t = std::make_unsigned_t<T>;
+    return UInt{static_cast<unsigned>(std::countr_zero(static_cast<unsigned_t>(c_val)))};
 }
 
 } /* namespace al */
@@ -565,9 +610,9 @@ auto operator ""_i32(unsigned long long const n) noexcept { return gsl::narrow<i
 auto operator ""_u32(unsigned long long const n) noexcept { return gsl::narrow<u32>(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i64(unsigned long long const n) noexcept { return gsl::narrow<i64>(n); }
+auto operator ""_i64(unsigned long long const n) noexcept { return i64::make_from(n); }
 [[nodiscard]] consteval
-auto operator ""_u64(unsigned long long const n) noexcept { return gsl::narrow<u64>(n); }
+auto operator ""_u64(unsigned long long const n) noexcept { return u64::make_from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize>(n); }

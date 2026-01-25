@@ -1788,10 +1788,10 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         std::ranges::for_each(context->mEffectSlotList,[device,context](EffectSlotSubList &sublist)
         {
             auto usemask = ~sublist.mFreeMask;
-            while(usemask)
+            while(usemask != 0)
             {
-                const auto idx = gsl::narrow_cast<unsigned>(std::countr_zero(usemask));
-                auto &slot = (*sublist.mEffectSlots)[idx];
+                const auto idx = usemask.countr_zero();
+                auto &slot = (*sublist.mEffectSlots)[idx.c_val];
                 usemask &= ~(1_u64 << idx);
 
                 const auto slotbase = slot.mSlot;
@@ -1817,10 +1817,10 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         std::ranges::for_each(context->mSourceList, [num_sends](SourceSubList &sublist)
         {
             auto usemask = ~sublist.mFreeMask;
-            while(usemask)
+            while(usemask != 0)
             {
-                const auto idx = gsl::narrow_cast<unsigned>(std::countr_zero(usemask));
-                auto &source = (*sublist.mSources)[idx];
+                const auto idx = usemask.countr_zero();
+                auto &source = (*sublist.mSources)[idx.c_val];
                 usemask &= ~(1_u64 << idx);
 
                 const auto sendrange = source.mSend | std::views::drop(num_sends);

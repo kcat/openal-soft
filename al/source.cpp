@@ -1456,6 +1456,9 @@ auto PropTypeName<ALdouble>() -> std::string_view { return "double"sv; }
 template<typename T, typename U>
 struct PairStruct { T First; U Second; };
 
+template<typename T, typename U>
+PairStruct(T, U) -> PairStruct<T, U>;
+
 template<typename T, usize N>
 auto GetCheckers(gsl::not_null<al::Context*> const context, SourceProp const prop,
     std::span<T,N> const values)

@@ -41,6 +41,9 @@ using namespace std::string_view_literals;
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 auto EventThread(gsl::not_null<al::Context*> const context) -> void
 {
     auto const ring = gsl::not_null{context->mAsyncEvents.get()};

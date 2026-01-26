@@ -204,6 +204,8 @@ void do_assert(const char *message, const std::source_location loc=std::source_l
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 enum class Quality : u8::value_t {
     s8, s16, f32, s24

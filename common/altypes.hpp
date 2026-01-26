@@ -336,11 +336,7 @@ public:
 #define DECL_BINARY(op)                                                       \
     template<strong_number U> [[nodiscard]] force_inline friend constexpr     \
     auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
-    {                                                                         \
-        static_assert(std::unsigned_integral<typename U::value_t>,            \
-            "Right-side operand must be an unsigned integer");                \
-        return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};              \
-    }
+    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
     DECL_BINARY(>>)
     DECL_BINARY(<<)
 #undef DECL_BINARY
@@ -405,19 +401,13 @@ public:
     DECL_BINASSIGN(^=)
 #undef DECL_BINASSIGN
     /* Binary assignment ops >>= and <<= between strong number types. Only
-     * available for integer types, and the right operand must be an unsigned
-     * type.
+     * available for integer types.
      */
 #define DECL_BINASSIGN(op)                                                    \
     template<strong_number U> force_inline friend constexpr                   \
     auto operator op(SelfType &lhs LIFETIMEBOUND, U const &rhs) noexcept      \
         -> SelfType&                                                          \
-    {                                                                         \
-        static_assert(std::unsigned_integral<typename U::value_t>,            \
-            "Right side operand must be unsigned");                           \
-        lhs.c_val op rhs.c_val;                                               \
-        return lhs;                                                           \
-    }
+    { lhs.c_val op rhs.c_val; return lhs; }
     DECL_BINASSIGN(>>=)
     DECL_BINASSIGN(<<=)
 #undef DECL_BINASSIGN

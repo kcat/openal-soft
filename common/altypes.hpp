@@ -120,6 +120,11 @@ template<weak_number T, typename SelfType>
 class number_base {
     friend SelfType;
 
+    /* Force printing smaller types as int. Always treat these as numeric
+     * values even when backed by character types.
+     */
+    using fmttype_t = std::conditional_t<not can_narrow<int, T>, int, T>;
+
     /* Defaulted constructor/destructor/copy assignment functions, which will be
      * inherited by the parent type. Allows the type to be trivial.
      */
@@ -265,187 +270,6 @@ public:
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
     static constexpr auto digits = std::numeric_limits<T>::digits;
 
-    /* Prefix and postfix increment and decrement operators. Only valid for
-     * integral types.
-     */
-    force_inline friend constexpr
-    auto operator++(SelfType &self LIFETIMEBOUND) noexcept -> SelfType& requires std::integral<T>
-    { ++self.c_val; return self; }
-    [[nodiscard]] force_inline friend constexpr
-    auto operator++(SelfType &self, int) noexcept -> SelfType requires std::integral<T>
-    {
-        auto const old = self;
-        ++self.c_val;
-        return old;
-    }
-    force_inline friend constexpr
-    auto operator--(SelfType &self LIFETIMEBOUND) noexcept -> SelfType& requires std::integral<T>
-    { --self.c_val; return self; }
-    [[nodiscard]] force_inline friend constexpr
-    auto operator--(SelfType &self, int) noexcept -> SelfType requires std::integral<T>
-    {
-        auto const old = self;
-        --self.c_val;
-        return old;
-    }
-
-    /* No automatic type promotion for our unary ops. Unary - is only valid for
-     * signed types.
-     */
-    [[nodiscard]] force_inline friend constexpr
-    auto operator-(SelfType const &value) noexcept -> SelfType
-    {
-        static_assert(std::is_signed_v<T>, "Unary operator- is only valid for signed types");
-        return SelfType{static_cast<T>(-value.c_val)};
-    }
-    [[nodiscard]] force_inline friend constexpr
-    auto operator~(SelfType const &value) noexcept -> SelfType
-    { return SelfType{static_cast<T>(~value.c_val)}; }
-
-    /* Our binary ops only promote to the larger of the two operands, when the
-     * conversion can't narrow (e.g. signed char + short = short, while
-     * unsigned + short = error).
-     */
-
-    /* Binary ops +, -, *, /, %, |, &, and ^ between strong number types. */
-#define DECL_BINARY(op)                                                       \
-    template<strong_number U> [[nodiscard]] force_inline friend constexpr     \
-    auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
-    {                                                                         \
-        static_assert(has_common<T, typename U::value_t>,                     \
-            "Incompatible operands");                                         \
-        if constexpr(not can_narrow<T, typename U::value_t>)                  \
-            return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)};          \
-        else if constexpr(not can_narrow<typename U::value_t, T>)             \
-            return U{static_cast<typename U::value_t>(lhs.c_val op rhs.c_val)}; \
-        else                                                                  \
-            return SelfType{};                                                \
-    }
-    DECL_BINARY(+)
-    DECL_BINARY(-)
-    DECL_BINARY(*)
-    DECL_BINARY(/)
-    DECL_BINARY(%)
-    DECL_BINARY(|)
-    DECL_BINARY(&)
-    DECL_BINARY(^)
-#undef DECL_BINARY
-    /* Binary ops >> and << between strong number types. Only available for
-     * integer types, and the right-side operand must be an unsigned type.
-     */
-#define DECL_BINARY(op)                                                       \
-    template<strong_number U> [[nodiscard]] force_inline friend constexpr     \
-    auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
-    DECL_BINARY(>>)
-    DECL_BINARY(<<)
-#undef DECL_BINARY
-
-    /* Binary ops +, -, *, /, %, |, &, and ^ between a strong number type and
-     * numeric constant.
-     */
-#define DECL_BINARY(op)                                                       \
-    [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(SelfType const &lhs, ConstantNum<T> const &rhs) noexcept \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }              \
-    [[nodiscard]] force_inline friend constexpr                               \
-    auto operator op(ConstantNum<T> const &lhs, SelfType const &rhs) noexcept \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs.c_val)}; }
-    DECL_BINARY(+)
-    DECL_BINARY(-)
-    DECL_BINARY(*)
-    DECL_BINARY(/)
-    DECL_BINARY(%)
-    DECL_BINARY(|)
-    DECL_BINARY(&)
-    DECL_BINARY(^)
-#undef DECL_BINARY
-    /* Binary ops >> and << between a strong number type and weak integer.
-     * Unlike the other operations, these don't require the weak integer to be
-     * constant because the result type is always the same as the left-side
-     * operand.
-     */
-#define DECL_BINARY(op)                                                       \
-    template<std::integral U> [[nodiscard]] force_inline friend constexpr     \
-    auto operator op(SelfType const &lhs, U const &rhs) noexcept              \
-    { return SelfType{static_cast<T>(lhs.c_val op rhs)}; }
-    DECL_BINARY(>>)
-    DECL_BINARY(<<)
-#undef DECL_BINARY
-
-    /* Our binary assignment ops only promote the rhs value to the lhs type
-     * when the conversion can't lose information, and produces an error
-     * otherwise.
-     */
-
-    /* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between strong
-     * number types. %=, |=, &=, and ^= are only available for integer types.
-     */
-#define DECL_BINASSIGN(op)                                                    \
-    template<strong_number U> force_inline friend constexpr                   \
-    auto operator op(SelfType &lhs LIFETIMEBOUND, U const &rhs) noexcept      \
-        -> SelfType&                                                          \
-    {                                                                         \
-        static_assert(not can_narrow<T, typename U::value_t>,                 \
-            "Incompatible right side operand");                               \
-        lhs.c_val op static_cast<T>(rhs.c_val);                               \
-        return lhs;                                                           \
-    }
-    DECL_BINASSIGN(+=)
-    DECL_BINASSIGN(-=)
-    DECL_BINASSIGN(*=)
-    DECL_BINASSIGN(/=)
-    DECL_BINASSIGN(%=)
-    DECL_BINASSIGN(|=)
-    DECL_BINASSIGN(&=)
-    DECL_BINASSIGN(^=)
-#undef DECL_BINASSIGN
-    /* Binary assignment ops >>= and <<= between strong number types. Only
-     * available for integer types.
-     */
-#define DECL_BINASSIGN(op)                                                    \
-    template<strong_number U> force_inline friend constexpr                   \
-    auto operator op(SelfType &lhs LIFETIMEBOUND, U const &rhs) noexcept      \
-        -> SelfType&                                                          \
-    { lhs.c_val op rhs.c_val; return lhs; }
-    DECL_BINASSIGN(>>=)
-    DECL_BINASSIGN(<<=)
-#undef DECL_BINASSIGN
-
-    /* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between a
-     * strong number type and numeric constant.
-     */
-#define DECL_BINASSIGN(op)                                                    \
-    force_inline friend constexpr                                             \
-    auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<T> const &rhs)  \
-        noexcept -> SelfType&                                                 \
-    { lhs.c_val op rhs.c_val; return lhs; }
-    DECL_BINASSIGN(+=)
-    DECL_BINASSIGN(-=)
-    DECL_BINASSIGN(*=)
-    DECL_BINASSIGN(/=)
-    DECL_BINASSIGN(%=)
-    DECL_BINASSIGN(|=)
-    DECL_BINASSIGN(&=)
-    DECL_BINASSIGN(^=)
-#undef DECL_BINASSIGN
-    /* Binary assignment ops >>= and <<= between a strong number type and
-     * integer constant. The shift amount must fit into an u8 regardless of the
-     * left operand type.
-     */
-#define DECL_BINASSIGN(op)                                                    \
-    force_inline friend constexpr                                             \
-    auto operator op(SelfType &lhs LIFETIMEBOUND, ConstantNum<std::uint8_t> const &rhs)  \
-        noexcept -> SelfType&                                                 \
-    { lhs.c_val op static_cast<T>(rhs.c_val); return lhs; }
-    DECL_BINASSIGN(>>=)
-    DECL_BINASSIGN(<<=)
-#undef DECL_BINASSIGN
-
-    /* Force printing smaller types as int. Always treat these as numeric
-     * values even when backed by character types.
-     */
-    using fmttype_t = std::conditional_t<not can_narrow<int, T>, int, T>;
     template<typename CharT>
     struct formatter : al::formatter<fmttype_t, CharT> {
         auto format(SelfType const &obj, auto& ctx) const
@@ -456,7 +280,183 @@ public:
     };
 };
 
+} /* namespace al */
+
+/* Prefix and postfix increment and decrement operators. Only valid for
+ * integral types.
+ */
+template<al::strong_integral T> force_inline constexpr
+auto operator++(T &self LIFETIMEBOUND) noexcept -> T&
+{ ++self.c_val; return self; }
+template<al::strong_integral T> [[nodiscard]] force_inline constexpr
+auto operator++(T &self, int) noexcept -> T
+{
+    auto const old = self;
+    ++self.c_val;
+    return old;
 }
+
+template<al::strong_integral T> force_inline constexpr
+auto operator--(T &self LIFETIMEBOUND) noexcept -> T&
+{ --self.c_val; return self; }
+template<al::strong_integral T> [[nodiscard]] force_inline constexpr
+auto operator--(T &self, int) noexcept -> T
+{
+    auto const old = self;
+    --self.c_val;
+    return old;
+}
+
+/* No automatic type promotion for our unary ops. Unary - is only valid for
+ * signed types.
+ */
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto operator-(T const &value) noexcept -> T
+{
+    static_assert(std::is_signed_v<T>, "Unary operator- is only valid for signed types");
+    return T{static_cast<T::value_t>(-value.c_val)};
+}
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto operator~(T const &value) noexcept -> T
+{ return T{static_cast<T::value_t>(~value.c_val)}; }
+
+/* Our binary ops only promote to the larger of the two operands, when the
+ * conversion can't narrow (e.g. signed char + short = short, while
+ * unsigned + short = error).
+ */
+
+/* Binary ops +, -, *, /, %, |, &, and ^ between strong number types. */
+#define DECL_BINARY(op)                                                       \
+template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline \
+constexpr auto operator op(T const &lhs, U const &rhs) noexcept               \
+{                                                                             \
+    static_assert(al::has_common<typename T::value_t, typename U::value_t>,   \
+        "Incompatible operands");                                             \
+    if constexpr(not al::can_narrow<typename T::value_t, typename U::value_t>)\
+        return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)};   \
+    else if constexpr(not al::can_narrow<typename U::value_t, typename T::value_t>) \
+        return U{static_cast<typename U::value_t>(lhs.c_val op rhs.c_val)};   \
+    else                                                                      \
+        return T{};                                                           \
+}
+DECL_BINARY(+)
+DECL_BINARY(-)
+DECL_BINARY(*)
+DECL_BINARY(/)
+DECL_BINARY(%)
+DECL_BINARY(|)
+DECL_BINARY(&)
+DECL_BINARY(^)
+#undef DECL_BINARY
+/* Binary ops >> and << between strong number types. Note that the right-side
+ * operand type doesn't influence the return type, as this is only modifying
+ * the left-side operand value.
+ */
+#define DECL_BINARY(op)                                                       \
+template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline \
+constexpr auto operator op(T const &lhs, U const &rhs) noexcept -> T          \
+{ return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)}; }
+DECL_BINARY(>>)
+DECL_BINARY(<<)
+#undef DECL_BINARY
+
+/* Binary ops +, -, *, /, %, |, &, and ^ between a strong number type and
+ * numeric constant.
+ */
+#define DECL_BINARY(op)                                                       \
+template<al::strong_number T> [[nodiscard]] force_inline constexpr            \
+auto operator op(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) noexcept -> T \
+{ return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)}; }       \
+template<al::strong_number T> [[nodiscard]] force_inline constexpr            \
+auto operator op(al::ConstantNum<typename T::value_t> const &lhs, T const &rhs) noexcept -> T \
+{ return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)}; }
+DECL_BINARY(+)
+DECL_BINARY(-)
+DECL_BINARY(*)
+DECL_BINARY(/)
+DECL_BINARY(%)
+DECL_BINARY(|)
+DECL_BINARY(&)
+DECL_BINARY(^)
+#undef DECL_BINARY
+/* Binary ops >> and << between a strong number type and weak integer.
+ * Unlike the other operations, these don't require the weak integer to be
+ * constant because the result type is always the same as the left-side
+ * operand.
+ */
+#define DECL_BINARY(op)                                                       \
+template<al::strong_number T, std::integral U> [[nodiscard]] force_inline     \
+constexpr auto operator op(T const &lhs, U const &rhs) noexcept -> T          \
+{ return T{static_cast<typename T::value_t>(lhs.c_val op rhs)}; }
+DECL_BINARY(>>)
+DECL_BINARY(<<)
+#undef DECL_BINARY
+
+/* Our binary assignment ops only promote the rhs value to the lhs type when
+ * the conversion can't lose information, and produces an error otherwise.
+ */
+
+/* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between strong
+ * number types. %=, |=, &=, and ^= are only available for integer types.
+ */
+#define DECL_BINASSIGN(op)                                                    \
+template<al::strong_number T, al::strong_number U> force_inline constexpr     \
+auto operator op(T &lhs LIFETIMEBOUND, U const &rhs) noexcept -> T&           \
+{                                                                             \
+    static_assert(not al::can_narrow<typename T::value_t, typename U::value_t>, \
+        "Incompatible right side operand");                                   \
+    lhs.c_val op static_cast<typename T::value_t>(rhs.c_val);                 \
+    return lhs;                                                               \
+}
+DECL_BINASSIGN(+=)
+DECL_BINASSIGN(-=)
+DECL_BINASSIGN(*=)
+DECL_BINASSIGN(/=)
+DECL_BINASSIGN(%=)
+DECL_BINASSIGN(|=)
+DECL_BINASSIGN(&=)
+DECL_BINASSIGN(^=)
+#undef DECL_BINASSIGN
+/* Binary assignment ops >>= and <<= between strong number types. Only
+ * available for integer types.
+ */
+#define DECL_BINASSIGN(op)                                                    \
+template<al::strong_number T, al::strong_number U> force_inline constexpr     \
+auto operator op(T &lhs LIFETIMEBOUND, U const &rhs) noexcept -> T&           \
+{ lhs.c_val op rhs.c_val; return lhs; }
+DECL_BINASSIGN(>>=)
+DECL_BINASSIGN(<<=)
+#undef DECL_BINASSIGN
+
+/* Binary assignment ops +=, -=, *=, /=, %=, |=, &=, and ^= between a strong
+ * number type and numeric constant.
+ */
+#define DECL_BINASSIGN(op)                                                    \
+template<al::strong_number T> force_inline constexpr                          \
+auto operator op(T &lhs LIFETIMEBOUND, al::ConstantNum<typename T::value_t> const &rhs) \
+    noexcept -> T&                                                            \
+{ lhs.c_val op rhs.c_val; return lhs; }
+DECL_BINASSIGN(+=)
+DECL_BINASSIGN(-=)
+DECL_BINASSIGN(*=)
+DECL_BINASSIGN(/=)
+DECL_BINASSIGN(%=)
+DECL_BINASSIGN(|=)
+DECL_BINASSIGN(&=)
+DECL_BINASSIGN(^=)
+#undef DECL_BINASSIGN
+/* Binary assignment ops >>= and <<= between a strong number type and integer
+ * constant. The shift amount must fit into an u8 regardless of the left
+ * operand type.
+ */
+#define DECL_BINASSIGN(op)                                                    \
+template<al::strong_number T> force_inline constexpr                          \
+auto operator op(T &lhs LIFETIMEBOUND, al::ConstantNum<std::uint8_t> const &rhs) \
+    noexcept -> T&                                                            \
+{ lhs.c_val op static_cast<typename T::value_t>(rhs.c_val); return lhs; }
+DECL_BINASSIGN(>>=)
+DECL_BINASSIGN(<<=)
+#undef DECL_BINASSIGN
 
 /* Three-way comparison operator between strong number types, from which other
  * comparison operators are synthesized. Implicitly handles signedness

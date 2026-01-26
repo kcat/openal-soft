@@ -69,7 +69,8 @@ auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
  * promotions.
  */
 template<typename T>
-concept strong_number = requires { T::is_strong_number_type; };
+concept strong_number = requires { T::is_strong_number_type; }
+    and std::same_as<T, typename T::self_t>;
 
 template<typename T>
 concept strong_integral = strong_number<T> and std::integral<typename T::value_t>;
@@ -141,6 +142,8 @@ public:
     static constexpr auto is_strong_number_type = true;
 
     using value_t = T;
+    using self_t = SelfType;
+
     T c_val;
 
     template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr

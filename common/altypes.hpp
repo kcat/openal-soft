@@ -146,8 +146,7 @@ public:
 
     T c_val;
 
-    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr
-        explicit(not std::same_as<T, U>)
+    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit
     number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
 
     force_inline constexpr explicit

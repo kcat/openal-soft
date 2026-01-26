@@ -223,7 +223,7 @@ public:
          * here.
          */
         if constexpr(std::floating_point<typename U::value_t>)
-            return U{static_cast<U::value_t>(c_val)};
+            return U{static_cast<typename U::value_t>(c_val)};
         else
             return U{convert_to<typename U::value_t>(c_val)};
     }
@@ -232,7 +232,7 @@ public:
      * underlying type.
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
-    auto reinterpret_as() const noexcept -> U { return U{static_cast<U::value_t>(c_val)}; }
+    auto reinterpret_as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
 
     template<strong_number U> [[nodiscard]] constexpr
     auto saturate_as() const noexcept -> U
@@ -254,7 +254,7 @@ public:
             if(c_val < 0)
                 return U{0};
         }
-        return U{static_cast<U::value_t>(c_val)};
+        return U{static_cast<typename U::value_t>(c_val)};
     }
 
     [[nodiscard]] force_inline constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
@@ -321,11 +321,11 @@ template<al::strong_number T> [[nodiscard]] force_inline constexpr
 auto operator-(T const &value) noexcept -> T
 {
     static_assert(std::is_signed_v<T>, "Unary operator- is only valid for signed types");
-    return T{static_cast<T::value_t>(-value.c_val)};
+    return T{static_cast<typename T::value_t>(-value.c_val)};
 }
 template<al::strong_number T> [[nodiscard]] force_inline constexpr
 auto operator~(T const &value) noexcept -> T
-{ return T{static_cast<T::value_t>(~value.c_val)}; }
+{ return T{static_cast<typename T::value_t>(~value.c_val)}; }
 
 /* Our binary ops only promote to the larger of the two operands, when the
  * conversion can't narrow (e.g. signed char + short = short, while
@@ -473,9 +473,9 @@ template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline co
 auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
     if constexpr(not al::can_narrow<typename T::value_t, typename U::value_t>)
-        return lhs.c_val <=> static_cast<T::value_t>(rhs.c_val);
+        return lhs.c_val <=> static_cast<typename T::value_t>(rhs.c_val);
     else if constexpr(not al::can_narrow<typename U::value_t, typename T::value_t>)
-        return static_cast<U::value_t>(lhs.c_val) <=> rhs.c_val;
+        return static_cast<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
     else if constexpr(std::signed_integral<typename T::value_t>
         and std::unsigned_integral<typename U::value_t>)
     {
@@ -510,7 +510,7 @@ template<al::strong_number T, al::weak_number U> requires(al::has_common<typenam
 [[nodiscard]] force_inline constexpr auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
     if constexpr(not al::can_narrow<typename T::value_t, U>)
-        return lhs.c_val <=> static_cast<T::value_t>(rhs);
+        return lhs.c_val <=> static_cast<typename T::value_t>(rhs);
     else if constexpr(not al::can_narrow<U, typename T::value_t>)
         return static_cast<U>(lhs.c_val) <=> rhs;
 }

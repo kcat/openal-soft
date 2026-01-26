@@ -100,7 +100,7 @@ template<>
 struct DevFmtTypeTraits<DevFmtFloat> { using Type = f32; };
 
 template<DevFmtType T>
-using DevFmtType_t = DevFmtTypeTraits<T>::Type;
+using DevFmtType_t = typename DevFmtTypeTraits<T>::Type;
 
 
 [[nodiscard]]

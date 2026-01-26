@@ -64,20 +64,6 @@ auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
 }
 
 
-/* This ConstantNum class is a wrapper to handle various operations with
- * numeric constants (literals, constexpr values). It can only be initialized
- * with weak numeric constant types, and will fail to compile if the provided
- * value doesn't fit the type it's paired against.
- */
-template<weak_number T>
-struct ConstantNum {
-    T const c_val;
-
-    /* NOLINTNEXTLINE(*-explicit-constructor) */
-    consteval ConstantNum(weak_number auto const &value) noexcept : c_val{convert_to<T>(value)} { }
-};
-
-
 /* A "strong number" is a numeric type derived from the number class below. It
  * has stronger protections from implicit conversions and automatic type
  * promotions.
@@ -97,6 +83,24 @@ concept strong_unsigned_integral = strong_number<T>
 
 template<typename T>
 concept strong_floating_point = strong_number<T> and std::floating_point<typename T::value_t>;
+
+
+/* This ConstantNum class is a wrapper to handle various operations with
+ * numeric constants (literals, constexpr values). It can be initialized with
+ * weak or strong numeric constant types, and will fail to compile if the
+ * provided value doesn't fit the type it's paired against.
+ */
+template<weak_number T>
+struct ConstantNum {
+    T const c_val;
+
+    /* NOLINTBEGIN(*-explicit-constructor) */
+    consteval ConstantNum(weak_number auto const &value) noexcept : c_val{convert_to<T>(value)} { }
+    consteval ConstantNum(strong_number auto const &value) noexcept
+        : c_val{convert_to<T>(value.c_val)}
+    { }
+    /* NOLINTEND(*-explicit-constructor) */
+};
 
 
 struct UInt;

@@ -170,7 +170,7 @@ public:
 
     [[nodiscard]] force_inline static constexpr
     auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType
-        requires(sizeof(SelfType) == 2)
+        requires(sizeof(value_t) == 2)
     {
         auto const ret = static_cast<std::uint16_t>((to_integer<std::uint16_t>(hi)<<8)
             | to_integer<std::uint16_t>(lo));

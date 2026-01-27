@@ -106,9 +106,20 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * Left  = (S + D)/2
  * Right = (S - D)/2
  *
+ * FIXME: There seems to be something incorrect in the initial conversion math,
+ * as some tests indicate the height (Z) is inverted from what it should be.
+ * That is, sounds above the horizon are encoded as if they're below the
+ * horizon, both compared to other encodings, as well as with decoder tests.
+ * I've tested and checked my transforms in different ways but get the same
+ * result, suggesting this is accurate to the original math. This should be
+ * invested, but to fix it for now, we just negate Z:
+ *
+ * S = 0.576794682542*W + 0.333130895776*X + 0.375368569468*Z
+ * D = j(0.88801610065*W + -0.512878512974*X) + 0.666477825862*Y
+ *
  * Or to preapply the half scale:
  *
- * S = 0.288397341271*W + 0.166565447888*X + -0.187684284734*Z
+ * S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z
  * D = j(0.444008050325*W + -0.256439256487*X) + 0.333238912931*Y
  *
  * Left  = S + D
@@ -134,11 +145,11 @@ void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<floa
     std::ranges::copy(zinput, std::next(mZ.begin(), sFilterDelay));
     std::ranges::copy(xinput, std::next(mX.begin(), sFilterDelay));
 
-    /* S = 0.288397341271*W + 0.166565447888*X + -0.187684284734*Z */
+    /* S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z */
     std::ranges::transform(mW | std::views::take(samplesToDo), mX, mS.begin(),
         [](const float w, const float x) { return 0.288397341271f*w + 0.166565447888f*x; });
     std::ranges::transform(mS | std::views::take(samplesToDo), mZ, mS.begin(),
-        [](const float wx, const float z) { return wx + -0.187684284734f*z; });
+        [](const float wx, const float z) { return wx + 0.187684284734f*z; });
 
     /* Precompute j(0.444008050325*W + -0.256439256487*X) and store in mD. */
     auto dstore = mD.begin();
@@ -267,11 +278,11 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
     const auto zinput = assume_aligned_span<16>(InSamples[2].first(samplesToDo));
     const auto xinput = assume_aligned_span<16>(InSamples[3].first(samplesToDo));
 
-    /* S = 0.288397341271*W + 0.166565447888*X - 0.187684284734*Z */
+    /* S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z */
     std::ranges::transform(winput, xinput, mTemp.begin(),
         [](const float w, const float x) { return 0.288397341271f*w + 0.166565447888f*x; });
     std::ranges::transform(mTemp, zinput, mTemp.begin(),
-        [](const float wx, const float z) { return wx - 0.187684284734f*z; });
+        [](const float wx, const float z) { return wx + 0.187684284734f*z; });
     process(mFilter1WXZ, Filter1Coeff, std::span{mTemp}.first(samplesToDo), true,
         std::span{mS}.subspan(1));
     mS[0] = mDelayWXZ; mDelayWXZ = mS[samplesToDo];
@@ -310,5 +321,4 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
 }
 
 template struct TsmeEncoder<TsmeLength256>;
-
 template struct TsmeEncoder<TsmeLength512>;

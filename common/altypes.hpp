@@ -3,6 +3,7 @@
 
 #include <compare>
 #include <concepts>
+#include <cmath>
 #include <cstdint>
 #include <cstddef>
 #include <stdexcept>
@@ -277,6 +278,21 @@ public:
     { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
     static constexpr auto digits = std::numeric_limits<T>::digits;
 
+    /* This returns the numeric limit of the type as the given floating point
+     * type. That is, 2**digits; for integral types, this is one greater than
+     * max, and for floating point types, the greatest integral value before
+     * skipping whole numbers (where nexttoward(x, 0) == x-1 and
+     * nexttoward(x, inf) == x+2).
+     */
+    template<strong_floating_point R> [[nodiscard]] static consteval
+    auto fplimit() noexcept -> R
+    {
+        constexpr auto halflimit = std::uint64_t{1} << (digits-1);
+        constexpr auto res = typename R::value_t{halflimit} * 2;
+        static_assert(res < R::infinity().c_val);
+        return R{res};
+    }
+
     template<typename CharT>
     struct formatter : al::formatter<fmttype_t, CharT> {
         auto format(SelfType const &obj, auto& ctx) const
@@ -491,15 +507,37 @@ auto operator<=>(T const &lhs, U const &rhs) noexcept
         using unsigned_t = std::make_unsigned_t<typename U::value_t>;
         return lhs.c_val <=> static_cast<unsigned_t>(rhs.c_val);
     }
-    /* FIXME: Allow comparing more "incompatible" types. This is difficult with
-     * floating point because, e.g. 2147483647_i32 < 2147483648.0_f32 should be
-     * true, except converting 2147483647 to float to directly compare them
-     * results in 2147483648.0f, making the result false. Converting
-     * 2147483648.0f to int32_t is additionally invalid since an int32_t can't
-     * hold 2147483648 (at best you may get -2147483648, which also makes it
-     * false). While a double would fix this, the problem remains when
-     * comparing i64 and f64.
+    /* All integer<=>integer and fp<=>fp comparisons should be handled above,
+     * as well as some integer<=>fp/fp<=>integer where the integer type can fit
+     * in the fp type. So this only needs to handle the remaining integer<=>fp
+     * and fp<=>integer comparisons.
      */
+    else if constexpr(std::floating_point<typename T::value_t>
+        and std::integral<typename U::value_t>)
+    {
+        if(std::isnan(lhs.c_val))
+            return std::partial_ordering::unordered;
+        if(lhs.c_val < U::min().template as<T>().c_val)
+            return std::partial_ordering::less;
+        if(lhs.c_val >= U::template fplimit<T>().c_val)
+            return std::partial_ordering::greater;
+        if(std::abs(lhs.c_val) < T::template fplimit<T>().c_val)
+            return lhs.c_val <=> static_cast<typename T::value_t>(rhs.c_val);
+        return std::partial_ordering{static_cast<typename U::value_t>(lhs.c_val) <=> rhs.c_val};
+    }
+    else if constexpr(std::integral<typename T::value_t>
+        and std::floating_point<typename U::value_t>)
+    {
+        if(std::isnan(rhs.c_val))
+            return std::partial_ordering::unordered;
+        if(T::min().template as<U>().c_val > rhs.c_val)
+            return std::partial_ordering::greater;
+        if(T::template fplimit<U>().c_val <= rhs.c_val)
+            return std::partial_ordering::less;
+        if(std::abs(rhs.c_val) < U::template fplimit<U>().c_val)
+            return static_cast<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
+        return std::partial_ordering{lhs.c_val <=> static_cast<typename T::value_t>(rhs.c_val)};
+    }
 }
 
 /* Three-way comparison operator between a strong number type and weak number

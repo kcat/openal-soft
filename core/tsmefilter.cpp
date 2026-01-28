@@ -106,13 +106,13 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * Left  = (S + D)/2
  * Right = (S - D)/2
  *
- * FIXME: There seems to be something incorrect in the initial conversion math,
+ * FIXME: There seems to be something incorrect in the initial encoding math,
  * as some tests indicate the height (Z) is inverted from what it should be.
  * That is, sounds above the horizon are encoded as if they're below the
  * horizon, both compared to other encodings, as well as with decoder tests.
  * I've tested and checked my transforms in different ways but get the same
  * result, suggesting this is accurate to the original math. This should be
- * invested, but to fix it for now, we just negate Z:
+ * investigated, but to fix it for now, we just negate Z:
  *
  * S = 0.576794682542*W + 0.333130895776*X + 0.375368569468*Z
  * D = j(0.88801610065*W + -0.512878512974*X) + 0.666477825862*Y

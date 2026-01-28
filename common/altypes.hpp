@@ -97,10 +97,18 @@ struct ConstantNum {
     T const c_val;
 
     /* NOLINTBEGIN(*-explicit-constructor) */
-    consteval ConstantNum(weak_number auto const &value) noexcept : c_val{convert_to<T>(value)} { }
-    consteval ConstantNum(strong_number auto const &value) noexcept
-        : c_val{convert_to<T>(value.c_val)}
-    { }
+    template<weak_number U>
+    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)}
+    {
+        static_assert(std::floating_point<T> or not std::floating_point<U>,
+            "Floating point constant for integer operation");
+    }
+    template<strong_number U>
+    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value.c_val)}
+    {
+        static_assert(std::floating_point<T> or not std::floating_point<U>,
+            "Floating point constant for integer operation");
+    }
     /* NOLINTEND(*-explicit-constructor) */
 };
 

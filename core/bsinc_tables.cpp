@@ -332,8 +332,9 @@ struct BSincFilterArray {
             else
             {
                 /* The last scale index doesn't have scale-related deltas. */
-                for(const auto i [[maybe_unused]] : std::views::iota(0_uz, BSincPhaseCount*m*2))
-                    mTable[idx++] = 0.0f;
+                auto const count = BSincPhaseCount * m * 2;
+                std::ranges::fill(std::span{mTable}.subspan(idx, count), 0.0f);
+                idx += count;
             }
         }
         Ensures(idx == hdr.total_size);

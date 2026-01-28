@@ -17,10 +17,10 @@ struct MixHrtfFilter;
 using f32x2 = std::array<f32, 2>;
 
 
-inline constexpr auto MixerFracBits = 16_i32;
-inline constexpr auto MixerFracOne = 1_i32 << MixerFracBits;
-inline constexpr auto MixerFracMask = MixerFracOne - 1_i32;
-inline constexpr auto MixerFracHalf = MixerFracOne >> 1_i32;
+inline constexpr auto MixerFracBits = 16;
+inline constexpr auto MixerFracOne = 1 << MixerFracBits;
+inline constexpr auto MixerFracMask = MixerFracOne - 1;
+inline constexpr auto MixerFracHalf = MixerFracOne >> 1;
 
 inline constexpr auto GainSilenceThreshold = 0.00001_f32; /* -100dB */
 

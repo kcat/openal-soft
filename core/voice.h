@@ -29,9 +29,9 @@ struct DeviceBase;
 struct EffectSlotBase;
 enum class DistanceModel : u8::value_t;
 
-inline constexpr auto MaxSendCount = 6_uz;
+inline constexpr auto MaxSendCount = 6u;
 
-inline constexpr auto MaxPitch = 10_u32;
+inline constexpr auto MaxPitch = 10u;
 
 inline constinit auto ResamplerDefault = Resampler::Spline;
 

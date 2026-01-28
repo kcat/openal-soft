@@ -152,6 +152,7 @@ public:
 
     using value_t = T;
     using self_t = SelfType;
+    using difference_type = std::make_signed_t<T>;
 
     T c_val;
 
@@ -209,8 +210,10 @@ public:
      * non-narrowing conversions.
      */
     template<strong_number U> requires(not can_narrow<typename U::value_t, T>) force_inline
-    constexpr explicit operator U() noexcept
-    { return U{convert_to<typename U::value_t>(c_val)}; }
+    constexpr explicit operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr explicit
+    operator bool() noexcept requires(std::integral<T>) { return c_val != T{0}; }
 
     /* Non-narrowing conversion method. */
     template<strong_number U> requires(not can_narrow<typename U::value_t, T>)

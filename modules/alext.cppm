@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2025-10-13 19:40:01.687690+00:00
+ * Last regenerated: 2026-01-28 02:29:27.129945+00:00
  */
 
 module;
@@ -842,8 +842,8 @@ using LPALGETBUFFERPTRVDIRECTSOFT = auto (AL_APIENTRY*)(ALCcontext *context, ALu
 using LPALSOURCEPLAYATTIMEDIRECTSOFT = auto (AL_APIENTRY*)(ALCcontext *context, ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT -> void;
 using LPALSOURCEPLAYATTIMEVDIRECTSOFT = auto (AL_APIENTRY*)(ALCcontext *context, ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT -> void;
 
-using LPEAXSETDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
-using LPEAXGETDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
+using LPEAXSETDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, const _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
+using LPEAXGETDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, const _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
 using LPEAXSETBUFFERMODEDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT -> ALboolean;
 using LPEAXGETBUFFERMODEDIRECT = auto (AL_APIENTRY*)(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT -> ALenum;
 #ifdef AL_ALEXT_PROTOTYPES
@@ -1013,8 +1013,8 @@ auto AL_APIENTRY alGetBufferPtrvDirectSOFT(ALCcontext *context, ALuint buffer, A
 auto AL_APIENTRY alSourcePlayAtTimeDirectSOFT(ALCcontext *context, ALuint source, ALint64SOFT start_time) AL_API_NOEXCEPT -> void;
 auto AL_APIENTRY alSourcePlayAtTimevDirectSOFT(ALCcontext *context, ALsizei n, const ALuint *sources, ALint64SOFT start_time) AL_API_NOEXCEPT -> void;
 
-auto AL_APIENTRY EAXSetDirect(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
-auto AL_APIENTRY EAXGetDirect(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
+auto AL_APIENTRY EAXSetDirect(ALCcontext *context, const _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
+auto AL_APIENTRY EAXGetDirect(ALCcontext *context, const _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT -> ALenum;
 auto AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT -> ALboolean;
 auto AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT -> ALenum;
 #endif

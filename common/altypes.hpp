@@ -71,7 +71,7 @@ auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
  */
 template<typename T>
 concept strong_number = requires { T::is_strong_number_type; }
-    and std::same_as<T, typename T::self_t>;
+    and std::derived_from<T, typename T::self_t>;
 
 template<typename T>
 concept strong_integral = strong_number<T> and std::integral<typename T::value_t>;

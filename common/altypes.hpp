@@ -190,11 +190,10 @@ public:
     /* Copy assignment from another strong number type, only for types that
      * won't narrow.
      */
-    template<strong_number U> requires(not std::is_base_of_v<number_base, U>) force_inline
-    constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
+    template<strong_number U>
+        requires(not std::is_base_of_v<number_base, U> and not can_narrow<T, typename U::value_t>)
+    force_inline constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
     {
-        static_assert(not can_narrow<T, typename U::value_t>,
-            "Invalid narrowing assignment; use .cast_to<U>() or .reinterpret_as<U>() to convert");
         c_val = static_cast<T>(rhs.c_val);
         return *this;
     }

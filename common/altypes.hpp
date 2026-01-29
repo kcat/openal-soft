@@ -145,7 +145,8 @@ class number_base {
     constexpr number_base() noexcept = default;
     constexpr number_base(number_base const&) noexcept = default;
     constexpr ~number_base() noexcept = default;
-    constexpr auto operator=(number_base const &rhs) & noexcept -> number_base& = default;
+    constexpr
+    auto operator=(number_base const &rhs) & noexcept LIFETIMEBOUND -> number_base& = default;
 
 public:
     static constexpr auto is_strong_number_type = true;
@@ -159,7 +160,7 @@ public:
     template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit
     number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
 
-    force_inline constexpr explicit
+    force_inline constexpr explicit(false)
     number_base(ConstantNum<T> const &value) noexcept : c_val{value.c_val} { }
 
     template<weak_number U> force_inline static constexpr

@@ -116,6 +116,16 @@ struct ConstantNum {
 struct UInt;
 
 
+namespace detail_ {
+
+template<typename>
+struct signed_difference { using type = void; };
+
+template<typename T> requires(std::integral<T>)
+struct signed_difference<T> { using type = std::make_signed_t<T>; };
+
+}
+
 /* Strong numbers are implemented using CRTP to act as a mixin of sorts. To
  * define a strong numeric type:
  *
@@ -153,7 +163,47 @@ public:
 
     using value_t = T;
     using self_t = SelfType;
-    using difference_type = std::make_signed_t<T>;
+    /* HACK: Annoyingly, iota_view has some strict requirements for what only
+     * needs to be incrementable. It needs std::iter_difference_t<T> to be
+     * "signed-integer-like", which is defined as an alias to either
+     * std::iterator_traits<std::remove_cvref_t<T>>::difference_type or
+     * std::incrementable_traits<std::remove_cvref_t<T>>::difference_type.
+     * As this is not an iterator, that means working with
+     * incrementable_traits::difference_type, which itself is defined in one of
+     * two ways:
+     *
+     * T::difference_type is declared as a "signed-integer-like" type, or
+     * the result of T() - T() being a std::integral type (converted to signed
+     * via std::make_signed_t).
+     *
+     * In this case, T() - T() results in T, not a standard integral, leaving
+     * T::difference_type. To be "signed-integer-like" in turn means to be a
+     * standard signed integral type, or a type that behaves like an signed
+     * integer *with a width larger than any standard integer type*.
+     *
+     * Here, we define a difference_type type that is the standard signed
+     * integral type this strong number models, which satisfies the definition.
+     * Although subtracting two strong numbers does not result in this type,
+     * and I don't know of any standard mechanism to generate or apply this
+     * difference type from/to the incrementable object(s). That makes it feel
+     * like we follow the technical requirements but not the intended
+     * requirements, which could be prone to breaking.
+     *
+     * For its part, cppreference does not specify how this difference_type may
+     * be used with weakly_incrementable (or plain incrementable) objects, so I
+     * have no idea what the purpose of having this type is. Perhaps it may be
+     * enough to have an explicit conversion operator to this type, and support
+     * operator+ and operator- with this type (templated to require this type
+     * specifically, to help prevent implicit conversions to/from other integer
+     * types; so x = difference_type(a - b) and b = a + difference_type(x) will
+     * work). But if it expects a - b to result in a difference_type type
+     * implicitly, or to add anything that can be implicitly converted to
+     * difference_type, that will obviously not work.
+     *
+     * Floating point types define this to void, making this not incrementable.
+     * Which is perfectly fine, since standard fp types aren't either.
+     */
+    using difference_type = typename detail_::signed_difference<T>::type;
 
     T c_val;
 
@@ -211,6 +261,9 @@ public:
      */
     template<strong_number U> requires(not can_narrow<typename U::value_t, T>) force_inline
     constexpr explicit operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
+
+    template<std::same_as<difference_type> U> [[nodiscard]] force_inline constexpr explicit
+    operator U() noexcept { return static_cast<U>(c_val); }
 
     [[nodiscard]] force_inline constexpr explicit
     operator bool() noexcept requires(std::integral<T>) { return c_val != T{0}; }
@@ -414,6 +467,26 @@ DECL_BINARY(>>)
 DECL_BINARY(<<)
 #undef DECL_BINARY
 
+/* Increment/decrement a strong integral using its difference type. */
+#define DECL_BINARY(op)                                                       \
+template<al::strong_integral T, std::same_as<typename T::difference_type> U>  \
+    [[nodiscard]] force_inline constexpr                                      \
+auto operator op(T const &lhs, U const &rhs) noexcept -> T                    \
+{                                                                             \
+    return T{static_cast<typename T::value_t>(lhs.c_val                       \
+        op static_cast<typename T::value_t>(rhs))};                           \
+}                                                                             \
+template<al::strong_integral T, std::same_as<typename T::difference_type> U>  \
+    [[nodiscard]] force_inline constexpr                                      \
+auto operator op(U const &lhs, T const &rhs) noexcept -> T                    \
+{                                                                             \
+    return T{static_cast<typename T::value_t>(                                \
+        static_cast<typename T::value_t>(lhs) op rhs.c_val)};                 \
+}
+DECL_BINARY(+)
+DECL_BINARY(-)
+#undef DECL_BINARY
+
 /* Our binary assignment ops only promote the rhs value to the lhs type when
  * the conversion can't lose information, and produces an error otherwise.
  */
@@ -453,6 +526,16 @@ auto operator op(T &lhs LIFETIMEBOUND, al::ConstantNum<std::uint8_t> const &rhs)
 { lhs.c_val op static_cast<typename T::value_t>(rhs.c_val); return lhs; }
 DECL_BINASSIGN(>>=)
 DECL_BINASSIGN(<<=)
+#undef DECL_BINASSIGN
+
+/* Offset a strong integral using its difference type. */
+#define DECL_BINASSIGN(op)                                                    \
+template<al::strong_integral T, std::same_as<typename T::difference_type> U>  \
+    force_inline constexpr                                                    \
+auto operator op(T &lhs LIFETIMEBOUND, U const &rhs) noexcept -> T&           \
+{ lhs.c_val op static_cast<typename T::value_t>(rhs); return lhs; }
+DECL_BINASSIGN(+=)
+DECL_BINASSIGN(-=)
 #undef DECL_BINASSIGN
 
 /* Three-way comparison operator between strong number types, from which other

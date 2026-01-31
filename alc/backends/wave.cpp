@@ -372,7 +372,7 @@ auto WaveBackend::reset() -> bool
         mFile.write("desc", 4);
         fwrite64be(32_u64, mFile);
         /* 64-bit double, mSampleRate */
-        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(mDevice->mSampleRate)), mFile);
+        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<double>(mDevice->mSampleRate)), mFile);
         /* 32-bit uint, mFormatID */
         mFile.write("lpcm", 4);
 
@@ -388,16 +388,16 @@ auto WaveBackend::reset() -> bool
             case DevFmtInt:
             case DevFmtUInt:
                 if constexpr(std::endian::native == std::endian::little)
-                    return 2_u32; /* kCAFLinearPCMFormatFlagIsLittleEndian */
+                    return 2u; /* kCAFLinearPCMFormatFlagIsLittleEndian */
                 else
                     break;
             case DevFmtFloat:
                 if constexpr(std::endian::native == std::endian::little)
-                    return 3_u32; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
+                    return 3u; /* kCAFLinearPCMFormatFlagIsFloat | kCAFLinearPCMFormatFlagIsLittleEndian */
                 else
-                    return 1_u32; /* kCAFLinearPCMFormatFlagIsFloat */
+                    return 1u; /* kCAFLinearPCMFormatFlagIsFloat */
             }
-            return 0_u32;
+            return 0u;
         });
 
         /* 32-bit uint, mFormatFlags */

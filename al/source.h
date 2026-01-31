@@ -139,7 +139,7 @@ struct Source {
      * Last user-specified offset, and the offset type (bytes, samples, or
      * seconds).
      */
-    f64 mOffset{0.0};
+    double mOffset{0.0};
     ALenum mOffsetType{AL_NONE};
 
     /** Source type (static, streaming, or undetermined) */

@@ -94,7 +94,7 @@ struct SampleInfo<u8> {
 
     static constexpr auto silence() noexcept { return 128_u8; }
 
-    static constexpr auto to_float(u8 const sample) noexcept -> f32
+    static constexpr auto to_float(u8 const sample) noexcept -> float
     { return gsl::narrow_cast<float>(sample.c_val-128) * (1.0f/128.0f); }
 };
 
@@ -104,7 +104,7 @@ struct SampleInfo<i16> {
 
     static constexpr auto silence() noexcept { return 0_i16; }
 
-    static constexpr auto to_float(i16 const sample) noexcept -> f32
+    static constexpr auto to_float(i16 const sample) noexcept -> float
     { return gsl::narrow_cast<float>(sample.c_val) * (1.0f/32768.0f); }
 };
 
@@ -114,27 +114,27 @@ struct SampleInfo<i32> {
 
     static constexpr auto silence() noexcept { return 0_i32; }
 
-    static constexpr auto to_float(i32 const sample) noexcept -> f32
+    static constexpr auto to_float(i32 const sample) noexcept -> float
     { return gsl::narrow_cast<float>(sample)*(1.0f/2147483648.0f); }
 };
 
 template<>
-struct SampleInfo<float> {
+struct SampleInfo<f32> {
     static constexpr auto format() noexcept { return FmtFloat; }
 
     static constexpr auto silence() noexcept { return 0.0_f32; }
 
-    static constexpr auto to_float(f32 const sample) noexcept -> f32 { return sample; }
+    static constexpr auto to_float(f32 const sample) noexcept -> float { return sample; }
 };
 
 template<>
-struct SampleInfo<double> {
+struct SampleInfo<f64> {
     static constexpr auto format() noexcept { return FmtDouble; }
 
-    static constexpr auto silence() noexcept { return double{}; }
+    static constexpr auto silence() noexcept { return 0.0_f64; }
 
-    static constexpr auto to_float(const double sample) noexcept -> float
-    { return gsl::narrow_cast<float>(sample); }
+    static constexpr auto to_float(f64 const sample) noexcept -> float
+    { return gsl::narrow_cast<float>(sample.c_val); }
 };
 
 template<>

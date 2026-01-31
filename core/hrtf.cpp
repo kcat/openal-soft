@@ -74,7 +74,7 @@ struct LoadedHrtf {
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr auto PassthruCoeff = gsl::narrow_cast<f32>(1.0/std::numbers::sqrt2);
+constexpr auto PassthruCoeff = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
 
 auto LoadedHrtfLock = std::mutex{};
 auto LoadedHrtfs = std::vector<LoadedHrtf>{};
@@ -155,27 +155,27 @@ public:
 };
 
 
-struct IdxBlend { u32 idx; f32 blend; };
+struct IdxBlend { u32 idx; float blend; };
 /* Calculate the elevation index given the polar elevation in radians. This
  * will return an index between 0 and (evcount - 1).
  */
-auto CalcEvIndex(u32 evcount, f32 ev) -> IdxBlend
+auto CalcEvIndex(u32 evcount, float ev) -> IdxBlend
 {
-    ev = (std::numbers::inv_pi_v<f32>*ev + 0.5f) * gsl::narrow_cast<f32>(evcount-1);
+    ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * gsl::narrow_cast<float>(evcount-1);
 
     const auto idx = float2uint(ev);
-    return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<f32>(idx)};
+    return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<float>(idx)};
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1).
  */
-auto CalcAzIndex(u32 azcount, f32 az) -> IdxBlend
+auto CalcAzIndex(u32 azcount, float az) -> IdxBlend
 {
-    az = (std::numbers::inv_pi_v<f32>*0.5f*az + 1.0f) * gsl::narrow_cast<f32>(azcount);
+    az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * gsl::narrow_cast<float>(azcount);
 
     const auto idx = float2uint(az);
-    return IdxBlend{idx%azcount, az-gsl::narrow_cast<f32>(idx)};
+    return IdxBlend{idx%azcount, az-gsl::narrow_cast<float>(idx)};
 }
 
 } // namespace
@@ -184,10 +184,10 @@ auto CalcAzIndex(u32 azcount, f32 az) -> IdxBlend
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const distance,
-    f32 const spread, HrirSpan const coeffs, std::span<u32, 2> const delays) const
+void HrtfStore::getCoeffs(float const elevation, float const azimuth, float const distance,
+    float const spread, HrirSpan const coeffs, std::span<u32, 2> const delays) const
 {
-    auto const dirfact = 1.0f - (std::numbers::inv_pi_v<f32>/2.0f * spread);
+    auto const dirfact = 1.0f - (std::numbers::inv_pi_v<float>/2.0f * spread);
 
     auto ebase = 0_uz;
     auto const field = std::ranges::find_if(mFields.begin(), mFields.end()-1,
@@ -226,17 +226,17 @@ void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const dist
         (     elev0.blend) * (     az1.blend) * dirfact};
 
     /* Calculate the blended HRIR delays. */
-    auto d = gsl::narrow_cast<f32>(mDelays[idx[0]][0].c_val)*blend[0]
-        + gsl::narrow_cast<f32>(mDelays[idx[1]][0].c_val)*blend[1]
-        + gsl::narrow_cast<f32>(mDelays[idx[2]][0].c_val)*blend[2]
-        + gsl::narrow_cast<f32>(mDelays[idx[3]][0].c_val)*blend[3];
-    delays[0] = fastf2u(d * f32{1.0f/HrirDelayFracOne});
+    auto d = gsl::narrow_cast<float>(mDelays[idx[0]][0].c_val)*blend[0]
+        + gsl::narrow_cast<float>(mDelays[idx[1]][0].c_val)*blend[1]
+        + gsl::narrow_cast<float>(mDelays[idx[2]][0].c_val)*blend[2]
+        + gsl::narrow_cast<float>(mDelays[idx[3]][0].c_val)*blend[3];
+    delays[0] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
-    d = gsl::narrow_cast<f32>(mDelays[idx[0]][1].c_val)*blend[0]
-        + gsl::narrow_cast<f32>(mDelays[idx[1]][1].c_val)*blend[1]
-        + gsl::narrow_cast<f32>(mDelays[idx[2]][1].c_val)*blend[2]
-        + gsl::narrow_cast<f32>(mDelays[idx[3]][1].c_val)*blend[3];
-    delays[1] = fastf2u(d * f32{1.0f/HrirDelayFracOne});
+    d = gsl::narrow_cast<float>(mDelays[idx[0]][1].c_val)*blend[0]
+        + gsl::narrow_cast<float>(mDelays[idx[1]][1].c_val)*blend[1]
+        + gsl::narrow_cast<float>(mDelays[idx[2]][1].c_val)*blend[2]
+        + gsl::narrow_cast<float>(mDelays[idx[3]][1].c_val)*blend[3];
+    delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
@@ -246,7 +246,7 @@ void HrtfStore::getCoeffs(f32 const elevation, f32 const azimuth, f32 const dist
     {
         const auto joined_coeffs = coeffs | std::views::join;
         std::ranges::transform(mCoeffs[idx[c]] | std::views::join, joined_coeffs,
-            joined_coeffs.begin(), [mult = blend[c]](f32 const src, f32 const coeff) -> f32
+            joined_coeffs.begin(), [mult = blend[c]](float const src, float const coeff) -> float
         {
             return src*mult + coeff;
         });
@@ -259,17 +259,17 @@ auto DirectHrtfState::Create(usize const num_chans) -> std::unique_ptr<DirectHrt
 
 void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool const perHrirMin,
     std::span<AngularPoint const> const AmbiPoints,
-    std::span<std::array<f32, MaxAmbiChannels> const> const AmbiMatrix,
-    f32 const XOverFreq, std::span<f32 const, MaxAmbiOrder+1> const AmbiOrderHFGain)
+    std::span<std::array<float, MaxAmbiChannels> const> const AmbiMatrix,
+    float const XOverFreq, std::span<float const, MaxAmbiOrder+1> const AmbiOrderHFGain)
 {
-    using f64x2 = std::array<f64, 2>;
+    using f64x2 = std::array<double, 2>;
     struct ImpulseResponse {
         ConstHrirSpan hrir;
         u32 ldelay, rdelay;
     };
 
-    auto const xover_norm = f64{XOverFreq} / Hrtf->mSampleRate;
-    mChannels[0].mSplitter.init(gsl::narrow_cast<f32>(xover_norm));
+    auto const xover_norm = double{XOverFreq} / Hrtf->mSampleRate;
+    mChannels[0].mSplitter.init(gsl::narrow_cast<float>(xover_norm));
     std::ranges::fill(mChannels | std::views::transform(&HrtfChannelState::mSplitter)
         | std::views::drop(1), mChannels[0].mSplitter);
 
@@ -315,7 +315,7 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
     });
 
     TRACE("Min delay: {:.2f}, max delay: {:.2f}, FIR length: {}",
-        min_delay/f64{HrirDelayFracOne}, max_delay/f64{HrirDelayFracOne}, irSize);
+        min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
 
     static constexpr auto hrir_delay_round = [](u32 const d) noexcept -> u32
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
@@ -324,7 +324,7 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
     max_delay = 0;
     std::ignore = std::ranges::mismatch(impulses, AmbiMatrix,
         [perHrirMin,min_delay,&max_delay,&tmpres](ImpulseResponse const &impulse,
-            std::span<f32 const, MaxAmbiChannels> const matrixline)
+            std::span<float const, MaxAmbiChannels> const matrixline)
     {
         auto const hrir = impulse.hrir;
         auto const base_delay = perHrirMin ? std::min(impulse.ldelay, impulse.rdelay) : min_delay;
@@ -333,15 +333,15 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
         max_delay = std::max(max_delay, std::max(impulse.ldelay, impulse.rdelay) - base_delay);
 
         std::ignore = std::ranges::mismatch(tmpres, matrixline,
-            [hrir,ldelay,rdelay](std::array<f64x2, HrirLength> &result, f64 const mult)
+            [hrir,ldelay,rdelay](std::array<f64x2, HrirLength> &result, double const mult)
         {
             auto const lresult = result | std::views::drop(ldelay) | std::views::elements<0>;
             std::ranges::transform(hrir | std::views::elements<0>, lresult, lresult.begin(),
-                std::plus{}, [mult](f64 const coeff) noexcept { return coeff*mult; });
+                std::plus{}, [mult](double const coeff) noexcept { return coeff*mult; });
 
             auto const rresult = result | std::views::drop(rdelay) | std::views::elements<1>;
             std::ranges::transform(hrir | std::views::elements<1>, rresult, rresult.begin(),
-                std::plus{}, [mult](f64 const coeff) noexcept { return coeff*mult; });
+                std::plus{}, [mult](double const coeff) noexcept { return coeff*mult; });
             return true;
         });
         return true;
@@ -351,11 +351,11 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
     constexpr auto join_join = std::views::join | std::views::join;
     std::ignore = std::ranges::transform(tmpres | join_join,
         (mChannels | std::views::transform(&HrtfChannelState::mCoeffs) | join_join).begin(),
-        [](f64 const in) noexcept { return gsl::narrow_cast<f32>(in); });
+        [](double const in) noexcept { return gsl::narrow_cast<float>(in); });
     tmpres.clear();
 
     const auto max_length = std::min(hrir_delay_round(max_delay) + irSize, HrirLength);
-    TRACE("New max delay: {:.2f}, FIR length: {}", max_delay/f64{HrirDelayFracOne}, max_length);
+    TRACE("New max delay: {:.2f}, FIR length: {}", max_delay/double{HrirDelayFracOne}, max_length);
     mIrSize = max_length;
 }
 
@@ -535,7 +535,7 @@ try {
         TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, u32{hrtf->mSampleRate}, devrate);
 
         /* Resample all the IRs. */
-        auto inout = std::array<std::array<f64, HrirLength>, 2>{};
+        auto inout = std::array<std::array<double, HrirLength>, 2>{};
         auto rs = PPhaseResampler{};
         rs.init(hrtf->mSampleRate, devrate);
         std::ranges::for_each(hrtf->mCoeffs, [&inout,&rs](HrirArray const &const_coeffs)
@@ -547,26 +547,26 @@ try {
             std::ranges::copy(coeffs0, inout[0].begin());
             rs.process(inout[0], inout[1]);
             std::ranges::transform(inout[1], coeffs0.begin(),
-                [](f64 const d) noexcept { return gsl::narrow_cast<f32>(d); });
+                [](double const d) noexcept { return gsl::narrow_cast<float>(d); });
 
             auto coeffs1 = coeffs | std::views::elements<1>;
             std::ranges::copy(coeffs1, inout[0].begin());
             rs.process(inout[0], inout[1]);
             std::ranges::transform(inout[1], coeffs1.begin(),
-                [](f64 const d) noexcept { return gsl::narrow_cast<f32>(d); });
+                [](double const d) noexcept { return gsl::narrow_cast<float>(d); });
         });
         rs = {};
 
         /* Scale the delays for the new sample rate. */
         auto max_delay = 0.0f;
-        auto new_delays = std::vector<f32>(hrtf->mDelays.size()*2_uz);
-        auto const rate_scale = gsl::narrow_cast<f32>(devrate)
-            / gsl::narrow_cast<f32>(u32{hrtf->mSampleRate});
+        auto new_delays = std::vector<float>(hrtf->mDelays.size()*2);
+        auto const rate_scale = gsl::narrow_cast<float>(devrate)
+            / gsl::narrow_cast<float>(u32{hrtf->mSampleRate});
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
             [&max_delay,rate_scale](u8 const oldval)
         {
-            auto const ret = std::round(gsl::narrow_cast<f32>(oldval.c_val) * rate_scale)
-                / f32{HrirDelayFracOne};
+            auto const ret = std::round(gsl::narrow_cast<float>(oldval.c_val) * rate_scale)
+                / float{HrirDelayFracOne};
             max_delay = std::max(max_delay, ret);
             return ret;
         });
@@ -575,18 +575,18 @@ try {
          * shrinking the head radius; not ideal but better than a per-delay
          * clamp).
          */
-        auto delay_scale = f32{HrirDelayFracOne};
+        auto delay_scale = float{HrirDelayFracOne};
         if(max_delay > MaxHrirDelay)
         {
             WARN("Resampled delay exceeds max ({:.2f} > {})", max_delay, MaxHrirDelay);
-            delay_scale *= f32{MaxHrirDelay} / max_delay;
+            delay_scale *= float{MaxHrirDelay} / max_delay;
         }
 
         /* NOLINTNEXTLINE(*-const-cast) */
         auto const delays = std::span{const_cast<u8x2*>(hrtf->mDelays.data()),
             hrtf->mDelays.size()};
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
-            [delay_scale](f32 const fdelay) -> u8
+            [delay_scale](float const fdelay) -> u8
         {
             return u8::make_from(al::saturate_cast<u8::value_t>(
                 float2int(fdelay*delay_scale + 0.5f)));
@@ -595,8 +595,9 @@ try {
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        auto const newIrSize = std::round(gsl::narrow_cast<f32>(u32{hrtf->mIrSize})*rate_scale);
-        hrtf->mIrSize = gsl::narrow_cast<u8::value_t>(std::min(f32{HrirLength}, newIrSize));
+        auto const newIrSize = std::round(gsl::narrow_cast<float>(unsigned{hrtf->mIrSize})
+            * rate_scale);
+        hrtf->mIrSize = gsl::narrow_cast<u8::value_t>(std::min(float{HrirLength}, newIrSize));
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 

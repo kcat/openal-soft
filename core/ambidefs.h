@@ -22,17 +22,17 @@ inline constexpr auto MaxAmbiChannels = AmbiChannelsFromOrder(MaxAmbiOrder);
  * to 4th order, which is the highest order a 32-bit mask value can specify (a
  * 64-bit mask could handle up to 7th order).
  */
-inline constexpr auto Ambi0OrderMask = 0x00000001_u32;
-inline constexpr auto Ambi1OrderMask = 0x0000000f_u32;
-inline constexpr auto Ambi2OrderMask = 0x000001ff_u32;
-inline constexpr auto Ambi3OrderMask = 0x0000ffff_u32;
-inline constexpr auto Ambi4OrderMask = 0x01ffffff_u32;
+inline constexpr auto Ambi0OrderMask = 0x00000001u;
+inline constexpr auto Ambi1OrderMask = 0x0000000fu;
+inline constexpr auto Ambi2OrderMask = 0x000001ffu;
+inline constexpr auto Ambi3OrderMask = 0x0000ffffu;
+inline constexpr auto Ambi4OrderMask = 0x01ffffffu;
 
 /* A bitmask of ambisonic channels with height information. If none of these
  * channels are used/needed, there's no height (e.g. with most surround sound
  * speaker setups). This is ACN ordering, with bit 0 being ACN 0, etc.
  */
-inline constexpr auto AmbiPeriphonicMask = 0xfe7ce4_u32;
+inline constexpr auto AmbiPeriphonicMask = 0xfe7ce4u;
 
 /* The maximum number of ambisonic channels for 2D (non-periphonic)
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
@@ -126,7 +126,7 @@ namespace AmbiScale {
     };
 
     template<usize N>
-    using UpsamplerArrays = std::array<std::array<f32, MaxAmbiChannels>, N>;
+    using UpsamplerArrays = std::array<std::array<float, MaxAmbiChannels>, N>;
     DECL_HIDDEN extern constinit UpsamplerArrays<4> const FirstOrderUp;
     DECL_HIDDEN extern constinit UpsamplerArrays<4> const FirstOrder2DUp;
     DECL_HIDDEN extern constinit UpsamplerArrays<9> const SecondOrderUp;
@@ -136,8 +136,8 @@ namespace AmbiScale {
     DECL_HIDDEN extern constinit UpsamplerArrays<25> const FourthOrder2DUp;
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
-    auto GetHFOrderScales(u32 src_order, u32 dev_order, bool horizontalOnly) noexcept
-        -> std::array<f32, MaxAmbiOrder+1>;
+    auto GetHFOrderScales(unsigned src_order, unsigned dev_order, bool horizontalOnly) noexcept
+        -> std::array<float, MaxAmbiOrder+1>;
 } /* namespace AmbiScale */
 
 namespace AmbiIndex {
@@ -215,8 +215,8 @@ namespace AmbiIndex {
  * The components are ordered such that OpenAL's X, Y, and Z are the first,
  * second, and third parameters respectively -- simply negate X and Z.
  */
-constexpr auto CalcAmbiCoeffs(f32 const y, f32 const z, f32 const x)
-    -> std::array<f32, MaxAmbiChannels>
+constexpr auto CalcAmbiCoeffs(float const y, float const z, float const x)
+    -> std::array<float, MaxAmbiChannels>
 {
     auto const xx = x*x;
     auto const yy = y*y;
@@ -229,13 +229,13 @@ constexpr auto CalcAmbiCoeffs(f32 const y, f32 const z, f32 const x)
     auto const xxyy = xx*yy;
     auto const zzzz = zz*zz;
 
-    return std::array<f32, MaxAmbiChannels>{{
+    return std::array<float, MaxAmbiChannels>{{
         /* Zeroth-order */
         1.0f, /* ACN 0 = 1 */
         /* First-order */
-        std::numbers::sqrt3_v<f32> * y, /* ACN 1 = sqrt(3) * Y */
-        std::numbers::sqrt3_v<f32> * z, /* ACN 2 = sqrt(3) * Z */
-        std::numbers::sqrt3_v<f32> * x, /* ACN 3 = sqrt(3) * X */
+        std::numbers::sqrt3_v<float> * y, /* ACN 1 = sqrt(3) * Y */
+        std::numbers::sqrt3_v<float> * z, /* ACN 2 = sqrt(3) * Z */
+        std::numbers::sqrt3_v<float> * x, /* ACN 3 = sqrt(3) * X */
         /* Second-order */
         3.872983346e+00f * xy,               /* ACN 4 = sqrt(15) * X * Y */
         3.872983346e+00f * yz,               /* ACN 5 = sqrt(15) * Y * Z */

@@ -16,7 +16,7 @@
 namespace {
 
 using u16x2 = std::array<u16, 2>;
-using complex_d = std::complex<f64>;
+using complex_d = std::complex<double>;
 
 [[nodiscard]]
 constexpr auto BitReverseCounter(usize const log2_size) noexcept -> usize
@@ -107,7 +107,7 @@ constexpr auto gArgAngle = std::array<std::complex<T>, gBitReverses.size()-1>{{
 
 } // namespace
 
-void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
+void complex_fft(std::span<std::complex<double>> const buffer, double const sign)
 {
     auto const fftsize = buffer.size();
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
@@ -134,7 +134,7 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
                 buffer[k] += temp;
             }
 
-            auto const w = complex_d{gArgAngle<f64>[i].real(),gArgAngle<f64>[i].imag()*sign};
+            auto const w = complex_d{gArgAngle<double>[i].real(),gArgAngle<double>[i].imag()*sign};
             auto u = w;
             for(auto const j : std::views::iota(1_uz, step2))
             {
@@ -178,7 +178,7 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
                 buffer[k] += temp;
             }
 
-            auto const arg = pi / gsl::narrow_cast<f64>(step2);
+            auto const arg = pi / gsl::narrow_cast<double>(step2);
             auto const w = std::polar(1.0, arg);
             auto u = w;
             for(auto const j : std::views::iota(1_uz, step2))
@@ -195,11 +195,11 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
     }
 }
 
-void complex_hilbert(std::span<std::complex<f64>> const buffer)
+void complex_hilbert(std::span<std::complex<double>> const buffer)
 {
     inverse_fft(buffer);
 
-    auto const inverse_size = 1.0 / gsl::narrow_cast<f64>(buffer.size());
+    auto const inverse_size = 1.0 / gsl::narrow_cast<double>(buffer.size());
     auto bufiter = buffer.begin();
     auto const halfiter = std::next(bufiter, gsl::narrow_cast<ptrdiff_t>(buffer.size()>>1));
 

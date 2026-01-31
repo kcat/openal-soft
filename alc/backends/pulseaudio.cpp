@@ -1022,23 +1022,23 @@ auto PulsePlayback::reset() -> bool
     pa_stream_set_moved_callback(mStream, move_callback, this);
 
     mSpec = *(pa_stream_get_sample_spec(mStream));
-    mFrameSize = gsl::narrow_cast<u32>(pa_frame_size(&mSpec));
+    mFrameSize = gsl::narrow_cast<unsigned>(pa_frame_size(&mSpec));
 
     if(mDevice->mSampleRate != mSpec.rate)
     {
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly.
          */
-        const auto scale = gsl::narrow_cast<f64>(mSpec.rate) / mDevice->mSampleRate;
+        const auto scale = gsl::narrow_cast<double>(mSpec.rate) / mDevice->mSampleRate;
         const auto perlen = std::clamp(std::round(scale*mDevice->mUpdateSize), 64.0, 8192.0);
-        const auto bufmax = u32{std::numeric_limits<i32>::max()} / mFrameSize;
+        const auto bufmax = unsigned{std::numeric_limits<int>::max()} / mFrameSize;
         const auto buflen = std::clamp(std::round(scale*mDevice->mBufferSize), perlen*2.0,
-            gsl::narrow_cast<f64>(bufmax));
+            gsl::narrow_cast<double>(bufmax));
 
-        mAttr.maxlength = ~0_u32;
-        mAttr.tlength = gsl::narrow_cast<u32>(buflen) * mFrameSize;
-        mAttr.prebuf = 0_u32;
-        mAttr.minreq = gsl::narrow_cast<u32>(perlen) * mFrameSize;
+        mAttr.maxlength = ~uint32_t{0};
+        mAttr.tlength = gsl::narrow_cast<unsigned>(buflen) * mFrameSize;
+        mAttr.prebuf = 0u;
+        mAttr.minreq = gsl::narrow_cast<unsigned>(perlen) * mFrameSize;
 
         op = pa_stream_set_buffer_attr(mStream, &mAttr, &PulseMainloop::streamSuccessCallbackC,
             &mMainloop);

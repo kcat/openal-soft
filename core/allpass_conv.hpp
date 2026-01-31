@@ -48,7 +48,7 @@ struct SegmentedFilter {
     static_assert((FilterSize % sSampleLength) == 0);
 
     PFFFTSetup mFft;
-    alignas(16) std::array<f32, sFftLength*sNumSegments> mFilterData;
+    alignas(16) std::array<float, sFftLength*sNumSegments> mFilterData;
 
     SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
@@ -60,21 +60,21 @@ struct SegmentedFilter {
         {
             const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/f64{FilterSize}
-                * gsl::narrow_cast<f64>(i*2 + 1);
+            const auto w = 2.0*std::numbers::pi/double{FilterSize}
+                * gsl::narrow_cast<double>(i*2 + 1);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = std::numbers::pi * gsl::narrow_cast<f64>(k);
+            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
             tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
         }
 
         /* The response is split into segments that are converted to the
          * frequency domain, each on their own (0 stuffed).
          */
-        using complex_d = std::complex<f64>;
+        using complex_d = std::complex<double>;
         auto fftBuffer = std::vector<complex_d>(sFftLength);
-        auto fftTmp = al::vector<f32, 16>(sFftLength);
+        auto fftTmp = al::vector<float, 16>(sFftLength);
         auto filter = mFilterData.begin();
         for(const auto s : std::views::iota(0_uz, sNumSegments))
         {
@@ -88,9 +88,9 @@ struct SegmentedFilter {
              */
             for(const auto i : std::views::iota(0_uz, sSampleLength))
             {
-                fftTmp[i*2 + 0] = gsl::narrow_cast<f32>(fftBuffer[i].real()) / f32{sFftLength};
-                fftTmp[i*2 + 1] = gsl::narrow_cast<f32>((i==0) ? fftBuffer[sSampleLength].real()
-                    : fftBuffer[i].imag()) / f32{sFftLength};
+                fftTmp[i*2 + 0] = gsl::narrow_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = gsl::narrow_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
+                    : fftBuffer[i].imag()) / float{sFftLength};
             }
             mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);
             std::advance(filter, sFftLength);

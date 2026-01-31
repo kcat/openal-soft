@@ -27,27 +27,27 @@ static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
     "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
 template<DevFmtType T> constexpr
-auto LoadSample(DevFmtType_t<T> val) noexcept -> f32 = delete;
+auto LoadSample(DevFmtType_t<T> val) noexcept -> float = delete;
 
-template<> constexpr auto LoadSample<DevFmtByte>(i8 const val) noexcept -> f32
-{ return gsl::narrow_cast<f32>(val.c_val) * (1.0f/128.0f); }
-template<> constexpr auto LoadSample<DevFmtShort>(i16 const val) noexcept -> f32
-{ return gsl::narrow_cast<f32>(val.c_val) * (1.0f/32768.0f); }
-template<> constexpr auto LoadSample<DevFmtInt>(i32 const val) noexcept -> f32
-{ return gsl::narrow_cast<f32>(val) * (1.0f/2147483648.0f); }
-template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> f32
+template<> constexpr auto LoadSample<DevFmtByte>(i8 const val) noexcept -> float
+{ return gsl::narrow_cast<float>(val.c_val) * (1.0f/128.0f); }
+template<> constexpr auto LoadSample<DevFmtShort>(i16 const val) noexcept -> float
+{ return gsl::narrow_cast<float>(val.c_val) * (1.0f/32768.0f); }
+template<> constexpr auto LoadSample<DevFmtInt>(i32 const val) noexcept -> float
+{ return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f); }
+template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> float
 { return val; }
 
-template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> f32
+template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> float
 { return LoadSample<DevFmtByte>((val - 128).reinterpret_as<i8>()); }
-template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> f32
+template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> float
 { return LoadSample<DevFmtShort>((val - 32768).reinterpret_as<i16>()); }
-template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> f32
+template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> float
 { return LoadSample<DevFmtInt>(as_signed(val - 2147483648u)); }
 
 
 template<DevFmtType T>
-void LoadSampleArray(std::span<f32> const dst, void const *const src, usize const channel,
+void LoadSampleArray(std::span<float> const dst, void const *const src, usize const channel,
     usize const srcstep) noexcept
 {
     Expects(channel < srcstep);
@@ -62,7 +62,7 @@ void LoadSampleArray(std::span<f32> const dst, void const *const src, usize cons
     });
 }
 
-void LoadSamples(std::span<f32> const dst, void const *const src, usize const channel,
+void LoadSamples(std::span<float> const dst, void const *const src, usize const channel,
     usize const srcstep, DevFmtType const srctype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
@@ -82,27 +82,27 @@ void LoadSamples(std::span<f32> const dst, void const *const src, usize const ch
 
 
 template<DevFmtType T>
-auto StoreSample(f32) noexcept -> DevFmtType_t<T> = delete;
+auto StoreSample(float) noexcept -> DevFmtType_t<T> = delete;
 
-template<> auto StoreSample<DevFmtFloat>(f32 const val) noexcept -> f32
+template<> auto StoreSample<DevFmtFloat>(float const val) noexcept -> f32
 { return val; }
-template<> auto StoreSample<DevFmtInt>(f32 const val) noexcept -> i32
+template<> auto StoreSample<DevFmtInt>(float const val) noexcept -> i32
 { return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
-template<> auto StoreSample<DevFmtShort>(f32 const val) noexcept -> i16
+template<> auto StoreSample<DevFmtShort>(float const val) noexcept -> i16
 { return i16{gsl::narrow_cast<std::int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
-template<> auto StoreSample<DevFmtByte>(f32 const val) noexcept -> i8
+template<> auto StoreSample<DevFmtByte>(float const val) noexcept -> i8
 { return i8{gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
 /* Define unsigned output variations. */
-template<> auto StoreSample<DevFmtUInt>(f32 const val) noexcept -> u32
+template<> auto StoreSample<DevFmtUInt>(float const val) noexcept -> u32
 { return as_unsigned(StoreSample<DevFmtInt>(val)) + 2147483648u; }
-template<> auto StoreSample<DevFmtUShort>(f32 const val) noexcept -> u16
+template<> auto StoreSample<DevFmtUShort>(float const val) noexcept -> u16
 { return StoreSample<DevFmtShort>(val).reinterpret_as<u16>() + 32768; }
-template<> auto StoreSample<DevFmtUByte>(f32 const val) noexcept -> u8
+template<> auto StoreSample<DevFmtUByte>(float const val) noexcept -> u8
 { return StoreSample<DevFmtByte>(val).reinterpret_as<u8>() + 128; }
 
 template<DevFmtType T>
-void StoreSampleArray(void *const dst, std::span<f32 const> const src, usize const channel,
+void StoreSampleArray(void *const dst, std::span<float const> const src, usize const channel,
     usize const dststep) noexcept
 {
     Expects(channel < dststep);
@@ -110,7 +110,7 @@ void StoreSampleArray(void *const dst, std::span<f32 const> const src, usize con
     auto sdst = dstspan.begin();
     std::advance(sdst, channel);
     *sdst = StoreSample<T>(src.front());
-    std::ranges::for_each(src | std::views::drop(1), [&sdst,dststep](f32 const in)
+    std::ranges::for_each(src | std::views::drop(1), [&sdst,dststep](float const in)
     {
         std::advance(sdst, dststep);
         *sdst = StoreSample<T>(in);
@@ -118,7 +118,7 @@ void StoreSampleArray(void *const dst, std::span<f32 const> const src, usize con
 }
 
 
-void StoreSamples(void *const dst, std::span<f32 const> const src, usize const channel,
+void StoreSamples(void *const dst, std::span<float const> const src, usize const channel,
     usize const dststep, DevFmtType const dsttype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
@@ -138,19 +138,19 @@ void StoreSamples(void *const dst, std::span<f32 const> const src, usize const c
 
 
 template<DevFmtType T>
-void Mono2Stereo(std::span<f32> const dst, void const *const src) noexcept
+void Mono2Stereo(std::span<float> const dst, void const *const src) noexcept
 {
     const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), dst.size()>>1};
     auto sdst = dst.begin();
-    std::ranges::for_each(srcspan, [&sdst](f32 const in)
+    std::ranges::for_each(srcspan, [&sdst](float const in)
     { sdst = std::fill_n(sdst, 2, in*0.707106781187f); }, &LoadSample<T>);
 }
 
 template<DevFmtType T>
-void Multi2Mono(u32 chanmask, usize const step, std::span<f32> const dst, void const *const src)
+void Multi2Mono(u32 chanmask, usize const step, std::span<float> const dst, void const *const src)
     noexcept
 {
-    const auto scale = std::sqrt(1.0f / gsl::narrow_cast<f32>(std::popcount(chanmask)));
+    const auto scale = std::sqrt(1.0f / gsl::narrow_cast<float>(std::popcount(chanmask)));
     const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), step*dst.size()};
     std::ranges::fill(dst, 0.0f);
     while(chanmask)
@@ -161,13 +161,13 @@ void Multi2Mono(u32 chanmask, usize const step, std::span<f32> const dst, void c
         auto ssrc = srcspan.begin();
         std::advance(ssrc, c);
         dst.front() += LoadSample<T>(*ssrc);
-        std::ranges::for_each(dst, [&ssrc,step](f32 &sample)
+        std::ranges::for_each(dst, [&ssrc,step](float &sample)
         {
             std::advance(ssrc, step);
             sample += LoadSample<T>(*ssrc);
         });
     }
-    std::ranges::transform(dst, dst.begin(), [scale](f32 const sample) noexcept -> f32
+    std::ranges::transform(dst, dst.begin(), [scale](float const sample) noexcept -> float
     { return sample * scale; });
 }
 
@@ -194,13 +194,13 @@ auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     auto mixer_mode = FPUCtl{};
-    const auto step = std::clamp(std::round(srcRate*f64{MixerFracOne}/dstRate), 1.0,
-        MaxPitch*f64{MixerFracOne});
+    const auto step = std::clamp(std::round(srcRate*double{MixerFracOne}/dstRate), 1.0,
+        MaxPitch*double{MixerFracOne});
     converter->mIncrement = gsl::narrow_cast<u32>(step);
     if(converter->mIncrement == MixerFracOne)
     {
-        converter->mResample = [](InterpState const*, std::span<f32 const> const src, u32,
-            u32 const, std::span<f32> const dst)
+        converter->mResample = [](InterpState const*, std::span<float const> const src, u32,
+            u32 const, std::span<float> const dst)
         {
             std::ranges::copy(src | std::views::drop(MaxResamplerEdge)
                 | std::views::take(dst.size()), dst.begin());
@@ -270,8 +270,8 @@ auto SampleConverter::convert(const void **const src, u32 *const srcframes, void
             break;
         }
 
-        const auto SrcData = std::span<f32>{mSrcSamples};
-        const auto DstData = std::span<f32>{mDstSamples};
+        const auto SrcData = std::span<float>{mSrcSamples};
+        const auto DstData = std::span<float>{mDstSamples};
         const auto DataPosFrac = mFracOffset;
         auto DataSize64 = u64{prepcount};
         DataSize64 += u64{readable};
@@ -435,7 +435,7 @@ auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes
 }
 
 
-void ChannelConverter::convert(void const *const src, f32 *const dst, u32 const frames) const
+void ChannelConverter::convert(void const *const src, float *const dst, u32 const frames) const
 {
     if(!frames)
         return;

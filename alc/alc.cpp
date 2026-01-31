@@ -1115,7 +1115,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         {
             optsrate = std::clamp<u32>(*freqopt, MinOutputRate, MaxOutputRate);
 
-            const double scale{gsl::narrow_cast<f64>(*optsrate) / f64{DefaultOutputRate}};
+            auto const scale = gsl::narrow_cast<double>(*optsrate) / double{DefaultOutputRate};
             period_size = gsl::narrow_cast<u32>(std::lround(period_size * scale));
         }
 
@@ -1449,7 +1449,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 auto oldrate = optsrate.value_or(DefaultOutputRate);
                 freqAttr = std::clamp<i32>(freqAttr, MinOutputRate, MaxOutputRate);
 
-                const auto scale = gsl::narrow_cast<f64>(freqAttr) / oldrate;
+                const auto scale = gsl::narrow_cast<double>(freqAttr) / oldrate;
                 period_size = gsl::narrow_cast<u32>(std::lround(period_size * scale));
                 buffer_size = gsl::narrow_cast<u32>(std::lround(buffer_size * scale));
                 optsrate = gsl::narrow_cast<u32>(freqAttr);

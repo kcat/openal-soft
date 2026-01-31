@@ -4,27 +4,25 @@
 #include <complex>
 #include <span>
 
-#include "alnumeric.h"
-
 /**
  * Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is
  * FFT and 1 is inverse FFT. Applies the Discrete Fourier Transform (DFT) to
  * the data supplied in the buffer, which MUST BE power of two.
  */
-void complex_fft(std::span<std::complex<f64>> buffer, f64 sign);
+void complex_fft(std::span<std::complex<double>> buffer, double sign);
 
 /**
  * Calculate the frequency-domain response of the time-domain signal in the
  * provided buffer, which MUST BE power of two.
  */
-inline void forward_fft(std::span<std::complex<f64>> const buffer)
+inline void forward_fft(std::span<std::complex<double>> const buffer)
 { complex_fft(buffer, -1.0); }
 
 /**
  * Calculate the time-domain signal of the frequency-domain response in the
  * provided buffer, which MUST BE power of two.
  */
-inline void inverse_fft(std::span<std::complex<f64>> const buffer)
+inline void inverse_fft(std::span<std::complex<double>> const buffer)
 { complex_fft(buffer, +1.0); }
 
 /**
@@ -34,6 +32,6 @@ inline void inverse_fft(std::span<std::complex<f64>> const buffer)
  * buffer. The buffer is an array of complex numbers and MUST BE power of two,
  * and the imaginary components should be cleared to 0.
  */
-void complex_hilbert(std::span<std::complex<f64>> buffer);
+void complex_hilbert(std::span<std::complex<double>> buffer);
 
 #endif /* ALCOMPLEX_H */

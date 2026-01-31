@@ -725,7 +725,9 @@ template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT
 using isize = std::make_signed_t<std::size_t>;
 using usize = std::size_t;
 using f32 = float;
-using f64 = double;
+
+struct f64 : al::number_base<double, f64> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
 
 namespace al {
 

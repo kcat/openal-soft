@@ -87,7 +87,7 @@ namespace {
 
 using SubListAllocator = al::allocator<std::array<al::Source,64>>;
 using std::chrono::nanoseconds;
-using seconds_d = std::chrono::duration<f64>;
+using seconds_d = std::chrono::duration<double>;
 
 using namespace std::string_view_literals;
 
@@ -251,7 +251,7 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
  * relative to the start of the queue (not the start of the current buffer).
  */
 auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
-    gsl::not_null<al::Context*> const context, nanoseconds *const clocktime) -> f64
+    gsl::not_null<al::Context*> const context, nanoseconds *const clocktime) -> double
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto const *Current = LPVoiceBufferItem{};
@@ -289,8 +289,8 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
         readPos += i64{item.mSampleLen};
         return false;
     });
-    return (gsl::narrow_cast<f64>(readPosFrac)/f64{MixerFracOne}
-        + gsl::narrow_cast<f64>(readPos.c_val)) / BufferFmt->mSampleRate;
+    return (gsl::narrow_cast<double>(readPosFrac)/double{MixerFracOne}
+        + gsl::narrow_cast<double>(readPos.c_val)) / BufferFmt->mSampleRate;
 }
 
 /* GetSourceOffset
@@ -444,7 +444,7 @@ struct VoicePos {
  * returns an empty optional.
  */
 auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const OffsetType,
-    f64 const Offset) -> std::optional<VoicePos>
+    double const Offset) -> std::optional<VoicePos>
 {
     /* Find the first valid Buffer in the Queue */
     const auto BufferFmt = std::invoke([&BufferList]() -> al::Buffer*
@@ -460,8 +460,8 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     /* Get sample frame offset */
     auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<i64,u32>
     {
-        auto dbloff = f64{};
-        auto dblfrac = f64{};
+        auto dbloff = double{};
+        auto dblfrac = double{};
         switch(OffsetType)
         {
         case AL_SEC_OFFSET:
@@ -1725,14 +1725,14 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
 
         if(auto *voice = GetSourceVoice(Source, Context))
         {
-            auto vpos = GetSampleOffset(Source->mQueue, prop, gsl::narrow_cast<f64>(values[0]));
+            auto vpos = GetSampleOffset(Source->mQueue, prop, gsl::narrow_cast<double>(values[0]));
             if(!vpos) Context->throw_error(AL_INVALID_VALUE, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
                 return;
         }
         Source->mOffsetType = prop;
-        Source->mOffset = gsl::narrow_cast<f64>(values[0]);
+        Source->mOffset = gsl::narrow_cast<double>(values[0]);
         return;
 
     case AL_SAMPLE_RW_OFFSETS_SOFT:

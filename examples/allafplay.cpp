@@ -510,7 +510,7 @@ void LafStream::convertSamples(std::span<std::byte> const samples) const
     }
 }
 
-void LafStream::convertPositions(std::span<f32> const dst) const
+void LafStream::convertPositions(std::span<float> const dst) const
 {
     std::visit(overloaded {
         [dst](vector<i8> const &src)
@@ -932,7 +932,7 @@ try {
 
         renderFile.write("desc", 4);
         fwrite64be(32_u64, renderFile);
-        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(RenderSampleRate)),renderFile);
+        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<double>(RenderSampleRate)),renderFile);
         renderFile.write("lpcm", 4);
 
         auto const flags = std::invoke([]

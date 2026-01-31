@@ -152,7 +152,8 @@ void PortPlayback::createStream(PaDeviceIndex const deviceid)
 
     auto params = StreamParamsExt{};
     params.device = deviceid;
-    params.suggestedLatency = mDevice->mBufferSize / gsl::narrow_cast<f64>(mDevice->mSampleRate);
+    params.suggestedLatency = mDevice->mBufferSize
+        / gsl::narrow_cast<double>(mDevice->mSampleRate);
     params.hostApiSpecificStreamInfo = nullptr;
     params.channelCount = gsl::narrow_cast<int>(std::min(devinfo.mPlaybackChannels,
         mDevice->channelsFromFmt()));
@@ -270,8 +271,8 @@ bool PortPlayback::reset()
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
         mDevice->mBufferSize = gsl::narrow_cast<u32>(std::clamp(sampleLatency,
-            gsl::narrow_cast<f64>(mDevice->mBufferSize),
-            f64{std::numeric_limits<i32>::max()}));
+            gsl::narrow_cast<double>(mDevice->mBufferSize),
+            double{std::numeric_limits<int>::max()}));
     }
 
     setDefaultChannelOrder();

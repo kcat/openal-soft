@@ -143,8 +143,8 @@ struct ContextBase {
 
     std::thread mEventThread;
     FifoBufferPtr<AsyncEvent> mAsyncEvents;
-    /* u32 to work with macOS wait/notify wrappers, but really just a bool. */
-    std::atomic<u32> mEventsPending;
+    /* uint32 to work with macOS wait/notify wrappers, but really just a bool. */
+    std::atomic<std::uint32_t> mEventsPending;
     using AsyncEventBitset = std::bitset<al::to_underlying(AsyncEnableBits::Count)>;
     std::atomic<AsyncEventBitset> mEnabledEvts{0u};
 

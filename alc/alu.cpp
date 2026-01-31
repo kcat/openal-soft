@@ -2249,7 +2249,7 @@ void ProcessContexts(DeviceBase const *const device, unsigned const SamplesToDo)
         /* Signal the event handler if there are any events to read. */
         if(auto const *const ring = ctx->mAsyncEvents.get(); ring->readSpace() > 0)
         {
-            ctx->mEventsPending.store(1_u32, std::memory_order_release);
+            ctx->mEventsPending.store(1, std::memory_order_release);
             al::atomic_notify_all(ctx->mEventsPending);
         }
     });
@@ -2509,7 +2509,7 @@ void DeviceBase::doDisconnect(std::string&& msg)
             if(auto *const ring = ctx->mAsyncEvents.get();
                 ring->write(evt) > 0)
             {
-                ctx->mEventsPending.store(1_u32, std::memory_order_release);
+                ctx->mEventsPending.store(1, std::memory_order_release);
                 al::atomic_notify_all(ctx->mEventsPending);
             }
 

@@ -471,10 +471,10 @@ auto DSoundPlayback::reset() -> bool
         if(SUCCEEDED(hr))
         {
             auto const num_updates = std::min(mDevice->mBufferSize / mDevice->mUpdateSize,
-                u32{MAX_UPDATES});
+                unsigned{MAX_UPDATES});
 
             auto nots = std::array<DSBPOSITIONNOTIFY, MAX_UPDATES>{};
-            for(auto i = 0_u32;i < num_updates;++i)
+            for(auto i = 0u;i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->mUpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;

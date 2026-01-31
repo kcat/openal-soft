@@ -169,8 +169,8 @@ auto AllocEffect(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
 {
     auto const sublist = std::ranges::find_if(device->EffectList,
         [](EffectSubList const &slist) { return slist.mFreeMask != 0; });
-    auto const lidx = gsl::narrow_cast<u32>(std::distance(device->EffectList.begin(), sublist));
-    auto const slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
+    auto const lidx = gsl::narrow_cast<ALuint>(std::distance(device->EffectList.begin(), sublist));
+    auto const slidx = gsl::narrow_cast<ALuint>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
     auto effect = gsl::make_not_null(std::construct_at(
@@ -199,8 +199,8 @@ void FreeEffect(gsl::not_null<al::Device*> const device, gsl::not_null<al::Effec
 }
 
 [[nodiscard]]
-auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> al::Effect*
+auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, ALuint const id)
+    noexcept -> al::Effect*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -214,7 +214,7 @@ auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
 }
 
 [[nodiscard]]
-auto LookupEffect(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupEffect(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::Effect*>
 {
     if(auto *const effect = LookupEffect(std::nothrow, al::get_not_null(context->mALDevice), id))
@@ -505,7 +505,7 @@ void InitEffect(al::Effect *const effect)
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
 
-void al::Effect::SetName(gsl::not_null<Context*> const context, u32 const id,
+void al::Effect::SetName(gsl::not_null<Context*> const context, ALuint const id,
     std::string_view const name)
 {
     auto const device = al::get_not_null(context->mALDevice);

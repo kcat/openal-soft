@@ -75,7 +75,7 @@ struct SolarisBackend final : BackendBase {
 
     int mFd{-1};
 
-    u32 mFrameStep{};
+    unsigned mFrameStep{};
     std::vector<std::byte> mBuffer;
 
     std::atomic<bool> mKillNow{true};
@@ -119,7 +119,7 @@ int SolarisBackend::mixerProc()
         }
 
         auto buffer = std::span{mBuffer};
-        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<u32>(buffer.size()/frame_size),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<unsigned>(buffer.size()/frame_size),
             frame_step);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
@@ -222,7 +222,7 @@ bool SolarisBackend::reset()
         return false;
     }
 
-    auto const frame_size = u32{mDevice->bytesFromFmt() * info.play.channels};
+    auto const frame_size = unsigned{mDevice->bytesFromFmt() * info.play.channels};
     mFrameStep = info.play.channels;
     mDevice->mSampleRate = info.play.sample_rate;
     mDevice->mBufferSize = info.play.buffer_size / frame_size;

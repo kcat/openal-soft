@@ -246,9 +246,9 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int const type_flag)
 
 #endif
 
-constexpr auto log2i(u32 x) -> u32
+constexpr auto log2i(unsigned x) -> unsigned
 {
-    auto y = 0_u32;
+    auto y = 0u;
     while(x > 1)
     {
         x >>= 1;
@@ -313,7 +313,7 @@ void OSSPlayback::mixerProc()
 
         auto write_buf = std::span{mMixData};
         mDevice->renderSamples(write_buf.data(),
-            gsl::narrow_cast<u32>(write_buf.size()/frame_size), frame_step);
+            gsl::narrow_cast<unsigned>(write_buf.size()/frame_size), frame_step);
         while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))
         {
             const auto wrote = mFd.write(write_buf);
@@ -386,7 +386,7 @@ auto OSSPlayback::reset() -> bool
     auto numFragmentsLogSize = ((mDevice->mBufferSize + mDevice->mUpdateSize/2)
         / mDevice->mUpdateSize) << 16u;
     /* According to the OSS spec, 16 bytes is the minimum period size. */
-    numFragmentsLogSize |= std::max(log2i(mDevice->mUpdateSize * frameSize), 4_u32);
+    numFragmentsLogSize |= std::max(log2i(mDevice->mUpdateSize * frameSize), 4u);
 
     auto info = audio_buf_info{};
 #define CHECKERR(func) if((func) < 0)                                         \
@@ -419,8 +419,8 @@ auto OSSPlayback::reset() -> bool
     }
 
     mDevice->mSampleRate = ossSpeed;
-    mDevice->mUpdateSize = gsl::narrow_cast<u32>(info.fragsize) / frameSize;
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(info.fragments) * mDevice->mUpdateSize;
+    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(info.fragsize) / frameSize;
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(info.fragments) * mDevice->mUpdateSize;
 
     setDefaultChannelOrder();
 

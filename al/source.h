@@ -46,7 +46,7 @@ enum class SourceStereo : bool {
 
 inline constexpr auto DefaultSendCount = 2_uz;
 
-inline constexpr auto InvalidVoiceIndex = std::numeric_limits<u32>::max();
+inline constexpr auto InvalidVoiceIndex = std::numeric_limits<unsigned>::max();
 
 inline constinit auto sBufferSubDataCompat = false;
 
@@ -156,10 +156,10 @@ struct Source {
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.
      */
-    u32 mVoiceIdx{InvalidVoiceIndex};
+    unsigned mVoiceIdx{InvalidVoiceIndex};
 
     /** Self ID */
-    u32 mId{0};
+    ALuint mId{0};
 
 
     Source() noexcept;
@@ -168,7 +168,7 @@ struct Source {
     Source(const Source&) = delete;
     auto operator=(const Source&) -> Source& = delete;
 
-    static void SetName(gsl::not_null<Context*> context, u32 id, std::string_view name);
+    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 
@@ -179,13 +179,13 @@ public:
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static auto EaxLookupSource(gsl::not_null<Context*> al_context LIFETIMEBOUND, u32 source_id)
+    static auto EaxLookupSource(gsl::not_null<Context*> al_context LIFETIMEBOUND, ALuint source_id)
         noexcept -> Source*;
 
 private:
     using Exception = EaxSourceException;
 
-    static constexpr auto eax_max_speakers = 9_u32;
+    static constexpr auto eax_max_speakers = 9u;
 
     using EaxFxSlotIds = std::array<const GUID*, EAX_MAX_FXSLOTS>;
 

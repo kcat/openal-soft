@@ -66,7 +66,7 @@ constexpr auto ReleaseTime = 0.2f; /* 200ms to drop from max to min */
 struct CompressorState final : public EffectState {
     /* Effect gains for each channel */
     struct TargetGain {
-        u32 mTarget{InvalidChannelIndex.c_val};
+        unsigned mTarget{InvalidChannelIndex.c_val};
         float mGain{0.0f};
     };
     std::array<TargetGain,MaxAmbiChannels> mChans;

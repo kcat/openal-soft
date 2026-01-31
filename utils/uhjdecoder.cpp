@@ -393,7 +393,7 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
 
-        auto const inchannels = gsl::narrow<u32>(ininfo.channels);
+        auto const inchannels = u32::make_from(ininfo.channels);
         auto outchans = u32{};
         if(inchannels == 2)
             outchans = 3;
@@ -404,7 +404,7 @@ auto main(std::span<std::string_view> args) -> int
             fmt::println(std::cerr, "{} is not a 2-, 3-, or 4-channel file", arg);
             return;
         }
-        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels,
+        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels.c_val,
             (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
@@ -416,22 +416,22 @@ auto main(std::span<std::string_view> args) -> int
         }
 
         outfile.write("RIFF", 4);
-        fwrite32le(0xFFFFFFFF, outfile); // 'RIFF' header len; filled in at close
+        fwrite32le(0xFFFFFFFF_u32, outfile); // 'RIFF' header len; filled in at close
         outfile.write("WAVE", 4);
 
         outfile.write("fmt ", 4);
-        fwrite32le(40, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+        fwrite32le(40_u32, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
         fwrite16le(0xFFFE_u16, outfile);
         // 16-bit val, channel count
-        fwrite16le(u16::make_from(outchans), outfile);
+        fwrite16le(outchans.cast_to<u16>(), outfile);
         // 32-bit val, frequency
-        fwrite32le(gsl::narrow<u32>(ininfo.samplerate), outfile);
+        fwrite32le(u32::make_from(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
-        fwrite32le(gsl::narrow<u32>(ininfo.samplerate)*outchans*u32{sizeof(float)}, outfile);
+        fwrite32le(u32::make_from(ininfo.samplerate)*outchans*sizeof(float), outfile);
         // 16-bit val, frame size
-        fwrite16le(u16::make_from(sizeof(float)*outchans), outfile);
+        fwrite16le((sizeof(float)*outchans).cast_to<u16>(), outfile);
         // 16-bit val, bits per sample
         fwrite16le(u16{sizeof(float)*8}, outfile);
         // 16-bit val, extra byte count
@@ -439,12 +439,12 @@ auto main(std::span<std::string_view> args) -> int
         // 16-bit val, valid bits per sample
         fwrite16le(u16{sizeof(float)*8}, outfile);
         // 32-bit val, channel mask
-        fwrite32le(0, outfile);
+        fwrite32le(0_u32, outfile);
         // 16 byte GUID, sub-type format
         outfile.write(SUBTYPE_BFORMAT_FLOAT.data(), std::ssize(SUBTYPE_BFORMAT_FLOAT));
 
         outfile.write("data", 4);
-        fwrite32le(0xFFFFFFFF, outfile); // 'data' header len; filled in at close
+        fwrite32le(0xFFFFFFFF_u32, outfile); // 'data' header len; filled in at close
         if(!outfile)
         {
             fmt::println(std::cerr, "Error writing wave file header: {} ({})",
@@ -455,9 +455,9 @@ auto main(std::span<std::string_view> args) -> int
         const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(usize{BufferLineSize} * inchannels);
-        auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans);
-        auto outmem = std::vector<char>(usize{BufferLineSize}*outchans*sizeof(float));
+        auto inmem = std::vector<float>(usize{BufferLineSize} * inchannels.c_val);
+        auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans.c_val);
+        auto outmem = std::vector<char>(usize{BufferLineSize}*outchans.c_val*sizeof(float));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -473,13 +473,13 @@ auto main(std::span<std::string_view> args) -> int
             if(got < BufferLineSize)
             {
                 auto const remaining = std::min(BufferLineSize - got, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(got*inchannels), 0.0f);
+                std::ranges::fill(inmem | std::views::drop(got*inchannels.c_val), 0.0f);
                 got += remaining;
                 LeadOut -= remaining;
             }
 
             if(inchannels > 2 || use_general)
-                decoder->decode(inmem, inchannels, decmem, got);
+                decoder->decode(inmem, inchannels.c_val, decmem, got);
             else
                 decoder->decode2(inmem, decmem, got);
             if(LeadIn >= got)
@@ -512,9 +512,9 @@ auto main(std::span<std::string_view> args) -> int
         {
             auto const dataLen = DataEnd - DataStart;
             if(outfile.seekp(4))
-                fwrite32le(gsl::narrow<u32>(DataEnd-8), outfile); // 'WAVE' header len
+                fwrite32le(u32::make_from(DataEnd-8), outfile); // 'WAVE' header len
             if(outfile.seekp(DataStart-4))
-                fwrite32le(gsl::narrow<u32>(dataLen), outfile); // 'data' header len
+                fwrite32le(u32::make_from(dataLen), outfile); // 'data' header len
         }
         outfile.flush();
         ++num_decoded;

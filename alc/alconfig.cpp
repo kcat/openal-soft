@@ -558,7 +558,7 @@ auto ConfigValueU32(std::string_view const devName, std::string_view const block
     std::string_view const keyName) -> std::optional<unsigned>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return gsl::narrow<u32>(std::stoul(val, nullptr, 0));
+        return gsl::narrow<unsigned>(std::stoul(val, nullptr, 0));
     }
     catch(std::out_of_range&) {
         WARN("Option is out of range of u32: {} = {}", keyName, val);

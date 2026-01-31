@@ -9,7 +9,7 @@ namespace {
 using namespace std::string_view_literals;
 } // namespace
 
-auto BytesFromDevFmt(DevFmtType const type) noexcept -> u32
+auto BytesFromDevFmt(DevFmtType const type) noexcept -> unsigned
 {
     switch(type)
     {
@@ -23,7 +23,7 @@ auto BytesFromDevFmt(DevFmtType const type) noexcept -> u32
     }
     return 0;
 }
-auto ChannelsFromDevFmt(DevFmtChannels const chans, u32 const ambiorder) noexcept -> u32
+auto ChannelsFromDevFmt(DevFmtChannels const chans, unsigned const ambiorder) noexcept -> unsigned
 {
     switch(chans)
     {

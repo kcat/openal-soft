@@ -340,7 +340,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
     const auto dst = std::span{outptrs}.first(mPort.size());
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
-        mDevice->renderSamples(dst, gsl::narrow_cast<u32>(numframes));
+        mDevice->renderSamples(dst, gsl::narrow_cast<unsigned>(numframes));
     else
     {
         std::ranges::for_each(dst, [numframes](void *outbuf) -> void

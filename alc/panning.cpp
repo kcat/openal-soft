@@ -149,7 +149,7 @@ auto GetScalingName(DevAmbiScaling const scaling) noexcept -> std::string_view
 
 
 [[nodiscard]]
-auto CreateStablizer(usize const outchans, u32 const srate) -> std::unique_ptr<FrontStablizer>
+auto CreateStablizer(usize const outchans, unsigned const srate) -> std::unique_ptr<FrontStablizer>
 {
     auto stablizer = FrontStablizer::Create(outchans);
 
@@ -263,7 +263,7 @@ struct DecoderConfig<DualBand, 0> {
 using DecoderView = DecoderConfig<DualBand, 0>;
 
 
-void InitNearFieldCtrl(al::Device *const device, float const ctrl_dist, u32 const order,
+void InitNearFieldCtrl(al::Device *const device, float const ctrl_dist, unsigned const order,
     SpatialMode const mode)
 {
     static constexpr auto chans_per_order2d = std::array{1u, 2u, 2u, 2u, 2u};
@@ -283,7 +283,7 @@ void InitNearFieldCtrl(al::Device *const device, float const ctrl_dist, u32 cons
         / gsl::narrow_cast<float>(device->mSampleRate);
     device->mNFCtrlFilter.init(w1);
 
-    std::ranges::fill(device->NumChannelsPerOrder, 0_u32);
+    std::ranges::fill(device->NumChannelsPerOrder, 0u);
     std::ranges::copy(((mode == Periphonic) ? chans_per_order3d : chans_per_order2d)
         | std::views::take(order+1u), device->NumChannelsPerOrder.begin());
 }
@@ -299,7 +299,7 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
     const auto distSampleScale = gsl::narrow_cast<float>(device->mSampleRate)
         / SpeedOfSoundMetersPerSec;
 
-    struct DistCoeffs { u32 Length{0u}; float Gain{1.0f}; };
+    struct DistCoeffs { unsigned Length{0u}; float Gain{1.0f}; };
     auto ChanDelay = std::vector<DistCoeffs>{};
     ChanDelay.reserve(device->RealOut.Buffer.size());
 
@@ -330,7 +330,7 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
         ChanDelay.resize(std::max(ChanDelay.size(), idx+1_uz));
         if(distance > 0.0f)
         {
-            ChanDelay[idx].Length = gsl::narrow_cast<u32>(delay);
+            ChanDelay[idx].Length = gsl::narrow_cast<unsigned>(delay);
             ChanDelay[idx].Gain = distance / maxdist;
         }
         TRACE("Channel {} distance comp: {} samples, {:f} gain", GetLabelFromChannel(ch),
@@ -478,16 +478,16 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
             ch = BottomBackRight;
         else
         {
-            auto idx = std::numeric_limits<u32>::max();
+            auto idx = std::numeric_limits<unsigned>::max();
             if(speaker.Name.size() > 3 && speaker.Name.starts_with("AUX"sv))
             {
                 const auto res = std::from_chars(std::to_address(speaker.Name.begin()+3),
                     std::to_address(speaker.Name.end()), idx);
                 if(res.ptr != std::to_address(speaker.Name.end()))
-                    idx = std::numeric_limits<u32>::max();
+                    idx = std::numeric_limits<unsigned>::max();
             }
 
-            if(idx >= u32{MaxChannels-Aux0})
+            if(idx >= unsigned{MaxChannels-Aux0})
             {
                 ERR("AmbDec speaker label \"{}\" not recognized", speaker.Name);
                 continue;
@@ -1206,7 +1206,7 @@ auto LoadAmbDecConfig(std::string_view const config, al::Device *const device,
 
 } // namespace
 
-void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
+void aluInitRenderer(al::Device *const device, int const hrtf_id,
     std::optional<StereoEncoding> const stereomode)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
@@ -1305,7 +1305,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
         if(hrtf_id >= 0 && std::cmp_less(hrtf_id, device->mHrtfList.size()))
         {
             const auto hrtfname = std::string_view{
-                device->mHrtfList[gsl::narrow_cast<u32>(hrtf_id)]};
+                device->mHrtfList[gsl::narrow_cast<unsigned>(hrtf_id)]};
             if(auto hrtf = GetLoadedHrtf(hrtfname, device->mSampleRate))
             {
                 device->mHrtf = std::move(hrtf);
@@ -1332,7 +1332,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
 
             auto *hrtf = device->mHrtf.get();
             device->mIrSize = hrtf->mIrSize;
-            if(auto hrtfsizeopt = device->configValue<u32>({}, "hrtf-size"))
+            if(auto hrtfsizeopt = device->configValue<unsigned>({}, "hrtf-size"))
             {
                 if(*hrtfsizeopt > 0 && *hrtfsizeopt < device->mIrSize)
                     device->mIrSize = std::max(*hrtfsizeopt, MinIrLength);
@@ -1409,7 +1409,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
     device->mRenderMode = RenderMode::Pairwise;
     if(device->Type != DeviceType::Loopback)
     {
-        if(auto cflevopt = device->configValue<i32>({}, "cf_level");
+        if(auto cflevopt = device->configValue<int>({}, "cf_level");
             cflevopt && *cflevopt > 0 && *cflevopt <= 6)
         {
             auto bs2b = std::make_unique<Bs2b::bs2b>();

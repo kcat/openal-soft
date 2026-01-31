@@ -219,7 +219,7 @@ struct OpenSLPlayback final : public BackendBase {
 
     std::mutex mMutex;
 
-    u32 mFrameSize{0};
+    unsigned mFrameSize{0};
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
@@ -310,11 +310,11 @@ void OpenSLPlayback::mixerProc()
 
         auto dlock = std::unique_lock{mMutex};
         auto data = mRing->getWriteVector();
-        mDevice->renderSamples(data[0].data(), gsl::narrow_cast<u32>(data[0].size()/mFrameSize),
-            frame_step);
+        mDevice->renderSamples(data[0].data(),
+            gsl::narrow_cast<unsigned>(data[0].size()/mFrameSize), frame_step);
         if(!data[1].empty())
             mDevice->renderSamples(data[1].data(),
-                gsl::narrow_cast<u32>(data[1].size()/mFrameSize), frame_step);
+                gsl::narrow_cast<unsigned>(data[1].size()/mFrameSize), frame_step);
 
         const auto updatebytes = mRing->getElemSize();
         const auto todo = usize{data[0].size() + data[1].size()} / updatebytes;
@@ -625,9 +625,9 @@ struct OpenSLCapture final : public BackendBase {
     SLObjectItf mRecordObj{nullptr};
 
     RingBufferPtr<std::byte> mRing;
-    u32 mByteOffset{0u};
+    unsigned mByteOffset{0u};
 
-    u32 mFrameSize{0u};
+    unsigned mFrameSize{0u};
 };
 
 OpenSLCapture::~OpenSLCapture()
@@ -683,7 +683,7 @@ void OpenSLCapture::open(std::string_view name)
         mRing = RingBuffer<std::byte>::Create(num_updates, update_len*mFrameSize, false);
 
         mDevice->mUpdateSize = update_len;
-        mDevice->mBufferSize = gsl::narrow_cast<u32>(mRing->writeSpace() * update_len);
+        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mRing->writeSpace() * update_len);
     }
     if(SL_RESULT_SUCCESS == result)
     {

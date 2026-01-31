@@ -282,7 +282,7 @@ constexpr auto operator|(pa_subscription_mask_t lhs, pa_subscription_mask_t rhs)
 struct DevMap {
     std::string name;
     std::string device_name;
-    u32 index{};
+    uint32_t index{};
 };
 
 auto checkName(std::span<DevMap const> const list, std::string_view const name) -> bool
@@ -432,7 +432,7 @@ public:
     }
 
     void eventCallback(pa_context *const context, pa_subscription_event_type_t const t,
-        u32 const idx) noexcept
+        uint32_t const idx) noexcept
     {
         const auto eventFacility = (t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
         const auto eventType = (t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
@@ -720,7 +720,7 @@ struct PulsePlayback final : BackendBase {
 
     pa_stream *mStream{nullptr};
 
-    u32 mFrameSize{0u};
+    unsigned mFrameSize{0u};
 };
 
 PulsePlayback::~PulsePlayback()
@@ -764,7 +764,7 @@ void PulsePlayback::streamWriteCallback(pa_stream *const stream, usize nbytes) c
             buflen = std::min(buflen, nbytes);
         nbytes -= buflen;
 
-        mDevice->renderSamples(buf, gsl::narrow_cast<u32>(buflen/mFrameSize), mSpec.channels);
+        mDevice->renderSamples(buf, gsl::narrow_cast<unsigned>(buflen/mFrameSize), mSpec.channels);
 
         if(auto const ret = pa_stream_write(stream, buf, buflen, free_func, 0, PA_SEEK_RELATIVE);
             ret != PA_OK) [[unlikely]]
@@ -885,7 +885,7 @@ void PulsePlayback::open(std::string_view name)
     static constexpr auto move_callback = [](pa_stream *const stream, void *const pdata) noexcept
     { return static_cast<PulsePlayback*>(pdata)->streamMovedCallback(stream); };
     pa_stream_set_moved_callback(mStream, move_callback, this);
-    mFrameSize = gsl::narrow_cast<u32>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
+    mFrameSize = gsl::narrow_cast<unsigned>(pa_frame_size(pa_stream_get_sample_spec(mStream)));
 
     if(!pulse_name.empty())
         mDeviceId.emplace(std::move(pulse_name));
@@ -1003,12 +1003,12 @@ auto PulsePlayback::reset() -> bool
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample spec"};
 
-    const auto frame_size = gsl::narrow_cast<u32>(pa_frame_size(&mSpec));
-    mAttr.maxlength = ~0_u32;
+    const auto frame_size = gsl::narrow_cast<uint32_t>(pa_frame_size(&mSpec));
+    mAttr.maxlength = ~uint32_t{0};
     mAttr.tlength = mDevice->mBufferSize * frame_size;
-    mAttr.prebuf = 0_u32;
+    mAttr.prebuf = 0u;
     mAttr.minreq = mDevice->mUpdateSize * frame_size;
-    mAttr.fragsize = ~0_u32;
+    mAttr.fragsize = ~uint32_t{0};
 
     mStream = plock.connectStream(deviceName, flags, &mAttr, &mSpec, &chanmap,
         BackendType::Playback);
@@ -1068,7 +1068,7 @@ void PulsePlayback::start()
     if(const auto todo = pa_stream_writable_size(mStream))
     {
         auto *const buf = pa_xmalloc(todo);
-        mDevice->renderSamples(buf, gsl::narrow_cast<u32>(todo/mFrameSize), mSpec.channels);
+        mDevice->renderSamples(buf, gsl::narrow_cast<unsigned>(todo/mFrameSize), mSpec.channels);
         pa_stream_write(mStream, buf, todo, pa_xfree, 0, PA_SEEK_RELATIVE);
     }
 
@@ -1262,13 +1262,13 @@ void PulseCapture::open(std::string_view name)
     if(pa_sample_spec_valid(&mSpec) == 0)
         throw al::backend_exception{al::backend_error::DeviceError, "Invalid sample format"};
 
-    const auto frame_size = gsl::narrow_cast<u32>(pa_frame_size(&mSpec));
-    const auto samples = std::max(mDevice->mBufferSize, mDevice->mSampleRate*100_u32/1000_u32);
-    mAttr.minreq = ~0_u32;
-    mAttr.prebuf = ~0_u32;
+    const auto frame_size = gsl::narrow_cast<uint32_t>(pa_frame_size(&mSpec));
+    const auto samples = std::max(mDevice->mBufferSize, mDevice->mSampleRate*100u/1000u);
+    mAttr.minreq = ~uint32_t{0};
+    mAttr.prebuf = ~uint32_t{0};
     mAttr.maxlength = samples * frame_size;
-    mAttr.tlength = ~0_u32;
-    mAttr.fragsize = std::min(samples, mDevice->mSampleRate*50_u32/1000_u32) * frame_size;
+    mAttr.tlength = ~uint32_t{0};
+    mAttr.fragsize = std::min(samples, mDevice->mSampleRate*50u/1000u) * frame_size;
 
     auto flags = PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY;
     if(!GetConfigValueBool({}, "pulse", "allow-moves", true))

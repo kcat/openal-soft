@@ -197,8 +197,8 @@ force_inline void MixLine(std::span<float const> const InSamples, std::span<floa
 
 } // namespace
 
-void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> const src, u32 frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> const src,
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -231,7 +231,7 @@ void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> c
 }
 
 void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float const> const src,
-    u32 frac, u32 const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const m = usize{bsinc.m};
@@ -277,8 +277,8 @@ void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float cons
     });
 }
 
-void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> const src, u32 frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> const src,
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const sf4 = _mm_set1_ps(bsinc.sf);
@@ -331,11 +331,11 @@ void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> c
 
 
 void MixHrtf_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
+    unsigned const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 void MixHrtfBlend_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    unsigned const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,

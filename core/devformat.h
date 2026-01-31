@@ -104,12 +104,12 @@ using DevFmtType_t = typename DevFmtTypeTraits<T>::Type;
 
 
 [[nodiscard]]
-auto BytesFromDevFmt(DevFmtType type) noexcept -> u32;
+auto BytesFromDevFmt(DevFmtType type) noexcept -> unsigned;
 [[nodiscard]]
-auto ChannelsFromDevFmt(DevFmtChannels chans, u32 ambiorder) noexcept -> u32;
+auto ChannelsFromDevFmt(DevFmtChannels chans, unsigned ambiorder) noexcept -> unsigned;
 [[nodiscard]]
 inline auto FrameSizeFromDevFmt(DevFmtChannels const chans, DevFmtType const type,
-    u32 const ambiorder) noexcept -> u32
+    unsigned const ambiorder) noexcept -> unsigned
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
 [[nodiscard]]

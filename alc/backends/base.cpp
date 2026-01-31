@@ -33,7 +33,7 @@ auto BackendBase::getClockLatency() -> ClockLatency
 {
     auto ret = ClockLatency{};
 
-    auto refcount = u32{};
+    auto refcount = unsigned{};
     do {
         refcount = mDevice->waitForMix();
         ret.ClockTime = mDevice->getClockTime();

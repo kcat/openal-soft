@@ -57,11 +57,11 @@ struct HrtfEntry {
 
 struct LoadedHrtf {
     std::string mFilename;
-    u32 mSampleRate{};
+    unsigned mSampleRate{};
     std::unique_ptr<HrtfStore> mEntry;
 
     template<typename T, typename U>
-    LoadedHrtf(T&& name, u32 const srate, U&& entry)
+    LoadedHrtf(T&& name, unsigned const srate, U&& entry)
         : mFilename{std::forward<T>(name)}, mSampleRate{srate}, mEntry{std::forward<U>(entry)}
     { }
     LoadedHrtf(LoadedHrtf&&) = default;
@@ -155,11 +155,11 @@ public:
 };
 
 
-struct IdxBlend { u32 idx; float blend; };
+struct IdxBlend { unsigned idx; float blend; };
 /* Calculate the elevation index given the polar elevation in radians. This
  * will return an index between 0 and (evcount - 1).
  */
-auto CalcEvIndex(u32 evcount, float ev) -> IdxBlend
+auto CalcEvIndex(unsigned evcount, float ev) -> IdxBlend
 {
     ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * gsl::narrow_cast<float>(evcount-1);
 
@@ -170,7 +170,7 @@ auto CalcEvIndex(u32 evcount, float ev) -> IdxBlend
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1).
  */
-auto CalcAzIndex(u32 azcount, float az) -> IdxBlend
+auto CalcAzIndex(unsigned azcount, float az) -> IdxBlend
 {
     az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * gsl::narrow_cast<float>(azcount);
 
@@ -185,7 +185,7 @@ auto CalcAzIndex(u32 azcount, float az) -> IdxBlend
  * and azimuth in radians. The coefficients are normalized.
  */
 void HrtfStore::getCoeffs(float const elevation, float const azimuth, float const distance,
-    float const spread, HrirSpan const coeffs, std::span<u32, 2> const delays) const
+    float const spread, HrirSpan const coeffs, std::span<unsigned, 2> const delays) const
 {
     auto const dirfact = 1.0f - (std::numbers::inv_pi_v<float>/2.0f * spread);
 
@@ -201,7 +201,7 @@ void HrtfStore::getCoeffs(float const elevation, float const azimuth, float cons
 
     /* Calculate the elevation indices. */
     auto const elev0 = CalcEvIndex(field->evCount.c_val, elevation);
-    auto const elev1_idx = usize{std::min(elev0.idx+1_u32, field->evCount.c_val-1_u32)};
+    auto const elev1_idx = usize{std::min(elev0.idx+1u, field->evCount.c_val-1u)};
     auto const ir0offset = usize{mElev[ebase + elev0.idx].irOffset.c_val};
     auto const ir1offset = usize{mElev[ebase + elev1_idx].irOffset.c_val};
 
@@ -257,15 +257,15 @@ void HrtfStore::getCoeffs(float const elevation, float const azimuth, float cons
 auto DirectHrtfState::Create(usize const num_chans) -> std::unique_ptr<DirectHrtfState>
 { return std::unique_ptr<DirectHrtfState>{new(FamCount{num_chans}) DirectHrtfState{num_chans}}; }
 
-void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool const perHrirMin,
-    std::span<AngularPoint const> const AmbiPoints,
+void DirectHrtfState::build(HrtfStore const *const Hrtf, unsigned const irSize,
+    bool const perHrirMin, std::span<AngularPoint const> const AmbiPoints,
     std::span<std::array<float, MaxAmbiChannels> const> const AmbiMatrix,
     float const XOverFreq, std::span<float const, MaxAmbiOrder+1> const AmbiOrderHFGain)
 {
     using f64x2 = std::array<double, 2>;
     struct ImpulseResponse {
         ConstHrirSpan hrir;
-        u32 ldelay, rdelay;
+        unsigned ldelay, rdelay;
     };
 
     auto const xover_norm = double{XOverFreq} / Hrtf->mSampleRate;
@@ -281,8 +281,8 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
         return AmbiOrderHFGain[order.c_val];
     });
 
-    auto min_delay = u32{HrtfHistoryLength * HrirDelayFracOne};
-    auto max_delay = 0_u32;
+    auto min_delay = unsigned{HrtfHistoryLength * HrirDelayFracOne};
+    auto max_delay = 0u;
     auto impulses = std::vector<ImpulseResponse>{};
     impulses.reserve(AmbiPoints.size());
     std::ranges::transform(AmbiPoints, std::back_inserter(impulses),
@@ -317,7 +317,7 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, u32 const irSize, bool 
     TRACE("Min delay: {:.2f}, max delay: {:.2f}, FIR length: {}",
         min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
 
-    static constexpr auto hrir_delay_round = [](u32 const d) noexcept -> u32
+    static constexpr auto hrir_delay_round = [](unsigned const d) noexcept -> unsigned
     { return (d+HrirDelayFracHalf) >> HrirDelayFracBits; };
 
     auto tmpres = std::vector<std::array<f64x2, HrirLength>>(mChannels.size());
@@ -398,7 +398,7 @@ void AddFileEntry(std::string_view const filename)
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(std::string_view const dispname, u32 const residx)
+void AddBuiltInEntry(std::string_view const dispname, unsigned const residx)
 {
     auto filename = al::format("!{}_{}", residx, dispname);
 
@@ -462,7 +462,7 @@ auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std
     return list;
 }
 
-auto GetLoadedHrtf(std::string_view const name, u32 const devrate) -> HrtfStorePtr
+auto GetLoadedHrtf(std::string_view const name, unsigned const devrate) -> HrtfStorePtr
 try {
     if(devrate > MaxHrtfSampleRate)
     {
@@ -532,7 +532,7 @@ try {
 
     if(hrtf->mSampleRate != devrate)
     {
-        TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, u32{hrtf->mSampleRate}, devrate);
+        TRACE("Resampling HRTF {} ({}hz -> {}hz)", name, unsigned{hrtf->mSampleRate}, devrate);
 
         /* Resample all the IRs. */
         auto inout = std::array<std::array<double, HrirLength>, 2>{};
@@ -561,7 +561,7 @@ try {
         auto max_delay = 0.0f;
         auto new_delays = std::vector<float>(hrtf->mDelays.size()*2);
         auto const rate_scale = gsl::narrow_cast<float>(devrate)
-            / gsl::narrow_cast<float>(u32{hrtf->mSampleRate});
+            / gsl::narrow_cast<float>(unsigned{hrtf->mSampleRate});
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
             [&max_delay,rate_scale](u8 const oldval)
         {
@@ -603,7 +603,7 @@ try {
 
     handle = LoadedHrtfs.emplace(handle, fname, devrate, std::move(hrtf));
     TRACE("Loaded HRTF {} for sample rate {}hz, {}-sample filter", name,
-        u32{handle->mEntry->mSampleRate}, u32{handle->mEntry->mIrSize});
+        unsigned{handle->mEntry->mSampleRate}, unsigned{handle->mEntry->mIrSize});
 
     return HrtfStorePtr{handle->mEntry.get()};
 }

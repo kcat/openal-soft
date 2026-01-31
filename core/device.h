@@ -84,7 +84,7 @@ class DistanceComp {
 
 public:
     /* Maximum delay in samples for speaker distance compensation. */
-    static constexpr auto MaxDelay = 1024_u32;
+    static constexpr auto MaxDelay = 1024u;
 
     struct ChanData {
         std::span<float> Buffer; /* Valid size is [0...MaxDelay). */
@@ -105,7 +105,7 @@ constexpr auto InvalidChannelIndex = ~0_u8;
 
 struct BFChannelConfig {
     float Scale;
-    u32 Index;
+    unsigned Index;
 };
 
 struct MixParams {
@@ -227,13 +227,13 @@ struct DeviceBase {
 
     std::string mDeviceName;
 
-    u32 mSampleRate{};
-    u32 mUpdateSize{};
-    u32 mBufferSize{};
+    unsigned mSampleRate{};
+    unsigned mUpdateSize{};
+    unsigned mBufferSize{};
 
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
-    u32 mAmbiOrder{0_u32};
+    unsigned mAmbiOrder{0u};
     float mXOverFreq{400.0f};
     /* If the main device mix is horizontal/2D only. */
     bool m2DMixing{false};
@@ -247,7 +247,7 @@ struct DeviceBase {
     std::bitset<DeviceFlagsCount> Flags;
     DeviceState mDeviceState{DeviceState::Unprepared};
 
-    u32 NumAuxSends{};
+    unsigned NumAuxSends{};
 
     /* Rendering mode. */
     RenderMode mRenderMode{RenderMode::Normal};
@@ -262,10 +262,10 @@ struct DeviceBase {
      */
     NfcFilter mNFCtrlFilter{};
 
-    using seconds32 = std::chrono::duration<i32>;
-    using nanoseconds32 = std::chrono::duration<i32, std::nano>;
+    using seconds32 = std::chrono::duration<int>;
+    using nanoseconds32 = std::chrono::duration<int, std::nano>;
 
-    std::atomic<u32> mSamplesDone{0u};
+    std::atomic<unsigned> mSamplesDone{0u};
     /* Split the clock to avoid a 64-bit atomic for certain 32-bit targets. */
     std::atomic<seconds32> mClockBaseSec{seconds32{}};
     std::atomic<nanoseconds32> mClockBaseNSec{nanoseconds32{}};
@@ -291,7 +291,7 @@ struct DeviceBase {
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
-    std::array<u32, MaxAmbiOrder+1> NumChannelsPerOrder{};
+    std::array<unsigned, MaxAmbiOrder+1> NumChannelsPerOrder{};
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.
@@ -300,7 +300,7 @@ struct DeviceBase {
 
     /* HRTF state and info */
     al::intrusive_ptr<HrtfStore> mHrtf;
-    u32 mIrSize{0u};
+    unsigned mIrSize{0u};
 
     PostProcess mPostProcess;
 
@@ -311,14 +311,14 @@ struct DeviceBase {
 
     /* Dithering control. */
     float DitherDepth{0.0f};
-    u32 DitherSeed{0u};
+    unsigned DitherSeed{0u};
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
      * the end, so the bottom bit indicates if the device is currently mixing
      * and the upper bits indicates how many mixes have been done.
      */
-    std::atomic<u32> mMixCount{0u};
+    std::atomic<unsigned> mMixCount{0u};
 
     // Contexts created on this device
     using ContextArray = al::FlexArray<ContextBase*>;
@@ -327,15 +327,21 @@ struct DeviceBase {
     /** Returns the number of contexts remaining on the device. */
     [[nodiscard]] auto removeContext(ContextBase *context) -> usize;
 
-    [[nodiscard]] auto bytesFromFmt() const noexcept -> u32 { return BytesFromDevFmt(FmtType); }
-    [[nodiscard]] auto channelsFromFmt() const noexcept -> u32 { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> u32 { return bytesFromFmt() * channelsFromFmt(); }
+    [[nodiscard]]
+    auto bytesFromFmt() const noexcept -> unsigned { return BytesFromDevFmt(FmtType); }
+    [[nodiscard]]
+    auto channelsFromFmt() const noexcept -> unsigned
+    { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    [[nodiscard]]
+    auto frameSizeFromFmt() const noexcept -> unsigned
+    { return bytesFromFmt() * channelsFromFmt(); }
 
     struct MixLock {
         DeviceBase *const self;
-        u32 const mEndVal;
+        unsigned const mEndVal;
 
-        MixLock(DeviceBase *device, u32 const endval) noexcept : self{device}, mEndVal{endval} { }
+        MixLock(DeviceBase *device, unsigned const endval) noexcept : self{device}, mEndVal{endval}
+        { }
         MixLock(const MixLock&) = delete;
         void operator=(const MixLock&) = delete;
         /* Update the mix count when the lock goes out of scope to "release" it
@@ -353,7 +359,7 @@ struct DeviceBase {
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */
-    [[nodiscard]] auto waitForMix() const noexcept -> u32
+    [[nodiscard]] auto waitForMix() const noexcept -> unsigned
     {
         auto refcount = mMixCount.load(std::memory_order_acquire);
         while((refcount&1)) refcount = mMixCount.load(std::memory_order_acquire);
@@ -384,8 +390,8 @@ struct DeviceBase {
     void Process(StablizerPostProcess const &proc, usize SamplesToDo);
     void Process(Bs2bPostProcess const &proc, usize SamplesToDo);
 
-    void renderSamples(std::span<void*const> outBuffers, u32 numSamples);
-    void renderSamples(void *outBuffer, u32 numSamples, usize frameStep);
+    void renderSamples(std::span<void*const> outBuffers, unsigned numSamples);
+    void renderSamples(void *outBuffer, unsigned numSamples, usize frameStep);
 
     /* Caller must lock the device state, and the mixer must not be running. */
     void doDisconnect(std::string&& msg);
@@ -396,7 +402,7 @@ struct DeviceBase {
 
 private:
     [[nodiscard]]
-    auto renderSamples(u32 numSamples) -> u32;
+    auto renderSamples(unsigned numSamples) -> unsigned;
 
 protected:
     explicit DeviceBase(DeviceType type);

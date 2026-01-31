@@ -294,7 +294,7 @@ try {
         const auto filterbase = (1_u64<<srcIdxs[0]) | (1_u64<<typeIdxs[0]);
 
         std::ranges::for_each(std::views::counted(ids, count),
-            [enable,filterbase,&debug](const u32 id)
+            [enable,filterbase,&debug](ALuint const id)
         {
             const auto filter = filterbase | (u64{id} << 32);
 
@@ -310,13 +310,13 @@ try {
         /* C++23 has std::views::cartesian(srcIdxs, typeIdxs, svrIdxs) for a
          * range that gives all value combinations of the given ranges.
          */
-        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](const u32 srcidx)
+        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](u8::value_t const srcidx)
         {
             const auto srcfilt = 1_u32<<srcidx;
-            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](const u32 typeidx)
+            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](u8::value_t const typeidx)
             {
                 const auto srctype = srcfilt | (1_u32<<typeidx);
-                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](const u32 svridx)
+                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](u8::value_t const svridx)
                 {
                     const auto filter = srctype | (1_u32<<svridx);
                     auto iter = std::ranges::lower_bound(debug.mFilters, filter);

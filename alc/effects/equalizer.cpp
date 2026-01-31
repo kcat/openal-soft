@@ -88,7 +88,7 @@ namespace {
 
 struct EqualizerState final : public EffectState {
     struct OutParams {
-        u32 mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
         /* Effect parameters */
         std::array<BiquadFilter,4> mFilter;

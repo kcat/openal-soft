@@ -65,8 +65,8 @@ struct Windower {
     {
         static constexpr auto scale = std::numbers::pi / double{StftSize};
         /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0_u32, u32{StftHalfSize}), mData.begin(),
-            [](u32 const i) -> float
+        std::ranges::transform(std::views::iota(0u, unsigned{StftHalfSize}), mData.begin(),
+            [](unsigned const i) -> float
         {
             const auto val = std::sin((i+0.5) * scale);
             return static_cast<float>(val * val);
@@ -87,7 +87,7 @@ struct PshifterState final : public EffectState {
     /* Effect parameters */
     usize mCount{};
     usize mPos{};
-    u32 mPitchShiftI{};
+    unsigned mPitchShiftI{};
     float mPitchShift{};
 
     /* Effects buffers */

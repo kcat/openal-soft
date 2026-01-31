@@ -105,8 +105,8 @@ struct Sdl3Backend final : BackendBase {
 
     SDL_AudioDeviceID mDeviceID{0};
     SDL_AudioStream *mStream{nullptr};
-    u32 mNumChannels{0};
-    u32 mFrameSize{0};
+    unsigned mNumChannels{0};
+    unsigned mFrameSize{0};
     std::vector<std::byte> mBuffer;
 };
 
@@ -177,7 +177,7 @@ void Sdl3Backend::open(std::string_view name)
         mDevice->FmtType = devtype;
 
         if(have.freq >= int{MinOutputRate} && have.freq <= int{MaxOutputRate})
-            mDevice->mSampleRate = gsl::narrow_cast<u32>(have.freq);
+            mDevice->mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
 
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
@@ -194,7 +194,7 @@ void Sdl3Backend::open(std::string_view name)
             mDevice->FmtChans = DevFmtMono;
         mDevice->mAmbiOrder = 0;
 
-        mNumChannels = gsl::narrow_cast<u32>(have.channels);
+        mNumChannels = gsl::narrow_cast<unsigned>(have.channels);
         mFrameSize = mDevice->bytesFromFmt() * mNumChannels;
 
         if(update_size >= 64)
@@ -202,8 +202,8 @@ void Sdl3Backend::open(std::string_view name)
             /* We have to assume the total buffer size is just twice the update
              * size. SDL doesn't tell us the full end-to-end buffer latency.
              */
-            mDevice->mUpdateSize = gsl::narrow_cast<u32>(update_size);
-            mDevice->mBufferSize = mDevice->mUpdateSize*2_u32;
+            mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
+            mDevice->mBufferSize = mDevice->mUpdateSize*2u;
         }
         else
             ERR("Invalid update size from SDL stream: {}", update_size);
@@ -296,7 +296,7 @@ auto Sdl3Backend::reset() -> bool
                 "Unhandled SDL channel count: {}", have.channels};
         mDevice->mAmbiOrder = 0;
     }
-    mNumChannels = gsl::narrow_cast<u32>(have.channels);
+    mNumChannels = gsl::narrow_cast<unsigned>(have.channels);
 
     switch(have.format)
     {
@@ -315,12 +315,12 @@ auto Sdl3Backend::reset() -> bool
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
-    mDevice->mSampleRate = gsl::narrow_cast<u32>(have.freq);
+    mDevice->mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
 
     if(update_size >= 64)
     {
-        mDevice->mUpdateSize = gsl::narrow_cast<u32>(update_size);
-        mDevice->mBufferSize = mDevice->mUpdateSize * 2_u32;
+        mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
+        mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
 
         mBuffer.resize(usize{mDevice->mUpdateSize} * mFrameSize);
         std::ranges::fill(mBuffer, mDevice->FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});

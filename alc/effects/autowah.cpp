@@ -67,7 +67,7 @@ struct AutowahState final : public EffectState {
     std::array<FilterParam,BufferLineSize> mEnv;
 
     struct ChannelData {
-        u32 mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
         struct FilterHistory {
             float z1{}, z2{};

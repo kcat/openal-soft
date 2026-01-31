@@ -96,7 +96,7 @@ void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
     auto const device = al::get_not_null(context->mDevice);
     auto const frequency = static_cast<float>(device->mSampleRate);
 
-    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1_u32);
+    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
     mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];
 
     const auto gainhf = std::max(1.0f - props.Damping, 0.0625f); /* Limit -24dB */

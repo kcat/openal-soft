@@ -66,7 +66,7 @@ struct SndioPlayback final : BackendBase {
     void stop() override;
 
     sio_hdl *mSndHandle{nullptr};
-    u32 mFrameStep{};
+    unsigned mFrameStep{};
 
     std::vector<std::byte> mBuffer;
 
@@ -94,7 +94,7 @@ void SndioPlayback::mixerProc()
     {
         auto buffer = std::span{mBuffer};
 
-        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<u32>(buffer.size() / frameSize),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<unsigned>(buffer.size()/frameSize),
             frameStep);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
@@ -449,7 +449,7 @@ void SndioCapture::open(std::string_view name)
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
     mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, usize{par.bps}*par.rchan, false);
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(mRing->writeSpace());
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 
     setDefaultChannelOrder();

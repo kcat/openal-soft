@@ -182,7 +182,7 @@ auto OboePlayback::reset() -> bool
         throw al::backend_exception{al::backend_error::DeviceError,
             "Got unhandled sample type: {}", oboe::convertToText(mStream->getFormat())};
     }
-    mDevice->mSampleRate = gsl::narrow_cast<u32>(mStream->getSampleRate());
+    mDevice->mSampleRate = gsl::narrow_cast<unsigned>(mStream->getSampleRate());
 
     /* Ensure the period size is no less than 10ms. It's possible for FramesPerCallback to be 0
      * indicating variable updates, but OpenAL should have a reasonable minimum update size set.
@@ -190,9 +190,9 @@ auto OboePlayback::reset() -> bool
      * update size.
      */
     mDevice->mUpdateSize = std::max(mDevice->mSampleRate/100u,
-        gsl::narrow_cast<u32>(mStream->getFramesPerBurst()));
+        gsl::narrow_cast<unsigned>(mStream->getFramesPerBurst()));
     mDevice->mBufferSize = std::max(mDevice->mUpdateSize*2u,
-        gsl::narrow_cast<u32>(mStream->getBufferSizeInFrames()));
+        gsl::narrow_cast<unsigned>(mStream->getBufferSizeInFrames()));
 
     return true;
 }
@@ -309,7 +309,7 @@ void OboeCapture::open(std::string_view name)
     /* Ensure a minimum ringbuffer size of 100ms. */
     mRing = RingBuffer<std::byte>::Create(
         std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u),
-        gsl::narrow_cast<u32>(mStream->getBytesPerFrame()), false);
+        gsl::narrow_cast<unsigned>(mStream->getBytesPerFrame()), false);
 
     mDeviceName = name;
 }

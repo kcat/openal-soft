@@ -34,7 +34,7 @@ class Compressor {
     };
     AutoFlags mAuto{};
 
-    u32 mLookAhead{0};
+    unsigned mLookAhead{0};
 
     float mPreGain{0.0f};
     float mPostGain{0.0f};
@@ -62,7 +62,7 @@ class Compressor {
     float mLastAttack{0.0f};
     float mLastGainDev{0.0f};
 
-    void gainCompressor(u32 SamplesToDo);
+    void gainCompressor(unsigned SamplesToDo);
 
     struct PrivateToken { };
 public:
@@ -78,8 +78,8 @@ public:
     Compressor(const Compressor&) = delete;
     auto operator=(const Compressor&) -> Compressor& = delete;
 
-    void process(u32 SamplesToDo, std::span<FloatBufferLine> InOut);
-    [[nodiscard]] auto getLookAhead() const noexcept -> u32 { return mLookAhead; }
+    void process(unsigned SamplesToDo, std::span<FloatBufferLine> InOut);
+    [[nodiscard]] auto getLookAhead() const noexcept -> unsigned { return mLookAhead; }
 
     /**
      * The compressor is initialized with the following settings:

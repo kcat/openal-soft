@@ -368,7 +368,7 @@ struct CoreAudioPlayback final : public BackendBase {
 
     AudioUnit mAudioUnit{};
 
-    u32 mFrameSize{0_u32};
+    unsigned mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
 };
 
@@ -520,9 +520,9 @@ bool CoreAudioPlayback::reset()
      */
     if(mDevice->mSampleRate != streamFormat.mSampleRate)
     {
-        mDevice->mBufferSize = gsl::narrow_cast<u32>(mDevice->mBufferSize*streamFormat.mSampleRate
-            /mDevice->mSampleRate + 0.5);
-        mDevice->mSampleRate = gsl::narrow_cast<u32>(streamFormat.mSampleRate);
+        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mDevice->mBufferSize
+            *streamFormat.mSampleRate/mDevice->mSampleRate + 0.5);
+        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(streamFormat.mSampleRate);
     }
 
     struct ChannelMap {
@@ -684,7 +684,7 @@ struct CoreAudioCapture final : public BackendBase {
 
     AudioUnit mAudioUnit{0};
 
-    u32 mFrameSize{0_u32};
+    unsigned mFrameSize{0u};
     AudioStreamBasicDescription mFormat{};  // This is the OpenAL format as a CoreAudio ASBD
 
     SampleConverterPtr mConverter;
@@ -929,7 +929,7 @@ void CoreAudioCapture::open(std::string_view name)
         gsl::narrow_cast<u64::value_t>(std::ceil(mDevice->mBufferSize*srateScale)),
         gsl::narrow_cast<UInt32>(outputFormat.mSampleRate)/u64::value_t{10});
     FrameCount64 += MaxResamplerPadding;
-    if(FrameCount64 > std::numeric_limits<i32>::max())
+    if(FrameCount64 > std::numeric_limits<int>::max())
         throw al::backend_exception{al::backend_error::DeviceError,
             "Calculated frame count is too large: {}", FrameCount64};
 
@@ -949,7 +949,7 @@ void CoreAudioCapture::open(std::string_view name)
     /* Set up sample converter if needed */
     if(outputFormat.mSampleRate != mDevice->mSampleRate)
         mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
-            mFormat.mChannelsPerFrame, gsl::narrow_cast<u32>(hardwareFormat.mSampleRate),
+            mFormat.mChannelsPerFrame, gsl::narrow_cast<unsigned>(hardwareFormat.mSampleRate),
             mDevice->mSampleRate, Resampler::FastBSinc24);
 
 #if CAN_ENUMERATE
@@ -997,17 +997,17 @@ void CoreAudioCapture::captureSamples(std::span<std::byte> outbuffer)
 
     auto rec_vec = mRing->getReadVector();
     const void *src0 = rec_vec[0].data();
-    auto src0len = gsl::narrow_cast<u32>(rec_vec[0].size() / mFrameSize);
+    auto src0len = gsl::narrow_cast<unsigned>(rec_vec[0].size() / mFrameSize);
     auto got = mConverter->convert(&src0, &src0len, outbuffer.data(),
-        gsl::narrow_cast<u32>(outbuffer.size()/mFrameSize));
+        gsl::narrow_cast<unsigned>(outbuffer.size()/mFrameSize));
     auto total_read = rec_vec[0].size()/mFrameSize - src0len;
     if(got < outbuffer.size()/mFrameSize && !src0len && !rec_vec[1].empty())
     {
         outbuffer = outbuffer.subspan(got*mFrameSize);
         const void *src1 = rec_vec[1].data();
-        auto src1len = gsl::narrow_cast<u32>(rec_vec[1].size()/mFrameSize);
+        auto src1len = gsl::narrow_cast<unsigned>(rec_vec[1].size()/mFrameSize);
         std::ignore = mConverter->convert(&src1, &src1len, outbuffer.data(),
-            gsl::narrow_cast<u32>(outbuffer.size()/mFrameSize));
+            gsl::narrow_cast<unsigned>(outbuffer.size()/mFrameSize));
         total_read += rec_vec[1].size()/mFrameSize - src1len;
     }
 
@@ -1017,7 +1017,7 @@ void CoreAudioCapture::captureSamples(std::span<std::byte> outbuffer)
 auto CoreAudioCapture::availableSamples() -> usize
 {
     if(!mConverter) return mRing->readSpace();
-    return mConverter->availableOut(gsl::narrow_cast<u32>(mRing->readSpace()));
+    return mConverter->availableOut(gsl::narrow_cast<unsigned>(mRing->readSpace()));
 }
 
 } // namespace

@@ -70,22 +70,22 @@ constexpr auto WaveformFracBits = 24_uz;
 constexpr auto WaveformFracOne = 1_uz << WaveformFracBits;
 constexpr auto WaveformFracMask = WaveformFracOne - 1;
 
-inline auto Sin(u32 const index) -> float
+inline auto Sin(unsigned const index) -> float
 {
     static constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
-inline auto Saw(u32 const index) -> float
+inline auto Saw(unsigned const index) -> float
 { return static_cast<float>(index) / float{WaveformFracOne}; }
 
-inline auto Triangle(u32 const index) -> float
+inline auto Triangle(unsigned const index) -> float
 { return std::fabs(static_cast<float>(index)*(2.0f/WaveformFracOne) - 1.0f); }
 
-inline auto Half(u32) -> float { return 0.5f; }
+inline auto Half(unsigned) -> float { return 0.5f; }
 
-template<float(&func)(u32)>
-void Oscillate(std::span<float> const dst, u32 index, u32 const step)
+template<float(&func)(unsigned)>
+void Oscillate(std::span<float> const dst, unsigned index, unsigned const step)
 {
     std::ranges::generate(dst, [&index,step]
     {
@@ -147,7 +147,7 @@ struct FormantFilter {
 
 struct VmorpherState final : public EffectState {
     struct OutParams {
-        u32 mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
         /* Effect parameters */
         std::array<std::array<FormantFilter,NumFormants>,NumFilters> mFormants;
@@ -158,10 +158,10 @@ struct VmorpherState final : public EffectState {
     };
     std::array<OutParams,MaxAmbiChannels> mChans;
 
-    void (*mGetSamples)(std::span<float> dst, u32 const index, u32 step){};
+    void (*mGetSamples)(std::span<float> dst, unsigned index, unsigned step){};
 
-    u32 mIndex{0};
-    u32 mStep{1};
+    unsigned mIndex{0};
+    unsigned mStep{1};
 
     /* Effects buffers */
     alignas(16) std::array<float,MaxUpdateSamples> mSampleBufferA{};
@@ -288,7 +288,7 @@ void VmorpherState::process(const size_t samplesToDo,
         const auto td = std::min(MaxUpdateSamples, samplesToDo-base);
 
         mGetSamples(std::span{mLfo}.first(td), mIndex, mStep);
-        mIndex += static_cast<u32>(mStep * td);
+        mIndex += static_cast<unsigned>(mStep * td);
         mIndex &= WaveformFracMask;
 
         auto chandata = mChans.begin();

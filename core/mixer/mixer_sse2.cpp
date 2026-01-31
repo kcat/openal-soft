@@ -51,8 +51,8 @@ force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept
 
 } // namespace
 
-void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, u32 frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, unsigned frac,
+    unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -60,8 +60,8 @@ void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, 
     auto const fracMask4 = _mm_set1_epi32(MixerFracMask);
     auto const fracOne4 = _mm_set1_ps(1.0f/MixerFracOne);
 
-    auto pos_ = std::array<u32, 4>{};
-    auto frac_ = std::array<u32, 4>{};
+    auto pos_ = std::array<unsigned, 4>{};
+    auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge, frac, increment, std::span{frac_}, std::span{pos_});
     auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
         as_signed(pos_[3]));
@@ -110,7 +110,7 @@ void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, 
 }
 
 void Resample_Cubic_SSE2(InterpState const *const state, std::span<float const> const src,
-    u32 frac, u32 const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -121,8 +121,8 @@ void Resample_Cubic_SSE2(InterpState const *const state, std::span<float const> 
     auto const fracDiffOne4 = _mm_set1_ps(1.0f/CubicPhaseDiffOne);
     auto const fracDiffMask4 = _mm_set1_epi32(CubicPhaseDiffMask);
 
-    auto pos_ = std::array<u32, 4>{};
-    auto frac_ = std::array<u32, 4>{};
+    auto pos_ = std::array<unsigned, 4>{};
+    auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, std::span{frac_}, std::span{pos_});
     auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
         as_signed(pos_[3]));

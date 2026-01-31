@@ -47,12 +47,12 @@ auto NameFromFormat(FmtType type) noexcept -> std::string_view;
 auto NameFromFormat(FmtChannels channels) noexcept -> std::string_view;
 
 [[nodiscard]]
-auto BytesFromFmt(FmtType type) noexcept -> u32;
+auto BytesFromFmt(FmtType type) noexcept -> unsigned;
 [[nodiscard]]
-auto ChannelsFromFmt(FmtChannels chans, u32 ambiorder) noexcept -> u32;
+auto ChannelsFromFmt(FmtChannels chans, unsigned ambiorder) noexcept -> unsigned;
 [[nodiscard]]
-inline auto FrameSizeFromFmt(FmtChannels const chans, FmtType const type, u32 const ambiorder)
-    noexcept -> u32
+inline auto FrameSizeFromFmt(FmtChannels const chans, FmtType const type, unsigned const ambiorder)
+    noexcept -> unsigned
 { return ChannelsFromFmt(chans, ambiorder) * BytesFromFmt(type); }
 
 #endif /* CORE_STORAGE_FORMATS_H */

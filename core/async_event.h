@@ -29,13 +29,13 @@ enum class AsyncSrcState : u8::value_t {
 using AsyncKillThread = std::monostate;
 
 struct AsyncSourceStateEvent {
-    u32 mId;
+    unsigned mId;
     AsyncSrcState mState;
 };
 
 struct AsyncBufferCompleteEvent {
-    u32 mId;
-    u32 mCount;
+    unsigned mId;
+    unsigned mCount;
 };
 
 struct AsyncDisconnectEvent {

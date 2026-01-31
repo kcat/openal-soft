@@ -1226,7 +1226,7 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 } /* radb5 */
 
 NOINLINE auto rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac) -> v4sf*
+    const float *wa, const std::span<unsigned const, 15> ifac) -> v4sf*
 {
     Expects(work1 != work2);
 
@@ -1269,7 +1269,7 @@ NOINLINE auto rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1,
 } /* rfftf1 */
 
 NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac)
+    const float *wa, const std::span<unsigned const, 15> ifac)
 {
     Expects(work1 != work2);
 
@@ -1312,7 +1312,7 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
 }
 
 v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac, const float fsign)
+    const float *wa, const std::span<unsigned const, 15> ifac, const float fsign)
 {
     Expects(work1 != work2);
 
@@ -1355,11 +1355,11 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
 }
 
 
-auto decompose(u32 const n, const std::span<u32, 15> ifac, const std::span<u32 const, 4> ntryh)
-    -> u32
+auto decompose(unsigned const n, const std::span<unsigned, 15> ifac,
+    const std::span<unsigned const, 4> ntryh) -> unsigned
 {
     auto nl = n;
-    auto nf = 0_u32;
+    auto nf = 0u;
     for(const auto ntry : ntryh)
     {
         while(nl != 1)
@@ -1386,9 +1386,9 @@ auto decompose(u32 const n, const std::span<u32, 15> ifac, const std::span<u32 c
     return nf;
 }
 
-void rffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
+void rffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
-    static constexpr std::array ntryh{4_u32, 2_u32, 3_u32, 5_u32};
+    static constexpr std::array ntryh{4u, 2u, 3u, 5u};
 
     const auto nf = usize{decompose(n, ifac, ntryh)};
     const auto argh = 2.0*std::numbers::pi / n;
@@ -1420,9 +1420,9 @@ void rffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
     }
 } /* rffti1 */
 
-void cffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
+void cffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
-    static constexpr auto ntryh = std::array{5_u32, 3_u32, 4_u32, 2_u32};
+    static constexpr auto ntryh = std::array{5u, 3u, 4u, 2u};
 
     const auto nf = usize{decompose(n, ifac, ntryh)};
     const auto argh = 2.0*std::numbers::pi / n;
@@ -1464,9 +1464,9 @@ void cffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
 
 
 struct alignas(V4sfAlignment) PFFFT_Setup {
-    u32 N{};
-    u32 Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
-    std::array<u32, 15> ifac{};
+    unsigned N{};
+    unsigned Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
+    std::array<unsigned, 15> ifac{};
     pffft_transform_t transform{};
 
     float *twiddle{}; /* N/4 elements */
@@ -1494,7 +1494,7 @@ auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) ->
         Expects((N%(SimdSize*SimdSize)) == 0);
     }
 
-    const auto Ncvec = u32{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
+    const auto Ncvec = unsigned{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
     Expects(Ncvec > 0u);
 
     const auto storelen = sizeof(PFFFT_Setup) + 2_zu*Ncvec*sizeof(v4sf);

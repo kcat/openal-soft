@@ -29,7 +29,7 @@ constexpr auto InterpSteps = 8;
 constexpr auto SamplesPerStep = 32;
 constexpr auto SamplesPerStepMask = SamplesPerStep-1;
 
-static_assert(std::popcount(gsl::narrow<u32>(SamplesPerStep)) == 1,
+static_assert(std::popcount(gsl::narrow<unsigned>(SamplesPerStep)) == 1,
     "SamplesPerStep must be a power of 2");
 
 /* Sets dst to the given value, returns true if it's meaningfully different. */
@@ -213,7 +213,7 @@ void BiquadInterpFilter::process(std::span<float const> src, std::span<float> ds
             if(steprem)
             {
                 steprem = SamplesPerStep - steprem;
-                mCounter = (counter*SamplesPerStep) | gsl::narrow_cast<i32>(steprem);
+                mCounter = (counter*SamplesPerStep) | gsl::narrow_cast<int>(steprem);
                 return;
             }
 
@@ -295,7 +295,7 @@ void BiquadInterpFilter::dualProcess(BiquadInterpFilter &other, std::span<float 
             if(steprem)
             {
                 steprem = SamplesPerStep - steprem;
-                mCounter = (counter*SamplesPerStep) | gsl::narrow_cast<i32>(steprem);
+                mCounter = (counter*SamplesPerStep) | gsl::narrow_cast<int>(steprem);
                 other.mCounter = mCounter;
                 return;
             }

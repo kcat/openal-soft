@@ -79,7 +79,7 @@ auto CreateHrtfStore(u32 const rate, u8 const irSize,
     static constexpr auto AlignVal = std::align_val_t{alignof(HrtfStore)};
     auto Hrtf = std::unique_ptr<HrtfStore>{::new(::operator new[](total, AlignVal)) HrtfStore{}};
     Hrtf->mRef.store(1u, std::memory_order_relaxed);
-    Hrtf->mSampleRate = rate & 0xff'ff'ff;
+    Hrtf->mSampleRate = rate.c_val & 0xff'ff'ff;
     Hrtf->mIrSize = irSize.c_val;
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
@@ -184,7 +184,7 @@ auto readle<u8,8>(std::istream &data) -> u8
 
 auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    const auto rate = readle<uint32_t>(data);
+    const auto rate = readle<u32>(data);
     const auto irCount = readle<u16>(data);
     const auto irSize = readle<u16>(data);
     const auto evCount = readle<u8>(data);
@@ -270,7 +270,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
 auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    const auto rate = readle<uint32_t>(data);
+    const auto rate = readle<u32>(data);
     const auto irSize = readle<u8>(data);
     const auto evCount = readle<u8>(data);
     if(!data || data.eof())
@@ -343,7 +343,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
     static constexpr auto ChanType_LeftOnly = 0_u8;
     static constexpr auto ChanType_LeftRight = 1_u8;
 
-    const auto rate = readle<uint32_t>(data);
+    const auto rate = readle<u32>(data);
     const auto sampleType = readle<u8>(data);
     const auto channelType = readle<u8>(data);
     const auto irSize = readle<u8>(data);
@@ -578,7 +578,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     static constexpr auto ChanType_LeftOnly = 0_u8;
     static constexpr auto ChanType_LeftRight = 1_u8;
 
-    const auto rate = readle<uint32_t>(data);
+    const auto rate = readle<u32>(data);
     const auto channelType = readle<u8>(data);
     const auto irSize = readle<u8>(data);
     const auto fdCount = readle<u8>(data);

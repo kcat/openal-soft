@@ -99,7 +99,7 @@ auto getFactoryByType(EffectSlotType const type) -> gsl::not_null<EffectStateFac
 
 
 [[nodiscard]]
-auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context, ALuint const id)
     noexcept -> al::EffectSlot*
 {
     const auto lidx = (id-1) >> 6;
@@ -114,7 +114,7 @@ auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
 }
 
 [[nodiscard]]
-auto LookupEffectSlot(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupEffectSlot(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::EffectSlot*>
 {
     if(auto *const slot = LookupEffectSlot(std::nothrow, context, id)) [[likely]]
@@ -123,8 +123,8 @@ auto LookupEffectSlot(gsl::not_null<al::Context*> const context, u32 const id)
 }
 
 [[nodiscard]]
-auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> al::Effect*
+auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, ALuint const id)
+    noexcept -> al::Effect*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -138,7 +138,7 @@ auto LookupEffect(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
 }
 
 [[nodiscard]]
-auto LookupEffect(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupEffect(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::Effect*>
 {
     if(auto *const effect = LookupEffect(std::nothrow, al::get_not_null(context->mALDevice), id))
@@ -147,8 +147,8 @@ auto LookupEffect(gsl::not_null<al::Context*> const context, u32 const id)
 }
 
 [[nodiscard]]
-auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> al::Buffer*
+auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, ALuint const id)
+    noexcept -> al::Buffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -162,7 +162,7 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
 }
 
 [[nodiscard]]
-auto LookupBuffer(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupBuffer(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::Buffer*>
 {
     if(auto *const buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
@@ -295,7 +295,7 @@ auto AllocEffectSlot(gsl::not_null<al::Context*> const context) -> gsl::not_null
 {
     auto const sublist = std::ranges::find_if(context->mEffectSlotList,
         [](EffectSlotSubList const &slist) { return slist.mFreeMask != 0; });
-    auto const lidx = gsl::narrow_cast<u32>(std::distance(context->mEffectSlotList.begin(),
+    auto const lidx = gsl::narrow_cast<ALuint>(std::distance(context->mEffectSlotList.begin(),
         sublist));
     auto const slidx = sublist->mFreeMask.countr_zero().c_val;
     ASSUME(slidx < 64);
@@ -416,7 +416,7 @@ try {
         slots.reserve(eids.size());
 
         std::ranges::transform(eids, std::back_inserter(slots),
-            [context](u32 const eid) -> gsl::not_null<al::EffectSlot*>
+            [context](ALuint const eid) -> gsl::not_null<al::EffectSlot*>
         {
             auto const slot = LookupEffectSlot(context, eid);
             if(slot->mRef.load(std::memory_order_relaxed) != 0)
@@ -834,7 +834,7 @@ al::EffectSlot::~EffectSlot()
     mSlot->InUse = false;
 }
 
-auto al::EffectSlot::initEffect(u32 const effectId, ALenum const effectType,
+auto al::EffectSlot::initEffect(ALuint const effectId, ALenum const effectType,
     EffectProps const &effectProps, gsl::not_null<Context*> const context) -> void
 {
     const auto newtype = EffectSlotTypeFromEnum(effectType);
@@ -903,7 +903,7 @@ void al::EffectSlot::updateProps(gsl::not_null<Context*> const context) const
     }
 }
 
-void al::EffectSlot::SetName(gsl::not_null<Context*> const context, u32 const id,
+void al::EffectSlot::SetName(gsl::not_null<Context*> const context, ALuint const id,
     std::string_view const name)
 {
     const auto slotlock = std::lock_guard{context->mEffectSlotLock};

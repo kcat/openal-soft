@@ -205,7 +205,7 @@ struct ConvolutionState final : public EffectState {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
-    u32 mAmbiOrder{};
+    unsigned mAmbiOrder{};
 
     size_t mFifoPos{0};
     alignas(16) std::array<float,ConvolveUpdateSamples*2> mInput{};
@@ -270,7 +270,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     using UhjDecoderType = UhjDecoder<512>;
     static constexpr auto DecoderPadding = UhjDecoderType::sInputPadding;
 
-    static constexpr auto MaxConvolveAmbiOrder = 1_u32;
+    static constexpr auto MaxConvolveAmbiOrder = 1u;
 
     if(!mFft)
         mFft = PFFFTSetup{ConvolveUpdateSize, PFFFT_REAL};
@@ -309,7 +309,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     auto resampler = PPhaseResampler{};
     if(device->mSampleRate != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->mSampleRate);
-    const auto resampledCount = static_cast<u32>(
+    const auto resampledCount = static_cast<unsigned>(
         (u64::value_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 

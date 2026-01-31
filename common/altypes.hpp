@@ -388,6 +388,14 @@ public:
     auto modf(SelfType &ires) const noexcept -> SelfType requires(std::floating_point<T>)
     { return SelfType{std::modf(c_val, &ires.c_val)}; }
 
+    [[nodiscard]] force_inline constexpr
+    auto isfinite() const noexcept -> bool requires(std::floating_point<T>)
+    { return std::isfinite(c_val); }
+
+    [[nodiscard]] force_inline constexpr
+    auto isnan() const noexcept -> bool requires(std::floating_point<T>)
+    { return std::isnan(c_val); }
+
 
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
@@ -713,8 +721,11 @@ template<typename CharT> struct al::formatter<i16, CharT> : i16::formatter<CharT
 struct u16 : al::number_base<std::uint16_t, u16> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
 
-using i32 = std::int32_t;
-using u32 = std::uint32_t;
+struct i32 : al::number_base<std::int32_t, i32> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<i32, CharT> : i32::formatter<CharT> { };
+
+struct u32 : al::number_base<std::uint32_t, u32> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<u32, CharT> : u32::formatter<CharT> { };
 
 struct i64 : al::number_base<std::int64_t, i64> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT> { };
@@ -768,9 +779,9 @@ auto operator ""_i16(unsigned long long const n) noexcept { return i16::make_fro
 auto operator ""_u16(unsigned long long const n) noexcept { return u16::make_from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i32(unsigned long long const n) noexcept { return gsl::narrow<i32>(n); }
+auto operator ""_i32(unsigned long long const n) noexcept { return i32::make_from(n); }
 [[nodiscard]] consteval
-auto operator ""_u32(unsigned long long const n) noexcept { return gsl::narrow<u32>(n); }
+auto operator ""_u32(unsigned long long const n) noexcept { return u32::make_from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_i64(unsigned long long const n) noexcept { return i64::make_from(n); }

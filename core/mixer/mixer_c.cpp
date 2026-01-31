@@ -28,24 +28,25 @@ constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
 constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
 constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
-using SamplerNST = auto(std::span<float const> vals, usize pos, u32 frac) noexcept -> float;
+using SamplerNST = auto(std::span<float const> vals, usize pos, unsigned frac) noexcept -> float;
 
 template<typename T>
-using SamplerT = auto(T const &istate, std::span<float const> vals, usize pos, u32 frac) noexcept
-    -> float;
+using SamplerT = auto(T const &istate, std::span<float const> vals, usize pos, unsigned frac)
+    noexcept -> float;
 
 [[nodiscard]] constexpr
-auto do_point(std::span<float const> const vals, usize const pos, u32) noexcept -> float
+auto do_point(std::span<float const> const vals, usize const pos, unsigned) noexcept -> float
 { return vals[pos]; }
 [[nodiscard]] constexpr
-auto do_lerp(std::span<float const> const vals, usize const pos, u32 const frac) noexcept -> float
+auto do_lerp(std::span<float const> const vals, usize const pos, unsigned const frac) noexcept
+    -> float
 { return lerpf(vals[pos+0], vals[pos+1], gsl::narrow_cast<float>(frac)*(1.0f/MixerFracOne)); }
 [[nodiscard]] constexpr
 auto do_cubic(CubicState const &istate, std::span<float const> const vals, usize const pos,
-    u32 const frac) noexcept -> float
+    unsigned const frac) noexcept -> float
 {
     /* Calculate the phase index and factor. */
-    auto const pi = u32{frac>>CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+    auto const pi = unsigned{frac>>CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
     auto const pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)*float{1.0f/CubicPhaseDiffOne};
 
     auto const fil = std::span{istate.filter[pi].mCoeffs};
@@ -57,14 +58,14 @@ auto do_cubic(CubicState const &istate, std::span<float const> const vals, usize
 }
 [[nodiscard]] constexpr
 auto do_fastbsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
-    u32 const frac) noexcept -> float
+    unsigned const frac) noexcept -> float
 {
     auto const m = usize{bsinc.m};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
     /* Calculate the phase index and factor. */
-    auto const pi = u32{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
+    auto const pi = unsigned{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
     auto const pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne);
 
     auto const fil = bsinc.filter.subspan(2_uz*pi*m);
@@ -78,14 +79,14 @@ auto do_fastbsinc(BsincState const &bsinc, std::span<float const> const vals, us
 }
 [[nodiscard]] constexpr
 auto do_bsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
-    u32 const frac) noexcept -> float
+    unsigned const frac) noexcept -> float
 {
     auto const m = usize{bsinc.m};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
     /* Calculate the phase index and factor. */
-    auto const pi = u32{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
+    auto const pi = unsigned{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
     auto const pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask)*float{1.0f/BsincPhaseDiffOne};
 
     auto const fil = bsinc.filter.subspan(2_uz*pi*m);
@@ -101,7 +102,7 @@ auto do_bsinc(BsincState const &bsinc, std::span<float const> const vals, usize 
 }
 
 template<SamplerNST Sampler>
-void DoResample(std::span<float const> const src, u32 frac, u32 const increment,
+void DoResample(std::span<float const> const src, unsigned frac, unsigned const increment,
     std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
@@ -117,8 +118,8 @@ void DoResample(std::span<float const> const src, u32 frac, u32 const increment,
 }
 
 template<typename U, SamplerT<U> Sampler>
-void DoResample(U const istate, std::span<float const> const src, u32 frac, u32 const increment,
-    std::span<float> const dst)
+void DoResample(U const istate, std::span<float const> const src, unsigned frac,
+    unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
     auto pos = 0_uz;
@@ -183,23 +184,23 @@ force_inline void MixLine(std::span<float const> InSamples, std::span<float> con
 
 } // namespace
 
-void Resample_Point_C(InterpState const*, std::span<float const> const src, u32 const frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_Point_C(InterpState const*, std::span<float const> const src, unsigned const frac,
+    unsigned const increment, std::span<float> const dst)
 { DoResample<do_point>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
-void Resample_Linear_C(InterpState const*, std::span<float const> const src, u32 const frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_Linear_C(InterpState const*, std::span<float const> const src, unsigned const frac,
+    unsigned const increment, std::span<float> const dst)
 { DoResample<do_lerp>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
 void Resample_Cubic_C(InterpState const *const state, std::span<float const> const src,
-    u32 const frac, u32 const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst)
 {
     DoResample<CubicState,do_cubic>(std::get<CubicState>(*state), src.subspan(MaxResamplerEdge-1),
         frac, increment, dst);
 }
 
 void Resample_FastBSinc_C(InterpState const *const state, std::span<float const> const src,
-    u32 const frac, u32 const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -208,7 +209,7 @@ void Resample_FastBSinc_C(InterpState const *const state, std::span<float const>
 }
 
 void Resample_BSinc_C(InterpState const *const state, std::span<float const> const src,
-    u32 const frac, u32 const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -218,11 +219,11 @@ void Resample_BSinc_C(InterpState const *const state, std::span<float const> con
 
 
 void MixHrtf_C(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
+    unsigned const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 void MixHrtfBlend_C(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    unsigned const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,

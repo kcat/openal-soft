@@ -312,8 +312,8 @@ auto AllocFilter(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
 {
     auto const sublist = std::ranges::find_if(device->FilterList,
         [](FilterSubList const &slist) { return slist.mFreeMask != 0; });
-    auto const lidx = gsl::narrow_cast<u32>(std::distance(device->FilterList.begin(), sublist));
-    auto const slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
+    auto const lidx = gsl::narrow_cast<ALuint>(std::distance(device->FilterList.begin(), sublist));
+    auto const slidx = gsl::narrow_cast<ALuint>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
     auto filter = gsl::make_not_null(std::construct_at(
@@ -342,8 +342,8 @@ void FreeFilter(gsl::not_null<al::Device*> const device, gsl::not_null<al::Filte
 }
 
 [[nodiscard]]
-auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 const id) noexcept
-    -> al::Filter*
+auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device, ALuint const id)
+    noexcept -> al::Filter*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -357,7 +357,7 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device, u32 c
 }
 
 [[nodiscard]]
-auto LookupFilter(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupFilter(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::Filter*>
 {
     if(auto *const filter = LookupFilter(std::nothrow, al::get_not_null(context->mALDevice), id))
@@ -615,7 +615,7 @@ AL_API DECL_FUNC3(void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,valu
 AL_API DECL_FUNC3(void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
 
 
-void al::Filter::SetName(gsl::not_null<al::Context*> const context, u32 const id,
+void al::Filter::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
     std::string_view const name)
 {
     auto const device = get_not_null(context->mALDevice);

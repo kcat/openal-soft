@@ -191,10 +191,10 @@ using unique_coptr = std::unique_ptr<T, decltype([](T *const ptr) { CoTaskMemFre
 
 
 /* Scales the given reftime value, rounding the result. */
-constexpr auto RefTime2Samples(ReferenceTime const &val, DWORD const srate) noexcept -> u32
+constexpr auto RefTime2Samples(ReferenceTime const &val, DWORD const srate) noexcept -> unsigned
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return al::saturate_cast<u32>(retval);
+    return al::saturate_cast<unsigned>(retval);
 }
 
 
@@ -1219,7 +1219,7 @@ struct WasapiPlayback final : BackendBase {
 
     UINT32 mOutBufferSize{}, mOutUpdateSize{};
     std::vector<char> mResampleBuffer;
-    u32 mBufferFilled{0};
+    unsigned mBufferFilled{0};
     SampleConverterPtr mResampler;
     bool mMonoUpsample{false};
     bool mExclusiveMode{false};
@@ -1257,7 +1257,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
     if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
         ERR("Failed to set priority level for thread");
 
-    const auto frame_size = u32{mFormat.Format.nChannels} * mFormat.Format.wBitsPerSample / 8_u32;
+    const auto frame_size = unsigned{mFormat.Format.nChannels}*mFormat.Format.wBitsPerSample/8u;
     const auto buffer_len = mOutBufferSize;
     auto *resbufferptr = LPCVOID{};
 
@@ -1296,7 +1296,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             mPadding.store(written, std::memory_order_relaxed);
         }
 
-        if(const auto len = u32{buffer_len - written})
+        if(const auto len = unsigned{buffer_len - written})
         {
             auto *buffer = LPBYTE{};
             auto hr = audio.mRender->GetBuffer(len, &buffer);
@@ -1664,12 +1664,12 @@ auto WasapiPlayback::openProxy(std::string_view const name, DeviceHelper const &
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
     else
         mDevice->mSampleRate = std::min(mDevice->mSampleRate,
-            gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec));
+            gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec));
 
-    const auto chancount = u32{OutputType.Format.nChannels};
+    const auto chancount = unsigned{OutputType.Format.nChannels};
     const auto chanmask = OutputType.dwChannelMask;
     /* Don't update the channel format if the requested format fits what's
      * supported.
@@ -1913,10 +1913,10 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
         mDevice->FmtChans = DevFmtStereo;
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec);
+        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
     else
         mDevice->mSampleRate = std::min(mDevice->mSampleRate,
-            gsl::narrow_cast<u32>(OutputType.Format.nSamplesPerSec));
+            gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec));
 
     setDefaultWFXChannelOrder();
 
@@ -1930,8 +1930,9 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
 
-    mDevice->mUpdateSize = gsl::narrow_cast<u32>((u64::value_t{mOutUpdateSize}*mDevice->mSampleRate
-        + (mFormat.Format.nSamplesPerSec-1)) / mFormat.Format.nSamplesPerSec);
+    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>((u64::value_t{mOutUpdateSize}
+        *mDevice->mSampleRate + (mFormat.Format.nSamplesPerSec-1))
+        / mFormat.Format.nSamplesPerSec);
     mDevice->mBufferSize = mDevice->mUpdateSize*2;
 
     mResampler = nullptr;
@@ -2278,7 +2279,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
          * implicitly two update periods on the device.
          */
         mOutUpdateSize = buffer_len;
-        mDevice->mUpdateSize = gsl::narrow_cast<u32>(u64::value_t{buffer_len}
+        mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(u64::value_t{buffer_len}
             * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
         mDevice->mBufferSize = mDevice->mUpdateSize * 2;
     }
@@ -2286,7 +2287,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     {
         mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
-        mDevice->mBufferSize = gsl::narrow_cast<u32>(u64::value_t{buffer_len}
+        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(u64::value_t{buffer_len}
             * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
         mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
             mDevice->mBufferSize/2u);
@@ -2470,13 +2471,13 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                 auto dstframes = usize{};
                 if(mSampleConv)
                 {
-                    static constexpr auto lenlimit = usize{std::numeric_limits<i32>::max()};
+                    static constexpr auto lenlimit = usize{std::numeric_limits<int>::max()};
                     auto *srcdata = LPCVOID{rdata};
-                    auto srcframes = u32{numsamples};
+                    auto srcframes = unsigned{numsamples};
 
                     const auto len1 = data[0].size() / mRing->getElemSize();
                     dstframes = mSampleConv->convert(&srcdata, &srcframes, data[0].data(),
-                        gsl::narrow_cast<u32>(std::min(len1, lenlimit)));
+                        gsl::narrow_cast<unsigned>(std::min(len1, lenlimit)));
                     if(srcframes > 0 && dstframes == len1 && !data[1].empty())
                     {
                         /* If some source samples remain, all of the first dest
@@ -2485,7 +2486,7 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                          */
                         const auto len2 = data[1].size() / mRing->getElemSize();
                         dstframes += mSampleConv->convert(&srcdata, &srcframes, data[1].data(),
-                            gsl::narrow_cast<u32>(std::min(len2, lenlimit)));
+                            gsl::narrow_cast<unsigned>(std::min(len2, lenlimit)));
                     }
                 }
                 else
@@ -2820,7 +2821,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         wfx = nullptr;
 
         static constexpr auto validate_fmt = [](DeviceBase const *const device,
-            u32 const chancount, u32 const chanmask) noexcept -> bool
+            unsigned const chancount, unsigned const chanmask) noexcept -> bool
         {
             switch(device->FmtChans)
             {

@@ -105,7 +105,7 @@ void EnumerateDevices()
     }
 }
 
-struct StreamParamsExt : PaStreamParameters { u32 updateSize; };
+struct StreamParamsExt : PaStreamParameters { unsigned updateSize; };
 
 struct PortPlayback final : BackendBase {
     explicit PortPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
@@ -140,7 +140,7 @@ auto PortPlayback::writeCallback(const void*, void *const outputBuffer,
     unsigned long const framesPerBuffer, PaStreamCallbackTimeInfo const*, PaStreamCallbackFlags)
     noexcept -> int
 {
-    mDevice->renderSamples(outputBuffer, gsl::narrow_cast<u32>(framesPerBuffer),
+    mDevice->renderSamples(outputBuffer, gsl::narrow_cast<unsigned>(framesPerBuffer),
         gsl::narrow_cast<unsigned>(mParams.channelCount));
     return 0;
 }
@@ -184,8 +184,8 @@ void PortPlayback::createStream(PaDeviceIndex const deviceid)
     {
         if(params.updateSize != DefaultUpdateSize)
             params.updateSize = DefaultUpdateSize;
-        else if(srate != 48000_u32)
-            srate = (srate != 44100_u32) ? 44100_u32 : 48000_u32;
+        else if(srate != 48000u)
+            srate = (srate != 44100u) ? 44100u : 48000u;
         else if(params.sampleFormat != paInt16)
             params.sampleFormat = paInt16;
         else if(params.channelCount != 2)
@@ -262,7 +262,7 @@ bool PortPlayback::reset()
     }
 
     const auto *streamInfo = Pa_GetStreamInfo(mStream);
-    mDevice->mSampleRate = gsl::narrow_cast<u32>(std::lround(streamInfo->sampleRate));
+    mDevice->mSampleRate = gsl::narrow_cast<unsigned>(std::lround(streamInfo->sampleRate));
     mDevice->mUpdateSize = mParams.updateSize;
     mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
     if(streamInfo->outputLatency > 0.0f)
@@ -270,7 +270,7 @@ bool PortPlayback::reset()
         const auto sampleLatency = streamInfo->outputLatency * streamInfo->sampleRate;
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
-        mDevice->mBufferSize = gsl::narrow_cast<u32>(std::clamp(sampleLatency,
+        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(std::clamp(sampleLatency,
             gsl::narrow_cast<double>(mDevice->mBufferSize),
             double{std::numeric_limits<int>::max()}));
     }

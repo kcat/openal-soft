@@ -134,8 +134,8 @@ struct WinMMPlayback final : public BackendBase {
     void start() override;
     void stop() override;
 
-    std::atomic<u32> mWritable{0_u32};
-    u32 mIdx{0_u32};
+    std::atomic<unsigned> mWritable{0u};
+    unsigned mIdx{0u};
     std::array<WAVEHDR, 4> mWaveBuffer{};
     al::vector<char,16> mBuffer;
 
@@ -188,7 +188,7 @@ FORCE_ALIGN void WinMMPlayback::mixerProc()
             waveOutWrite(mOutHdl, &waveHdr, sizeof(WAVEHDR));
             --todo;
         }
-        mIdx = gsl::narrow_cast<u32>(widx);
+        mIdx = gsl::narrow_cast<unsigned>(widx);
     }
 }
 
@@ -248,9 +248,9 @@ void WinMMPlayback::open(std::string_view name)
 
 auto WinMMPlayback::reset() -> bool
 {
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(u64::value_t{mDevice->mBufferSize} *
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(u64::value_t{mDevice->mBufferSize} *
         mFormat.nSamplesPerSec / mDevice->mSampleRate);
-    mDevice->mBufferSize = (mDevice->mBufferSize+3) & ~0x3_u32;
+    mDevice->mBufferSize = (mDevice->mBufferSize+3) & ~0x3u;
     mDevice->mUpdateSize = mDevice->mBufferSize / 4;
     mDevice->mSampleRate = mFormat.nSamplesPerSec;
 
@@ -323,7 +323,7 @@ void WinMMPlayback::start()
     try {
         for(auto &waveHdr : mWaveBuffer)
             waveOutPrepareHeader(mOutHdl, &waveHdr, sizeof(WAVEHDR));
-        mWritable.store(gsl::narrow_cast<u32>(mWaveBuffer.size()), std::memory_order_release);
+        mWritable.store(gsl::narrow_cast<unsigned>(mWaveBuffer.size()), std::memory_order_release);
 
         mKillNow.store(false, std::memory_order_release);
         mThread = std::thread{&WinMMPlayback::mixerProc, this};
@@ -369,8 +369,8 @@ struct WinMMCapture final : public BackendBase {
     void captureSamples(std::span<std::byte> outbuffer) override;
     auto availableSamples() -> usize override;
 
-    std::atomic<u32> mReadable{0_u32};
-    u32 mIdx{0_u32};
+    std::atomic<unsigned> mReadable{0u};
+    unsigned mIdx{0u};
     std::array<WAVEHDR, 4> mWaveBuffer{};
     al::vector<char, 16> mBuffer;
 
@@ -426,7 +426,7 @@ void WinMMCapture::captureProc()
             waveInAddBuffer(mInHdl, &waveHdr, sizeof(WAVEHDR));
             --todo;
         }
-        mIdx = gsl::narrow_cast<u32>(widx);
+        mIdx = gsl::narrow_cast<unsigned>(widx);
     }
 }
 

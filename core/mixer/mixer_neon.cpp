@@ -26,13 +26,13 @@
 
 namespace {
 
-constexpr auto BSincPhaseDiffBits = u32{MixerFracBits - BSincPhaseBits};
-constexpr auto BSincPhaseDiffOne = 1_u32 << BSincPhaseDiffBits;
-constexpr auto BSincPhaseDiffMask = BSincPhaseDiffOne - 1_u32;
+constexpr auto BSincPhaseDiffBits = unsigned{MixerFracBits - BSincPhaseBits};
+constexpr auto BSincPhaseDiffOne = 1u << BSincPhaseDiffBits;
+constexpr auto BSincPhaseDiffMask = BSincPhaseDiffOne - 1u;
 
-constexpr auto CubicPhaseDiffBits = u32{MixerFracBits - CubicPhaseBits};
-constexpr auto CubicPhaseDiffOne = 1_u32 << CubicPhaseDiffBits;
-constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1_u32;
+constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
+constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
+constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
 force_inline
 void vtranspose4(float32x4_t &x0, float32x4_t &x1, float32x4_t &x2, float32x4_t &x3) noexcept
@@ -182,8 +182,8 @@ force_inline void MixLine(std::span<float const> const InSamples, std::span<floa
 
 } // namespace
 
-void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, u32 frac,
-    u32 const increment, std::span<float> const dst)
+void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, unsigned frac,
+    unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -191,8 +191,8 @@ void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, 
     auto const fracMask4 = vdupq_n_u32(MixerFracMask);
     auto const fracOne4 = vdupq_n_f32(1.0f/MixerFracOne);
 
-    alignas(16) auto pos_ = std::array<u32, 4>{};
-    alignas(16) auto frac_ = std::array<u32, 4>{};
+    alignas(16) auto pos_ = std::array<unsigned, 4>{};
+    alignas(16) auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge, frac, increment, std::span{frac_}, std::span{pos_});
     auto frac4 = vld1q_u32(frac_.data());
     auto pos4 = vld1q_u32(pos_.data());
@@ -239,7 +239,7 @@ void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, 
 }
 
 void Resample_Cubic_NEON(InterpState const *const state, std::span<float const> const src,
-    u32 frac, u32 const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -250,8 +250,8 @@ void Resample_Cubic_NEON(InterpState const *const state, std::span<float const> 
     auto const fracDiffOne4 = vdupq_n_f32(1.0f/CubicPhaseDiffOne);
     auto const fracDiffMask4 = vdupq_n_u32(CubicPhaseDiffMask);
 
-    alignas(16) auto pos_ = std::array<u32, 4>{};
-    alignas(16) auto frac_ = std::array<u32, 4>{};
+    alignas(16) auto pos_ = std::array<unsigned, 4>{};
+    alignas(16) auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, std::span{frac_}, std::span{pos_});
     auto frac4 = vld1q_u32(frac_.data());
     auto pos4 = vld1q_u32(pos_.data());
@@ -329,7 +329,7 @@ void Resample_Cubic_NEON(InterpState const *const state, std::span<float const> 
 }
 
 void Resample_FastBSinc_NEON(InterpState const *const state, std::span<float const> const src,
-    u32 frac, u32 const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const m = usize{bsinc.m};
@@ -375,7 +375,7 @@ void Resample_FastBSinc_NEON(InterpState const *const state, std::span<float con
 }
 
 void Resample_BSinc_NEON(InterpState const *const state, std::span<float const> const src,
-    u32 frac, u32 const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const sf4 = vdupq_n_f32(bsinc.sf);
@@ -427,11 +427,11 @@ void Resample_BSinc_NEON(InterpState const *const state, std::span<float const> 
 
 
 void MixHrtf_NEON(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
+    unsigned const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 void MixHrtfBlend_NEON(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
-    u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
+    unsigned const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,

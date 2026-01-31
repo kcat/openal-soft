@@ -58,15 +58,15 @@ constexpr auto rcoeffs_nrml = CalcDirectionCoeffs(std::array{ inv_sqrt2, 0.0f, i
 
 struct ChorusState final : public EffectState {
     std::vector<float> mDelayBuffer;
-    u32 mOffset{0};
+    unsigned mOffset{0};
 
-    u32 mLfoOffset{0};
-    u32 mLfoRange{1};
+    unsigned mLfoOffset{0};
+    unsigned mLfoRange{1};
     float mLfoScale{0.0f};
-    u32 mLfoDisp{0};
+    unsigned mLfoDisp{0};
 
     /* Calculated delays to apply to the left and right outputs. */
-    std::array<std::array<u32,BufferLineSize>,2> mModDelays{};
+    std::array<std::array<unsigned, BufferLineSize>, 2> mModDelays{};
 
     /* Temp storage for the modulated left and right outputs. */
     alignas(16) std::array<FloatBufferLine,2> mBuffer{};
@@ -172,7 +172,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
         /* Calculate lfo phase displacement */
         auto phase = props.Phase;
         if(phase < 0) phase += 360;
-        mLfoDisp = (mLfoRange*static_cast<u32>(phase) + 180) / 360;
+        mLfoDisp = (mLfoRange*static_cast<unsigned>(phase) + 180) / 360;
     }
 }
 
@@ -184,10 +184,10 @@ void ChorusState::calcTriangleDelays(const size_t todo)
     const auto depth = mDepth;
     const auto delay = mDelay;
 
-    auto gen_lfo = [lfo_scale,depth,delay](u32 const offset) -> u32
+    auto gen_lfo = [lfo_scale,depth,delay](unsigned const offset) -> unsigned
     {
         const float offset_norm{static_cast<float>(offset) * lfo_scale};
-        return static_cast<u32>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
+        return static_cast<unsigned>(fastf2i((1.0f-std::abs(2.0f-offset_norm)) * depth) + delay);
     };
 
     auto offset = mLfoOffset;
@@ -211,7 +211,7 @@ void ChorusState::calcTriangleDelays(const size_t todo)
         i += rem;
     }
 
-    mLfoOffset = static_cast<u32>(mLfoOffset+todo) % lfo_range;
+    mLfoOffset = static_cast<unsigned>(mLfoOffset+todo) % lfo_range;
 }
 
 void ChorusState::calcSinusoidDelays(const size_t todo)
@@ -221,10 +221,10 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
     const auto depth = mDepth;
     const auto delay = mDelay;
 
-    auto gen_lfo = [lfo_scale,depth,delay](u32 const offset) -> u32
+    auto gen_lfo = [lfo_scale,depth,delay](unsigned const offset) -> unsigned
     {
         auto const offset_norm = float{static_cast<float>(offset) * lfo_scale};
-        return static_cast<u32>(fastf2i(std::sin(offset_norm)*depth) + delay);
+        return static_cast<unsigned>(fastf2i(std::sin(offset_norm)*depth) + delay);
     };
 
     auto offset = mLfoOffset;
@@ -248,7 +248,7 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
         i += rem;
     }
 
-    mLfoOffset = static_cast<u32>(mLfoOffset+todo) % lfo_range;
+    mLfoOffset = static_cast<unsigned>(mLfoOffset+todo) % lfo_range;
 }
 
 void ChorusState::process(const size_t samplesToDo,
@@ -257,7 +257,7 @@ void ChorusState::process(const size_t samplesToDo,
     const auto delaybuf = std::span{mDelayBuffer};
     const auto bufmask = delaybuf.size()-1;
     const auto feedback = mFeedback;
-    const auto avgdelay = (static_cast<u32>(mDelay) + MixerFracHalf) >> MixerFracBits;
+    const auto avgdelay = (static_cast<unsigned>(mDelay) + MixerFracHalf) >> MixerFracBits;
     auto offset = mOffset;
 
     if(mWaveform == ChorusWaveform::Sinusoid)

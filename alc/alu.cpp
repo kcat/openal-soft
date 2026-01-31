@@ -140,7 +140,7 @@ auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 }
 
 
-void BsincPrepare(u32 const increment, BsincState *const state, BSincTable const *const table)
+void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable const *const table)
 {
     auto si = usize{BSincScaleCount - 1};
     auto sf = 0.0f;
@@ -165,7 +165,7 @@ void BsincPrepare(u32 const increment, BsincState *const state, BSincTable const
 }
 
 [[nodiscard]]
-auto SelectResampler(Resampler const resampler, u32 const increment) -> ResamplerFunc
+auto SelectResampler(Resampler const resampler, unsigned const increment) -> ResamplerFunc
 {
     switch(resampler)
     {
@@ -250,8 +250,8 @@ void aluInit(CompatFlagBitset const flags, float const nfcscale)
 }
 
 
-auto PrepareResampler(Resampler const resampler, u32 const increment, InterpState *const state)
-    -> ResamplerFunc
+auto PrepareResampler(Resampler const resampler, unsigned const increment,
+    InterpState *const state) -> ResamplerFunc
 {
     switch(resampler)
     {
@@ -441,7 +441,7 @@ namespace {
  * whitenoise.
  */
 [[nodiscard]]
-auto dither_rng(u32 *const seed) noexcept -> u32
+auto dither_rng(unsigned *const seed) noexcept -> unsigned
 {
     *seed = (*seed * 96314165) + 907633515;
     return *seed;
@@ -796,7 +796,7 @@ const auto RotatorCoeffArray = RotatorCoeffs{};
  * coefficients, this fills in the coefficients for the higher orders up to and
  * including the given order. The matrix is in ACN layout.
  */
-void AmbiRotator(AmbiRotateMatrix &matrix, i32 const order)
+void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
 {
     /* Don't do anything for < 2nd order. */
     if(order < 2) return;
@@ -856,7 +856,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, i32 const order)
     auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
     auto base_idx = 4_uz;
     auto last_base = 1_uz;
-    for(auto const l : std::views::iota(2_i32, order+1))
+    for(auto const l : std::views::iota(2, order+1))
     {
         auto y = base_idx;
         for(auto const n : std::views::iota(-l, l+1))
@@ -994,7 +994,7 @@ void CalcAmbisonicPanning(Voice *const voice, float const xpos, float const ypos
     shrot[1][1] =  U[0]; shrot[1][2] = -U[1]; shrot[1][3] =  U[2];
     shrot[2][1] = -V[0]; shrot[2][2] =  V[1]; shrot[2][3] = -V[2];
     shrot[3][1] = -N[0]; shrot[3][2] =  N[1]; shrot[3][3] = -N[2];
-    AmbiRotator(shrot, gsl::narrow_cast<i32>(device->mAmbiOrder));
+    AmbiRotator(shrot, gsl::narrow_cast<int>(device->mAmbiOrder));
 
     /* If the device is higher order than the voice, "upsample" the matrix.
      *
@@ -2023,7 +2023,8 @@ void CalcVoiceParams(Voice *const voice, ContextBase *const context, bool const 
 }
 
 
-void SendSourceStateEvent(ContextBase const *const context, u32 const id, VChangeState const state)
+void SendSourceStateEvent(ContextBase const *const context, unsigned const id,
+    VChangeState const state)
 {
     auto *const ring = context->mAsyncEvents.get();
     auto const evt_vec = ring->getWriteVector();
@@ -2164,7 +2165,7 @@ void ProcessParamUpdates(ContextBase *const ctx, std::span<EffectSlotBase*const>
     IncrementRef(ctx->mUpdateCount);
 }
 
-void ProcessContexts(DeviceBase const *const device, u32 const SamplesToDo)
+void ProcessContexts(DeviceBase const *const device, unsigned const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -2288,10 +2289,10 @@ void ApplyDistanceComp(std::span<FloatBufferLine> const Samples, usize const Sam
     });
 }
 
-void ApplyDither(std::span<FloatBufferLine> const Samples, u32 *const dither_seed,
+void ApplyDither(std::span<FloatBufferLine> const Samples, unsigned *const dither_seed,
     float const quant_scale, usize const SamplesToDo)
 {
-    static constexpr auto invRNGRange = 1.0 / std::numeric_limits<u32>::max();
+    static constexpr auto invRNGRange = 1.0 / std::numeric_limits<unsigned>::max();
     ASSUME(SamplesToDo > 0);
 
     /* Dithering. Generate whitenoise (uniform distribution of random values
@@ -2326,7 +2327,7 @@ template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i32
      * When scaling and clamping for a signed 32-bit integer, these following
      * values are the best a float can give.
      */
-    return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f));
+    return i32{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
 }
 template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i16
 { return i16{gsl::narrow_cast<i16::value_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
@@ -2335,7 +2336,7 @@ template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i8
 
 /* Define unsigned output variations. */
 template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u32
-{ return as_unsigned(SampleConv<i32>(val)) + 2147483648u; }
+{ return SampleConv<i32>(val).reinterpret_as<u32>() + 2147483648u; }
 template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u16
 { return SampleConv<i16>(val).reinterpret_as<u16>() + 32768; }
 template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u8
@@ -2389,9 +2390,9 @@ void Write(std::span<FloatBufferLine const> const InBuffer, std::span<void*const
 
 } // namespace
 
-auto DeviceBase::renderSamples(u32 const numSamples) -> u32
+auto DeviceBase::renderSamples(unsigned const numSamples) -> unsigned
 {
-    auto const samplesToDo = std::min(numSamples, u32{BufferLineSize});
+    auto const samplesToDo = std::min(numSamples, unsigned{BufferLineSize});
 
     /* Clear main mixing buffers. */
     std::ranges::fill(MixBuffer | std::views::join, 0.0f);
@@ -2434,10 +2435,10 @@ auto DeviceBase::renderSamples(u32 const numSamples) -> u32
     return samplesToDo;
 }
 
-void DeviceBase::renderSamples(std::span<void*const> const outBuffers, u32 const numSamples)
+void DeviceBase::renderSamples(std::span<void*const> const outBuffers, unsigned const numSamples)
 {
     auto mixer_mode = FPUCtl{};
-    auto total = 0_u32;
+    auto total = 0u;
     while(auto const todo = numSamples - total)
     {
         auto const samplesToDo = renderSamples(todo);
@@ -2460,10 +2461,11 @@ void DeviceBase::renderSamples(std::span<void*const> const outBuffers, u32 const
     }
 }
 
-void DeviceBase::renderSamples(void *const outBuffer, u32 const numSamples, usize const frameStep)
+void DeviceBase::renderSamples(void *const outBuffer, unsigned const numSamples,
+    usize const frameStep)
 {
     auto mixer_mode = FPUCtl{};
-    auto total = 0_u32;
+    auto total = 0u;
     while(auto const todo = numSamples - total)
     {
         auto const samplesToDo = renderSamples(todo);

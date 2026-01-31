@@ -63,12 +63,12 @@ struct DebugLogEntry {
     DebugSource const mSource;
     DebugType const mType;
     DebugSeverity const mSeverity;
-    u32 const mId;
+    ALuint const mId;
 
     std::string mMessage;
 
     template<typename T>
-    DebugLogEntry(DebugSource const source, DebugType const type, u32 const id,
+    DebugLogEntry(DebugSource const source, DebugType const type, ALuint const id,
         DebugSeverity const severity, T&& message)
         : mSource{source}, mType{type}, mSeverity{severity}, mId{id}
         , mMessage{std::forward<T>(message)}
@@ -119,11 +119,11 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     Listener mListener{};
 
     std::vector<SourceSubList> mSourceList;
-    u32 mNumSources{0_u32};
+    ALCuint mNumSources{0u};
     std::mutex mSourceLock;
 
     std::vector<EffectSlotSubList> mEffectSlotList;
-    u32 mNumEffectSlots{0_u32};
+    ALCuint mNumEffectSlots{0u};
     std::mutex mEffectSlotLock;
 
     /* Default effect slot */
@@ -132,8 +132,8 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     std::vector<std::string_view> mExtensions;
     std::string mExtensionsString;
 
-    std::unordered_map<u32, std::string> mSourceNames;
-    std::unordered_map<u32, std::string> mEffectSlotNames;
+    std::unordered_map<ALuint, std::string> mSourceNames;
+    std::unordered_map<ALuint, std::string> mEffectSlotNames;
 
     /**
      * Removes the context from being current on the running thread or
@@ -180,7 +180,7 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
         DebugType type, ALuint id, DebugSeverity severity, std::string_view message);
 
-    void debugMessage(DebugSource const source, DebugType const type, u32 const id,
+    void debugMessage(DebugSource const source, DebugType const type, ALuint const id,
         DebugSeverity const severity, std::string_view const message)
     {
         if(!mDebugEnabled.load(std::memory_order_relaxed)) [[likely]]

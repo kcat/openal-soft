@@ -86,10 +86,10 @@ struct VoiceBufferItem {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
-    u32 mBlockAlign{0_u32};
-    u32 mSampleLen{0_u32};
-    u32 mLoopStart{0_u32};
-    u32 mLoopEnd{0_u32};
+    unsigned mBlockAlign{0u};
+    unsigned mSampleLen{0u};
+    unsigned mLoopStart{0u};
+    unsigned mLoopEnd{0u};
 
     SampleVariant mSamples;
 
@@ -162,7 +162,7 @@ struct VoicePropsItem : VoiceProps {
     std::atomic<VoicePropsItem*> next{nullptr};
 };
 
-enum : u32 {
+enum : unsigned {
     VoiceIsStatic,
     VoiceIsCallback,
     VoiceIsAmbisonic,
@@ -186,7 +186,7 @@ struct Voice {
 
     VoiceProps mProps{};
 
-    std::atomic<u32> mSourceID{0_u32};
+    std::atomic<unsigned> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
     std::atomic<bool> mPendingChange{false};
 
@@ -194,9 +194,9 @@ struct Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<i32> mPosition;
+    std::atomic<int> mPosition;
     /** Fractional (fixed-point) offset to the next sample. */
-    std::atomic<u32> mPositionFrac;
+    std::atomic<unsigned> mPositionFrac;
 
     /* Current buffer queue item being played. */
     std::atomic<VoiceBufferItem*> mCurrentBuffer;
@@ -210,28 +210,28 @@ struct Voice {
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels{};
-    u32 mFrequency{};
-    u32 mFrameStep{}; /**< In steps of the sample type size. */
-    u32 mBytesPerBlock{}; /**< Or for PCM formats, BytesPerFrame. */
-    u32 mSamplesPerBlock{}; /**< Always 1 for PCM formats. */
+    unsigned mFrequency{};
+    unsigned mFrameStep{}; /**< In steps of the sample type size. */
+    unsigned mBytesPerBlock{}; /**< Or for PCM formats, BytesPerFrame. */
+    unsigned mSamplesPerBlock{}; /**< Always 1 for PCM formats. */
     bool mDuplicateMono{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
-    u32 mAmbiOrder{};
+    unsigned mAmbiOrder{};
 
     std::unique_ptr<DecoderBase> mDecoder;
-    u32 mDecoderPadding{};
+    unsigned mDecoderPadding{};
 
     /** Current target parameters used for mixing. */
-    u32 mStep{0_u32};
+    unsigned mStep{0u};
 
     ResamplerFunc mResampler{};
 
     InterpState mResampleState;
 
     std::bitset<VoiceFlagCount> mFlags;
-    u32 mNumCallbackBlocks{0_u32};
-    u32 mCallbackBlockOffset{0_u32};
+    unsigned mNumCallbackBlocks{0u};
+    unsigned mCallbackBlockOffset{0u};
 
     struct TargetData {
         bool FilterActive{};
@@ -263,7 +263,7 @@ struct Voice {
     Voice& operator=(Voice const&) = delete;
 
     void mix(State vstate, ContextBase *context, std::chrono::nanoseconds deviceTime,
-        u32 samplesToDo);
+        unsigned samplesToDo);
 
     void prepare(DeviceBase *device);
 

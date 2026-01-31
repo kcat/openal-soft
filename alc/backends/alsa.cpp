@@ -518,7 +518,7 @@ void AlsaPlayback::mixerProc()
 
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
             auto *WritePtr = static_cast<char*>(areas->addr) + (offset * areas->step / 8);
-            mDevice->renderSamples(WritePtr, gsl::narrow_cast<u32>(frames), mFrameStep);
+            mDevice->renderSamples(WritePtr, gsl::narrow_cast<unsigned>(frames), mFrameStep);
 
             if(const auto commitres = snd_pcm_mmap_commit(mPcmHandle, offset, frames);
                 std::cmp_not_equal(commitres, frames))
@@ -582,7 +582,7 @@ void AlsaPlayback::mixerNoMMapProc()
         auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         const auto dlock = std::lock_guard{mMutex};
-        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<u32>(avail),
+        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<unsigned>(avail),
             mFrameStep);
         while(avail > 0)
         {
@@ -766,8 +766,8 @@ auto AlsaPlayback::reset() -> bool
 #undef CHECK
     sp = nullptr;
 
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(bufferSizeInFrames);
-    mDevice->mUpdateSize = gsl::narrow_cast<u32>(periodSizeInFrames);
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(bufferSizeInFrames);
+    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(periodSizeInFrames);
     mDevice->mSampleRate = rate;
 
     setDefaultChannelOrder();

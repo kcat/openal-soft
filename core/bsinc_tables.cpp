@@ -94,7 +94,7 @@ constexpr auto Kaiser(const double beta, const double k, const double besseli_0_
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
  * Rejection is in dB.
  */
-constexpr auto CalcKaiserWidth(double const rejection, u32 const order) noexcept -> double
+constexpr auto CalcKaiserWidth(double const rejection, unsigned const order) noexcept -> double
 {
     if(rejection > 21.19)
         return (rejection - 7.95) / (2.285 * std::numbers::pi*2.0 * order);
@@ -119,22 +119,23 @@ struct BSincHeader {
     double scaleLimit{};
 
     std::array<double, BSincScaleCount> a{};
-    std::array<u32, BSincScaleCount> m{};
-    u32 total_size{};
+    std::array<unsigned, BSincScaleCount> m{};
+    unsigned total_size{};
 
-    constexpr BSincHeader(u32 const rejection, u32 const order, u32 const maxScale) noexcept
+    constexpr
+    BSincHeader(unsigned const rejection, unsigned const order, unsigned const maxScale) noexcept
         : beta{CalcKaiserBeta(rejection)}, scaleBase{CalcKaiserWidth(rejection, order) / 2.0}
         , scaleLimit{1.0 / maxScale}
     {
         const auto base_a = (order+1.0) / 2.0;
-        for(const auto si : std::views::iota(0_u32, BSincScaleCount))
+        for(const auto si : std::views::iota(0u, BSincScaleCount))
         {
             const auto scale = std::lerp(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
             a[si] = std::min(base_a/scale, base_a*maxScale);
             /* std::ceil() isn't constexpr until C++23, this should behave the
              * same.
              */
-            auto a_ = gsl::narrow_cast<u32>(a[si]);
+            auto a_ = gsl::narrow_cast<unsigned>(a[si]);
             a_ += (gsl::narrow_cast<double>(a_) != a[si]);
             m[si] = a_ * 2u;
 

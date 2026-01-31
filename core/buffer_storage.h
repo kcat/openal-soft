@@ -31,7 +31,7 @@ constexpr auto Is2DAmbisonic(FmtChannels const chans) noexcept -> bool
 }
 
 
-using CallbackType = auto(*)(void*, void*, i32) noexcept -> i32;
+using CallbackType = auto(*)(void*, void*, int) noexcept -> int;
 
 using SampleVariant = std::variant<std::span<u8>,
     std::span<i16>,
@@ -49,23 +49,23 @@ struct BufferStorage {
 
     SampleVariant mData;
 
-    u32 mSampleRate{0_u32};
+    unsigned mSampleRate{0u};
     FmtChannels mChannels{FmtMono};
     FmtType mType{FmtShort};
-    u32 mSampleLen{0_u32};
-    u32 mBlockAlign{0_u32};
+    unsigned mSampleLen{0u};
+    unsigned mBlockAlign{0u};
 
     AmbiLayout mAmbiLayout{AmbiLayout::FuMa};
     AmbiScaling mAmbiScaling{AmbiScaling::FuMa};
-    u32 mAmbiOrder{0_u32};
+    unsigned mAmbiOrder{0u};
 
-    [[nodiscard]] auto bytesFromFmt() const noexcept -> u32 { return BytesFromFmt(mType); }
-    [[nodiscard]] auto channelsFromFmt() const noexcept -> u32
+    [[nodiscard]] auto bytesFromFmt() const noexcept -> unsigned { return BytesFromFmt(mType); }
+    [[nodiscard]] auto channelsFromFmt() const noexcept -> unsigned
     { return ChannelsFromFmt(mChannels, mAmbiOrder); }
-    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> u32
+    [[nodiscard]] auto frameSizeFromFmt() const noexcept -> unsigned
     { return channelsFromFmt() * bytesFromFmt(); }
 
-    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> u32
+    [[nodiscard]] auto blockSizeFromFmt() const noexcept -> unsigned
     {
         if(mType == FmtIMA4) return ((mBlockAlign-1)/2 + 4) * channelsFromFmt();
         if(mType == FmtMSADPCM) return ((mBlockAlign-2)/2 + 7) * channelsFromFmt();

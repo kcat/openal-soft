@@ -61,9 +61,9 @@ struct Filter {
     TableTypes mTypeVariant;
 
     /* Self ID */
-    u32 mId{0};
+    ALuint mId{0};
 
-    static void SetName(gsl::not_null<Context*> context, u32 id, std::string_view name);
+    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

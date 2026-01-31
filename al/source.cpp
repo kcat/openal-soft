@@ -213,7 +213,7 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
     auto readPosFrac = u32{};
-    auto refcount = u32{};
+    auto refcount = unsigned{};
 
     do {
         refcount = device->waitForMix();
@@ -223,14 +223,13 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
         readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
 
     if(readPos < 0)
-        return (readPos * (std::numeric_limits<u32>::max()+1_i64))
-            + (i64{readPosFrac} << (32-MixerFracBits));
+        return (readPos * (u32::max()+1_i64)) + (readPosFrac.as<i64>() << (32-MixerFracBits));
 
     std::ignore = std::ranges::find_if(Source->mQueue,
         [Current,&readPos](const VoiceBufferItem &item)
@@ -242,7 +241,7 @@ auto GetSourceSampleOffset(gsl::not_null<al::Source*> const Source,
     });
     if(readPos >= i64::max()>>32)
         return i64::max();
-    return (readPos<<32) + (i64{readPosFrac} << (32-MixerFracBits));
+    return (readPos<<32) + (readPosFrac.as<i64>() << (32-MixerFracBits));
 }
 
 /* GetSourceSecOffset
@@ -257,7 +256,7 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
     auto readPosFrac = u32{};
-    auto refcount = u32{};
+    auto refcount = unsigned{};
 
     do {
         refcount = device->waitForMix();
@@ -267,7 +266,7 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
         readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
@@ -289,8 +288,8 @@ auto GetSourceSecOffset(gsl::not_null<al::Source*> const Source,
         readPos += i64{item.mSampleLen};
         return false;
     });
-    return (gsl::narrow_cast<double>(readPosFrac)/double{MixerFracOne}
-        + gsl::narrow_cast<double>(readPos.c_val)) / BufferFmt->mSampleRate;
+    return (readPos.cast_to<f64>() + readPosFrac.as<f64>()/MixerFracOne).c_val
+        / BufferFmt->mSampleRate;
 }
 
 /* GetSourceOffset
@@ -307,7 +306,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
     auto const *Current = LPVoiceBufferItem{};
     auto readPos = i64{};
     auto readPosFrac = u32{};
-    auto refcount = u32{};
+    auto refcount = unsigned{};
 
     do {
         refcount = device->waitForMix();
@@ -316,7 +315,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
         readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = voice->mPositionFrac.load(std::memory_order_relaxed);
+        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->mMixCount.load(std::memory_order_relaxed));
@@ -343,7 +342,7 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
         if constexpr(std::floating_point<T>)
         {
             const auto offset = gsl::narrow_cast<T>(readPos.c_val)
-                + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
+                + gsl::narrow_cast<T>(readPosFrac.c_val)/T{MixerFracOne};
             return offset / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         }
         else
@@ -351,13 +350,14 @@ NOINLINE auto GetSourceOffset(gsl::not_null<al::Source*> const Source, ALenum co
 
     case AL_SAMPLE_OFFSET:
         if constexpr(std::floating_point<T>)
-            return gsl::narrow_cast<T>(readPos.c_val) + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
+            return gsl::narrow_cast<T>(readPos.c_val)
+                + gsl::narrow_cast<T>(readPosFrac.c_val)/T{MixerFracOne};
         else
             return al::saturate_cast<T>(readPos.c_val);
 
     case AL_BYTE_OFFSET:
         /* Round down to the block boundary. */
-        const auto BlockSize = u32{BufferFmt->blockSizeFromFmt()};
+        const auto BlockSize = BufferFmt->blockSizeFromFmt();
         readPos = readPos / i64{BufferFmt->mBlockAlign} * i64{BlockSize};
 
         if constexpr(std::floating_point<T>)
@@ -414,7 +414,7 @@ auto GetSourceLength(gsl::not_null<const al::Source*> const source, ALenum const
 
     case AL_BYTE_LENGTH_SOFT:
         /* Round down to the block boundary. */
-        const auto BlockSize = u32{BufferFmt->blockSizeFromFmt()};
+        const auto BlockSize = BufferFmt->blockSizeFromFmt();
         const auto alignedlen = length / u64{BufferFmt->mBlockAlign} * u64{BlockSize};
 
         if constexpr(std::floating_point<T>)
@@ -444,7 +444,7 @@ struct VoicePos {
  * returns an empty optional.
  */
 auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const OffsetType,
-    double const Offset) -> std::optional<VoicePos>
+    f64 const Offset) -> std::optional<VoicePos>
 {
     /* Find the first valid Buffer in the Queue */
     const auto BufferFmt = std::invoke([&BufferList]() -> al::Buffer*
@@ -460,12 +460,12 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     /* Get sample frame offset */
     auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<i64,u32>
     {
-        auto dbloff = double{};
-        auto dblfrac = double{};
+        auto dbloff = f64{};
+        auto dblfrac = f64{};
         switch(OffsetType)
         {
         case AL_SEC_OFFSET:
-            dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
+            dblfrac = (Offset*f64{BufferFmt->mSampleRate}).modf(dbloff);
             if(dblfrac < 0.0)
             {
                 /* If there's a negative fraction, reduce the offset to "floor"
@@ -475,23 +475,23 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {i64{gsl::narrow_cast<i64::value_t>(dbloff)},
-                gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
+            return {dbloff.reinterpret_as<i64>(),
+                std::min(dblfrac*MixerFracOne, MixerFracOne-1.0_f64).reinterpret_as<u32>()};
 
         case AL_SAMPLE_OFFSET:
-            dblfrac = std::modf(Offset, &dbloff);
+            dblfrac = Offset.modf(dbloff);
             if(dblfrac < 0.0)
             {
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {i64{gsl::narrow_cast<i64::value_t>(dbloff)},
-                gsl::narrow_cast<u32>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
+            return {dbloff.reinterpret_as<i64>(),
+                std::min(dblfrac*MixerFracOne, MixerFracOne-1.0_f64).reinterpret_as<u32>()};
 
         case AL_BYTE_OFFSET:
             /* Determine the ByteOffset (and ensure it is block aligned) */
-            const auto blockoffset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
-            return {i64{gsl::narrow_cast<i64::value_t>(blockoffset) * BufferFmt->mBlockAlign},
+            const auto blockoffset = (Offset / f64{BufferFmt->blockSizeFromFmt()}).floor();
+            return {blockoffset.reinterpret_as<i64>()*i64{BufferFmt->mBlockAlign},
                 0_u32};
         }
         return {0_i64, 0_u32};
@@ -500,9 +500,9 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     /* Find the bufferlist item this offset belongs to. */
     if(offset < 0)
     {
-        if(offset < std::numeric_limits<i32>::min())
+        if(offset < i32::min())
             return std::nullopt;
-        return VoicePos{gsl::narrow_cast<i32>(offset.c_val), frac, &BufferList.front()};
+        return VoicePos{offset.reinterpret_as<i32>(), frac, &BufferList.front()};
     }
 
     if(BufferFmt->mCallback)
@@ -518,7 +518,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, ALenum const O
     if(iter != BufferList.end())
     {
         /* Offset is in this buffer */
-        return VoicePos{gsl::narrow_cast<i32>(offset.c_val), frac, &*iter};
+        return VoicePos{offset.reinterpret_as<i32>(), frac, &*iter};
     }
 
     /* Offset is out of range of the queue */
@@ -612,11 +612,11 @@ auto SetVoiceOffset(Voice *const oldvoice, const VoicePos &vpos,
     /* First, get a free voice to start at the new offset. */
     auto voicelist = context->getVoicesSpan();
     Voice *newvoice{};
-    auto vidx = 0_u32;
+    auto vidx = 0u;
     for(Voice *voice : voicelist)
     {
         if(voice->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
-            && voice->mSourceID.load(std::memory_order_relaxed) == 0_u32
+            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
             && voice->mPendingChange.load(std::memory_order_relaxed) == false)
         {
             newvoice = voice;
@@ -655,8 +655,8 @@ auto SetVoiceOffset(Voice *const oldvoice, const VoicePos &vpos,
      * fading flag).
      */
     newvoice->mPlayState.store(Voice::Pending, std::memory_order_relaxed);
-    newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
-    newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
+    newvoice->mPosition.store(vpos.pos.c_val, std::memory_order_relaxed);
+    newvoice->mPositionFrac.store(vpos.frac.c_val, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     newvoice->mStartTime = oldvoice->mStartTime;
     newvoice->mFlags.reset();
@@ -755,8 +755,9 @@ auto AllocSource(gsl::not_null<al::Context*> const context) noexcept -> gsl::not
 {
     auto const sublist = std::ranges::find_if(context->mSourceList,
         [](SourceSubList const &slist) { return slist.mFreeMask != 0; });
-    auto const lidx = gsl::narrow_cast<u32>(std::distance(context->mSourceList.begin(), sublist));
-    auto const slidx = gsl::narrow_cast<u32>(sublist->mFreeMask.countr_zero().c_val);
+    auto const lidx = gsl::narrow_cast<ALuint>(std::distance(context->mSourceList.begin(),
+        sublist));
+    auto const slidx = gsl::narrow_cast<ALuint>(sublist->mFreeMask.countr_zero().c_val);
     ASSUME(slidx < 64);
 
     auto const source = gsl::make_not_null(std::construct_at(
@@ -802,8 +803,8 @@ void FreeSource(gsl::not_null<al::Context*> const context, gsl::not_null<al::Sou
 
 
 [[nodiscard]]
-auto LookupSource(std::nothrow_t, gsl::not_null<al::Context*> const context, u32 const id) noexcept
-    -> al::Source*
+auto LookupSource(std::nothrow_t, gsl::not_null<al::Context*> const context, ALuint const id)
+    noexcept -> al::Source*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
@@ -817,7 +818,7 @@ auto LookupSource(std::nothrow_t, gsl::not_null<al::Context*> const context, u32
 }
 
 [[nodiscard]]
-auto LookupSource(gsl::not_null<al::Context*> const context, u32 const id)
+auto LookupSource(gsl::not_null<al::Context*> const context, ALuint const id)
     -> gsl::not_null<al::Source*>
 {
     if(auto *source = LookupSource(std::nothrow, context, id)) [[likely]]
@@ -1082,7 +1083,7 @@ enum SourceProp : ALenum {
 };
 
 [[nodiscard]]
-constexpr auto IntValsByProp(ALenum const prop) -> u32
+constexpr auto IntValsByProp(ALenum const prop) -> ALuint
 {
     switch(SourceProp{prop})
     {
@@ -1162,7 +1163,7 @@ constexpr auto IntValsByProp(ALenum const prop) -> u32
 }
 
 [[nodiscard]]
-constexpr auto Int64ValsByProp(ALenum const prop) -> u32
+constexpr auto Int64ValsByProp(ALenum const prop) -> ALuint
 {
     switch(SourceProp{prop})
     {
@@ -1243,7 +1244,7 @@ constexpr auto Int64ValsByProp(ALenum const prop) -> u32
 }
 
 [[nodiscard]]
-constexpr auto FloatValsByProp(ALenum const prop) -> u32
+constexpr auto FloatValsByProp(ALenum const prop) -> ALuint
 {
     switch(SourceProp{prop})
     {
@@ -1319,7 +1320,7 @@ constexpr auto FloatValsByProp(ALenum const prop) -> u32
     return 0;
 }
 [[nodiscard]]
-constexpr auto DoubleValsByProp(ALenum const prop) -> u32
+constexpr auto DoubleValsByProp(ALenum const prop) -> ALuint
 {
     switch(SourceProp{prop})
     {
@@ -1725,7 +1726,8 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
 
         if(auto *voice = GetSourceVoice(Source, Context))
         {
-            auto vpos = GetSampleOffset(Source->mQueue, prop, gsl::narrow_cast<double>(values[0]));
+            auto const vpos = GetSampleOffset(Source->mQueue, prop,
+                f64{gsl::narrow_cast<double>(values[0])});
             if(!vpos) Context->throw_error(AL_INVALID_VALUE, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
@@ -2397,7 +2399,7 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_integral_v<T>)
         {
             CheckSize(1);
-            auto played = 0_i32;
+            auto played = ALint{0};
             /* Buffers on a looping source are in a perpetual state of PENDING,
              * so don't report any as PROCESSED.
              */
@@ -2406,13 +2408,13 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
             {
                 const auto Current = std::invoke([Source,Context]() -> const VoiceBufferItem*
                 {
-                    if(auto *voice = GetSourceVoice(Source, Context))
+                    if(auto const *const voice = GetSourceVoice(Source, Context))
                         return voice->mCurrentBuffer.load(std::memory_order_relaxed);
                     return nullptr;
                 });
                 auto const qiter = std::ranges::find(Source->mQueue, Current,
                     [](al::BufferQueueItem const &item) { return &item; });
-                played = gsl::narrow_cast<i32>(std::distance(Source->mQueue.begin(), qiter));
+                played = gsl::narrow_cast<ALint>(std::distance(Source->mQueue.begin(), qiter));
             }
             values[0] = played;
             return;
@@ -2525,7 +2527,7 @@ constexpr auto get_srchandles(gsl::not_null<al::Context*> const context,
     }
     auto &sources = source_store.emplace<source_store_vector>();
     sources.reserve(sids.size());
-    std::ranges::transform(sids, std::back_inserter(sources), [context](u32 const sid)
+    std::ranges::transform(sids, std::back_inserter(sources), [context](ALuint const sid)
     { return LookupSource(context, sid); });
     return std::span{sources};
 }
@@ -2577,7 +2579,7 @@ void StartSources(gsl::not_null<al::Context*> const context,
     }
 
     auto voiceiter = voicelist.begin();
-    auto vidx = 0_u32;
+    auto vidx = 0u;
     auto tail = LPVoiceChange{};
     auto cur = LPVoiceChange{};
     std::ranges::for_each(srchandles, [&](gsl::not_null<al::Source*> const source)
@@ -2673,13 +2675,13 @@ void StartSources(gsl::not_null<al::Context*> const context,
          */
         if(const auto offsettype = source->mOffsetType)
         {
-            auto const offset = source->mOffset;
+            auto const offset = f64{source->mOffset};
             source->mOffsetType = AL_NONE;
             source->mOffset = 0.0;
             if(auto const vpos = GetSampleOffset(source->mQueue, offsettype, offset))
             {
-                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                voice->mPosition.store(vpos->pos.c_val, std::memory_order_relaxed);
+                voice->mPositionFrac.store(vpos->frac.c_val, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
                 if(vpos->pos > 0 || (vpos->pos == 0 && vpos->frac > 0)
                     || vpos->bufferitem != &source->mQueue.front())
@@ -3665,7 +3667,7 @@ void UpdateAllSourceProps(gsl::not_null<al::Context*> const context)
 {
     auto const srclock = std::lock_guard{context->mSourceLock};
     auto const voicelist = context->getVoicesSpan();
-    auto vidx = 0_u32;
+    auto vidx = 0u;
     for(Voice *voice : voicelist)
     {
         auto const sid = voice->mSourceID.load(std::memory_order_acquire);
@@ -3679,7 +3681,7 @@ void UpdateAllSourceProps(gsl::not_null<al::Context*> const context)
     }
 }
 
-void al::Source::SetName(gsl::not_null<al::Context*> const context, u32 const id,
+void al::Source::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
     std::string_view const name)
 {
     auto const srclock = std::lock_guard{context->mSourceLock};
@@ -3720,8 +3722,8 @@ void al::Source::eaxInitialize(gsl::not_null<Context*> const context) noexcept
     mEaxChanged = true;
 }
 
-auto al::Source::EaxLookupSource(gsl::not_null<al::Context*> const al_context, u32 const source_id)
-    noexcept -> Source*
+auto al::Source::EaxLookupSource(gsl::not_null<al::Context*> const al_context,
+    ALuint const source_id) noexcept -> Source*
 {
     return LookupSource(std::nothrow, al_context, source_id);
 }

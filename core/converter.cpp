@@ -34,7 +34,7 @@ template<> constexpr auto LoadSample<DevFmtByte>(i8 const val) noexcept -> float
 template<> constexpr auto LoadSample<DevFmtShort>(i16 const val) noexcept -> float
 { return (val.as<f32>() * (1.0f/32768.0f)).c_val; }
 template<> constexpr auto LoadSample<DevFmtInt>(i32 const val) noexcept -> float
-{ return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f); }
+{ return (val.cast_to<f32>() * (1.0f/2147483648.0f)).c_val; }
 template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> float
 { return val.c_val; }
 
@@ -43,7 +43,7 @@ template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> floa
 template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> float
 { return LoadSample<DevFmtShort>((val - 32768).reinterpret_as<i16>()); }
 template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> float
-{ return LoadSample<DevFmtInt>(as_signed(val - 2147483648u)); }
+{ return LoadSample<DevFmtInt>((val - 2147483648u).reinterpret_as<i32>()); }
 
 
 template<DevFmtType T>
@@ -87,7 +87,7 @@ auto StoreSample(float) noexcept -> DevFmtType_t<T> = delete;
 template<> auto StoreSample<DevFmtFloat>(float const val) noexcept -> f32
 { return f32{val}; }
 template<> auto StoreSample<DevFmtInt>(float const val) noexcept -> i32
-{ return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
+{ return i32{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))}; }
 template<> auto StoreSample<DevFmtShort>(float const val) noexcept -> i16
 { return i16{gsl::narrow_cast<std::int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
 template<> auto StoreSample<DevFmtByte>(float const val) noexcept -> i8
@@ -95,7 +95,7 @@ template<> auto StoreSample<DevFmtByte>(float const val) noexcept -> i8
 
 /* Define unsigned output variations. */
 template<> auto StoreSample<DevFmtUInt>(float const val) noexcept -> u32
-{ return as_unsigned(StoreSample<DevFmtInt>(val)) + 2147483648u; }
+{ return StoreSample<DevFmtInt>(val).reinterpret_as<u32>() + 2147483648u; }
 template<> auto StoreSample<DevFmtUShort>(float const val) noexcept -> u16
 { return StoreSample<DevFmtShort>(val).reinterpret_as<u16>() + 32768; }
 template<> auto StoreSample<DevFmtUByte>(float const val) noexcept -> u8
@@ -147,8 +147,8 @@ void Mono2Stereo(std::span<float> const dst, void const *const src) noexcept
 }
 
 template<DevFmtType T>
-void Multi2Mono(u32 chanmask, usize const step, std::span<float> const dst, void const *const src)
-    noexcept
+void Multi2Mono(unsigned chanmask, usize const step, std::span<float> const dst,
+    void const *const src) noexcept
 {
     const auto scale = std::sqrt(1.0f / gsl::narrow_cast<float>(std::popcount(chanmask)));
     const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), step*dst.size()};
@@ -156,7 +156,7 @@ void Multi2Mono(u32 chanmask, usize const step, std::span<float> const dst, void
     while(chanmask)
     {
         const auto c = std::countr_zero(chanmask);
-        chanmask &= ~(1_u32 << c);
+        chanmask &= ~(1u << c);
 
         auto ssrc = srcspan.begin();
         std::advance(ssrc, c);
@@ -174,8 +174,8 @@ void Multi2Mono(u32 chanmask, usize const step, std::span<float> const dst, void
 } // namespace
 
 auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
-    usize const numchans, u32 const srcRate, u32 const dstRate, Resampler const resampler)
-    -> SampleConverterPtr
+    usize const numchans, unsigned const srcRate, unsigned const dstRate,
+    Resampler const resampler) -> SampleConverterPtr
 {
     auto converter = SampleConverterPtr{};
     if(numchans < 1 || srcRate < 1 || dstRate < 1)
@@ -196,11 +196,11 @@ auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
     auto mixer_mode = FPUCtl{};
     const auto step = std::clamp(std::round(srcRate*double{MixerFracOne}/dstRate), 1.0,
         MaxPitch*double{MixerFracOne});
-    converter->mIncrement = gsl::narrow_cast<u32>(step);
+    converter->mIncrement = gsl::narrow_cast<unsigned>(step);
     if(converter->mIncrement == MixerFracOne)
     {
-        converter->mResample = [](InterpState const*, std::span<float const> const src, u32,
-            u32 const, std::span<float> const dst)
+        converter->mResample = [](InterpState const*, std::span<float const> const src, unsigned,
+            unsigned const, std::span<float> const dst)
         {
             std::ranges::copy(src | std::views::drop(MaxResamplerEdge)
                 | std::views::take(dst.size()), dst.begin());
@@ -213,7 +213,7 @@ auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
     return converter;
 }
 
-auto SampleConverter::availableOut(u32 const srcframes) const -> u32
+auto SampleConverter::availableOut(unsigned const srcframes) const -> unsigned
 {
     if(srcframes < 1)
     {
@@ -235,12 +235,12 @@ auto SampleConverter::availableOut(u32 const srcframes) const -> u32
     DataSize64 -= u64{mFracOffset};
 
     /* If we have a full prep, we can generate at least one sample. */
-    return gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{mIncrement}-1)/u64{mIncrement},
-        1_u64, u64{std::numeric_limits<i32>::max()}).c_val);
+    return gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{mIncrement}-1)/u64{mIncrement},
+        1_u64, u64{std::numeric_limits<int>::max()}).c_val);
 }
 
-auto SampleConverter::convert(const void **const src, u32 *const srcframes, void *const dst,
-    u32 const dstframes) -> u32
+auto SampleConverter::convert(const void **const src, unsigned *const srcframes, void *const dst,
+    unsigned const dstframes) -> unsigned
 {
     const auto SrcFrameSize = mChan.size() * mSrcTypeSize;
     const auto DstFrameSize = mChan.size() * mDstTypeSize;
@@ -250,11 +250,11 @@ auto SampleConverter::convert(const void **const src, u32 *const srcframes, void
     auto SamplesOut = std::span{static_cast<std::byte*>(dst), dstframes*DstFrameSize};
 
     const auto mixer_mode = FPUCtl{};
-    auto pos = 0_u32;
+    auto pos = 0u;
     while(pos < dstframes && NumSrcSamples > 0)
     {
         const auto prepcount = mSrcPrepCount;
-        const auto readable = std::min(NumSrcSamples, u32{BufferLineSize} - prepcount);
+        const auto readable = std::min(NumSrcSamples, unsigned{BufferLineSize} - prepcount);
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
@@ -280,7 +280,7 @@ auto SampleConverter::convert(const void **const src, u32 *const srcframes, void
         DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
+        auto DstSize = gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
             1_u64, u64{BufferLineSize}).c_val);
         DstSize = std::min(DstSize, dstframes-pos);
 
@@ -333,8 +333,8 @@ auto SampleConverter::convert(const void **const src, u32 *const srcframes, void
     return pos;
 }
 
-auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes,
-    void *const *const dst, u32 const dstframes) -> u32
+auto SampleConverter::convertPlanar(void const **const src, unsigned *const srcframes,
+    void *const *const dst, unsigned const dstframes) -> unsigned
 {
     const auto srcs = std::span{src, mChan.size()};
     const auto dsts = std::span{dst, mChan.size()};
@@ -342,11 +342,11 @@ auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes
     auto NumSrcSamples = *srcframes;
 
     const auto mixer_mode = FPUCtl{};
-    auto pos = 0_u32;
+    auto pos = 0u;
     while(pos < dstframes && NumSrcSamples > 0)
     {
         const auto prepcount = mSrcPrepCount;
-        const auto readable = std::min(NumSrcSamples, u32{BufferLineSize} - prepcount);
+        const auto readable = std::min(NumSrcSamples, unsigned{BufferLineSize} - prepcount);
 
         if(prepcount < MaxResamplerPadding && MaxResamplerPadding-prepcount >= readable)
         {
@@ -377,7 +377,7 @@ auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes
         DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<u32>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
+        auto DstSize = gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
             1_u64, u64{BufferLineSize}).c_val);
         DstSize = std::min(DstSize, dstframes-pos);
 
@@ -435,7 +435,8 @@ auto SampleConverter::convertPlanar(void const **const src, u32 *const srcframes
 }
 
 
-void ChannelConverter::convert(void const *const src, float *const dst, u32 const frames) const
+void ChannelConverter::convert(void const *const src, float *const dst, unsigned const frames)
+    const
 {
     if(!frames)
         return;

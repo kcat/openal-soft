@@ -1485,7 +1485,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
     std::span<T const> const values)
 {
     static constexpr auto is_finite = []<typename U>(U&& v) -> bool
-    { return std::isfinite(gsl::narrow_cast<f32>(std::forward<U>(v))); };
+    { return std::isfinite(gsl::narrow_cast<float>(std::forward<U>(v))); };
     auto [CheckSize, CheckValue] = GetCheckers(Context, prop, values);
     auto const device = al::get_not_null(Context->mALDevice);
 
@@ -1521,21 +1521,21 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mPitch = gsl::narrow_cast<f32>(values[0]);
+        Source->mPitch = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_CONE_INNER_ANGLE:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{360});
 
-        Source->mInnerAngle = gsl::narrow_cast<f32>(values[0]);
+        Source->mInnerAngle = gsl::narrow_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_CONE_OUTER_ANGLE:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{360});
 
-        Source->mOuterAngle = gsl::narrow_cast<f32>(values[0]);
+        Source->mOuterAngle = gsl::narrow_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_GAIN:
@@ -1545,7 +1545,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mGain = gsl::narrow_cast<f32>(values[0]);
+        Source->mGain = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_MAX_DISTANCE:
@@ -1555,7 +1555,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mMaxDistance = gsl::narrow_cast<f32>(values[0]);
+        Source->mMaxDistance = gsl::narrow_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_ROLLOFF_FACTOR:
@@ -1565,7 +1565,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mRolloffFactor = gsl::narrow_cast<f32>(values[0]);
+        Source->mRolloffFactor = gsl::narrow_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_REFERENCE_DISTANCE:
@@ -1575,7 +1575,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mRefDistance = gsl::narrow_cast<f32>(values[0]);
+        Source->mRefDistance = gsl::narrow_cast<float>(values[0]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_MIN_GAIN:
@@ -1585,7 +1585,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mMinGain = gsl::narrow_cast<f32>(values[0]);
+        Source->mMinGain = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_MAX_GAIN:
@@ -1595,42 +1595,42 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mMaxGain = gsl::narrow_cast<f32>(values[0]);
+        Source->mMaxGain = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_CONE_OUTER_GAIN:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
-        Source->mOuterGain = gsl::narrow_cast<f32>(values[0]);
+        Source->mOuterGain = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_CONE_OUTER_GAINHF:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
-        Source->mOuterGainHF = gsl::narrow_cast<f32>(values[0]);
+        Source->mOuterGainHF = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_AIR_ABSORPTION_FACTOR:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{10});
 
-        Source->mAirAbsorptionFactor = gsl::narrow_cast<f32>(values[0]);
+        Source->mAirAbsorptionFactor = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_ROOM_ROLLOFF_FACTOR:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
-        Source->mRoomRolloffFactor = gsl::narrow_cast<f32>(values[0]);
+        Source->mRoomRolloffFactor = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_DOPPLER_FACTOR:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
-        Source->mDopplerFactor = gsl::narrow_cast<f32>(values[0]);
+        Source->mDopplerFactor = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
 
@@ -1766,14 +1766,14 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         else
             CheckValue(values[0] >= T{0});
 
-        Source->mRadius = gsl::narrow_cast<f32>(values[0]);
+        Source->mRadius = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_SUPER_STEREO_WIDTH_SOFT:
         CheckSize(1);
         CheckValue(values[0] >= T{0} && values[0] <= T{1});
 
-        Source->mEnhWidth = gsl::narrow_cast<f32>(values[0]);
+        Source->mEnhWidth = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_PANNING_ENABLED_SOFT:
@@ -1787,7 +1787,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         CheckSize(1);
         CheckValue(values[0] >= T{-1} && values[0] <= T{1});
 
-        Source->mPan = gsl::narrow_cast<f32>(values[0]);
+        Source->mPan = gsl::narrow_cast<float>(values[0]);
         return UpdateSourceProps(Source, Context);
 
     case AL_STEREO_ANGLES:
@@ -1795,8 +1795,8 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_floating_point_v<T>)
             CheckValue(std::ranges::all_of(values, is_finite));
 
-        Source->mStereoPan[0] = gsl::narrow_cast<f32>(values[0]);
-        Source->mStereoPan[1] = gsl::narrow_cast<f32>(values[1]);
+        Source->mStereoPan[0] = gsl::narrow_cast<float>(values[0]);
+        Source->mStereoPan[1] = gsl::narrow_cast<float>(values[1]);
         return UpdateSourceProps(Source, Context);
 
 
@@ -1805,9 +1805,9 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_floating_point_v<T>)
             CheckValue(std::ranges::all_of(values, is_finite));
 
-        Source->mPosition[0] = gsl::narrow_cast<f32>(values[0]);
-        Source->mPosition[1] = gsl::narrow_cast<f32>(values[1]);
-        Source->mPosition[2] = gsl::narrow_cast<f32>(values[2]);
+        Source->mPosition[0] = gsl::narrow_cast<float>(values[0]);
+        Source->mPosition[1] = gsl::narrow_cast<float>(values[1]);
+        Source->mPosition[2] = gsl::narrow_cast<float>(values[2]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_VELOCITY:
@@ -1815,9 +1815,9 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_floating_point_v<T>)
             CheckValue(std::ranges::all_of(values, is_finite));
 
-        Source->mVelocity[0] = gsl::narrow_cast<f32>(values[0]);
-        Source->mVelocity[1] = gsl::narrow_cast<f32>(values[1]);
-        Source->mVelocity[2] = gsl::narrow_cast<f32>(values[2]);
+        Source->mVelocity[0] = gsl::narrow_cast<float>(values[0]);
+        Source->mVelocity[1] = gsl::narrow_cast<float>(values[1]);
+        Source->mVelocity[2] = gsl::narrow_cast<float>(values[2]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_DIRECTION:
@@ -1825,9 +1825,9 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_floating_point_v<T>)
             CheckValue(std::ranges::all_of(values, is_finite));
 
-        Source->mDirection[0] = gsl::narrow_cast<f32>(values[0]);
-        Source->mDirection[1] = gsl::narrow_cast<f32>(values[1]);
-        Source->mDirection[2] = gsl::narrow_cast<f32>(values[2]);
+        Source->mDirection[0] = gsl::narrow_cast<float>(values[0]);
+        Source->mDirection[1] = gsl::narrow_cast<float>(values[1]);
+        Source->mDirection[2] = gsl::narrow_cast<float>(values[2]);
         return CommitAndUpdateSourceProps(Source, Context);
 
     case AL_ORIENTATION:
@@ -1835,12 +1835,12 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
         if constexpr(std::is_floating_point_v<T>)
             CheckValue(std::ranges::all_of(values, is_finite));
 
-        Source->mOrientAt[0] = gsl::narrow_cast<f32>(values[0]);
-        Source->mOrientAt[1] = gsl::narrow_cast<f32>(values[1]);
-        Source->mOrientAt[2] = gsl::narrow_cast<f32>(values[2]);
-        Source->mOrientUp[0] = gsl::narrow_cast<f32>(values[3]);
-        Source->mOrientUp[1] = gsl::narrow_cast<f32>(values[4]);
-        Source->mOrientUp[2] = gsl::narrow_cast<f32>(values[5]);
+        Source->mOrientAt[0] = gsl::narrow_cast<float>(values[0]);
+        Source->mOrientAt[1] = gsl::narrow_cast<float>(values[1]);
+        Source->mOrientAt[2] = gsl::narrow_cast<float>(values[2]);
+        Source->mOrientUp[0] = gsl::narrow_cast<float>(values[3]);
+        Source->mOrientUp[1] = gsl::narrow_cast<float>(values[4]);
+        Source->mOrientUp[2] = gsl::narrow_cast<float>(values[5]);
         return UpdateSourceProps(Source, Context);
 
 
@@ -3996,20 +3996,20 @@ void al::Source::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
 }
 
 auto al::Source::eax_calculate_dst_occlusion_mb(eax_long const src_occlusion_mb,
-    f32 const path_ratio, f32 const lf_ratio) noexcept -> f32
+    float const path_ratio, float const lf_ratio) noexcept -> float
 {
     const auto ratio_1 = path_ratio + lf_ratio - 1.0f;
     const auto ratio_2 = path_ratio * lf_ratio;
-    return gsl::narrow_cast<f32>(src_occlusion_mb) * std::max(ratio_2, ratio_1);
+    return gsl::narrow_cast<float>(src_occlusion_mb) * std::max(ratio_2, ratio_1);
 }
 
 auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam
 {
     const auto &source = mEax.source;
 
-    auto gain_mb = gsl::narrow_cast<f32>(source.mObstruction.lObstruction)
+    auto gain_mb = gsl::narrow_cast<float>(source.mObstruction.lObstruction)
         * source.mObstruction.flObstructionLFRatio;
-    auto gainhf_mb = gsl::narrow_cast<f32>(source.mObstruction.lObstruction);
+    auto gainhf_mb = gsl::narrow_cast<float>(source.mObstruction.lObstruction);
 
     for(const auto i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
     {
@@ -4027,7 +4027,7 @@ auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPass
             gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
                 source.mOcclusion.flOcclusionDirectRatio, source.mOcclusion.flOcclusionLFRatio);
 
-            gainhf_mb += gsl::narrow_cast<f32>(source.mOcclusion.lOcclusion)
+            gainhf_mb += gsl::narrow_cast<float>(source.mOcclusion.lOcclusion)
                 * source.mOcclusion.flOcclusionDirectRatio;
         }
 
@@ -4037,7 +4037,7 @@ auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPass
             gain_mb += eax_calculate_dst_occlusion_mb(send.mOcclusion.lOcclusion,
                 send.mOcclusion.flOcclusionDirectRatio, send.mOcclusion.flOcclusionLFRatio);
 
-            gainhf_mb += gsl::narrow_cast<f32>(send.mOcclusion.lOcclusion)
+            gainhf_mb += gsl::narrow_cast<float>(send.mOcclusion.lOcclusion)
                 * send.mOcclusion.flOcclusionDirectRatio;
         }
     }
@@ -4052,8 +4052,8 @@ auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPass
      */
     gainhf_mb -= gain_mb;
 
-    gain_mb += gsl::narrow_cast<f32>(source.lDirect);
-    gainhf_mb += gsl::narrow_cast<f32>(source.lDirectHF);
+    gain_mb += gsl::narrow_cast<float>(source.lDirect);
+    gainhf_mb += gsl::narrow_cast<float>(source.lDirectHF);
 
     return EaxAlLowPassParam{level_mb_to_gain(gain_mb), level_mb_to_gain(gainhf_mb)};
 }
@@ -4067,38 +4067,38 @@ auto al::Source::eax_create_room_filter_param(const al::EffectSlot &fx_slot,
     const auto &fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
     if((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0)
     {
-        gain_mb += gsl::narrow_cast<f32>(fx_slot_eax.lOcclusion)*fx_slot_eax.flOcclusionLFRatio
+        gain_mb += gsl::narrow_cast<float>(fx_slot_eax.lOcclusion)*fx_slot_eax.flOcclusionLFRatio
             + eax_calculate_dst_occlusion_mb(send.mOcclusion.lOcclusion,
                 send.mOcclusion.flOcclusionRoomRatio, send.mOcclusion.flOcclusionLFRatio)
-            + gsl::narrow_cast<f32>(send.mExclusion.lExclusion)
+            + gsl::narrow_cast<float>(send.mExclusion.lExclusion)
                 *send.mExclusion.flExclusionLFRatio;
 
-        gainhf_mb += gsl::narrow_cast<f32>(fx_slot_eax.lOcclusion)
-            + gsl::narrow_cast<f32>(send.mOcclusion.lOcclusion)
+        gainhf_mb += gsl::narrow_cast<float>(fx_slot_eax.lOcclusion)
+            + gsl::narrow_cast<float>(send.mOcclusion.lOcclusion)
                 *send.mOcclusion.flOcclusionRoomRatio
-            + gsl::narrow_cast<f32>(send.mExclusion.lExclusion);
+            + gsl::narrow_cast<float>(send.mExclusion.lExclusion);
 
         const auto &source = mEax.source;
         if(mEaxPrimaryFxSlotId.value_or(-1) == fx_slot.eax_get_index())
         {
             gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
                 source.mOcclusion.flOcclusionRoomRatio, source.mOcclusion.flOcclusionLFRatio);
-            gain_mb += gsl::narrow_cast<f32>(source.mExclusion.lExclusion)
+            gain_mb += gsl::narrow_cast<float>(source.mExclusion.lExclusion)
                 * source.mExclusion.flExclusionLFRatio;
 
-            gainhf_mb += gsl::narrow_cast<f32>(source.mOcclusion.lOcclusion)
+            gainhf_mb += gsl::narrow_cast<float>(source.mOcclusion.lOcclusion)
                 * source.mOcclusion.flOcclusionRoomRatio;
-            gainhf_mb += gsl::narrow_cast<f32>(source.mExclusion.lExclusion);
+            gainhf_mb += gsl::narrow_cast<float>(source.mExclusion.lExclusion);
         }
 
         gainhf_mb -= gain_mb;
 
-        gain_mb += gsl::narrow_cast<f32>(source.lRoom);
-        gainhf_mb += gsl::narrow_cast<f32>(source.lRoomHF);
+        gain_mb += gsl::narrow_cast<float>(source.lRoom);
+        gainhf_mb += gsl::narrow_cast<float>(source.lRoomHF);
     }
 
-    gain_mb += gsl::narrow_cast<f32>(send.mSend.lSend);
-    gainhf_mb += gsl::narrow_cast<f32>(send.mSend.lSendHF);
+    gain_mb += gsl::narrow_cast<float>(send.mSend.lSend);
+    gainhf_mb += gsl::narrow_cast<float>(send.mSend.lSendHF);
 
     return EaxAlLowPassParam{level_mb_to_gain(gain_mb), level_mb_to_gain(gainhf_mb)};
 }
@@ -4131,7 +4131,7 @@ void al::Source::eax_update_room_filters()
 void al::Source::eax_set_efx_outer_gain_hf()
 {
     mOuterGainHF = std::clamp(
-        level_mb_to_gain(gsl::narrow_cast<f32>(mEax.source.lOutsideVolumeHF)),
+        level_mb_to_gain(gsl::narrow_cast<float>(mEax.source.lOutsideVolumeHF)),
         AL_MIN_CONE_OUTER_GAINHF,
         AL_MAX_CONE_OUTER_GAINHF);
 }

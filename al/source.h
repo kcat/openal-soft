@@ -67,26 +67,26 @@ struct BufferQueueItem : VoiceBufferItem {
 };
 
 struct Source {
-    f32 mPitch{1.0f};
-    f32 mGain{1.0f};
-    f32 mOuterGain{0.0f};
-    f32 mMinGain{0.0f};
-    f32 mMaxGain{1.0f};
-    f32 mInnerAngle{360.0f};
-    f32 mOuterAngle{360.0f};
-    f32 mRefDistance{1.0f};
-    f32 mMaxDistance{std::numeric_limits<f32>::max()};
-    f32 mRolloffFactor{1.0f};
+    float mPitch{1.0f};
+    float mGain{1.0f};
+    float mOuterGain{0.0f};
+    float mMinGain{0.0f};
+    float mMaxGain{1.0f};
+    float mInnerAngle{360.0f};
+    float mOuterAngle{360.0f};
+    float mRefDistance{1.0f};
+    float mMaxDistance{std::numeric_limits<float>::max()};
+    float mRolloffFactor{1.0f};
 #if ALSOFT_EAX
     // For EAXSOURCE_ROLLOFFFACTOR, which is distinct from and added to
     // AL_ROLLOFF_FACTOR
-    f32 mRolloffFactor2{0.0f};
+    float mRolloffFactor2{0.0f};
 #endif
-    std::array<f32, 3> mPosition{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mVelocity{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mDirection{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mOrientAt{{0.0f, 0.0f, -1.0f}};
-    std::array<f32, 3> mOrientUp{{0.0f, 1.0f,  0.0f}};
+    std::array<float, 3> mPosition{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mVelocity{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mDirection{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mOrientAt{{0.0f, 0.0f, -1.0f}};
+    std::array<float, 3> mOrientUp{{0.0f, 1.0f,  0.0f}};
     bool mHeadRelative{false};
     bool mLooping{false};
     DistanceModel mDistanceModel{DistanceModel::Default};
@@ -99,39 +99,39 @@ struct Source {
     bool mDryGainHFAuto{true};
     bool mWetGainAuto{true};
     bool mWetGainHFAuto{true};
-    f32 mOuterGainHF{1.0f};
+    float mOuterGainHF{1.0f};
 
-    f32 mAirAbsorptionFactor{0.0f};
-    f32 mRoomRolloffFactor{0.0f};
-    f32 mDopplerFactor{1.0f};
+    float mAirAbsorptionFactor{0.0f};
+    float mRoomRolloffFactor{0.0f};
+    float mDopplerFactor{1.0f};
 
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    std::array<f32, 2> mStereoPan{{std::numbers::pi_v<f32>/6.0f,
-        -std::numbers::pi_v<f32>/6.0f}};
+    std::array<float, 2> mStereoPan{{std::numbers::pi_v<float>/6.0f,
+        -std::numbers::pi_v<float>/6.0f}};
 
-    f32 mRadius{0.0f};
-    f32 mEnhWidth{0.593f};
-    f32 mPan{0.0f};
+    float mRadius{0.0f};
+    float mEnhWidth{0.593f};
+    float mPan{0.0f};
 
     /** Direct filter and auxiliary send info. */
     struct DirectData {
-        f32 mGain{};
-        f32 mGainHF{};
-        f32 mHFReference{};
-        f32 mGainLF{};
-        f32 mLFReference{};
+        float mGain{};
+        float mGainHF{};
+        float mHFReference{};
+        float mGainLF{};
+        float mLFReference{};
     };
     DirectData mDirect;
 
     struct SendData {
         intrusive_ptr<EffectSlot> mSlot;
-        f32 mGain{};
-        f32 mGainHF{};
-        f32 mHFReference{};
-        f32 mGainLF{};
-        f32 mLFReference{};
+        float mGain{};
+        float mGainHF{};
+        float mHFReference{};
+        float mGainLF{};
+        float mLFReference{};
     };
     std::array<SendData, MaxSendCount> mSend;
 
@@ -261,7 +261,7 @@ private:
     // Source validators
 
     struct Eax1SourceReverbMixValidator {
-        void operator()(f32 const reverb_mix) const
+        void operator()(float const reverb_mix) const
         {
             if (reverb_mix == EAX_REVERBMIX_USEDISTANCE)
                 return;
@@ -319,7 +319,7 @@ private:
     };
 
     struct Eax2SourceRoomRolloffFactorValidator {
-        void operator()(f32 const flRoomRolloffFactor) const
+        void operator()(float const flRoomRolloffFactor) const
         {
             eax_validate_range<Exception>(
                 "Room Rolloff Factor",
@@ -341,7 +341,7 @@ private:
     };
 
     struct Eax2SourceObstructionLfRatioValidator {
-        void operator()(f32 const flObstructionLFRatio) const
+        void operator()(float const flObstructionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Obstruction LF Ratio",
@@ -363,7 +363,7 @@ private:
     };
 
     struct Eax2SourceOcclusionLfRatioValidator {
-        void operator()(f32 const flOcclusionLFRatio) const
+        void operator()(float const flOcclusionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion LF Ratio",
@@ -374,7 +374,7 @@ private:
     };
 
     struct Eax2SourceOcclusionRoomRatioValidator {
-        void operator()(f32 const flOcclusionRoomRatio) const
+        void operator()(float const flOcclusionRoomRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion Room Ratio",
@@ -396,7 +396,7 @@ private:
     };
 
     struct Eax2SourceAirAbsorptionFactorValidator {
-        void operator()(f32 const flAirAbsorptionFactor) const
+        void operator()(float const flAirAbsorptionFactor) const
         {
             eax_validate_range<Exception>(
                 "Air Absorption Factor",
@@ -418,7 +418,7 @@ private:
     };
 
     struct Eax3SourceOcclusionDirectRatioValidator {
-        void operator()(f32 const flOcclusionDirectRatio) const
+        void operator()(float const flOcclusionDirectRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion Direct Ratio",
@@ -440,7 +440,7 @@ private:
     };
 
     struct Eax3SourceExclusionLfRatioValidator {
-        void operator()(f32 const flExclusionLFRatio) const
+        void operator()(float const flExclusionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Exclusion LF Ratio",
@@ -451,7 +451,7 @@ private:
     };
 
     struct Eax3SourceDopplerFactorValidator {
-        void operator()(f32 const flDopplerFactor) const
+        void operator()(float const flDopplerFactor) const
         {
             eax_validate_range<Exception>(
                 "Doppler Factor",
@@ -462,7 +462,7 @@ private:
     };
 
     struct Eax3SourceRolloffFactorValidator {
-        void operator()(f32 const flRolloffFactor) const
+        void operator()(float const flRolloffFactor) const
         {
             eax_validate_range<Exception>(
                 "Rolloff Factor",
@@ -473,7 +473,7 @@ private:
     };
 
     struct Eax5SourceMacroFXFactorValidator {
-        void operator()(f32 const flMacroFXFactor) const
+        void operator()(float const flMacroFXFactor) const
         {
             eax_validate_range<Exception>(
                 "Macro FX Factor",
@@ -850,8 +850,8 @@ private:
     static void eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept;
     static void eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept;
 
-    static auto eax_calculate_dst_occlusion_mb(eax_long src_occlusion_mb, f32 path_ratio,
-        f32 lf_ratio) noexcept -> f32;
+    static auto eax_calculate_dst_occlusion_mb(eax_long src_occlusion_mb, float path_ratio,
+        float lf_ratio) noexcept -> float;
 
     [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;
 

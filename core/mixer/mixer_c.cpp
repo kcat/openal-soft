@@ -20,32 +20,33 @@
 
 namespace {
 
-constexpr auto BsincPhaseDiffBits = u32{MixerFracBits - BSincPhaseBits};
-constexpr auto BsincPhaseDiffOne = 1_u32 << BsincPhaseDiffBits;
-constexpr auto BsincPhaseDiffMask = BsincPhaseDiffOne - 1_u32;
+constexpr auto BsincPhaseDiffBits = unsigned{MixerFracBits - BSincPhaseBits};
+constexpr auto BsincPhaseDiffOne = 1u << BsincPhaseDiffBits;
+constexpr auto BsincPhaseDiffMask = BsincPhaseDiffOne - 1u;
 
-constexpr auto CubicPhaseDiffBits = u32{MixerFracBits - CubicPhaseBits};
-constexpr auto CubicPhaseDiffOne = 1_u32 << CubicPhaseDiffBits;
-constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1_u32;
+constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
+constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
+constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
-using SamplerNST = auto(std::span<f32 const> vals, usize pos, u32 frac) noexcept -> f32;
+using SamplerNST = auto(std::span<float const> vals, usize pos, u32 frac) noexcept -> float;
 
 template<typename T>
-using SamplerT = auto(T const &istate, std::span<f32 const> vals, usize pos, u32 frac) noexcept -> f32;
+using SamplerT = auto(T const &istate, std::span<float const> vals, usize pos, u32 frac) noexcept
+    -> float;
 
 [[nodiscard]] constexpr
-auto do_point(std::span<f32 const> const vals, usize const pos, u32) noexcept -> f32
+auto do_point(std::span<float const> const vals, usize const pos, u32) noexcept -> float
 { return vals[pos]; }
 [[nodiscard]] constexpr
-auto do_lerp(std::span<f32 const> const vals, usize const pos, u32 const frac) noexcept -> f32
-{ return lerpf(vals[pos+0], vals[pos+1], gsl::narrow_cast<f32>(frac)*(1.0f/MixerFracOne)); }
+auto do_lerp(std::span<float const> const vals, usize const pos, u32 const frac) noexcept -> float
+{ return lerpf(vals[pos+0], vals[pos+1], gsl::narrow_cast<float>(frac)*(1.0f/MixerFracOne)); }
 [[nodiscard]] constexpr
-auto do_cubic(CubicState const &istate, std::span<f32 const> const vals, usize const pos,
-    u32 const frac) noexcept -> f32
+auto do_cubic(CubicState const &istate, std::span<float const> const vals, usize const pos,
+    u32 const frac) noexcept -> float
 {
     /* Calculate the phase index and factor. */
     auto const pi = u32{frac>>CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
-    auto const pf = gsl::narrow_cast<f32>(frac&CubicPhaseDiffMask) * f32{1.0f/CubicPhaseDiffOne};
+    auto const pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)*float{1.0f/CubicPhaseDiffOne};
 
     auto const fil = std::span{istate.filter[pi].mCoeffs};
     auto const phd = std::span{istate.filter[pi].mDeltas};
@@ -55,8 +56,8 @@ auto do_cubic(CubicState const &istate, std::span<f32 const> const vals, usize c
         + (fil[2] + pf*phd[2])*vals[pos+2] + (fil[3] + pf*phd[3])*vals[pos+3];
 }
 [[nodiscard]] constexpr
-auto do_fastbsinc(BsincState const &bsinc, std::span<f32 const> const vals, usize const pos,
-    u32 const frac) noexcept -> f32
+auto do_fastbsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
+    u32 const frac) noexcept -> float
 {
     auto const m = usize{bsinc.m};
     ASSUME(m > 0);
@@ -64,7 +65,7 @@ auto do_fastbsinc(BsincState const &bsinc, std::span<f32 const> const vals, usiz
 
     /* Calculate the phase index and factor. */
     auto const pi = u32{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-    auto const pf = gsl::narrow_cast<f32>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne);
+    auto const pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask) * (1.0f/BsincPhaseDiffOne);
 
     auto const fil = bsinc.filter.subspan(2_uz*pi*m);
     auto const phd = fil.subspan(m);
@@ -76,8 +77,8 @@ auto do_fastbsinc(BsincState const &bsinc, std::span<f32 const> const vals, usiz
     return r;
 }
 [[nodiscard]] constexpr
-auto do_bsinc(BsincState const &bsinc, std::span<f32 const> const vals, usize const pos,
-    u32 const frac) noexcept -> f32
+auto do_bsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
+    u32 const frac) noexcept -> float
 {
     auto const m = usize{bsinc.m};
     ASSUME(m > 0);
@@ -85,7 +86,7 @@ auto do_bsinc(BsincState const &bsinc, std::span<f32 const> const vals, usize co
 
     /* Calculate the phase index and factor. */
     auto const pi = u32{frac>>BsincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-    auto const pf = gsl::narrow_cast<f32>(frac&BsincPhaseDiffMask) * f32{1.0f/BsincPhaseDiffOne};
+    auto const pf = gsl::narrow_cast<float>(frac&BsincPhaseDiffMask)*float{1.0f/BsincPhaseDiffOne};
 
     auto const fil = bsinc.filter.subspan(2_uz*pi*m);
     auto const phd = fil.subspan(m);
@@ -100,12 +101,12 @@ auto do_bsinc(BsincState const &bsinc, std::span<f32 const> const vals, usize co
 }
 
 template<SamplerNST Sampler>
-void DoResample(std::span<f32 const> const src, u32 frac, u32 const increment,
-    std::span<f32> const dst)
+void DoResample(std::span<float const> const src, u32 frac, u32 const increment,
+    std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
     auto pos = 0_uz;
-    std::generate(dst.begin(), dst.end(), [&pos,&frac,src,increment]() -> f32
+    std::generate(dst.begin(), dst.end(), [&pos,&frac,src,increment]() -> float
     {
         const auto output = Sampler(src, pos, frac);
         frac += increment;
@@ -116,12 +117,12 @@ void DoResample(std::span<f32 const> const src, u32 frac, u32 const increment,
 }
 
 template<typename U, SamplerT<U> Sampler>
-void DoResample(U const istate, std::span<f32 const> const src, u32 frac, u32 const increment,
-    std::span<f32> const dst)
+void DoResample(U const istate, std::span<float const> const src, u32 frac, u32 const increment,
+    std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
     auto pos = 0_uz;
-    std::generate(dst.begin(), dst.end(), [istate,src,&pos,&frac,increment]() -> f32
+    std::generate(dst.begin(), dst.end(), [istate,src,&pos,&frac,increment]() -> float
     {
         auto const output = Sampler(istate, src, pos, frac);
         frac += increment;
@@ -132,7 +133,7 @@ void DoResample(U const istate, std::span<f32 const> const src, u32 frac, u32 co
 }
 
 void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize, ConstHrirSpan const Coeffs,
-    f32 const left, f32 const right) noexcept
+    float const left, float const right) noexcept
 {
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
@@ -142,14 +143,14 @@ void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize, ConstHrirSpa
     { return f32x2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
 }
 
-force_inline void MixLine(std::span<f32 const> InSamples, std::span<f32> const dst,
-    f32 &CurrentGain, f32 const TargetGain, f32 const delta, usize const fade_len,
+force_inline void MixLine(std::span<float const> InSamples, std::span<float> const dst,
+    float &CurrentGain, float const TargetGain, float const delta, usize const fade_len,
     usize Counter)
 {
     auto const step = (TargetGain-CurrentGain) * delta;
 
     auto output = dst.begin();
-    if(std::abs(step) > std::numeric_limits<f32>::epsilon())
+    if(std::abs(step) > std::numeric_limits<float>::epsilon())
     {
         auto input = InSamples.first(fade_len);
         InSamples = InSamples.subspan(fade_len);
@@ -157,7 +158,7 @@ force_inline void MixLine(std::span<f32 const> InSamples, std::span<f32> const d
         auto const gain = CurrentGain;
         auto step_count = 0.0f;
         output = std::transform(input.begin(), input.end(), output, output,
-            [gain,step,&step_count](f32 const in, f32 out) noexcept -> f32
+            [gain,step,&step_count](float const in, float out) noexcept -> float
             {
                 out += in * (gain + step*step_count);
                 step_count += 1.0f;
@@ -176,29 +177,29 @@ force_inline void MixLine(std::span<f32 const> InSamples, std::span<f32> const d
         return;
 
     std::transform(InSamples.begin(), InSamples.end(), output, output,
-        [TargetGain](f32 const in, f32 const out) noexcept -> f32
+        [TargetGain](float const in, float const out) noexcept -> float
         { return out + in*TargetGain; });
 }
 
 } // namespace
 
-void Resample_Point_C(InterpState const*, std::span<f32 const> const src, u32 const frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Point_C(InterpState const*, std::span<float const> const src, u32 const frac,
+    u32 const increment, std::span<float> const dst)
 { DoResample<do_point>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
-void Resample_Linear_C(InterpState const*, std::span<f32 const> const src, u32 const frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Linear_C(InterpState const*, std::span<float const> const src, u32 const frac,
+    u32 const increment, std::span<float> const dst)
 { DoResample<do_lerp>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
-void Resample_Cubic_C(InterpState const *const state, std::span<f32 const> const src,
-    u32 const frac, u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_C(InterpState const *const state, std::span<float const> const src,
+    u32 const frac, u32 const increment, std::span<float> const dst)
 {
     DoResample<CubicState,do_cubic>(std::get<CubicState>(*state), src.subspan(MaxResamplerEdge-1),
         frac, increment, dst);
 }
 
-void Resample_FastBSinc_C(InterpState const *const state, std::span<f32 const> const src,
-    u32 const frac, u32 const increment, std::span<f32> const dst)
+void Resample_FastBSinc_C(InterpState const *const state, std::span<float const> const src,
+    u32 const frac, u32 const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -206,8 +207,8 @@ void Resample_FastBSinc_C(InterpState const *const state, std::span<f32 const> c
         increment, dst);
 }
 
-void Resample_BSinc_C(InterpState const *const state, std::span<f32 const> const src,
-    u32 const frac, u32 const increment, std::span<f32> const dst)
+void Resample_BSinc_C(InterpState const *const state, std::span<float const> const src,
+    u32 const frac, u32 const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
     ASSUME(istate.l <= MaxResamplerEdge);
@@ -216,11 +217,11 @@ void Resample_BSinc_C(InterpState const *const state, std::span<f32 const> const
 }
 
 
-void MixHrtf_C(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtf_C(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
-void MixHrtfBlend_C(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtfBlend_C(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
@@ -230,7 +231,7 @@ void MixHrtfBlend_C(std::span<f32 const> const InSamples, std::span<f32x2> const
 
 void MixDirectHrtf_C(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
-    std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
+    std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
@@ -238,11 +239,11 @@ void MixDirectHrtf_C(FloatBufferSpan const LeftOut, FloatBufferSpan const RightO
 }
 
 
-void Mix_C(std::span<f32 const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
-    std::span<f32> const CurrentGains, std::span<f32 const> const TargetGains,
+void Mix_C(std::span<float const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
+    std::span<float> const CurrentGains, std::span<float const> const TargetGains,
     usize const Counter, usize const OutPos)
 {
-    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
+    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());
 
     auto curgains = CurrentGains.begin();
@@ -252,10 +253,10 @@ void Mix_C(std::span<f32 const> const InSamples, std::span<FloatBufferLine> cons
             fade_len, Counter);
 }
 
-void Mix_C(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer, f32 &CurrentGain,
-    f32 const TargetGain, usize const Counter)
+void Mix_C(std::span<float const> const InSamples, std::span<float> const OutBuffer,
+    float &CurrentGain, float const TargetGain, usize const Counter)
 {
-    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
+    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());
 
     MixLine(InSamples, OutBuffer, CurrentGain, TargetGain, delta, fade_len, Counter);

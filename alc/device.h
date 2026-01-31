@@ -135,15 +135,15 @@ auto Device::configValue(std::string_view const block, std::string_view const ke
 { return ConfigValueStr(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<i32>
+    -> std::optional<int>
 { return ConfigValueI32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<u32>
+    -> std::optional<unsigned>
 { return ConfigValueU32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<f32>
+    -> std::optional<float>
 { return ConfigValueF32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const

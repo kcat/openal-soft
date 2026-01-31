@@ -72,7 +72,7 @@ enum class StereoEncoding : u8::value_t {
 
 
 struct InputRemixMap {
-    struct TargetMix { Channel channel; f32 mix; };
+    struct TargetMix { Channel channel; float mix; };
 
     Channel channel;
     std::span<TargetMix const> targets;
@@ -87,12 +87,12 @@ public:
     static constexpr auto MaxDelay = 1024_u32;
 
     struct ChanData {
-        std::span<f32> Buffer; /* Valid size is [0...MaxDelay). */
-        f32 Gain{1.0f};
+        std::span<float> Buffer; /* Valid size is [0...MaxDelay). */
+        float Gain{1.0f};
     };
 
     std::array<ChanData, MaxOutputChannels> mChannels{};
-    al::FlexArray<f32, 16> mSamples;
+    al::FlexArray<float, 16> mSamples;
 
     static auto Create(usize const numsamples) -> std::unique_ptr<DistanceComp>
     { return std::unique_ptr<DistanceComp>{new(FamCount{numsamples}) DistanceComp{numsamples}}; }
@@ -104,7 +104,7 @@ public:
 constexpr auto InvalidChannelIndex = ~0_u8;
 
 struct BFChannelConfig {
-    f32 Scale;
+    float Scale;
     u32 Index;
 };
 
@@ -122,8 +122,8 @@ struct MixParams {
      * destination channel is InvalidChannelIndex, the given source channel is
      * not used for output.
      */
-    template<std::invocable<usize, u8, f32> F>
-    void setAmbiMixParams(MixParams const &inmix, f32 const gainbase, F func) const
+    template<std::invocable<usize, u8, float> F>
+    void setAmbiMixParams(MixParams const &inmix, float const gainbase, F func) const
     {
         auto const numIn = inmix.Buffer.size();
         auto const numOut = Buffer.size();
@@ -153,7 +153,7 @@ struct RealMixParams {
     std::span<FloatBufferLine> Buffer;
 };
 
-using AmbiRotateMatrix = std::array<std::array<f32, MaxAmbiChannels>, MaxAmbiChannels>;
+using AmbiRotateMatrix = std::array<std::array<float, MaxAmbiChannels>, MaxAmbiChannels>;
 
 
 struct AmbiDecPostProcess {
@@ -234,7 +234,7 @@ struct DeviceBase {
     DevFmtChannels FmtChans{};
     DevFmtType FmtType{};
     u32 mAmbiOrder{0_u32};
-    f32 mXOverFreq{400.0f};
+    float mXOverFreq{400.0f};
     /* If the main device mix is horizontal/2D only. */
     bool m2DMixing{false};
     /* For DevFmtAmbi* output only, specifies the channel order and
@@ -255,7 +255,7 @@ struct DeviceBase {
     /* The average speaker distance as determined by the ambdec configuration,
      * HRTF data set, or the NFC-HOA reference delay. Only used for NFC.
      */
-    f32 AvgSpeakerDist{0.0f};
+    float AvgSpeakerDist{0.0f};
 
     /* The default NFC filter. Not used directly, but is pre-initialized with
      * the control distance from AvgSpeakerDist.
@@ -265,7 +265,7 @@ struct DeviceBase {
     using seconds32 = std::chrono::duration<i32>;
     using nanoseconds32 = std::chrono::duration<i32, std::nano>;
 
-    std::atomic<u32> mSamplesDone{0_u32};
+    std::atomic<u32> mSamplesDone{0u};
     /* Split the clock to avoid a 64-bit atomic for certain 32-bit targets. */
     std::atomic<seconds32> mClockBaseSec{seconds32{}};
     std::atomic<nanoseconds32> mClockBaseNSec{nanoseconds32{}};
@@ -277,11 +277,11 @@ struct DeviceBase {
     /* Temp storage used for mixer processing. */
     static constexpr auto MixerLineSize = usize{BufferLineSize + DecoderBase::sMaxPadding};
     static constexpr auto MixerChannelsMax = 25_uz;
-    alignas(16) std::array<f32, MixerLineSize*MixerChannelsMax> mSampleData{};
-    alignas(16) std::array<f32, MixerLineSize+MaxResamplerPadding> mResampleData{};
+    alignas(16) std::array<float, MixerLineSize*MixerChannelsMax> mSampleData{};
+    alignas(16) std::array<float, MixerLineSize+MaxResamplerPadding> mResampleData{};
 
-    alignas(16) std::array<f32, BufferLineSize> FilteredData{};
-    alignas(16) std::array<f32, BufferLineSize+HrtfHistoryLength> ExtraSampleData{};
+    alignas(16) std::array<float, BufferLineSize> FilteredData{};
+    alignas(16) std::array<float, BufferLineSize+HrtfHistoryLength> ExtraSampleData{};
 
     /* Persistent storage for HRTF mixing. */
     alignas(16) std::array<f32x2, BufferLineSize+HrirLength> HrtfAccumData{};
@@ -300,7 +300,7 @@ struct DeviceBase {
 
     /* HRTF state and info */
     al::intrusive_ptr<HrtfStore> mHrtf;
-    u32 mIrSize{0_u32};
+    u32 mIrSize{0u};
 
     PostProcess mPostProcess;
 
@@ -310,15 +310,15 @@ struct DeviceBase {
     std::unique_ptr<DistanceComp> ChannelDelays;
 
     /* Dithering control. */
-    f32 DitherDepth{0.0f};
-    u32 DitherSeed{0_u32};
+    float DitherDepth{0.0f};
+    u32 DitherSeed{0u};
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
      * the end, so the bottom bit indicates if the device is currently mixing
      * and the upper bits indicates how many mixes have been done.
      */
-    std::atomic<u32> mMixCount{0_u32};
+    std::atomic<u32> mMixCount{0u};
 
     // Contexts created on this device
     using ContextArray = al::FlexArray<ContextBase*>;

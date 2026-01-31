@@ -32,7 +32,7 @@ public:
     alignas(16) FloatBufferLine mDstSamples{};
 
     struct ChanSamples {
-        alignas(16) std::array<f32, MaxResamplerPadding> PrevSamples;
+        alignas(16) std::array<float, MaxResamplerPadding> PrevSamples;
     };
     al::FlexArray<ChanSamples> mChan;
 
@@ -62,7 +62,7 @@ struct ChannelConverter {
 
     [[nodiscard]] auto is_active() const noexcept -> bool { return mChanMask != 0; }
 
-    void convert(const void *src, f32 *dst, u32 frames) const;
+    void convert(const void *src, float *dst, u32 frames) const;
 };
 
 #endif /* CORE_CONVERTER_H */

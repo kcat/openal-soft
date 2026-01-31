@@ -109,7 +109,7 @@ void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u8 const outchan, f32 const outgain)
+        [this](usize const idx, u8 const outchan, float const outgain)
     {
         mChans[idx].mTarget = outchan.c_val;
         mChans[idx].mGain = outgain;

@@ -56,7 +56,7 @@ enum class DebugSeverity : u8::value_t;
 enum ContextFlags {
     DebugBit = 0, /* ALC_CONTEXT_DEBUG_BIT_EXT */
 };
-using ContextFlagBitset = std::bitset<sizeof(u32)*8>;
+using ContextFlagBitset = std::bitset<sizeof(ALCuint)*8>;
 
 
 struct DebugLogEntry {
@@ -101,10 +101,10 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     DistanceModel mDistanceModel{DistanceModel::Default};
     bool mSourceDistanceModel{false};
 
-    f32 mDopplerFactor{1.0f};
-    f32 mDopplerVelocity{1.0f};
-    f32 mSpeedOfSound{SpeedOfSoundMetersPerSec};
-    f32 mAirAbsorptionGainHF{AirAbsorbGainHF};
+    float mDopplerFactor{1.0f};
+    float mDopplerVelocity{1.0f};
+    float mSpeedOfSound{SpeedOfSoundMetersPerSec};
+    float mAirAbsorptionGainHF{AirAbsorbGainHF};
 
     std::mutex mEventCbLock;
     ALEVENTPROCSOFT mEventCb{};
@@ -252,7 +252,7 @@ public:
     void eaxSetLastError() noexcept;
 
     [[nodiscard]]
-    auto eaxGetDistanceFactor() const noexcept -> f32 { return mEax.flDistanceFactor; }
+    auto eaxGetDistanceFactor() const noexcept -> float { return mEax.flDistanceFactor; }
 
     [[nodiscard]]
     auto eaxGetPrimaryFxSlotIndex() const noexcept -> EaxFxSlotIndex
@@ -316,7 +316,7 @@ private:
     };
 
     struct Eax4DistanceFactorValidator {
-        void operator()(f32 const flDistanceFactor) const
+        void operator()(float const flDistanceFactor) const
         {
             eax_validate_range<ContextException>(
                 "Distance Factor",
@@ -327,7 +327,7 @@ private:
     };
 
     struct Eax4AirAbsorptionHfValidator {
-        void operator()(f32 const flAirAbsorptionHF) const
+        void operator()(float const flAirAbsorptionHF) const
         {
             eax_validate_range<ContextException>(
                 "Air Absorption HF",
@@ -338,7 +338,7 @@ private:
     };
 
     struct Eax4HfReferenceValidator {
-        void operator()(f32 const flHFReference) const
+        void operator()(float const flHFReference) const
         {
             eax_validate_range<ContextException>(
                 "HF Reference",
@@ -373,7 +373,7 @@ private:
     };
 
     struct Eax5MacroFxFactorValidator {
-        void operator()(f32 const flMacroFXFactor) const
+        void operator()(float const flMacroFXFactor) const
         {
             eax_validate_range<ContextException>(
                 "Macro FX Factor",

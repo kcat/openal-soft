@@ -30,13 +30,13 @@ template<DevFmtType T> constexpr
 auto LoadSample(DevFmtType_t<T> val) noexcept -> float = delete;
 
 template<> constexpr auto LoadSample<DevFmtByte>(i8 const val) noexcept -> float
-{ return gsl::narrow_cast<float>(val.c_val) * (1.0f/128.0f); }
+{ return (val.as<f32>() * (1.0f/128.0f)).c_val; }
 template<> constexpr auto LoadSample<DevFmtShort>(i16 const val) noexcept -> float
-{ return gsl::narrow_cast<float>(val.c_val) * (1.0f/32768.0f); }
+{ return (val.as<f32>() * (1.0f/32768.0f)).c_val; }
 template<> constexpr auto LoadSample<DevFmtInt>(i32 const val) noexcept -> float
 { return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f); }
 template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> float
-{ return val; }
+{ return val.c_val; }
 
 template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> float
 { return LoadSample<DevFmtByte>((val - 128).reinterpret_as<i8>()); }
@@ -85,7 +85,7 @@ template<DevFmtType T>
 auto StoreSample(float) noexcept -> DevFmtType_t<T> = delete;
 
 template<> auto StoreSample<DevFmtFloat>(float const val) noexcept -> f32
-{ return val; }
+{ return f32{val}; }
 template<> auto StoreSample<DevFmtInt>(float const val) noexcept -> i32
 { return fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f)); }
 template<> auto StoreSample<DevFmtShort>(float const val) noexcept -> i16

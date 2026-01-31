@@ -322,8 +322,8 @@ constexpr auto FramesPerPos = 48_uz;
 struct Channel {
     ALuint mSource{};
     std::array<ALuint,2> mBuffers{};
-    f32 mAzimuth{};
-    f32 mElevation{};
+    float mAzimuth{};
+    float mElevation{};
     bool mIsLfe{};
 
     Channel() = default;
@@ -372,7 +372,7 @@ struct LafStream {
     std::variant<vector<i8>,vector<i16>,vector<f32>,vector<i32>> mSampleLine;
 
     std::vector<Channel> mChannels;
-    std::vector<std::vector<f32>> mPosTracks;
+    std::vector<std::vector<float>> mPosTracks;
 
     LafStream() = default;
     LafStream(const LafStream&) = delete;
@@ -390,7 +390,7 @@ struct LafStream {
 
     void convertSamples(std::span<std::byte> samples) const;
 
-    void convertPositions(std::span<f32> dst) const;
+    void convertPositions(std::span<float> dst) const;
 };
 
 auto LafStream::readChunk() -> u32
@@ -515,20 +515,20 @@ void LafStream::convertPositions(std::span<float> const dst) const
     std::visit(overloaded {
         [dst](vector<i8> const &src)
         {
-            std::ranges::transform(src, dst.begin(), [](i8 const in) noexcept -> f32
-            { return gsl::narrow_cast<f32>(in.c_val) / 127.0f; });
+            std::ranges::transform(src, dst.begin(), [](i8 const in) noexcept -> float
+            { return (in.as<f32>() / 127.0f).c_val; });
         },
         [dst](vector<i16> const &src)
         {
-            std::ranges::transform(src, dst.begin(), [](i16 const in) noexcept -> f32
-            { return gsl::narrow_cast<f32>(in.c_val) / 32767.0f; });
+            std::ranges::transform(src, dst.begin(), [](i16 const in) noexcept -> float
+            { return (in.as<f32>() / 32767.0f).c_val; });
         },
-        [dst](vector<f32> const &src) { std::ranges::copy(src, dst.begin()); },
+        [dst](vector<f32> const &src) { std::ranges::transform(src, dst.begin(), &f32::c_val); },
         [dst](vector<i32> const &src)
         {
             /* 24-bit samples are converted to 32-bit in copySamples. */
-            std::ranges::transform(src, dst.begin(), [](i32 const in) noexcept -> f32
-            { return gsl::narrow_cast<f32>(in>>8) / 8388607.0f; });
+            std::ranges::transform(src, dst.begin(), [](i32 const in) noexcept -> float
+            { return gsl::narrow_cast<float>(in>>8) / 8388607.0f; });
         },
     }, mSampleLine);
 }
@@ -650,7 +650,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     {
         const auto value = u32{as_unsigned(input[0])} | (u32{as_unsigned(input[1])}<<8)
             | (u32{as_unsigned(input[2])}<<16) | (u32{as_unsigned(input[3])}<<24);
-        return std::bit_cast<f32>(value);
+        return std::bit_cast<float>(value);
     };
 
     /* C++23 can use chandata | std::views::chunk(9) | std::views::enumerate to
@@ -788,8 +788,8 @@ try {
         else
         {
             auto const tmp = gsl::narrow_cast<i32>(azi);
-            azi -= gsl::narrow_cast<f32>(tmp + (tmp%2));
-            azi *= std::numbers::pi_v<f32>;
+            azi -= gsl::narrow_cast<float>(tmp + (tmp%2));
+            azi *= std::numbers::pi_v<float>;
         }
 
         auto elev = channel.mElevation / 180.0f;
@@ -798,8 +798,8 @@ try {
         else
         {
             auto const tmp = gsl::narrow_cast<i32>(elev);
-            elev -= gsl::narrow_cast<f32>(tmp + (tmp%2));
-            elev *= std::numbers::pi_v<f32>;
+            elev -= gsl::narrow_cast<float>(tmp + (tmp%2));
+            elev *= std::numbers::pi_v<float>;
         }
 
         auto const x = std::sin(azi) * std::cos(elev);

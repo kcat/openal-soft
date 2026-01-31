@@ -13,13 +13,13 @@
 namespace al {
 
 class Vector {
-    alignas(16) std::array<f32, 4> mVals{};
+    alignas(16) std::array<float, 4> mVals{};
 
 public:
     constexpr Vector() noexcept = default;
     constexpr Vector(const Vector&) noexcept = default;
     constexpr Vector(Vector&&) noexcept = default;
-    constexpr explicit Vector(f32 const a, f32 const b, f32 const c, f32 const d) noexcept
+    constexpr explicit Vector(float const a, float const b, float const c, float const d) noexcept
         : mVals{{a,b,c,d}}
     { }
 
@@ -27,9 +27,10 @@ public:
     constexpr auto operator=(Vector&&) & noexcept LIFETIMEBOUND -> Vector& = default;
 
     [[nodiscard]] constexpr
-    auto operator[](usize const idx) noexcept LIFETIMEBOUND -> f32& { return mVals[idx]; }
+    auto operator[](usize const idx) noexcept LIFETIMEBOUND -> float& { return mVals[idx]; }
     [[nodiscard]] constexpr
-    auto operator[](usize const idx) const noexcept LIFETIMEBOUND -> f32 const& { return mVals[idx]; }
+    auto operator[](usize const idx) const noexcept LIFETIMEBOUND -> float const&
+    { return mVals[idx]; }
 
     constexpr auto operator+=(const Vector &rhs) & noexcept -> Vector&
     {
@@ -47,10 +48,10 @@ public:
             mVals[2] - rhs.mVals[2], mVals[3] - rhs.mVals[3]};
     }
 
-    constexpr auto normalize() -> f32
+    constexpr auto normalize() -> float
     {
-        auto const length_sqr = f32{mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2]};
-        if(length_sqr > std::numeric_limits<f32>::epsilon())
+        auto const length_sqr = float{mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2]};
+        if(length_sqr > std::numeric_limits<float>::epsilon())
         {
             auto const length = std::sqrt(length_sqr);
             auto const inv_length = 1.0f / length;
@@ -72,22 +73,22 @@ public:
             0.0f};
     }
 
-    [[nodiscard]] constexpr auto dot_product(const Vector &rhs) const noexcept -> f32
+    [[nodiscard]] constexpr auto dot_product(const Vector &rhs) const noexcept -> float
     { return mVals[0]*rhs.mVals[0] + mVals[1]*rhs.mVals[1] + mVals[2]*rhs.mVals[2]; }
 };
 
 class Matrix {
-    alignas(16) std::array<f32, 16> mVals{};
+    alignas(16) std::array<float, 16> mVals{};
 
 public:
     constexpr Matrix() noexcept = default;
     constexpr Matrix(const Matrix&) noexcept = default;
     constexpr Matrix(Matrix&&) noexcept = default;
     constexpr explicit Matrix(
-        f32 const aa, f32 const ab, f32 const ac, f32 const ad,
-        f32 const ba, f32 const bb, f32 const bc, f32 const bd,
-        f32 const ca, f32 const cb, f32 const cc, f32 const cd,
-        f32 const da, f32 const db, f32 const dc, f32 const dd) noexcept
+        float const aa, float const ab, float const ac, float const ad,
+        float const ba, float const bb, float const bc, float const bd,
+        float const ca, float const cb, float const cc, float const cd,
+        float const da, float const db, float const dc, float const dd) noexcept
         : mVals{{aa,ab,ac,ad, ba,bb,bc,bd, ca,cb,cc,cd, da,db,dc,dd}}
     { }
 
@@ -95,9 +96,9 @@ public:
     constexpr auto operator=(Matrix&&) & noexcept LIFETIMEBOUND -> Matrix& = default;
 
     [[nodiscard]] constexpr auto operator[](usize const idx) noexcept LIFETIMEBOUND
-    { return std::span<f32, 4>{&mVals[idx*4], 4}; }
+    { return std::span<float, 4>{&mVals[idx*4], 4}; }
     [[nodiscard]] constexpr auto operator[](usize const idx) const noexcept LIFETIMEBOUND
-    { return std::span<f32 const, 4>{&mVals[idx*4], 4}; }
+    { return std::span<float const, 4>{&mVals[idx*4], 4}; }
 
     [[nodiscard]] static constexpr auto Identity() noexcept -> Matrix
     {

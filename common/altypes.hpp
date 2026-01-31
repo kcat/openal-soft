@@ -724,7 +724,9 @@ template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT
 
 using isize = std::make_signed_t<std::size_t>;
 using usize = std::size_t;
-using f32 = float;
+
+struct f32 : al::number_base<float, f32> { using number_base::number_base; using number_base::operator=; };
+template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
 
 struct f64 : al::number_base<double, f64> { using number_base::number_base; using number_base::operator=; };
 template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
@@ -783,9 +785,9 @@ auto operator ""_uz(unsigned long long const n) noexcept { return gsl::narrow<us
 auto operator ""_zu(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
 
 [[nodiscard]] consteval
-auto operator ""_f32(long double const n) noexcept { return static_cast<f32>(n); }
+auto operator ""_f32(long double const n) noexcept { return f32::make_from(n); }
 [[nodiscard]] consteval
-auto operator ""_f64(long double const n) noexcept { return static_cast<f64>(n); }
+auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
 
 
 template<al::strong_number T> [[nodiscard]] force_inline constexpr

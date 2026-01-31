@@ -90,7 +90,7 @@ void fwrite32le(u32 const value, std::ostream &f)
     f.write(data.data(), std::ssize(data));
 }
 
-auto f32AsLEBytes(f32 const value) -> std::array<char,4>
+auto f32AsLEBytes(float const value) -> std::array<char,4>
 {
     auto ret = std::bit_cast<std::array<char,4>>(value);
     if constexpr(std::endian::native == std::endian::big)
@@ -101,26 +101,26 @@ auto f32AsLEBytes(f32 const value) -> std::array<char,4>
 
 constexpr auto BufferLineSize = 1024u;
 
-using FloatBufferLine = std::array<f32, BufferLineSize>;
+using FloatBufferLine = std::array<float, BufferLineSize>;
 
 
 struct UhjDecoder {
     constexpr static auto sFilterDelay = 1024_uz;
 
-    alignas(16) std::array<f32, BufferLineSize+sFilterDelay> mS{};
-    alignas(16) std::array<f32, BufferLineSize+sFilterDelay> mD{};
-    alignas(16) std::array<f32, BufferLineSize+sFilterDelay> mT{};
-    alignas(16) std::array<f32, BufferLineSize+sFilterDelay> mQ{};
+    alignas(16) std::array<float, BufferLineSize+sFilterDelay> mS{};
+    alignas(16) std::array<float, BufferLineSize+sFilterDelay> mD{};
+    alignas(16) std::array<float, BufferLineSize+sFilterDelay> mT{};
+    alignas(16) std::array<float, BufferLineSize+sFilterDelay> mQ{};
 
     /* History for the FIR filter. */
-    alignas(16) std::array<f32, sFilterDelay-1> mDTHistory{};
-    alignas(16) std::array<f32, sFilterDelay-1> mSHistory{};
+    alignas(16) std::array<float, sFilterDelay-1> mDTHistory{};
+    alignas(16) std::array<float, sFilterDelay-1> mSHistory{};
 
-    alignas(16) std::array<f32, BufferLineSize + sFilterDelay*2> mTemp{};
+    alignas(16) std::array<float, BufferLineSize + sFilterDelay*2> mTemp{};
 
-    void decode(std::span<f32 const> InSamples, usize InChannels,
+    void decode(std::span<float const> InSamples, usize InChannels,
         std::span<FloatBufferLine> OutSamples, usize SamplesToDo);
-    void decode2(std::span<f32 const> InSamples,
+    void decode2(std::span<float const> InSamples,
         std::span<FloatBufferLine> OutSamples, usize SamplesToDo);
 };
 
@@ -200,7 +200,7 @@ auto const PShift = PhaseShifterT<UhjDecoder::sFilterDelay*2>{};
  *
  * Not halving produces a result matching the original input.
  */
-void UhjDecoder::decode(std::span<f32 const> const InSamples, usize const InChannels,
+void UhjDecoder::decode(std::span<float const> const InSamples, usize const InChannels,
     std::span<FloatBufferLine> const OutSamples, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -237,18 +237,18 @@ void UhjDecoder::decode(std::span<f32 const> const InSamples, usize const InChan
     /* Precompute j(0.828331*D + 0.767820*T) and store in xoutput. */
     auto tmpiter = std::ranges::copy(mDTHistory, mTemp.begin()).out;
     std::ranges::transform(mD | std::views::take(SamplesToDo+sFilterDelay), mT, tmpiter,
-        [](f32 const d, f32 const t) noexcept { return 0.828331f*d + 0.767820f*t; });
+        [](float const d, float const t) noexcept { return 0.828331f*d + 0.767820f*t; });
     std::ranges::copy(mTemp | std::views::drop(SamplesToDo) | std::views::take(mDTHistory.size()),
         mDTHistory.begin());
     PShift.process(xoutput.first(SamplesToDo), mTemp);
 
     /* W = 0.981532*S + 0.197484*j(0.828331*D + 0.767820*T) */
     std::ranges::transform(mS | std::views::take(SamplesToDo), xoutput, woutput.begin(),
-        [](f32 const s, f32 const jdt) -> f32 { return 0.981532f*s + 0.197484f*jdt; });
+        [](float const s, float const jdt) -> float { return 0.981532f*s + 0.197484f*jdt; });
 
     /* X = 0.418496*S - j(0.828331*D + 0.767820*T) */
     std::ranges::transform(mS | std::views::take(SamplesToDo), xoutput, xoutput.begin(),
-        [](f32 const s, f32 const jdt) -> f32 { return 0.418496f*s - jdt; });
+        [](float const s, float const jdt) -> float { return 0.418496f*s - jdt; });
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::ranges::copy(mSHistory, mTemp.begin()).out;
@@ -268,7 +268,7 @@ void UhjDecoder::decode(std::span<f32 const> const InSamples, usize const InChan
         auto const zoutput = std::span{OutSamples[3]};
         /* Z = 1.023332*Q */
         std::ranges::transform(mQ | std::views::take(SamplesToDo), zoutput.begin(),
-            [](f32 const q) noexcept -> f32 { return 1.023332f*q; });
+            [](float const q) noexcept -> float { return 1.023332f*q; });
     }
 
     auto const get_end = std::views::drop(SamplesToDo) | std::views::take(sFilterDelay);
@@ -297,7 +297,7 @@ void UhjDecoder::decode(std::span<f32 const> const InSamples, usize const InChan
  * NOTE: As above, S and D should not be halved. The only consequence of
  * halving here is merely a -6dB reduction in output, but it's still incorrect.
  */
-void UhjDecoder::decode2(std::span<f32 const> const InSamples,
+void UhjDecoder::decode2(std::span<float const> const InSamples,
     std::span<FloatBufferLine> const OutSamples, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -323,11 +323,11 @@ void UhjDecoder::decode2(std::span<f32 const> const InSamples,
 
     /* W = 0.981530*S + j*0.163585*D */
     std::ranges::transform(mS | std::views::take(SamplesToDo), xoutput, woutput.begin(),
-        [](f32 const s, f32 const jd) -> f32 { return 0.981530f*s + 0.163585f*jd; });
+        [](float const s, float const jd) -> float { return 0.981530f*s + 0.163585f*jd; });
 
     /* X = 0.418504*S - j*0.828347*D */
     std::ranges::transform(mS | std::views::take(SamplesToDo), xoutput, xoutput.begin(),
-        [](f32 const s, f32 const jd) -> f32 { return 0.418504f*s - 0.828347f*jd; });
+        [](float const s, float const jd) -> float { return 0.418504f*s - 0.828347f*jd; });
 
     /* Precompute j*S and store in youtput. */
     tmpiter = std::ranges::copy(mSHistory, mTemp.begin()).out;
@@ -338,7 +338,7 @@ void UhjDecoder::decode2(std::span<f32 const> const InSamples,
 
     /* Y = 0.762956*D + j*0.384230*S */
     std::ranges::transform(mD | std::views::take(SamplesToDo), youtput, youtput.begin(),
-        [](f32 const d, f32 const js) -> f32 { return 0.762956f*d + 0.384230f*js; });
+        [](float const d, float const js) -> float { return 0.762956f*d + 0.384230f*js; });
 
     auto const get_end = std::views::drop(SamplesToDo) | std::views::take(sFilterDelay);
     std::ranges::copy(mS | get_end, mS.begin());
@@ -429,15 +429,15 @@ auto main(std::span<std::string_view> args) -> int
         // 32-bit val, frequency
         fwrite32le(gsl::narrow<u32>(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
-        fwrite32le(gsl::narrow<u32>(ininfo.samplerate)*outchans*u32{sizeof(f32)}, outfile);
+        fwrite32le(gsl::narrow<u32>(ininfo.samplerate)*outchans*u32{sizeof(float)}, outfile);
         // 16-bit val, frame size
-        fwrite16le(u16::make_from(sizeof(f32)*outchans), outfile);
+        fwrite16le(u16::make_from(sizeof(float)*outchans), outfile);
         // 16-bit val, bits per sample
-        fwrite16le(u16{sizeof(f32)*8}, outfile);
+        fwrite16le(u16{sizeof(float)*8}, outfile);
         // 16-bit val, extra byte count
         fwrite16le(22_u16, outfile);
         // 16-bit val, valid bits per sample
-        fwrite16le(u16{sizeof(f32)*8}, outfile);
+        fwrite16le(u16{sizeof(float)*8}, outfile);
         // 32-bit val, channel mask
         fwrite32le(0, outfile);
         // 16 byte GUID, sub-type format
@@ -455,9 +455,9 @@ auto main(std::span<std::string_view> args) -> int
         const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<f32>(usize{BufferLineSize} * inchannels);
-        auto decmem = al::vector<std::array<f32, BufferLineSize>, 16>(outchans);
-        auto outmem = std::vector<char>(usize{BufferLineSize}*outchans*sizeof(f32));
+        auto inmem = std::vector<float>(usize{BufferLineSize} * inchannels);
+        auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans);
+        auto outmem = std::vector<char>(usize{BufferLineSize}*outchans*sizeof(float));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -493,7 +493,7 @@ auto main(std::span<std::string_view> args) -> int
             for(auto i = 0_uz;i < got;++i)
             {
                 /* Attenuate by -3dB for FuMa output levels. */
-                static constexpr auto inv_sqrt2 = gsl::narrow_cast<f32>(1.0/std::numbers::sqrt2);
+                static constexpr auto inv_sqrt2 = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
                 for(auto j = 0_uz;j < outchans;++j)
                     oiter = std::ranges::copy(f32AsLEBytes(decmem[j][LeadIn+i]*inv_sqrt2), oiter)
                         .out;

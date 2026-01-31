@@ -14,7 +14,7 @@ struct HrtfChannelState;
 struct HrtfFilter;
 struct MixHrtfFilter;
 
-using f32x2 = std::array<f32, 2>;
+using f32x2 = std::array<float, 2>;
 
 
 inline constexpr auto MixerFracBits = 16;
@@ -22,7 +22,7 @@ inline constexpr auto MixerFracOne = 1 << MixerFracBits;
 inline constexpr auto MixerFracMask = MixerFracOne - 1;
 inline constexpr auto MixerFracHalf = MixerFracOne >> 1;
 
-inline constexpr auto GainSilenceThreshold = 0.00001_f32; /* -100dB */
+inline constexpr auto GainSilenceThreshold = 0.00001f; /* -100dB */
 
 
 enum class Resampler : u8::value_t {
@@ -45,14 +45,14 @@ enum class Resampler : u8::value_t {
  * mappings for every sample.
  */
 struct BsincState {
-    f32 sf; /* Scale interpolation factor. */
+    float sf; /* Scale interpolation factor. */
     u32 m; /* Coefficient count. */
     u32 l; /* Left coefficient offset. */
     /* Filter coefficients, followed by the phase, scale, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.
      */
-    std::span<f32 const> filter;
+    std::span<float const> filter;
 };
 
 struct CubicState {
@@ -65,33 +65,33 @@ struct CubicState {
 
 using InterpState = std::variant<std::monostate, CubicState, BsincState>;
 
-using ResamplerFunc = void(*)(InterpState const *state, std::span<f32 const> src, u32 frac,
-    u32 increment, std::span<f32> dst);
+using ResamplerFunc = void(*)(InterpState const *state, std::span<float const> src, u32 frac,
+    u32 increment, std::span<float> dst);
 
 [[nodiscard]]
 auto PrepareResampler(Resampler resampler, u32 increment, InterpState *state) -> ResamplerFunc;
 
 #define DECL_RESAMPLER(T, I)                                                  \
-void Resample_##T##_##I(InterpState const *state, std::span<f32 const> src,   \
-    u32 frac, u32 increment, std::span<f32> dst);
+void Resample_##T##_##I(InterpState const *state, std::span<float const> src, \
+    u32 frac, u32 increment, std::span<float> dst);
 
 #define DECL_MIXER(I)                                                         \
-void Mix_##I(std::span<f32 const> InSamples,                                  \
-    std::span<FloatBufferLine> OutBuffer, std::span<f32> CurrentGains,        \
-    std::span<f32 const> TargetGains, usize Counter, usize OutPos);           \
-void Mix_##I(std::span<f32 const> InSamples, std::span<f32> OutBuffer,        \
-    f32 &CurrentGain, f32 TargetGain, usize Counter);
+void Mix_##I(std::span<float const> InSamples,                                \
+    std::span<FloatBufferLine> OutBuffer, std::span<float> CurrentGains,      \
+    std::span<float const> TargetGains, usize Counter, usize OutPos);         \
+void Mix_##I(std::span<float const> InSamples, std::span<float> OutBuffer,    \
+    float &CurrentGain, float TargetGain, usize Counter);
 
-#define DECL_HRTF_MIXER(I) \
-void MixHrtf_##I(std::span<f32 const> InSamples,                              \
+#define DECL_HRTF_MIXER(I)                                                    \
+void MixHrtf_##I(std::span<float const> InSamples,                            \
     std::span<f32x2> AccumSamples, u32 IrSize,                                \
     MixHrtfFilter const *hrtfparams, usize SamplesToDo);                      \
-void MixHrtfBlend_##I(std::span<f32 const> InSamples,                         \
+void MixHrtfBlend_##I(std::span<float const> InSamples,                       \
     std::span<f32x2> AccumSamples, u32 IrSize, HrtfFilter const *oldparams,   \
     MixHrtfFilter const *newparams, usize SamplesToDo);                       \
 void MixDirectHrtf_##I(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,     \
     std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,\
-    std::span<f32, BufferLineSize> TempBuf,                                   \
+    std::span<float, BufferLineSize> TempBuf,                                 \
     std::span<HrtfChannelState> ChanState, usize IrSize, usize SamplesToDo);
 
 

@@ -2317,8 +2317,8 @@ void ApplyDither(std::span<FloatBufferLine> const Samples, u32 *const dither_see
 template<typename T> [[nodiscard]]
 auto SampleConv(float) noexcept -> T = delete;
 
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> float
-{ return val; }
+template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> f32
+{ return f32{val}; }
 template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i32
 {
     /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.

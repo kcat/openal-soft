@@ -13,10 +13,10 @@
 
 
 using ApplyCoeffsT = void(*)(std::span<f32x2> Values, usize irSize, ConstHrirSpan Coeffs,
-    f32 left, f32 right);
+    float left, float right);
 
 template<ApplyCoeffsT ApplyCoeffs>
-void MixHrtfBase(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtfBase(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     usize const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
@@ -42,7 +42,7 @@ void MixHrtfBase(std::span<f32 const> const InSamples, std::span<f32x2> const Ac
 }
 
 template<ApplyCoeffsT ApplyCoeffs>
-void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     usize const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
@@ -51,7 +51,7 @@ void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> con
     ASSUME(IrSize <= HrirLength);
 
     auto const OldCoeffs = ConstHrirSpan{oldparams->Coeffs};
-    auto const oldGainStep = oldparams->Gain / gsl::narrow_cast<f32>(SamplesToDo);
+    auto const oldGainStep = oldparams->Gain / gsl::narrow_cast<float>(SamplesToDo);
     auto const NewCoeffs = ConstHrirSpan{newparams->Coeffs};
     auto const newGainStep = newparams->GainStep;
 
@@ -59,7 +59,7 @@ void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> con
     {
         auto ldelay = usize{HrtfHistoryLength} - oldparams->Delay[0];
         auto rdelay = usize{HrtfHistoryLength} - oldparams->Delay[1];
-        auto stepcount = gsl::narrow_cast<f32>(SamplesToDo);
+        auto stepcount = gsl::narrow_cast<float>(SamplesToDo);
         for(auto i = 0_uz;i < SamplesToDo;++i)
         {
             auto const g = oldGainStep*stepcount;
@@ -71,7 +71,7 @@ void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> con
         }
     }
 
-    if(newGainStep*gsl::narrow_cast<f32>(SamplesToDo) > GainSilenceThreshold) [[likely]]
+    if(newGainStep*gsl::narrow_cast<float>(SamplesToDo) > GainSilenceThreshold) [[likely]]
     {
         auto ldelay = usize{HrtfHistoryLength+1} - newparams->Delay[0];
         auto rdelay = usize{HrtfHistoryLength+1} - newparams->Delay[1];
@@ -91,7 +91,7 @@ void MixHrtfBlendBase(std::span<f32 const> const InSamples, std::span<f32x2> con
 template<ApplyCoeffsT ApplyCoeffs>
 void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
-    std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChannelState,
+    std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChannelState,
     usize const IrSize, usize const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);

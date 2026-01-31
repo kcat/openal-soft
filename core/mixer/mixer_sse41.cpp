@@ -42,17 +42,17 @@
 
 namespace {
 
-constexpr auto CubicPhaseDiffBits = u32{MixerFracBits - CubicPhaseBits};
-constexpr auto CubicPhaseDiffOne = 1_u32 << CubicPhaseDiffBits;
-constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1_u32;
+constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
+constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
+constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
 force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 } // namespace
 
-void Resample_Linear_SSE4(InterpState const*, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Linear_SSE4(InterpState const*, std::span<float const> const src, u32 frac,
+    u32 const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -103,7 +103,7 @@ void Resample_Linear_SSE4(InterpState const*, std::span<f32 const> const src, u3
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment]
         {
             auto const smp = lerpf(src[pos+0], src[pos+1],
-                gsl::narrow_cast<f32>(frac) * (1.0f/MixerFracOne));
+                gsl::narrow_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             pos  += frac>>MixerFracBits;
@@ -113,8 +113,8 @@ void Resample_Linear_SSE4(InterpState const*, std::span<f32 const> const src, u3
     }
 }
 
-void Resample_Cubic_SSE4(InterpState const *const state, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_SSE4(InterpState const *const state, std::span<float const> const src,
+    u32 frac, u32 const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
@@ -192,7 +192,7 @@ void Resample_Cubic_SSE4(InterpState const *const state, std::span<f32 const> co
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment,filter]
         {
             auto const pi = usize{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
-            auto const pf = gsl::narrow_cast<f32>(frac&CubicPhaseDiffMask)
+            auto const pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)
                 * (1.0f/CubicPhaseDiffOne);
             auto const pf4 = _mm_set1_ps(pf);
 

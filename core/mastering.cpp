@@ -43,7 +43,7 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-float UpdateSlidingHold(SlidingHold *Hold, u32 const i, f32 const in)
+float UpdateSlidingHold(SlidingHold *Hold, u32 const i, float const in)
 {
     static constexpr auto mask = u32{BufferLineSize - 1};
     const auto length = Hold->mLength;

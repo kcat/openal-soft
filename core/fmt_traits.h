@@ -124,7 +124,7 @@ struct SampleInfo<f32> {
 
     static constexpr auto silence() noexcept { return 0.0_f32; }
 
-    static constexpr auto to_float(f32 const sample) noexcept -> float { return sample; }
+    static constexpr auto to_float(f32 const sample) noexcept -> float { return sample.c_val; }
 };
 
 template<>

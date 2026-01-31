@@ -52,7 +52,7 @@ struct Buffer;
 
 struct EffectSlot {
     u32 mEffectId{};
-    f32 mGain{1.0f};
+    float mGain{1.0f};
     bool mAuxSendAuto{true};
     al::intrusive_ptr<EffectSlot> mTarget;
     al::intrusive_ptr<al::Buffer> mBuffer;
@@ -350,7 +350,7 @@ private:
     void eax_set_efx_slot_send_auto(bool is_send_auto);
 
     // `alAuxiliaryEffectSlotf(effect_slot, AL_EFFECTSLOT_GAIN, gain)`
-    void eax_set_efx_slot_gain(f32 gain);
+    void eax_set_efx_slot_gain(float gain);
 
 public:
     class EaxDeleter {

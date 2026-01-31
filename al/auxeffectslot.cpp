@@ -1418,7 +1418,7 @@ void al::EffectSlot::eax_set_efx_slot_send_auto(bool const is_send_auto)
     mPropsDirty = true;
 }
 
-void al::EffectSlot::eax_set_efx_slot_gain(f32 const gain)
+void al::EffectSlot::eax_set_efx_slot_gain(float const gain)
 {
 #define EAX_PREFIX "[EAX_SET_EFFECT_SLOT_GAIN] "
 

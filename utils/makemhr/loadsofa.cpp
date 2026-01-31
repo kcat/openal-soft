@@ -105,7 +105,7 @@ auto PrepareLayout(const std::span<const float> xyzs, HrirDataT *hData) -> bool
     return PrepareHrirData(std::span{distances}.first(fi), evCounts, azs, hData);
 }
 
-auto GetSampleRate(MYSOFA_HRTF const *const sofaHrtf) -> f32
+auto GetSampleRate(MYSOFA_HRTF const *const sofaHrtf) -> float
 {
     auto *srate_dim = gsl::czstring{};
     auto *srate_units = gsl::czstring{};

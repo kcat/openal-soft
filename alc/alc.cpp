@@ -980,7 +980,7 @@ auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
 /* Downmixing channel arrays, to map a device format's missing channels to
  * existing ones. Based on what PipeWire does, though simplified.
  */
-constexpr auto inv_sqrt2f = gsl::narrow_cast<f32>(1.0 / std::numbers::sqrt2);
+constexpr auto inv_sqrt2f = gsl::narrow_cast<float>(1.0 / std::numbers::sqrt2);
 constexpr auto FrontStereo3dB = std::array{
     InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
     InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}
@@ -1033,7 +1033,7 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 const threshold)
+auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, float const threshold)
     -> std::unique_ptr<Compressor>
 {
     static constexpr auto LookAheadTime = 0.001f;
@@ -1049,7 +1049,7 @@ auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 cons
         .set(Compressor::AutoRelease).set(Compressor::AutoPostGain).set(Compressor::AutoDeclip);
 
     return Compressor::Create(device->RealOut.Buffer.size(),
-        gsl::narrow_cast<f32>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
+        gsl::narrow_cast<float>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
         PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
 }
 
@@ -2775,7 +2775,7 @@ try {
 
     auto context = al::Context::Create(dev, ctxflags);
 
-    if(auto const volopt = dev->configValue<f32>({}, "volume-adjust"))
+    if(auto const volopt = dev->configValue<float>({}, "volume-adjust"))
     {
         if(auto const valf = *volopt; !std::isfinite(valf))
             ERR("volume-adjust must be finite: {:f}", valf);

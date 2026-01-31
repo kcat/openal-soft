@@ -25,7 +25,7 @@ struct HrtfStore {
     u32 mIrSize : 8;
 
     struct Field {
-        f32 distance;
+        float distance;
         u8 evCount;
     };
     /* NOTE: Fields are stored *backwards*. mFields.front() is the farthest
@@ -41,7 +41,7 @@ struct HrtfStore {
     std::span<HrirArray const> mCoeffs;
     std::span<u8x2 const> mDelays;
 
-    void getCoeffs(f32 elevation, f32 azimuth, f32 distance, f32 spread,
+    void getCoeffs(float elevation, float azimuth, float distance, float spread,
         HrirSpan coeffs, std::span<u32, 2> delays) const;
 
     void inc_ref() noexcept;
@@ -73,8 +73,8 @@ constexpr inline auto HrirDelayFracHalf = HrirDelayFracOne >> 1_u32;
 constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ff_u32;
 
 
-struct EvRadians { f32 value; };
-struct AzRadians { f32 value; };
+struct EvRadians { float value; };
+struct AzRadians { float value; };
 struct AngularPoint {
     EvRadians Elev;
     AzRadians Azim;
@@ -85,7 +85,7 @@ class DirectHrtfState {
     explicit DirectHrtfState(usize const numchans) : mChannels{numchans} { }
 
 public:
-    std::array<f32, BufferLineSize> mTemp{};
+    std::array<float, BufferLineSize> mTemp{};
 
     /* HRTF filter state for dry buffer content */
     u32 mIrSize{0};
@@ -99,8 +99,8 @@ public:
      */
     void build(HrtfStore const *Hrtf, u32 irSize, bool perHrirMin,
         std::span<AngularPoint const> AmbiPoints,
-        std::span<std::array<f32, MaxAmbiChannels> const> AmbiMatrix, f32 XOverFreq,
-        std::span<f32 const, MaxAmbiOrder+1> AmbiOrderHFGain);
+        std::span<std::array<float, MaxAmbiChannels> const> AmbiMatrix, float XOverFreq,
+        std::span<float const, MaxAmbiOrder+1> AmbiOrderHFGain);
 
     static auto Create(usize num_chans) -> std::unique_ptr<DirectHrtfState>;
 

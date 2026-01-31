@@ -1049,7 +1049,7 @@ catch(std::exception &e) {
 
 
 void alBufferf(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 const value [[maybe_unused]]) noexcept
+    float const value [[maybe_unused]]) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
@@ -1066,8 +1066,8 @@ catch(std::exception &e) {
 }
 
 void alBuffer3f(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 const value1 [[maybe_unused]], f32 const value2 [[maybe_unused]],
-    f32 const value3 [[maybe_unused]]) noexcept
+    float const value1 [[maybe_unused]], float const value2 [[maybe_unused]],
+    float const value3 [[maybe_unused]]) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
@@ -1084,7 +1084,7 @@ catch(std::exception &e) {
 }
 
 void alBufferfv(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 const *const values) noexcept
+    float const *const values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
@@ -1239,7 +1239,7 @@ catch(std::exception &e) {
 
 
 void alGetBufferf(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 *const value) noexcept
+    float *const value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock = std::lock_guard{device->BufferLock};
@@ -1251,8 +1251,8 @@ try {
     switch(param)
     {
     case AL_SEC_LENGTH_SOFT:
-        *value = (albuf->mSampleRate < 1) ? 0.0_f32 :
-            (gsl::narrow_cast<f32>(albuf->mSampleLen)/gsl::narrow_cast<f32>(albuf->mSampleRate));
+        *value = (albuf->mSampleRate < 1) ? 0.0f :
+            (gsl::narrow_cast<float>(albuf->mSampleLen)/gsl::narrow_cast<float>(albuf->mSampleRate));
         return;
     }
 
@@ -1266,7 +1266,7 @@ catch(std::exception &e) {
 }
 
 void alGetBuffer3f(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 *const value1, f32 *const value2, f32 *const value3) noexcept
+    float *const value1, float *const value2, float *const value3) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
@@ -1285,7 +1285,7 @@ catch(std::exception &e) {
 }
 
 void alGetBufferfv(gsl::not_null<al::Context*> const context, u32 const buffer, ALenum const param,
-    f32 *const values) noexcept
+    float *const values) noexcept
 try {
     switch(param)
     {

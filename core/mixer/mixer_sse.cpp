@@ -27,19 +27,19 @@
 
 namespace {
 
-constexpr auto BSincPhaseDiffBits = u32{MixerFracBits - BSincPhaseBits};
-constexpr auto BSincPhaseDiffOne = 1_u32 << BSincPhaseDiffBits;
-constexpr auto BSincPhaseDiffMask = BSincPhaseDiffOne - 1_u32;
+constexpr auto BSincPhaseDiffBits = unsigned{MixerFracBits - BSincPhaseBits};
+constexpr auto BSincPhaseDiffOne = 1u << BSincPhaseDiffBits;
+constexpr auto BSincPhaseDiffMask = BSincPhaseDiffOne - 1u;
 
-constexpr auto CubicPhaseDiffBits = u32{MixerFracBits - CubicPhaseBits};
-constexpr auto CubicPhaseDiffOne = 1_u32 << CubicPhaseDiffBits;
-constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1_u32;
+constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
+constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
+constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
 force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize, ConstHrirSpan const Coeffs,
-    f32 const left, f32 const right)
+    float const left, float const right)
 {
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
@@ -92,11 +92,11 @@ void ApplyCoeffs(std::span<f32x2> const Values, usize const IrSize, ConstHrirSpa
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 }
 
-force_inline void MixLine(std::span<f32 const> const InSamples, std::span<f32> const dst,
-    f32 &CurrentGain, f32 const TargetGain, f32 const delta, usize const fade_len,
+force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,
+    float &CurrentGain, float const TargetGain, float const delta, usize const fade_len,
     usize const realign_len, usize const Counter)
 {
-    auto const step = f32{(TargetGain-CurrentGain) * delta};
+    auto const step = float{(TargetGain-CurrentGain) * delta};
 
     auto pos = 0_uz;
     if(std::abs(step) > std::numeric_limits<float>::epsilon())
@@ -139,7 +139,7 @@ force_inline void MixLine(std::span<f32 const> const InSamples, std::span<f32> c
             auto const out = dst.subspan(pos);
 
             std::ranges::transform(in, out, out.begin(),
-                [gain,step,&step_count](f32 const val, f32 dry) noexcept -> f32
+                [gain,step,&step_count](float const val, float dry) noexcept -> float
             {
                 dry += val * (gain + step*step_count);
                 step_count += 1.0f;
@@ -160,7 +160,7 @@ force_inline void MixLine(std::span<f32 const> const InSamples, std::span<f32> c
             auto const out = dst.subspan(pos);
 
             std::ranges::transform(in, out, out.begin(),
-                [TargetGain](f32 const val, f32 const dry) noexcept -> f32
+                [TargetGain](float const val, float const dry) noexcept -> float
                 { return dry + val*TargetGain; });
             pos += leftover;
         }
@@ -190,25 +190,25 @@ force_inline void MixLine(std::span<f32 const> const InSamples, std::span<f32> c
         auto const out = dst.subspan(pos);
 
         std::ranges::transform(in, out, out.begin(),
-            [TargetGain](f32 const val, f32 const dry) noexcept -> f32
+            [TargetGain](float const val, float const dry) noexcept -> float
             { return dry + val*TargetGain; });
     }
 }
 
 } // namespace
 
-void Resample_Cubic_SSE(InterpState const *const state, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> const src, u32 frac,
+    u32 const increment, std::span<float> const dst)
 {
     ASSUME(frac < MixerFracOne);
 
     auto const filter = std::get<CubicState>(*state).filter;
 
     auto pos = usize{MaxResamplerEdge-1};
-    std::ranges::generate(dst, [&pos,&frac,src,increment,filter]() -> f32
+    std::ranges::generate(dst, [&pos,&frac,src,increment,filter]() -> float
     {
         auto const pi = usize{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
-        auto const pf = gsl::narrow_cast<f32>(frac&CubicPhaseDiffMask)*(1.0f/CubicPhaseDiffOne);
+        auto const pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)*(1.0f/CubicPhaseDiffOne);
         auto const pf4 = _mm_set1_ps(pf);
 
         /* Apply the phase interpolated filter. */
@@ -230,8 +230,8 @@ void Resample_Cubic_SSE(InterpState const *const state, std::span<f32 const> con
     });
 }
 
-void Resample_FastBSinc_SSE(InterpState const *const state, std::span<f32 const> const src,
-    u32 frac, u32 const increment, std::span<f32> const dst)
+void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float const> const src,
+    u32 frac, u32 const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const m = usize{bsinc.m};
@@ -243,11 +243,11 @@ void Resample_FastBSinc_SSE(InterpState const *const state, std::span<f32 const>
 
     ASSUME(bsinc.l <= MaxResamplerEdge);
     auto pos = usize{MaxResamplerEdge-bsinc.l};
-    std::ranges::generate(dst, [&pos,&frac,src,increment,filter,m]() -> f32
+    std::ranges::generate(dst, [&pos,&frac,src,increment,filter,m]() -> float
     {
         // Calculate the phase index and factor.
         auto const pi = usize{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-        auto const pf = gsl::narrow_cast<f32>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
+        auto const pf = gsl::narrow_cast<float>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
 
         // Apply the phase interpolated filter.
         auto r4 = _mm_setzero_ps();
@@ -277,8 +277,8 @@ void Resample_FastBSinc_SSE(InterpState const *const state, std::span<f32 const>
     });
 }
 
-void Resample_BSinc_SSE(InterpState const *const state, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> const src, u32 frac,
+    u32 const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const sf4 = _mm_set1_ps(bsinc.sf);
@@ -291,11 +291,11 @@ void Resample_BSinc_SSE(InterpState const *const state, std::span<f32 const> con
 
     ASSUME(bsinc.l <= MaxResamplerEdge);
     auto pos = usize{MaxResamplerEdge-bsinc.l};
-    std::ranges::generate(dst, [&pos,&frac,src,increment,sf4,m,filter]() -> f32
+    std::ranges::generate(dst, [&pos,&frac,src,increment,sf4,m,filter]() -> float
     {
         // Calculate the phase index and factor.
         auto const pi = usize{frac >> BSincPhaseDiffBits}; ASSUME(pi < BSincPhaseCount);
-        auto const pf = gsl::narrow_cast<f32>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
+        auto const pf = gsl::narrow_cast<float>(frac&BSincPhaseDiffMask)*(1.0f/BSincPhaseDiffOne);
 
         // Apply the scale and phase interpolated filter.
         auto r4 = _mm_setzero_ps();
@@ -330,11 +330,11 @@ void Resample_BSinc_SSE(InterpState const *const state, std::span<f32 const> con
 }
 
 
-void MixHrtf_SSE(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtf_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, MixHrtfFilter const *const hrtfparams, usize const SamplesToDo)
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
-void MixHrtfBlend_SSE(std::span<f32 const> const InSamples, std::span<f32x2> const AccumSamples,
+void MixHrtfBlend_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     u32 const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
     usize const SamplesToDo)
 {
@@ -344,7 +344,7 @@ void MixHrtfBlend_SSE(std::span<f32 const> const InSamples, std::span<f32x2> con
 
 void MixDirectHrtf_SSE(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
-    std::span<f32, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
+    std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
     usize const IrSize, usize const SamplesToDo)
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
@@ -352,14 +352,14 @@ void MixDirectHrtf_SSE(FloatBufferSpan const LeftOut, FloatBufferSpan const Righ
 }
 
 
-void Mix_SSE(std::span<f32 const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
-    std::span<f32> const CurrentGains, std::span<f32 const> const TargetGains, usize const Counter,
-    usize const OutPos)
+void Mix_SSE(std::span<float const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
+    std::span<float> const CurrentGains, std::span<float const> const TargetGains,
+    usize const Counter, usize const OutPos)
 {
     if((OutPos&3) != 0) [[unlikely]]
         return Mix_C(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
 
-    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
+    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());
     auto const realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 
@@ -370,14 +370,14 @@ void Mix_SSE(std::span<f32 const> const InSamples, std::span<FloatBufferLine> co
             realign_len, Counter);
 }
 
-void Mix_SSE(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
-    f32 &CurrentGain, f32 const TargetGain, usize const Counter)
+void Mix_SSE(std::span<float const> const InSamples, std::span<float> const OutBuffer,
+    float &CurrentGain, float const TargetGain, usize const Counter)
 {
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]
         return Mix_C(InSamples, OutBuffer, CurrentGain, TargetGain, Counter);
 
-    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<f32>(Counter) : 0.0f;
+    auto const delta = (Counter > 0) ? 1.0f / gsl::narrow_cast<float>(Counter) : 0.0f;
     auto const fade_len = std::min(Counter, InSamples.size());
     auto const realign_len = std::min((fade_len+3_uz) & ~3_uz, InSamples.size()) - fade_len;
 

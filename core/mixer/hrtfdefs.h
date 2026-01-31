@@ -9,8 +9,8 @@
 
 
 using u8x2 = std::array<u8, 2>;
-using u32x2 = std::array<u32, 2>;
-using f32x2 = std::array<f32, 2>;
+using u32x2 = std::array<unsigned, 2>;
+using f32x2 = std::array<float, 2>;
 
 constexpr auto HrtfHistoryBits = 6u;
 constexpr auto HrtfHistoryLength = 1u << HrtfHistoryBits;
@@ -29,20 +29,20 @@ using ConstHrirSpan = std::span<f32x2 const, HrirLength>;
 struct MixHrtfFilter {
     ConstHrirSpan const Coeffs;
     u32x2 Delay;
-    f32 Gain;
-    f32 GainStep;
+    float Gain;
+    float GainStep;
 };
 
 struct HrtfFilter {
     alignas(16) HrirArray Coeffs;
     u32x2 Delay;
-    f32 Gain;
+    float Gain;
 };
 
 
 struct HrtfChannelState {
     BandSplitter mSplitter;
-    f32 mHfScale{};
+    float mHfScale{};
     alignas(16) HrirArray mCoeffs{};
 };
 

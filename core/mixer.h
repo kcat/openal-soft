@@ -12,28 +12,30 @@
 
 struct MixParams;
 
-void Mix_C(std::span<f32 const> InSamples, std::span<FloatBufferLine> OutBuffer,
-    std::span<f32> CurrentGains, std::span<f32 const> TargetGains, usize Counter, usize OutPos);
-void Mix_C(std::span<f32 const> InSamples, std::span<f32> OutBuffer, f32 &CurrentGain,
-    f32 TargetGain, usize Counter);
+void Mix_C(std::span<float const> InSamples, std::span<FloatBufferLine> OutBuffer,
+    std::span<float> CurrentGains, std::span<float const> TargetGains, usize Counter,
+    usize OutPos);
+void Mix_C(std::span<float const> InSamples, std::span<float> OutBuffer, float &CurrentGain,
+    float TargetGain, usize Counter);
 
 /* Mixer functions that handle one input and multiple output channels. */
-using MixerOutFunc = void(*)(std::span<f32 const> InSamples, std::span<FloatBufferLine> OutBuffer,
-    std::span<f32> CurrentGains, std::span<f32 const> TargetGains, usize Counter, usize OutPos);
+using MixerOutFunc = void(*)(std::span<float const> InSamples,
+    std::span<FloatBufferLine> OutBuffer, std::span<float> CurrentGains,
+    std::span<float const> TargetGains, usize Counter, usize OutPos);
 
 inline constinit auto MixSamplesOut = MixerOutFunc{Mix_C};
-inline void MixSamples(std::span<f32 const> const InSamples,
-    std::span<FloatBufferLine> const OutBuffer, std::span<f32> const CurrentGains,
-    std::span<f32 const> const TargetGains, usize const Counter, usize const OutPos)
+inline void MixSamples(std::span<float const> const InSamples,
+    std::span<FloatBufferLine> const OutBuffer, std::span<float> const CurrentGains,
+    std::span<float const> const TargetGains, usize const Counter, usize const OutPos)
 { MixSamplesOut(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos); }
 
 /* Mixer functions that handle one input and one output channel. */
-using MixerOneFunc = void(*)(std::span<f32 const> InSamples, std::span<f32> OutBuffer,
-    f32 &CurrentGain, f32 TargetGain, usize Counter);
+using MixerOneFunc = void(*)(std::span<float const> InSamples, std::span<float> OutBuffer,
+    float &CurrentGain, float TargetGain, usize Counter);
 
 inline constinit auto MixSamplesOne = MixerOneFunc{Mix_C};
-inline void MixSamples(std::span<f32 const> const InSamples, std::span<f32> const OutBuffer,
-    f32 &CurrentGain, f32 const TargetGain, usize const Counter)
+inline void MixSamples(std::span<float const> const InSamples, std::span<float> const OutBuffer,
+    float &CurrentGain, float const TargetGain, usize const Counter)
 { MixSamplesOne(InSamples, OutBuffer, CurrentGain, TargetGain, Counter); }
 
 
@@ -51,8 +53,7 @@ inline void MixSamples(std::span<f32 const> const InSamples, std::span<f32> cons
  * The components are ordered such that OpenAL's X, Y, and Z are the first,
  * second, and third parameters respectively -- simply negate X and Z.
  */
-std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(const float y, const float z, const float x,
-    const float spread);
+std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(float y, float z, float x, float spread);
 
 /**
  * CalcDirectionCoeffs

@@ -156,7 +156,7 @@ auto CreateStablizer(usize const outchans, u32 const srate) -> std::unique_ptr<F
     /* Initialize band-splitting filter for the mid signal, with a crossover at
      * 5khz (could be higher).
      */
-    stablizer->MidFilter.init(5000.0f / gsl::narrow_cast<f32>(srate));
+    stablizer->MidFilter.init(5000.0f / gsl::narrow_cast<float>(srate));
     std::ranges::fill(stablizer->ChannelFilters, stablizer->MidFilter);
 
     return stablizer;
@@ -185,7 +185,7 @@ void AllocChannels(al::Device *const device, usize const main_chans, usize const
 }
 
 
-using ChannelCoeffs = std::array<f32, MaxAmbiChannels>;
+using ChannelCoeffs = std::array<float, MaxAmbiChannels>;
 enum DecoderMode : bool {
     SingleBand, DualBand
 };
@@ -203,7 +203,7 @@ struct DecoderConfig<SingleBand, N> {
     SpatialMode m3DMode{};
     std::array<Channel, N> mChannels{};
     DevAmbiScaling mScaling{};
-    std::array<f32, MaxAmbiOrder+1> mOrderGain{};
+    std::array<float, MaxAmbiOrder+1> mOrderGain{};
     std::array<ChannelCoeffs, N> mCoeffs{};
 };
 
@@ -213,9 +213,9 @@ struct DecoderConfig<DualBand, N> {
     SpatialMode m3DMode{};
     std::array<Channel, N> mChannels{};
     DevAmbiScaling mScaling{};
-    std::array<f32, MaxAmbiOrder+1> mOrderGain{};
+    std::array<float, MaxAmbiOrder+1> mOrderGain{};
     std::array<ChannelCoeffs, N> mCoeffs{};
-    std::array<f32, MaxAmbiOrder+1> mOrderGainLF{};
+    std::array<float, MaxAmbiOrder+1> mOrderGainLF{};
     std::array<ChannelCoeffs, N> mCoeffsLF{};
 };
 
@@ -225,9 +225,9 @@ struct DecoderConfig<DualBand, 0> {
     SpatialMode m3DMode{};
     std::span<Channel const> mChannels;
     DevAmbiScaling mScaling{};
-    std::span<f32 const> mOrderGain;
+    std::span<float const> mOrderGain;
     std::span<ChannelCoeffs const> mCoeffs;
-    std::span<f32 const> mOrderGainLF;
+    std::span<float const> mOrderGainLF;
     std::span<ChannelCoeffs const> mCoeffsLF;
 
     template<usize N>
@@ -263,7 +263,7 @@ struct DecoderConfig<DualBand, 0> {
 using DecoderView = DecoderConfig<DualBand, 0>;
 
 
-void InitNearFieldCtrl(al::Device *const device, f32 const ctrl_dist, u32 const order,
+void InitNearFieldCtrl(al::Device *const device, float const ctrl_dist, u32 const order,
     SpatialMode const mode)
 {
     static constexpr auto chans_per_order2d = std::array{1u, 2u, 2u, 2u, 2u};
@@ -280,7 +280,7 @@ void InitNearFieldCtrl(al::Device *const device, f32 const ctrl_dist, u32 const 
     TRACE("Using near-field reference distance: {:.2f} meters", device->AvgSpeakerDist);
 
     const auto w1 = SpeedOfSoundMetersPerSec / device->AvgSpeakerDist
-        / gsl::narrow_cast<f32>(device->mSampleRate);
+        / gsl::narrow_cast<float>(device->mSampleRate);
     device->mNFCtrlFilter.init(w1);
 
     std::ranges::fill(device->NumChannelsPerOrder, 0_u32);
@@ -289,17 +289,17 @@ void InitNearFieldCtrl(al::Device *const device, f32 const ctrl_dist, u32 const 
 }
 
 void InitDistanceComp(al::Device *const device, std::span<Channel const> const channels,
-    const std::span<f32 const,MaxOutputChannels> dists)
+    const std::span<float const, MaxOutputChannels> dists)
 {
     const auto maxdist = std::ranges::max(dists);
 
     if(!device->getConfigValueBool("decoder", "distance-comp", true) || !(maxdist > 0.0f))
         return;
 
-    const auto distSampleScale = gsl::narrow_cast<f32>(device->mSampleRate)
+    const auto distSampleScale = gsl::narrow_cast<float>(device->mSampleRate)
         / SpeedOfSoundMetersPerSec;
 
-    struct DistCoeffs { u32 Length{0u}; f32 Gain{1.0f}; };
+    struct DistCoeffs { u32 Length{0u}; float Gain{1.0f}; };
     auto ChanDelay = std::vector<DistCoeffs>{};
     ChanDelay.reserve(device->RealOut.Buffer.size());
 
@@ -320,11 +320,11 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
          * will be in steps of about 7 millimeters.
          */
         auto delay = std::floor((maxdist - distance)*distSampleScale + 0.5f);
-        if(delay > f32{DistanceComp::MaxDelay-1})
+        if(delay > float{DistanceComp::MaxDelay-1})
         {
             ERR("Delay for channel {} ({}) exceeds buffer length ({} > {})", idx,
                 GetLabelFromChannel(ch), delay, DistanceComp::MaxDelay-1);
-            delay = f32{DistanceComp::MaxDelay-1};
+            delay = float{DistanceComp::MaxDelay-1};
         }
 
         ChanDelay.resize(std::max(ChanDelay.size(), idx+1_uz));
@@ -734,10 +734,10 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
             AllocChannels(device, count, 0);
             device->m2DMixing = false;
 
-            auto avg_dist = f32{};
-            if(auto const distopt = device->configValue<f32>("decoder", "speaker-dist"))
+            auto avg_dist = float{};
+            if(auto const distopt = device->configValue<float>("decoder", "speaker-dist"))
                 avg_dist = *distopt;
-            else if(auto const delayopt = device->configValue<f32>("decoder", "nfc-ref-delay"))
+            else if(auto const delayopt = device->configValue<float>("decoder", "nfc-ref-delay"))
             {
                 WARN("nfc-ref-delay is deprecated, use speaker-dist instead");
                 avg_dist = *delayopt * SpeedOfSoundMetersPerSec;
@@ -772,7 +772,7 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
 
         chancoeffs.resize(std::max(chancoeffs.size(), idx+1_zu), ChannelDec{});
         std::ranges::transform(decoder.mCoeffs[i] | std::views::take(ambicount), ordermap,
-            chancoeffs[idx].begin(), [&decoder](f32 const coeff, u8 const order) -> f32
+            chancoeffs[idx].begin(), [&decoder](float const coeff, u8 const order) -> float
         { return coeff * decoder.mOrderGain[order.c_val]; });
 
         if(!dual_band)
@@ -780,7 +780,7 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
 
         chancoeffslf.resize(std::max(chancoeffslf.size(), idx+1_zu), ChannelDec{});
         std::ranges::transform(decoder.mCoeffsLF[i] | std::views::take(ambicount), ordermap,
-            chancoeffslf[idx].begin(), [&decoder](f32 const coeff, u8 const order) -> f32
+            chancoeffslf[idx].begin(), [&decoder](float const coeff, u8 const order) -> float
         { return coeff * decoder.mOrderGainLF[order.c_val]; });
     }
 
@@ -828,14 +828,14 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
         (decoder.mOrder > 1) ? "second" : "first",
         (decoder.m3DMode == Periphonic) ? " periphonic" : "");
     auto bformatdec = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
-        device->mXOverFreq/gsl::narrow_cast<f32>(device->mSampleRate));
+        device->mXOverFreq/gsl::narrow_cast<float>(device->mSampleRate));
     return {std::move(bformatdec), std::move(stablizer)};
 }
 
 [[nodiscard]]
 auto InitHrtfPanning(al::Device *const device) -> std::unique_ptr<DirectHrtfState>
 {
-    static constexpr auto Deg180 = std::numbers::pi_v<f32>;
+    static constexpr auto Deg180 = std::numbers::pi_v<float>;
     static constexpr auto Deg_90 = Deg180 / 2.0f /* 90 degrees*/;
     static constexpr auto Deg_45 = Deg_90 / 2.0f /* 45 degrees*/;
     static constexpr auto Deg135 = Deg_45 * 3.0f /*135 degrees*/;
@@ -1007,20 +1007,20 @@ auto InitHrtfPanning(al::Device *const device) -> std::unique_ptr<DirectHrtfStat
         ChannelCoeffs{3.125000000e-02f, -1.931356215e-02f, -5.056356215e-02f,  0.000000000e+00f,  0.000000000e+00f,  4.149625014e-02f,  5.814697482e-02f,  0.000000000e+00f, -7.925078574e-03f,  1.522452112e-03f,  0.000000000e+00f, -6.187332918e-02f, -5.384041069e-02f,  0.000000000e+00f,  2.013501509e-02f,  0.000000000e+00f,  0.000000000e+00f, -8.560063208e-03f,  0.000000000e+00f,  7.899684062e-02f,  4.188014710e-02f,  0.000000000e+00f, -3.506295521e-02f,  0.000000000e+00f,  1.155996975e-03f},
         ChannelCoeffs{3.125000000e-02f,  1.931356215e-02f, -5.056356215e-02f,  0.000000000e+00f,  0.000000000e+00f, -4.149625014e-02f,  5.814697482e-02f,  0.000000000e+00f, -7.925078574e-03f, -1.522452112e-03f,  0.000000000e+00f,  6.187332918e-02f, -5.384041069e-02f,  0.000000000e+00f,  2.013501509e-02f,  0.000000000e+00f,  0.000000000e+00f,  8.560063208e-03f,  0.000000000e+00f, -7.899684062e-02f,  4.188014710e-02f,  0.000000000e+00f, -3.506295521e-02f,  0.000000000e+00f,  1.155996975e-03f},
     };
-    static constexpr std::array<f32, MaxAmbiOrder+1> AmbiOrderHFGain1O{
+    static constexpr std::array<float, MaxAmbiOrder+1> AmbiOrderHFGain1O{
         /*ENRGY*/ 2.000000000e+00f, 1.154700538e+00f
     };
-    static constexpr std::array<f32, MaxAmbiOrder+1> AmbiOrderHFGain2O{
+    static constexpr std::array<float, MaxAmbiOrder+1> AmbiOrderHFGain2O{
         /*ENRGY*/ 1.825741858e+00f, 1.414213562e+00f, 7.302967433e-01f
         /*AMP   1.000000000e+00f, 7.745966692e-01f, 4.000000000e-01f*/
         /*RMS   9.128709292e-01f, 7.071067812e-01f, 3.651483717e-01f*/
     };
-    static constexpr std::array<f32, MaxAmbiOrder+1> AmbiOrderHFGain3O{
+    static constexpr std::array<float, MaxAmbiOrder+1> AmbiOrderHFGain3O{
         /*ENRGY 1.865086714e+00f, 1.606093894e+00f, 1.142055301e+00f, 5.683795528e-01f*/
         /*AMP*/ 1.000000000e+00f, 8.611363116e-01f, 6.123336207e-01f, 3.047469850e-01f
         /*RMS   8.340921354e-01f, 7.182670250e-01f, 5.107426573e-01f, 2.541870634e-01f*/
     };
-    static constexpr std::array<f32, MaxAmbiOrder+1> AmbiOrderHFGain4O{
+    static constexpr std::array<float, MaxAmbiOrder+1> AmbiOrderHFGain4O{
         /*ENRGY 1.947005434e+00f, 1.764337084e+00f, 1.424707344e+00f, 9.755104127e-01f, 4.784482742e-01f*/
         /*AMP*/ 1.000000000e+00f, 9.061798459e-01f, 7.317428698e-01f, 5.010311710e-01f, 2.457354591e-01f
         /*RMS   7.696214736e-01f, 6.974154684e-01f, 5.631650257e-01f, 3.856043482e-01f, 1.891232861e-01f*/
@@ -1166,7 +1166,7 @@ void InitTsmePanning(al::Device *const device)
 
 auto LoadAmbDecConfig(std::string_view const config, al::Device *const device,
     std::unique_ptr<DecoderConfig<DualBand, MaxOutputChannels>> &decoder_store,
-    DecoderView &decoder, std::span<f32, MaxOutputChannels> const speakerdists) -> bool
+    DecoderView &decoder, std::span<float, MaxOutputChannels> const speakerdists) -> bool
 {
     auto conf = AmbDecConf{};
     if(auto status = conf.load(config); !status)
@@ -1242,7 +1242,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
 
         auto decoder_store = std::unique_ptr<DecoderConfig<DualBand,MaxOutputChannels>>{};
         auto decoder = DecoderView{};
-        auto speakerdists = std::array<f32, MaxOutputChannels>{};
+        auto speakerdists = std::array<float, MaxOutputChannels>{};
         auto usingCustom = false;
         if(!layout.empty())
         {
@@ -1269,7 +1269,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
         {
             auto dist_scale = 0.0f;
             const auto accum_dist = std::accumulate(speakerdists.begin(), speakerdists.end(), 0.0f,
-                [&dist_scale](f32 const curvalue, f32 const dist) noexcept -> f32
+                [&dist_scale](float const curvalue, float const dist) noexcept -> float
             {
                 if(!(dist > 0.0f))
                     return curvalue;
@@ -1278,7 +1278,7 @@ void aluInitRenderer(al::Device *const device, i32 const hrtf_id,
             });
 
             auto const avg_dist = (accum_dist > 0.0f) ? accum_dist :
-                device->configValue<f32>("decoder", "speaker-dist").value_or(1.0f);
+                device->configValue<float>("decoder", "speaker-dist").value_or(1.0f);
             InitNearFieldCtrl(device, avg_dist, decoder.mOrder.c_val, decoder.m3DMode);
 
             if(accum_dist > 0.0f)

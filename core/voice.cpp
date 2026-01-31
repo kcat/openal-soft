@@ -56,9 +56,9 @@ static_assert(BufferLineSize > MaxPitch, "MaxPitch must be less then BufferLineS
 using namespace std::chrono;
 using namespace std::string_view_literals;
 
-using HrtfMixerFunc = void(*)(std::span<const f32> InSamples, std::span<f32x2> AccumSamples,
+using HrtfMixerFunc = void(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
     u32 IrSize, MixHrtfFilter const *hrtfparams, usize SamplesToDo);
-using HrtfMixerBlendFunc = void(*)(std::span<const f32> InSamples, std::span<f32x2> AccumSamples,
+using HrtfMixerBlendFunc = void(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
     u32 IrSize, HrtfFilter const *oldparams, MixHrtfFilter const *newparams, usize SamplesToDo);
 
 constinit auto MixHrtfSamples = HrtfMixerFunc{MixHrtf_C};
@@ -237,8 +237,8 @@ void SendSourceStoppedEvent(ContextBase const *const context, u32 const id)
 
 
 auto DoFilters(BiquadInterpFilter &lpfilter, BiquadInterpFilter &hpfilter,
-    std::span<f32, BufferLineSize> const dst LIFETIMEBOUND,
-    std::span<f32 const> const src LIFETIMEBOUND, bool const active) -> std::span<f32 const>
+    std::span<float, BufferLineSize> const dst LIFETIMEBOUND,
+    std::span<float const> const src LIFETIMEBOUND, bool const active) -> std::span<float const>
 {
     if(active)
     {
@@ -252,7 +252,7 @@ auto DoFilters(BiquadInterpFilter &lpfilter, BiquadInterpFilter &hpfilter,
 
 
 template<typename T>
-void LoadSamples(std::span<f32> const dstSamples, std::span<T const> const srcData,
+void LoadSamples(std::span<float> const dstSamples, std::span<T const> const srcData,
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock [[maybe_unused]]) noexcept
 {
@@ -270,7 +270,7 @@ void LoadSamples(std::span<f32> const dstSamples, std::span<T const> const srcDa
 }
 
 template<>
-void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> src,
+void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const> src,
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
@@ -302,7 +302,7 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
 
         if(skip == 0)
         {
-            dstSamples[0] = gsl::narrow_cast<f32>(sample) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sample) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -353,14 +353,14 @@ void LoadSamples<IMA4Data>(std::span<f32> dstSamples, std::span<IMA4Data const> 
             auto const decspl = decode_nibble(nibbleOffset);
             ++nibbleOffset;
 
-            return gsl::narrow_cast<f32>(decspl) / 32768.0f;
+            return gsl::narrow_cast<float>(decspl) / 32768.0f;
         });
         dstSamples = dstSamples.subspan(written);
     }
 }
 
 template<>
-void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData const> src,
+void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData const> src,
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
@@ -401,16 +401,16 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
          */
         if(skip == 0)
         {
-            dstSamples[0] = gsl::narrow_cast<f32>(sampleHistory[1]) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[1]) / 32768.0f;
             if(dstSamples.size() < 2) return;
-            dstSamples[1] = gsl::narrow_cast<f32>(sampleHistory[0]) / 32768.0f;
+            dstSamples[1] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(2);
             if(dstSamples.empty()) return;
         }
         else if(skip == 1)
         {
             --skip;
-            dstSamples[0] = gsl::narrow_cast<f32>(sampleHistory[0]) / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -460,13 +460,13 @@ void LoadSamples<MSADPCMData>(std::span<f32> dstSamples, std::span<MSADPCMData c
             auto const sample = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;
 
-            return gsl::narrow_cast<f32>(sample) / 32768.0f;
+            return gsl::narrow_cast<float>(sample) / 32768.0f;
         });
         dstSamples = dstSamples.subspan(written);
     }
 }
 
-void LoadSamples(std::span<f32> const dstSamples, SampleVariant const &src,
+void LoadSamples(std::span<float> const dstSamples, SampleVariant const &src,
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
@@ -479,7 +479,7 @@ void LoadSamples(std::span<f32> const dstSamples, SampleVariant const &src,
 
 void LoadBufferStatic(VoiceBufferItem const *const buffer,
     VoiceBufferItem const *const bufferLoopItem, usize const dataPosInt, usize const srcChannel,
-    usize const srcStep, std::span<f32> voiceSamples)
+    usize const srcStep, std::span<float> voiceSamples)
 {
     if(!bufferLoopItem)
     {
@@ -525,7 +525,7 @@ void LoadBufferStatic(VoiceBufferItem const *const buffer,
 
 void LoadBufferCallback(VoiceBufferItem const *const buffer, usize const dataPosInt,
     usize const numCallbackSamples, usize const srcChannel, usize const srcStep,
-    std::span<f32> voiceSamples)
+    std::span<float> voiceSamples)
 {
     auto lastSample = 0.0f;
     if(numCallbackSamples > dataPosInt) [[likely]]
@@ -542,7 +542,7 @@ void LoadBufferCallback(VoiceBufferItem const *const buffer, usize const dataPos
 
 void LoadBufferQueue(VoiceBufferItem const *buffer, VoiceBufferItem const *const bufferLoopItem,
     usize dataPosInt, usize const srcChannel, usize const srcStep,
-    std::span<f32> voiceSamples)
+    std::span<float> voiceSamples)
 {
     auto lastSample = 0.0f;
     /* Crawl the buffer queue to fill in the temp buffer */
@@ -574,7 +574,7 @@ void LoadBufferQueue(VoiceBufferItem const *buffer, VoiceBufferItem const *const
 }
 
 
-void DoHrtfMix(std::span<f32 const> const samples, DirectParams &parms, f32 const targetGain,
+void DoHrtfMix(std::span<float const> const samples, DirectParams &parms, float const targetGain,
     usize const counter, usize outPos, bool const isPlaying, DeviceBase *const device)
 {
     auto const IrSize = device->mIrSize;
@@ -606,14 +606,14 @@ void DoHrtfMix(std::span<f32 const> const samples, DirectParams &parms, f32 cons
          */
         if(counter > fademix)
         {
-            auto const a = gsl::narrow_cast<f32>(fademix) / gsl::narrow_cast<f32>(counter);
+            auto const a = gsl::narrow_cast<float>(fademix) / gsl::narrow_cast<float>(counter);
             gain = lerpf(parms.Hrtf.Old.Gain, targetGain, a);
         }
 
         auto const hrtfparams = MixHrtfFilter{
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
-            0.0f, gain / gsl::narrow_cast<f32>(fademix)};
+            0.0f, gain / gsl::narrow_cast<float>(fademix)};
         MixHrtfBlendSamples(HrtfSamples, AccumSamples.subspan(outPos), IrSize, &parms.Hrtf.Old,
             &hrtfparams, fademix);
 
@@ -633,7 +633,8 @@ void DoHrtfMix(std::span<f32 const> const samples, DirectParams &parms, f32 cons
          */
         if(counter > samples.size())
         {
-            auto const a = gsl::narrow_cast<f32>(todo) / gsl::narrow_cast<f32>(counter-fademix);
+            auto const a = gsl::narrow_cast<float>(todo)
+                / gsl::narrow_cast<float>(counter-fademix);
             gain = lerpf(parms.Hrtf.Old.Gain, targetGain, a);
         }
 
@@ -641,7 +642,7 @@ void DoHrtfMix(std::span<f32 const> const samples, DirectParams &parms, f32 cons
             parms.Hrtf.Target.Coeffs,
             parms.Hrtf.Target.Delay,
             parms.Hrtf.Old.Gain,
-            (gain - parms.Hrtf.Old.Gain) / gsl::narrow_cast<f32>(todo)};
+            (gain - parms.Hrtf.Old.Gain) / gsl::narrow_cast<float>(todo)};
         MixHrtfSamples(HrtfSamples.subspan(fademix), AccumSamples.subspan(outPos), IrSize,
             &hrtfparams, todo);
 
@@ -650,11 +651,11 @@ void DoHrtfMix(std::span<f32 const> const samples, DirectParams &parms, f32 cons
     }
 }
 
-void DoNfcMix(std::span<f32 const> const samples, std::span<FloatBufferLine> outBuffer,
-    DirectParams &parms, std::span<f32 const, MaxOutputChannels> const outGains,
+void DoNfcMix(std::span<float const> const samples, std::span<FloatBufferLine> outBuffer,
+    DirectParams &parms, std::span<float const, MaxOutputChannels> const outGains,
     u32 const counter, u32 const outPos, DeviceBase *const device)
 {
-    using FilterProc = void(NfcFilter::*)(std::span<f32 const> src, std::span<f32> dst);
+    using FilterProc = void(NfcFilter::*)(std::span<float const> src, std::span<float> dst);
     static constexpr auto NfcProcess = std::array{FilterProc{nullptr}, &NfcFilter::process1,
         &NfcFilter::process2, &NfcFilter::process3, &NfcFilter::process4};
     static_assert(NfcProcess.size() == MaxAmbiOrder+1);
@@ -685,7 +686,7 @@ void DoNfcMix(std::span<f32 const> const samples, std::span<FloatBufferLine> out
 void Voice::mix(State const vstate, ContextBase *const context, nanoseconds const deviceTime,
     u32 const samplesToDo)
 {
-    static constexpr auto SilentTarget = std::array<f32, MaxOutputChannels>{};
+    static constexpr auto SilentTarget = std::array<float, MaxOutputChannels>{};
 
     ASSUME(samplesToDo > 0);
 
@@ -753,7 +754,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
     /* Get a span of pointers to hold the floating point, deinterlaced,
      * resampled buffer data to be mixed.
      */
-    auto samplePointers = std::array<std::span<f32>, DeviceBase::MixerChannelsMax>{};
+    auto samplePointers = std::array<std::span<float>, DeviceBase::MixerChannelsMax>{};
     auto const mixingSamples = std::span{samplePointers}
         .first((mFmtChannels == FmtMono && !mDuplicateMono) ? 1_uz : mChans.size());
     {
@@ -867,7 +868,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
                  */
                 auto const srciter = std::ranges::min_element(srcbuf.begin(),
                     std::next(srcbuf.begin(), gsl::narrow_cast<ptrdiff_t>(avail)), {},
-                    [](f32 const s) { return std::abs(s); });
+                    [](float const s) { return std::abs(s); });
 
                 std::ranges::fill(std::next(srciter), srcbuf.end(), *srciter);
             }
@@ -979,7 +980,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
     {
         mDecoder->decode(mixingSamples, (vstate==Playing));
         std::ranges::transform(mixingSamples, mixingSamples.begin(),
-            [samplesToMix](std::span<f32> const samples)
+            [samplesToMix](std::span<float> const samples)
         { return samples.first(samplesToMix); });
     }
 
@@ -1028,7 +1029,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
             if(mFlags.test(VoiceHasHrtf))
             {
                 auto const targetGain = parms.Hrtf.Target.Gain
-                    * gsl::narrow_cast<f32>(vstate == Playing);
+                    * gsl::narrow_cast<float>(vstate == Playing);
                 DoHrtfMix(samples, parms, targetGain, counter, outPos, (vstate == Playing),
                     device);
             }
@@ -1271,7 +1272,7 @@ void Voice::prepare(DeviceBase *device)
          * identity, so don't mess with it).
          */
         const auto splitter = BandSplitter{device->mXOverFreq
-            / gsl::narrow_cast<f32>(device->mSampleRate)};
+            / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ranges::for_each(mChans, [splitter,device](ChannelData &chandata)
         {
             chandata.mAmbiHFScale = 1.0f;
@@ -1299,7 +1300,7 @@ void Voice::prepare(DeviceBase *device)
             device->m2DMixing);
 
         const auto splitter = BandSplitter{device->mXOverFreq
-            / gsl::narrow_cast<f32>(device->mSampleRate)};
+            / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ignore = std::ranges::mismatch(mChans, ordersSpan,
             [&scales,splitter,device](ChannelData &chandata, u8 const scaleidx)
         {

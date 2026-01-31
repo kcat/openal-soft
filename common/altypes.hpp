@@ -325,6 +325,70 @@ public:
     [[nodiscard]] force_inline constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
     [[nodiscard]] force_inline constexpr auto countr_zero() const noexcept -> UInt requires(std::integral<T>);
 
+    [[nodiscard]] force_inline constexpr
+    auto abs() const noexcept -> SelfType { return SelfType{std::abs(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto ceil() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::ceil(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto floor() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::floor(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto sqrt() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::sqrt(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto cbrt() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::cbrt(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto sin() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::sin(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto asin() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::asin(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto cos() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::cos(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto acos() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::acos(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto log() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::log(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto log2() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::log2(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto log10() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::log10(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto exp() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::exp(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto exp2() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::exp2(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto round() const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::round(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto modf(SelfType &ires) const noexcept -> SelfType requires(std::floating_point<T>)
+    { return SelfType{std::modf(c_val, &ires.c_val)}; }
+
+
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
      */
@@ -397,6 +461,8 @@ auto operator--(T &self, int) noexcept -> T
 /* No automatic type promotion for our unary ops. Unary - is only valid for
  * signed types.
  */
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto operator+(T const &value) noexcept -> T { return value; }
 template<al::strong_number T> [[nodiscard]] force_inline constexpr
 auto operator-(T const &value) noexcept -> T
 {
@@ -718,5 +784,61 @@ auto operator ""_zu(unsigned long long const n) noexcept { return gsl::narrow<us
 auto operator ""_f32(long double const n) noexcept { return static_cast<f32>(n); }
 [[nodiscard]] consteval
 auto operator ""_f64(long double const n) noexcept { return static_cast<f64>(n); }
+
+
+template<al::strong_number T> [[nodiscard]] force_inline constexpr
+auto abs(T const &in) noexcept -> T { return in.abs(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto ceil(T const &in) noexcept -> T { return in.ceil(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto floor(T const &in) noexcept -> T { return in.floor(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto sqrt(T const &in) noexcept -> T { return in.sqrt(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto cbrt(T const &in) noexcept -> T { return in.cbrt(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto sin(T const &in) noexcept -> T { return in.sin(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto asin(T const &in) noexcept -> T { return in.asin(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto cos(T const &in) noexcept -> T { return in.cos(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto acos(T const &in) noexcept -> T { return in.acos(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto atan2(T const &y, T const &x) noexcept -> T { return T{std::atan2(y.c_val, x.c_val)}; }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto pow(T const &x, T const &y) noexcept -> T { return T{std::pow(x.c_val, y.c_val)}; }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto log(T const &in) noexcept -> T { return in.log(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto log2(T const &in) noexcept -> T { return in.log2(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto log10(T const &in) noexcept -> T { return in.log10(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto exp(T const &in) noexcept -> T { return in.exp(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto exp2(T const &in) noexcept -> T { return in.exp2(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto round(T const &in) noexcept -> T { return in.round(); }
+
+template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
+auto lerp(T const &x, T const &y, T const &a) noexcept -> T
+{ return T{std::lerp(x.c_val, y.c_val, a.c_val)}; }
 
 #endif /* AL_TYPES_HPP */

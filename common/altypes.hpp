@@ -299,27 +299,59 @@ public:
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto reinterpret_as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
 
+    /* Saturating cast, applying a standard cast except out of range source
+     * values are clamped to the output range.
+     */
     template<strong_number U> [[nodiscard]] constexpr
     auto saturate_as() const noexcept -> U
     {
-        static_assert(not std::floating_point<T> or strong_floating_point<U>,
-            "Floating point to integer is not currently handled in .saturate_as()");
-        if constexpr(strong_integral<U> and U::digits < std::numeric_limits<T>::digits)
+        if constexpr(strong_integral<U>)
         {
-            if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+            if constexpr(std::floating_point<T>)
             {
-                if(c_val < U::min().template as<SelfType>().c_val)
-                    return U::min();
+                if constexpr(strong_signed_integral<U>)
+                {
+                    /* fp -> unsigned integral */
+                    if(signbit())
+                        return U{0};
+                    if(c_val >= U::template fplimit<SelfType>().c_val or isnan())
+                        return U::max();
+                    return U{static_cast<typename U::value_t>(c_val)};
+                }
+                else
+                {
+                    /* fp -> signed integral */
+                    if(abs() >= U::template fplimit<SelfType>() or isnan())
+                        return signbit() ? U::min() : U::max();
+                    return U{static_cast<typename U::value_t>(c_val)};
+                }
             }
-            if(c_val > U::max().template as<SelfType>().c_val)
-                return U::max();
+            else
+            {
+                /* integral -> integral */
+                if constexpr(U::digits < std::numeric_limits<T>::digits)
+                {
+                    if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+                    {
+                        if(c_val < U::min().template as<SelfType>().c_val)
+                            return U::min();
+                    }
+                    if(c_val > U::max().template as<SelfType>().c_val)
+                        return U::max();
+                }
+                if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+                {
+                    if(c_val < 0)
+                        return U{0};
+                }
+                return U{static_cast<typename U::value_t>(c_val)};
+            }
         }
-        if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+        else
         {
-            if(c_val < 0)
-                return U{0};
+            /* fp/integral -> fp */
+            return U{static_cast<typename U::value_t>(c_val)};
         }
-        return U{static_cast<typename U::value_t>(c_val)};
     }
 
     [[nodiscard]] force_inline constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
@@ -327,6 +359,17 @@ public:
 
     [[nodiscard]] force_inline constexpr
     auto abs() const noexcept -> SelfType { return SelfType{std::abs(c_val)}; }
+
+    [[nodiscard]] force_inline constexpr
+    auto signbit() const noexcept -> bool
+    {
+        if constexpr(std::floating_point<T>)
+            return std::signbit(c_val);
+        else if constexpr(std::signed_integral<T>)
+            return c_val < 0;
+        else
+            return false;
+    }
 
     [[nodiscard]] force_inline constexpr
     auto ceil() const noexcept -> SelfType requires(std::floating_point<T>)

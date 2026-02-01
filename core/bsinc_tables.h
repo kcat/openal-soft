@@ -4,14 +4,15 @@
 #include <array>
 #include <span>
 
+#include "altypes.hpp"
 #include "bsinc_defs.h"
 #include "opthelpers.h"
 
 struct BSincTable {
-    float scaleBase, scaleRange;
-    std::array<unsigned int,BSincScaleCount> m;
-    std::array<unsigned int,BSincScaleCount> filterOffset;
-    std::span<const float> Tab;
+    f32 scaleBase, scaleRange;
+    std::array<u32, BSincScaleCount> m;
+    std::array<u32, BSincScaleCount> filterOffset;
+    std::span<float const> Tab;
 };
 
 DECL_HIDDEN extern constinit const BSincTable gBSinc12;

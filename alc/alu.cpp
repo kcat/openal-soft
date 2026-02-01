@@ -143,25 +143,26 @@ auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable const *const table)
 {
     auto si = usize{BSincScaleCount - 1};
-    auto sf = 0.0f;
+    auto sf = 0.0_f32;
 
     if(increment > MixerFracOne)
     {
-        sf = MixerFracOne/gsl::narrow_cast<float>(increment) - table->scaleBase;
-        sf = std::max(0.0f, BSincScaleCount*sf*table->scaleRange - 1.0f);
-        si = float2uint(sf);
+        sf = MixerFracOne/f32::make_from(increment) - table->scaleBase;
+        sf = std::max(0.0_f32, BSincScaleCount*sf*table->scaleRange - 1.0f);
+
+        si = float2uint(sf.c_val);
+        sf -= f32::make_from(si);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.
          */
-        sf -= gsl::narrow_cast<float>(si);
-        sf = 1.0f - std::sqrt(1.0f - sf*sf);
+        sf = 1.0f - sqrt(1.0f - sf*sf);
     }
 
-    state->sf = sf;
-    state->m = table->m[si];
+    state->sf = sf.c_val;
+    state->m = table->m[si].c_val;
     state->l = (state->m/2) - 1;
-    state->filter = table->Tab.subspan(table->filterOffset[si]);
+    state->filter = table->Tab.subspan(table->filterOffset[si].c_val);
 }
 
 [[nodiscard]]

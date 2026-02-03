@@ -144,10 +144,12 @@ template<weak_number T, typename SelfType>
 class number_base {
     friend SelfType;
 
-    /* Force printing smaller types as int. Always treat these as numeric
-     * values even when backed by character types.
+    /* Force printing smaller types as (unsigned) int. Always treat these as
+     * numeric values even when backed by character types.
      */
-    using fmttype_t = std::conditional_t<not can_narrow<int, T>, int, T>;
+    using fmttype_t = std::conditional_t<not can_narrow<unsigned, T>, unsigned,
+        std::conditional_t<not can_narrow<int, T>, int,
+        T>>;
 
     /* Defaulted constructor/destructor/copy assignment functions, which will be
      * inherited by the parent type. Allows the type to be trivial.
@@ -178,7 +180,7 @@ public:
      *
      * In this case, T() - T() results in T, not a standard integral, leaving
      * T::difference_type. To be "signed-integer-like" in turn means to be a
-     * standard signed integral type, or a type that behaves like an signed
+     * standard signed integral type, or a type that behaves like a signed
      * integer *with a width larger than any standard integer type*.
      *
      * Here, we define a difference_type type that is the standard signed

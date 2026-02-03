@@ -847,31 +847,31 @@ auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
 
 
 template<al::strong_number T> [[nodiscard]] force_inline constexpr
-auto abs(T const &in) noexcept -> T { return in.abs(); }
+auto abs(T const &x) noexcept -> T { return x.abs(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto ceil(T const &in) noexcept -> T { return in.ceil(); }
+auto ceil(T const &x) noexcept -> T { return x.ceil(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto floor(T const &in) noexcept -> T { return in.floor(); }
+auto floor(T const &x) noexcept -> T { return x.floor(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto sqrt(T const &in) noexcept -> T { return in.sqrt(); }
+auto sqrt(T const &x) noexcept -> T { return x.sqrt(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto cbrt(T const &in) noexcept -> T { return in.cbrt(); }
+auto cbrt(T const &x) noexcept -> T { return x.cbrt(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto sin(T const &in) noexcept -> T { return in.sin(); }
+auto sin(T const &x) noexcept -> T { return x.sin(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto asin(T const &in) noexcept -> T { return in.asin(); }
+auto asin(T const &x) noexcept -> T { return x.asin(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto cos(T const &in) noexcept -> T { return in.cos(); }
+auto cos(T const &x) noexcept -> T { return x.cos(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto acos(T const &in) noexcept -> T { return in.acos(); }
+auto acos(T const &x) noexcept -> T { return x.acos(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
 auto atan2(T const &y, T const &x) noexcept -> T { return T{std::atan2(y.c_val, x.c_val)}; }
@@ -880,25 +880,25 @@ template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
 auto pow(T const &x, T const &y) noexcept -> T { return T{std::pow(x.c_val, y.c_val)}; }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto log(T const &in) noexcept -> T { return in.log(); }
+auto log(T const &x) noexcept -> T { return x.log(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto log2(T const &in) noexcept -> T { return in.log2(); }
+auto log2(T const &x) noexcept -> T { return x.log2(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto log10(T const &in) noexcept -> T { return in.log10(); }
+auto log10(T const &x) noexcept -> T { return x.log10(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto exp(T const &in) noexcept -> T { return in.exp(); }
+auto exp(T const &x) noexcept -> T { return x.exp(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto exp2(T const &in) noexcept -> T { return in.exp2(); }
+auto exp2(T const &x) noexcept -> T { return x.exp2(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto round(T const &in) noexcept -> T { return in.round(); }
+auto round(T const &x) noexcept -> T { return x.round(); }
 
 template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
-auto lerp(T const &x, T const &y, T const &a) noexcept -> T
-{ return T{std::lerp(x.c_val, y.c_val, a.c_val)}; }
+auto lerp(T const &a, T const &b, T const &t) noexcept -> T
+{ return T{std::lerp(a.c_val, b.c_val, t.c_val)}; }
 
 #endif /* AL_TYPES_HPP */

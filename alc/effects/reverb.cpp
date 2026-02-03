@@ -311,8 +311,7 @@ struct DelayLineU {
         while(const auto rem = std::distance(input, in.end()))
         {
             const auto td = std::min(gsl::narrow_cast<ptrdiff_t>(stride-offset), rem);
-            input = std::ranges::copy(std::views::counted(input, td),
-                (output | std::views::drop(offset)).begin()).in;
+            input = std::ranges::copy_n(input, td, (output | std::views::drop(offset)).begin()).in;
             /* Either wrapping back to 0 with more input, or it's done. */
             offset = 0;
         }

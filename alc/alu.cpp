@@ -160,7 +160,7 @@ void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable 
     }
 
     state->sf = sf.c_val;
-    state->m = table->m[si].c_val;
+    state->m = table->m[si];
     state->l = (state->m/2) - 1;
     state->filter = table->Tab.subspan(table->filterOffset[si].c_val);
 }

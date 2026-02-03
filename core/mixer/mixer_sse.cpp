@@ -234,15 +234,15 @@ void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float cons
     unsigned frac, unsigned const increment, std::span<float> const dst)
 {
     auto const &bsinc = std::get<BsincState>(*state);
-    auto const m = usize{bsinc.m};
+    auto const m = usize{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
     ASSUME(frac < MixerFracOne);
 
     auto const filter = bsinc.filter.first(2_uz*m*BSincPhaseCount);
 
-    ASSUME(bsinc.l <= MaxResamplerEdge);
-    auto pos = usize{MaxResamplerEdge-bsinc.l};
+    ASSUME(bsinc.l.c_val <= MaxResamplerEdge);
+    auto pos = usize{MaxResamplerEdge-bsinc.l.c_val};
     std::ranges::generate(dst, [&pos,&frac,src,increment,filter,m]() -> float
     {
         // Calculate the phase index and factor.
@@ -282,15 +282,15 @@ void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> c
 {
     auto const &bsinc = std::get<BsincState>(*state);
     auto const sf4 = _mm_set1_ps(bsinc.sf);
-    auto const m = usize{bsinc.m};
+    auto const m = usize{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
     ASSUME(frac < MixerFracOne);
 
     auto const filter = bsinc.filter.first(4_uz*BSincPhaseCount*m);
 
-    ASSUME(bsinc.l <= MaxResamplerEdge);
-    auto pos = usize{MaxResamplerEdge-bsinc.l};
+    ASSUME(bsinc.l.c_val <= MaxResamplerEdge);
+    auto pos = usize{MaxResamplerEdge-bsinc.l.c_val};
     std::ranges::generate(dst, [&pos,&frac,src,increment,sf4,m,filter]() -> float
     {
         // Calculate the phase index and factor.

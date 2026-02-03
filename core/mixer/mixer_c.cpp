@@ -60,7 +60,7 @@ auto do_cubic(CubicState const &istate, std::span<float const> const vals, usize
 auto do_fastbsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
     unsigned const frac) noexcept -> float
 {
-    auto const m = usize{bsinc.m};
+    auto const m = usize{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
@@ -81,7 +81,7 @@ auto do_fastbsinc(BsincState const &bsinc, std::span<float const> const vals, us
 auto do_bsinc(BsincState const &bsinc, std::span<float const> const vals, usize const pos,
     unsigned const frac) noexcept -> float
 {
-    auto const m = usize{bsinc.m};
+    auto const m = usize{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
 
@@ -203,8 +203,8 @@ void Resample_FastBSinc_C(InterpState const *const state, std::span<float const>
     unsigned const frac, unsigned const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
-    ASSUME(istate.l <= MaxResamplerEdge);
-    DoResample<BsincState,do_fastbsinc>(istate, src.subspan(MaxResamplerEdge-istate.l), frac,
+    ASSUME(istate.l.c_val <= MaxResamplerEdge);
+    DoResample<BsincState,do_fastbsinc>(istate, src.subspan(MaxResamplerEdge-istate.l.c_val), frac,
         increment, dst);
 }
 
@@ -212,8 +212,8 @@ void Resample_BSinc_C(InterpState const *const state, std::span<float const> con
     unsigned const frac, unsigned const increment, std::span<float> const dst)
 {
     auto const istate = std::get<BsincState>(*state);
-    ASSUME(istate.l <= MaxResamplerEdge);
-    DoResample<BsincState,do_bsinc>(istate, src.subspan(MaxResamplerEdge-istate.l), frac,
+    ASSUME(istate.l.c_val <= MaxResamplerEdge);
+    DoResample<BsincState,do_bsinc>(istate, src.subspan(MaxResamplerEdge-istate.l.c_val), frac,
         increment, dst);
 }
 

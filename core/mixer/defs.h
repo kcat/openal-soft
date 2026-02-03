@@ -46,8 +46,8 @@ enum class Resampler : u8::value_t {
  */
 struct BsincState {
     float sf; /* Scale interpolation factor. */
-    unsigned m; /* Coefficient count. */
-    unsigned l; /* Left coefficient offset. */
+    u32 m; /* Coefficient count. */
+    u32 l; /* Left coefficient offset. */
     /* Filter coefficients, followed by the phase, scale, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.

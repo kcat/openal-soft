@@ -421,7 +421,7 @@ auto GetSourceLength(gsl::not_null<const al::Source*> const source, ALenum const
             return gsl::narrow_cast<T>(alignedlen.c_val);
         else
         {
-            if(alignedlen > u64{std::numeric_limits<T>::max()})
+            if(alignedlen > std::numeric_limits<T>::max())
                 return RoundToZero(std::numeric_limits<T>::max(), gsl::narrow_cast<T>(BlockSize));
             return gsl::narrow_cast<T>(alignedlen.c_val);
         }

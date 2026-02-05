@@ -137,8 +137,6 @@ struct ConstantNum {
     /* NOLINTBEGIN(*-explicit-constructor) */
     template<compatible_constant<T> U>
     consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)} { }
-    template<strong_number U> requires(compatible_constant<typename U::value_t, T>)
-    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value.c_val)} { }
     /* NOLINTEND(*-explicit-constructor) */
 };
 
@@ -613,24 +611,20 @@ DECL_BINARY(<<)
 #undef DECL_BINARY
 
 /* Increment/decrement a strong integral using its difference type. */
-#define DECL_BINARY(op)                                                       \
-template<al::strong_integral T, std::same_as<typename T::difference_type> U>  \
-    [[nodiscard]] force_inline constexpr                                      \
-auto operator op(T const &lhs, U const &rhs) noexcept -> T                    \
-{                                                                             \
-    return T{static_cast<typename T::value_t>(lhs.c_val                       \
-        op static_cast<typename T::value_t>(rhs))};                           \
-}                                                                             \
-template<al::strong_integral T, std::same_as<typename T::difference_type> U>  \
-    [[nodiscard]] force_inline constexpr                                      \
-auto operator op(U const &lhs, T const &rhs) noexcept -> T                    \
-{                                                                             \
-    return T{static_cast<typename T::value_t>(                                \
-        static_cast<typename T::value_t>(lhs) op rhs.c_val)};                 \
-}
-DECL_BINARY(+)
-DECL_BINARY(-)
-#undef DECL_BINARY
+template<al::strong_integral T, std::same_as<typename T::difference_type> U> [[nodiscard]]
+    force_inline constexpr
+auto operator+(T const &lhs, U const &rhs) noexcept -> T
+{ return T{static_cast<typename T::value_t>(lhs.c_val + static_cast<typename T::value_t>(rhs))}; }
+
+template<al::strong_integral T, std::same_as<typename T::difference_type> U> [[nodiscard]]
+    force_inline constexpr
+auto operator+(U const &lhs, T const &rhs) noexcept -> T
+{ return T{static_cast<typename T::value_t>(static_cast<typename T::value_t>(lhs) + rhs.c_val)}; }
+
+template<al::strong_integral T, std::same_as<typename T::difference_type> U> [[nodiscard]]
+    force_inline constexpr
+auto operator-(T const &lhs, U const &rhs) noexcept -> T
+{ return T{static_cast<typename T::value_t>(lhs.c_val - static_cast<typename T::value_t>(rhs))}; }
 
 /* Our binary assignment ops only promote the rhs value to the lhs type when
  * the conversion can't lose information, and produces an error otherwise.

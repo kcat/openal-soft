@@ -54,7 +54,7 @@ auto BiquadFilter::SetParams(BiquadType const type, float const f0norm, float ga
      */
     gain = std::max(gain, 0.00001f);
 
-    auto const w0 = std::numbers::pi_v<float>*2.0f * f0norm;
+    auto const w0 = std::numbers::pi_v<float>*2.0f * std::min(f0norm, 0.49f);
     auto const sin_w0 = std::sin(w0);
     auto const cos_w0 = std::cos(w0);
     auto const alpha = sin_w0/2.0f * rcpQ;

@@ -14,7 +14,7 @@
 
 void BandSplitter::init(float const f0norm)
 {
-    auto const w = f0norm * (std::numbers::pi_v<float>*2.0f);
+    auto const w = std::numbers::pi_v<float>*2.0f * std::min(f0norm, 0.49f);
     if(auto const cw = std::cos(w); cw > std::numeric_limits<float>::epsilon())
         mCoeff = (std::sin(w) - 1.0f) / cw;
     else

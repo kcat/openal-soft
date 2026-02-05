@@ -147,12 +147,12 @@ struct BSincHeader {
  * at nyquist. Each filter will scale up to double size when downsampling, to
  * 23rd and 47th order respectively.
  */
-constexpr auto bsinc12_hdr = BSincHeader{60._f64, 11._f64, 2._f64};
-constexpr auto bsinc24_hdr = BSincHeader{60._f64, 23._f64, 2._f64};
+constexpr auto bsinc12_hdr = BSincHeader{60, 11, 2};
+constexpr auto bsinc24_hdr = BSincHeader{60, 23, 2};
 /* 47th order filter (48-point) with an 80dB drop at nyquist. The filter order
  * doesn't increase when downsampling.
  */
-constexpr auto bsinc48_hdr = BSincHeader{80._f64, 47._f64, 1._f64};
+constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 
 template<const BSincHeader &hdr>

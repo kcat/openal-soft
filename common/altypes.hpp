@@ -87,6 +87,44 @@ template<typename T>
 concept strong_floating_point = strong_number<T> and std::floating_point<typename T::value_t>;
 
 
+/* Determines whether a weak number of type T can be used for an operation on a
+ * strong number's underlying type U. This is intended to restrict otherwise
+ * valid numeric constants that could be confusing. For example:
+ *
+ * auto var = u8{...};
+ * auto var_doubled = var * 2;
+ *
+ * Here 2 is a "weak" int, which is required to convert to a "strong" u8. This
+ * would be a narrowing conversion (usually), but 2 is a constant value that
+ * can be represented in an u8. This effectively results in:
+ *
+ * auto var_doubled = var * 2_u8;
+ *
+ * which is valid and reasonable. In contrast, however:
+ *
+ * auto var = u32{...};
+ * auto rcp = 1.0f / var;
+ *
+ * Here 1.0f is a "weak" float, which is required to convert to a "strong" u32.
+ * Normally this would be a narrowing conversion, but 1.0f is a constant value
+ * that can be represented as an u32 type, so this would convert and compile.
+ * The result being:
+ *
+ * auto rcp = 1_u32 / var;
+ *
+ * which is a completely valid computation, but likely not what was expected.
+ * This kind of conversion should be rejected, and instead require explicit
+ * types:
+ *
+ * auto rcp = 1.0f / var.cast_to<f32>();
+ *
+ * will compile and work as expected.
+ */
+template<typename T, typename U>
+concept compatible_constant = (std::integral<U> and std::integral<T>)
+    or (std::floating_point<U> and (std::integral<T> or sizeof(U) >= sizeof(T)));
+
+
 /* This ConstantNum class is a wrapper to handle various operations with
  * numeric constants (literals, constexpr values). It can be initialized with
  * weak or strong numeric constant types, and will fail to compile if the
@@ -97,18 +135,10 @@ struct ConstantNum {
     T const c_val;
 
     /* NOLINTBEGIN(*-explicit-constructor) */
-    template<weak_number U>
-    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)}
-    {
-        static_assert(std::floating_point<T> or not std::floating_point<U>,
-            "Floating point constant for integer operation");
-    }
-    template<strong_number U>
-    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value.c_val)}
-    {
-        static_assert(std::floating_point<T> or not std::floating_point<U>,
-            "Floating point constant for integer operation");
-    }
+    template<compatible_constant<T> U>
+    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)} { }
+    template<strong_number U> requires(compatible_constant<typename U::value_t, T>)
+    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value.c_val)} { }
     /* NOLINTEND(*-explicit-constructor) */
 };
 
@@ -209,11 +239,15 @@ public:
 
     T c_val;
 
-    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit
+    /* Implicit constructor from non-narrowing weak number types. */
+    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit(false)
     number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
 
-    force_inline constexpr explicit(false)
-    number_base(ConstantNum<T> const &value) noexcept : c_val{value.c_val} { }
+    /* Implicit constructor from narrowing weak number types. Required to be
+     * compile-time so the provided value can be checked for narrowing.
+     */
+    template<weak_number U> requires(can_narrow<T, U> and compatible_constant<U, T>) consteval
+    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
 
     template<weak_number U> force_inline static constexpr
     auto make_from(U const &value) noexcept(not can_narrow<T, U>) -> SelfType
@@ -247,14 +281,6 @@ public:
     force_inline constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
     {
         c_val = static_cast<T>(rhs.c_val);
-        return *this;
-    }
-
-    /* Copy assignment from a compatible constant. */
-    force_inline constexpr
-    auto operator=(ConstantNum<T> const &rhs) & noexcept LIFETIMEBOUND -> number_base&
-    {
-        c_val = rhs.c_val;
         return *this;
     }
 

@@ -156,17 +156,17 @@ struct signed_difference<T> { using type = std::make_signed_t<T>; };
 }
 
 /* Strong numbers are implemented using CRTP to act as a mixin of sorts. */
-template<weak_number T, typename SelfType>
-    requires(not std::is_const_v<T> and not std::is_volatile_v<T>)
+template<weak_number ValueType, typename SelfType>
+    requires(not std::is_const_v<ValueType> and not std::is_volatile_v<ValueType>)
 class number_base {
     friend SelfType;
 
     /* Force printing smaller types as (unsigned) int. Always treat these as
      * numeric values even when backed by character types.
      */
-    using fmttype_t = std::conditional_t<not can_narrow<unsigned, T>, unsigned,
-        std::conditional_t<not can_narrow<int, T>, int,
-        T>>;
+    using fmttype_t = std::conditional_t<not can_narrow<unsigned, ValueType>, unsigned,
+        std::conditional_t<not can_narrow<int, ValueType>, int,
+        ValueType>>;
 
     /* Defaulted constructor/destructor/copy assignment functions, which will be
      * inherited by the parent type. Allows the type to be trivial.
@@ -180,7 +180,7 @@ class number_base {
 public:
     static constexpr auto is_strong_number_type = true;
 
-    using value_t = T;
+    using value_t = ValueType;
     using self_t = SelfType;
     /* HACK: Annoyingly, iota_view has some strict requirements for what only
      * needs to be incrementable. It needs std::iter_difference_t<T> to be
@@ -222,22 +222,23 @@ public:
      * Floating point types define this to void, making this not incrementable.
      * Which is perfectly fine, since standard fp types aren't either.
      */
-    using difference_type = typename detail_::signed_difference<T>::type;
+    using difference_type = typename detail_::signed_difference<ValueType>::type;
 
-    T c_val;
+    ValueType c_val;
 
     /* Implicit constructor from non-narrowing weak number types. */
-    template<weak_number U> requires(not can_narrow<T, U>) force_inline constexpr explicit(false)
-    number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
+    template<weak_number U> requires(not can_narrow<ValueType, U>) force_inline constexpr
+    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<ValueType>(value)} { }
 
     /* Implicit constructor from narrowing weak number types. Required to be
      * compile-time so the provided value can be checked for narrowing.
      */
-    template<weak_number U> requires(can_narrow<T, U> and compatible_constant<U, T>) consteval
-    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<T>(value)} { }
+    template<weak_number U>
+        requires(can_narrow<ValueType, U> and compatible_constant<U, ValueType>) consteval
+    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<ValueType>(value)} { }
 
     template<weak_number U> force_inline static constexpr
-    auto make_from(U const &value) noexcept(not can_narrow<T, U>) -> SelfType
+    auto make_from(U const &value) noexcept(not can_narrow<ValueType, U>) -> SelfType
     {
         /* Converting to a floating point type isn't checked here because it's
          * nearly impossible to otherwise ensure a large enough integer or
@@ -245,10 +246,10 @@ public:
          * converting to floating point results in the nearest value instead of
          * being modulo wrapped, this should be considered fine.
          */
-        if constexpr(std::floating_point<T>)
-            return SelfType{static_cast<T>(value)};
+        if constexpr(std::floating_point<ValueType>)
+            return SelfType{static_cast<ValueType>(value)};
         else
-            return SelfType{convert_to<T>(value)};
+            return SelfType{convert_to<ValueType>(value)};
     }
 
     [[nodiscard]] force_inline static constexpr
@@ -263,17 +264,17 @@ public:
     /* Conversion operator to other strong number types. Only valid for
      * non-narrowing conversions.
      */
-    template<strong_number U> requires(not can_narrow<typename U::value_t, T>) force_inline
+    template<strong_number U> requires(not can_narrow<typename U::value_t, ValueType>) force_inline
     constexpr explicit operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
 
     template<std::same_as<difference_type> U> [[nodiscard]] force_inline constexpr explicit
     operator U() noexcept { return static_cast<U>(c_val); }
 
     [[nodiscard]] force_inline constexpr explicit
-    operator bool() noexcept requires(std::integral<T>) { return c_val != T{0}; }
+    operator bool() noexcept requires(std::integral<ValueType>) { return c_val != ValueType{0}; }
 
     /* Non-narrowing conversion method. */
-    template<strong_number U> requires(not can_narrow<typename U::value_t, T>)
+    template<strong_number U> requires(not can_narrow<typename U::value_t, ValueType>)
     [[nodiscard]] force_inline constexpr
     auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
 
@@ -285,7 +286,8 @@ public:
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
-        noexcept(not can_narrow<typename U::value_t,T> or std::floating_point<typename U::value_t>)
+        noexcept(not can_narrow<typename U::value_t,ValueType>
+            or std::floating_point<typename U::value_t>)
         -> U
     {
         /* Like make_from, converting to a floating point type isn't checked
@@ -301,7 +303,8 @@ public:
      * underlying type.
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
-    auto reinterpret_as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
+    auto reinterpret_as() const noexcept -> U
+    { return U{static_cast<typename U::value_t>(c_val)}; }
 
     /* Saturating cast, applying a standard cast except out of range source
      * values are clamped to the output range.
@@ -311,7 +314,7 @@ public:
     {
         if constexpr(strong_integral<U>)
         {
-            if constexpr(std::floating_point<T>)
+            if constexpr(std::floating_point<ValueType>)
             {
                 if constexpr(strong_signed_integral<U>)
                 {
@@ -333,9 +336,9 @@ public:
             else
             {
                 /* integral -> integral */
-                if constexpr(U::digits < std::numeric_limits<T>::digits)
+                if constexpr(U::digits < std::numeric_limits<ValueType>::digits)
                 {
-                    if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+                    if constexpr(strong_signed_integral<U> and std::signed_integral<ValueType>)
                     {
                         if(c_val < U::min().template as<SelfType>().c_val)
                             return U::min();
@@ -343,7 +346,7 @@ public:
                     if(c_val > U::max().template as<SelfType>().c_val)
                         return U::max();
                 }
-                if constexpr(strong_signed_integral<U> and std::signed_integral<T>)
+                if constexpr(strong_signed_integral<U> and std::signed_integral<ValueType>)
                 {
                     if(c_val < 0)
                         return U{0};
@@ -358,8 +361,10 @@ public:
         }
     }
 
-    [[nodiscard]] force_inline constexpr auto popcount() const noexcept -> UInt requires(std::integral<T>);
-    [[nodiscard]] force_inline constexpr auto countr_zero() const noexcept -> UInt requires(std::integral<T>);
+    [[nodiscard]] force_inline constexpr
+    auto popcount() const noexcept -> UInt requires(std::integral<ValueType>);
+    [[nodiscard]] force_inline constexpr
+    auto countr_zero() const noexcept -> UInt requires(std::integral<ValueType>);
 
     [[nodiscard]] force_inline constexpr
     auto abs() const noexcept -> SelfType { return SelfType{std::abs(c_val)}; }
@@ -367,99 +372,103 @@ public:
     [[nodiscard]] force_inline constexpr
     auto signbit() const noexcept -> bool
     {
-        if constexpr(std::floating_point<T>)
+        if constexpr(std::floating_point<ValueType>)
             return std::signbit(c_val);
-        else if constexpr(std::signed_integral<T>)
+        else if constexpr(std::signed_integral<ValueType>)
             return c_val < 0;
         else
             return false;
     }
 
     [[nodiscard]] force_inline constexpr
-    auto ceil() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto ceil() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::ceil(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto floor() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto floor() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::floor(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto sqrt() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto sqrt() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::sqrt(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto cbrt() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto cbrt() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::cbrt(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto sin() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto sin() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::sin(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto asin() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto asin() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::asin(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto cos() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto cos() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::cos(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto acos() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto acos() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::acos(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto log() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto log() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::log(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto log2() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto log2() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::log2(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto log10() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto log10() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::log10(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto exp() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto exp() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::exp(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto exp2() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto exp2() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::exp2(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto round() const noexcept -> SelfType requires(std::floating_point<T>)
+    auto round() const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::round(c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto modf(SelfType &ires) const noexcept -> SelfType requires(std::floating_point<T>)
+    auto modf(SelfType &ires) const noexcept -> SelfType requires(std::floating_point<ValueType>)
     { return SelfType{std::modf(c_val, &ires.c_val)}; }
 
     [[nodiscard]] force_inline constexpr
-    auto isfinite() const noexcept -> bool requires(std::floating_point<T>)
+    auto isfinite() const noexcept -> bool requires(std::floating_point<ValueType>)
     { return std::isfinite(c_val); }
 
     [[nodiscard]] force_inline constexpr
-    auto isnan() const noexcept -> bool requires(std::floating_point<T>)
+    auto isnan() const noexcept -> bool requires(std::floating_point<ValueType>)
     { return std::isnan(c_val); }
 
 
     /* Relevant values for the given type. Offered here as static methods
      * instead of through a separate templated structure.
      */
-    static consteval auto min() noexcept { return SelfType{std::numeric_limits<T>::min()}; }
-    static consteval auto max() noexcept { return SelfType{std::numeric_limits<T>::max()}; }
-    static consteval auto lowest() noexcept { return SelfType{std::numeric_limits<T>::lowest()}; }
-    static consteval auto epsilon() noexcept requires std::floating_point<T>
-    { return SelfType{std::numeric_limits<T>::epsilon()}; }
-    static consteval auto infinity() noexcept requires std::numeric_limits<T>::has_infinity
-    { return SelfType{std::numeric_limits<T>::infinity()}; }
-    static consteval auto quiet_NaN() noexcept requires std::numeric_limits<T>::has_quiet_NaN
-    { return SelfType{std::numeric_limits<T>::quiet_NaN()}; }
-    static consteval auto signaling_NaN() noexcept
-        requires std::numeric_limits<T>::has_signaling_NaN
-    { return SelfType{std::numeric_limits<T>::signaling_NaN()}; }
-    static constexpr auto digits = std::numeric_limits<T>::digits;
+    static consteval
+    auto min() noexcept { return SelfType{std::numeric_limits<ValueType>::min()}; }
+    static consteval
+    auto max() noexcept { return SelfType{std::numeric_limits<ValueType>::max()}; }
+    static consteval
+    auto lowest() noexcept { return SelfType{std::numeric_limits<ValueType>::lowest()}; }
+    static consteval auto epsilon() noexcept requires std::floating_point<ValueType>
+    { return SelfType{std::numeric_limits<ValueType>::epsilon()}; }
+    static consteval auto infinity() noexcept requires std::numeric_limits<ValueType>::has_infinity
+    { return SelfType{std::numeric_limits<ValueType>::infinity()}; }
+    static consteval
+    auto quiet_NaN() noexcept requires std::numeric_limits<ValueType>::has_quiet_NaN
+    { return SelfType{std::numeric_limits<ValueType>::quiet_NaN()}; }
+    static consteval
+    auto signaling_NaN() noexcept requires std::numeric_limits<ValueType>::has_signaling_NaN
+    { return SelfType{std::numeric_limits<ValueType>::signaling_NaN()}; }
+    static constexpr auto digits = std::numeric_limits<ValueType>::digits;
 
     /* This returns the numeric limit of the type as the given floating point
      * type. That is, 2**digits; for integral types, this is one greater than

@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "alformat.hpp"
+#include "altypes.hpp"
 #include "opthelpers.h"
 #include "gsl/gsl"
 
@@ -154,19 +155,7 @@ struct signed_difference<T> { using type = std::make_signed_t<T>; };
 
 }
 
-/* Strong numbers are implemented using CRTP to act as a mixin of sorts. To
- * define a strong numeric type:
- *
- * struct name : al::number_base<real_type, name> {
- *     using number_base::number_base;
- *     using number_base::operator=;
- * };
- *
- * And to define its formatter:
- *
- * template<typename CharT>
- * struct al::formatter<name, CharT> : name::formatter<CharT> { };
- */
+/* Strong numbers are implemented using CRTP to act as a mixin of sorts. */
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>)
 class number_base {
@@ -269,17 +258,6 @@ public:
         auto const ret = static_cast<std::uint16_t>((to_integer<std::uint16_t>(hi)<<8)
             | to_integer<std::uint16_t>(lo));
         return std::bit_cast<SelfType>(ret);
-    }
-
-    /* Copy assignment from another strong number type, only for types that
-     * won't narrow.
-     */
-    template<strong_number U>
-        requires(not std::is_base_of_v<number_base, U> and not can_narrow<T, typename U::value_t>)
-    force_inline constexpr auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> number_base&
-    {
-        c_val = static_cast<T>(rhs.c_val);
-        return *this;
     }
 
     /* Conversion operator to other strong number types. Only valid for
@@ -774,42 +752,47 @@ auto operator==(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) n
 { return (lhs <=> rhs) == 0; }
 
 
-struct i8 : al::number_base<std::int8_t, i8> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> { };
+#define DECL_NUMBERTYPE(SelfType, ValueType)                                  \
+struct SelfType : al::number_base<ValueType, SelfType> {                      \
+    using number_base::number_base;                                           \
+                                                                              \
+    constexpr SelfType() noexcept = default;                                  \
+    constexpr SelfType(SelfType const&) noexcept = default;                   \
+    constexpr ~SelfType() noexcept = default;                                 \
+                                                                              \
+    constexpr                                                                 \
+    auto operator=(SelfType const &rhs) & noexcept LIFETIMEBOUND              \
+        -> SelfType& = default;                                               \
+                                                                              \
+    template<al::strong_number U>                                             \
+        requires(not std::is_base_of_v<SelfType, U>                           \
+            and not al::can_narrow<value_t, typename U::value_t>)             \
+    force_inline constexpr                                                    \
+    auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
+    {                                                                         \
+        c_val = static_cast<value_t>(rhs.c_val);                              \
+        return *this;                                                         \
+    }                                                                         \
+};
 
-struct u8 : al::number_base<std::uint8_t, u8> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<u8, CharT> : u8::formatter<CharT> { };
-
-struct i16 : al::number_base<std::int16_t, i16> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<i16, CharT> : i16::formatter<CharT> { };
-
-struct u16 : al::number_base<std::uint16_t, u16> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
-
-struct i32 : al::number_base<std::int32_t, i32> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<i32, CharT> : i32::formatter<CharT> { };
-
-struct u32 : al::number_base<std::uint32_t, u32> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<u32, CharT> : u32::formatter<CharT> { };
-
-struct i64 : al::number_base<std::int64_t, i64> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT> { };
-
-struct u64 : al::number_base<std::uint64_t, u64> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
+DECL_NUMBERTYPE(i8, std::int8_t)
+DECL_NUMBERTYPE(u8, std::uint8_t)
+DECL_NUMBERTYPE(i16, std::int16_t)
+DECL_NUMBERTYPE(u16, std::uint16_t)
+DECL_NUMBERTYPE(i32, std::int32_t)
+DECL_NUMBERTYPE(u32, std::uint32_t)
+DECL_NUMBERTYPE(i64, std::int64_t)
+DECL_NUMBERTYPE(u64, std::uint64_t)
+DECL_NUMBERTYPE(f32, float)
+DECL_NUMBERTYPE(f64, double)
 
 using isize = std::make_signed_t<std::size_t>;
 using usize = std::size_t;
 
-struct f32 : al::number_base<float, f32> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
-
-struct f64 : al::number_base<double, f64> { using number_base::number_base; using number_base::operator=; };
-template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
-
 namespace al {
 
-struct UInt : number_base<unsigned, UInt> { using number_base::number_base; using number_base::operator=; };
+DECL_NUMBERTYPE(UInt, unsigned)
+#undef DECL_NUMBERTYPE
 
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
@@ -831,6 +814,16 @@ constexpr auto number_base<T,SelfType>::countr_zero() const noexcept -> UInt
 
 } /* namespace al */
 
+template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> { };
+template<typename CharT> struct al::formatter<u8, CharT> : u8::formatter<CharT> { };
+template<typename CharT> struct al::formatter<i16, CharT> : i16::formatter<CharT> { };
+template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
+template<typename CharT> struct al::formatter<i32, CharT> : i32::formatter<CharT> { };
+template<typename CharT> struct al::formatter<u32, CharT> : u32::formatter<CharT> { };
+template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT> { };
+template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
+template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
+template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
 template<typename CharT> struct al::formatter<al::UInt, CharT> : al::UInt::formatter<CharT> { };
 
 [[nodiscard]] consteval
@@ -854,16 +847,16 @@ auto operator ""_i64(unsigned long long const n) noexcept { return i64::make_fro
 auto operator ""_u64(unsigned long long const n) noexcept { return u64::make_from(n); }
 
 [[nodiscard]] consteval
+auto operator ""_f32(long double const n) noexcept { return f32::make_from(n); }
+[[nodiscard]] consteval
+auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
+
+[[nodiscard]] consteval
 auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize>(n); }
 [[nodiscard]] consteval
 auto operator ""_uz(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
 [[nodiscard]] consteval
 auto operator ""_zu(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
-
-[[nodiscard]] consteval
-auto operator ""_f32(long double const n) noexcept { return f32::make_from(n); }
-[[nodiscard]] consteval
-auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
 
 
 template<al::strong_number T> [[nodiscard]] force_inline constexpr

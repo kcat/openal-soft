@@ -29,7 +29,7 @@ concept weak_number = std::integral<T> or std::floating_point<T>;
  * fine since all platforms we currently care about won't lose precision.
  */
 template<typename T, typename U>
-concept can_narrow = sizeof(T) < sizeof(U)
+concept might_narrow = sizeof(T) < sizeof(U)
     or (std::unsigned_integral<T> and std::signed_integral<U>)
     or (std::integral<T> and std::floating_point<U>)
     or (sizeof(T) == sizeof(U)
@@ -37,13 +37,13 @@ concept can_narrow = sizeof(T) < sizeof(U)
             or (std::floating_point<T> and std::integral<U>)));
 
 template<typename T, typename U>
-concept has_common = not can_narrow<T, U> or not can_narrow<U, T>;
+concept has_common = not might_narrow<T, U> or not might_narrow<U, T>;
 
 
 template<weak_number T, weak_number U> [[nodiscard]] constexpr
-auto convert_to(U const &value) noexcept(not can_narrow<T, U>) -> T
+auto convert_to(U const &value) noexcept(not might_narrow<T, U>) -> T
 {
-    if constexpr(not can_narrow<T, U>)
+    if constexpr(not might_narrow<T, U>)
         return static_cast<T>(value);
     else
     {
@@ -164,8 +164,8 @@ class number_base {
     /* Force printing smaller types as (unsigned) int. Always treat these as
      * numeric values even when backed by character types.
      */
-    using fmttype_t = std::conditional_t<not can_narrow<unsigned, ValueType>, unsigned,
-        std::conditional_t<not can_narrow<int, ValueType>, int,
+    using fmttype_t = std::conditional_t<not might_narrow<unsigned, ValueType>, unsigned,
+        std::conditional_t<not might_narrow<int, ValueType>, int,
         ValueType>>;
 
     /* Defaulted constructor/destructor/copy assignment functions, which will be
@@ -227,7 +227,7 @@ public:
     ValueType c_val;
 
     /* Implicit constructor from non-narrowing weak number types. */
-    template<weak_number U> requires(not can_narrow<ValueType, U>) force_inline constexpr
+    template<weak_number U> requires(not might_narrow<ValueType, U>) force_inline constexpr
     explicit(false) number_base(U const &value) noexcept : c_val{convert_to<ValueType>(value)} { }
 
     /* Implicit constructor from narrowing weak number types. Required to be
@@ -237,7 +237,7 @@ public:
     number_base(ConstantNum<ValueType> const &value) noexcept : c_val{value.c_val} { }
 
     template<weak_number U> force_inline static constexpr
-    auto make_from(U const &value) noexcept(not can_narrow<ValueType, U>) -> SelfType
+    auto make_from(U const &value) noexcept(not might_narrow<ValueType, U>) -> SelfType
     {
         /* Converting to a floating point type isn't checked here because it's
          * nearly impossible to otherwise ensure a large enough integer or
@@ -263,8 +263,9 @@ public:
     /* Conversion operator to other strong number types. Only valid for
      * non-narrowing conversions.
      */
-    template<strong_number U> requires(not can_narrow<typename U::value_t, ValueType>) force_inline
-    constexpr explicit operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
+    template<strong_number U> requires(not might_narrow<typename U::value_t, ValueType>)
+        force_inline constexpr explicit
+    operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
 
     template<std::same_as<difference_type> U> [[nodiscard]] force_inline constexpr explicit
     operator U() noexcept { return static_cast<U>(c_val); }
@@ -273,7 +274,7 @@ public:
     operator bool() noexcept requires(std::integral<ValueType>) { return c_val != ValueType{0}; }
 
     /* Non-narrowing conversion method. */
-    template<strong_number U> requires(not can_narrow<typename U::value_t, ValueType>)
+    template<strong_number U> requires(not might_narrow<typename U::value_t, ValueType>)
     [[nodiscard]] force_inline constexpr
     auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
 
@@ -285,7 +286,7 @@ public:
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
-        noexcept(not can_narrow<typename U::value_t,ValueType>
+        noexcept(not might_narrow<typename U::value_t,ValueType>
             or std::floating_point<typename U::value_t>)
         -> U
     {
@@ -549,9 +550,9 @@ constexpr auto operator op(T const &lhs, U const &rhs) noexcept               \
 {                                                                             \
     static_assert(al::has_common<typename T::value_t, typename U::value_t>,   \
         "Incompatible operands");                                             \
-    if constexpr(not al::can_narrow<typename T::value_t, typename U::value_t>)\
+    if constexpr(not al::might_narrow<typename T::value_t, typename U::value_t>) \
         return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)};   \
-    else if constexpr(not al::can_narrow<typename U::value_t, typename T::value_t>) \
+    else if constexpr(not al::might_narrow<typename U::value_t, typename T::value_t>) \
         return U{static_cast<typename U::value_t>(lhs.c_val op rhs.c_val)};   \
     else                                                                      \
         return T{};                                                           \
@@ -620,7 +621,7 @@ auto operator-(T const &lhs, U const &rhs) noexcept -> T
 template<al::strong_number T, al::strong_number U> force_inline constexpr     \
 auto operator op(T &lhs LIFETIMEBOUND, U const &rhs) noexcept -> T&           \
 {                                                                             \
-    static_assert(not al::can_narrow<typename T::value_t, typename U::value_t>, \
+    static_assert(not al::might_narrow<typename T::value_t, typename U::value_t>, \
         "Incompatible right side operand");                                   \
     lhs.c_val op static_cast<typename T::value_t>(rhs.c_val);                 \
     return lhs;                                                               \
@@ -670,9 +671,9 @@ DECL_BINASSIGN(-=)
 template<al::strong_number T, al::strong_number U> [[nodiscard]] force_inline constexpr
 auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
-    if constexpr(not al::can_narrow<typename T::value_t, typename U::value_t>)
+    if constexpr(not al::might_narrow<typename T::value_t, typename U::value_t>)
         return lhs.c_val <=> static_cast<typename T::value_t>(rhs.c_val);
-    else if constexpr(not al::can_narrow<typename U::value_t, typename T::value_t>)
+    else if constexpr(not al::might_narrow<typename U::value_t, typename T::value_t>)
         return static_cast<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
     else if constexpr(std::signed_integral<typename T::value_t>
         and std::unsigned_integral<typename U::value_t>)
@@ -730,9 +731,9 @@ auto operator<=>(T const &lhs, U const &rhs) noexcept
 template<al::strong_number T, al::weak_number U> requires(al::has_common<typename T::value_t, U>)
 [[nodiscard]] force_inline constexpr auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
-    if constexpr(not al::can_narrow<typename T::value_t, U>)
+    if constexpr(not al::might_narrow<typename T::value_t, U>)
         return lhs.c_val <=> static_cast<typename T::value_t>(rhs);
-    else if constexpr(not al::can_narrow<U, typename T::value_t>)
+    else if constexpr(not al::might_narrow<U, typename T::value_t>)
         return static_cast<U>(lhs.c_val) <=> rhs;
 }
 
@@ -774,7 +775,7 @@ struct SelfType : al::number_base<ValueType, SelfType> {                      \
                                                                               \
     template<al::strong_number U>                                             \
         requires(not std::is_base_of_v<SelfType, U>                           \
-            and not al::can_narrow<value_t, typename U::value_t>)             \
+            and not al::might_narrow<value_t, typename U::value_t>)           \
     force_inline constexpr                                                    \
     auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
     {                                                                         \
@@ -782,7 +783,7 @@ struct SelfType : al::number_base<ValueType, SelfType> {                      \
         return *this;                                                         \
     }                                                                         \
                                                                               \
-    template<al::weak_number U> requires(not al::can_narrow<value_t, U>)      \
+    template<al::weak_number U> requires(not al::might_narrow<value_t, U>)    \
     force_inline constexpr                                                    \
     auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
     {                                                                         \

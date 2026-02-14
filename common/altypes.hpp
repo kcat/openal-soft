@@ -233,9 +233,8 @@ public:
     /* Implicit constructor from narrowing weak number types. Required to be
      * compile-time so the provided value can be checked for narrowing.
      */
-    template<weak_number U>
-        requires(can_narrow<ValueType, U> and compatible_constant<U, ValueType>) consteval
-    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<ValueType>(value)} { }
+    constexpr explicit(false)
+    number_base(ConstantNum<ValueType> const &value) noexcept : c_val{value.c_val} { }
 
     template<weak_number U> force_inline static constexpr
     auto make_from(U const &value) noexcept(not can_narrow<ValueType, U>) -> SelfType
@@ -780,6 +779,22 @@ struct SelfType : al::number_base<ValueType, SelfType> {                      \
     auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
     {                                                                         \
         c_val = static_cast<value_t>(rhs.c_val);                              \
+        return *this;                                                         \
+    }                                                                         \
+                                                                              \
+    template<al::weak_number U> requires(not al::can_narrow<value_t, U>)      \
+    force_inline constexpr                                                    \
+    auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
+    {                                                                         \
+        c_val = static_cast<value_t>(rhs);                                    \
+        return *this;                                                         \
+    }                                                                         \
+                                                                              \
+    force_inline constexpr                                                    \
+    auto operator=(al::ConstantNum<ValueType> const &rhs) & noexcept          \
+        LIFETIMEBOUND -> SelfType&                                            \
+    {                                                                         \
+        c_val = rhs.c_val;                                                    \
         return *this;                                                         \
     }                                                                         \
 };

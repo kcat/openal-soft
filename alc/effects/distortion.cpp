@@ -50,7 +50,7 @@ constexpr auto NumLines = 4_uz;
  * array of discrete signals.
  */
 alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> B2A{{
-    /*   W      Y      Z      X  */
+    /*   W       Y       Z       X   */
     {{ 0.25f,  0.25f,  0.25f,  0.25f }}, /* A0 */
     {{ 0.25f, -0.25f, -0.25f,  0.25f }}, /* A1 */
     {{ 0.25f,  0.25f, -0.25f, -0.25f }}, /* A2 */

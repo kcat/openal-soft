@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <limits>
 #include <numbers>
+#include <ranges>
 #include <span>
 #include <variant>
 #include <vector>
@@ -49,15 +50,33 @@ struct BufferStorage;
 
 namespace {
 
-constexpr auto inv_sqrt2 = static_cast<float>(1.0 / std::numbers::sqrt2);
-constexpr auto lcoeffs_pw = CalcDirectionCoeffs(std::array{-1.0f, 0.0f, 0.0f});
-constexpr auto rcoeffs_pw = CalcDirectionCoeffs(std::array{ 1.0f, 0.0f, 0.0f});
-constexpr auto lcoeffs_nrml = CalcDirectionCoeffs(std::array{-inv_sqrt2, 0.0f, inv_sqrt2});
-constexpr auto rcoeffs_nrml = CalcDirectionCoeffs(std::array{ inv_sqrt2, 0.0f, inv_sqrt2});
+constexpr auto NumLines = 4_uz;
+
+/* The B-Format to A-Format conversion matrix. This produces a tetrahedral
+ * array of discrete signals. Note, A0 and A1 are left-side responses while A2
+ * and A3 are right-side responses, which is important to distinguish for the
+ * Phase property affecting the right output separately from the left output.
+ */
+alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> B2A{{
+    /*   W       Y       Z       X   */
+    {{ 0.25f,  0.25f,  0.25f,  0.25f }}, /* A0 */
+    {{ 0.25f,  0.25f, -0.25f, -0.25f }}, /* A1 */
+    {{ 0.25f, -0.25f, -0.25f,  0.25f }}, /* A2 */
+    {{ 0.25f, -0.25f,  0.25f, -0.25f }}  /* A3 */
+}};
+
+/* Converts A-Format to B-Format for output. */
+alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> A2B{{
+    /*  A0     A1     A2     A3  */
+    {{ 1.0f,  1.0f,  1.0f,  1.0f }}, /* W */
+    {{ 1.0f,  1.0f, -1.0f, -1.0f }}, /* Y */
+    {{ 1.0f, -1.0f, -1.0f,  1.0f }}, /* Z */
+    {{ 1.0f, -1.0f,  1.0f, -1.0f }}  /* X */
+}};
 
 
 struct ChorusState final : public EffectState {
-    std::vector<float> mDelayBuffer;
+    std::vector<float> mDelayBuffers;
     unsigned mOffset{0};
 
     unsigned mLfoOffset{0};
@@ -68,21 +87,39 @@ struct ChorusState final : public EffectState {
     /* Calculated delays to apply to the left and right outputs. */
     std::array<std::array<unsigned, BufferLineSize>, 2> mModDelays{};
 
-    /* Temp storage for the modulated left and right outputs. */
-    alignas(16) std::array<FloatBufferLine,2> mBuffer{};
-
-    /* Gains for left and right outputs. */
-    struct OutGains {
-        std::array<float,MaxAmbiChannels> Current{};
-        std::array<float,MaxAmbiChannels> Target{};
-    };
-    std::array<OutGains,2> mGains;
+    /* Temp storage for the A-Format-converted input and the B-Format output. */
+    alignas(16) std::array<FloatBufferLine, NumLines> mABuffer{};
+    alignas(16) FloatBufferLine mTempLine{};
+    alignas(16) std::array<FloatBufferLine, NumLines> mBBuffer{};
 
     /* effect parameters */
     ChorusWaveform mWaveform{};
     int mDelay{0};
     float mDepth{0.0f};
     float mFeedback{0.0f};
+
+
+    struct OutParams {
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
+
+        /* Current and target gain for this channel. */
+        float mCurrentGain{};
+        float mTargetGain{};
+    };
+    std::array<OutParams, NumLines> mChans;
+
+    /* When the device is mixing to higher-order B-Format, the output needs
+     * high-frequency adjustment and (potentially) mixing into higher order
+     * channels to compensate.
+     */
+    struct UpsampleParams {
+        float mHfScale{1.0f};
+        BandSplitter mSplitter;
+        std::array<float, MaxAmbiChannels> mCurrentGains{};
+        std::array<float, MaxAmbiChannels> mTargetGains{};
+    };
+    std::optional<std::array<UpsampleParams, NumLines>> mUpsampler;
+
 
     void calcTriangleDelays(const size_t todo);
     void calcSinusoidDelays(const size_t todo);
@@ -95,16 +132,37 @@ struct ChorusState final : public EffectState {
 };
 
 
-void ChorusState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
+void ChorusState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
 {
     static constexpr auto MaxDelay = std::max(ChorusMaxDelay, FlangerMaxDelay);
-    const auto frequency = static_cast<float>(Device->mSampleRate);
-    const auto maxlen = usize{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)};
-    if(maxlen != mDelayBuffer.size())
-        decltype(mDelayBuffer)(maxlen).swap(mDelayBuffer);
+    const auto frequency = static_cast<float>(device->mSampleRate);
 
-    std::ranges::fill(mDelayBuffer, 0.0f);
-    mGains.fill(OutGains{});
+    const auto maxlen = usize{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)} * NumLines;
+    if(maxlen != mDelayBuffers.size())
+        decltype(mDelayBuffers)(maxlen).swap(mDelayBuffers);
+    std::ranges::fill(mDelayBuffers, 0.0f);
+
+    mChans.fill(OutParams{});
+    mUpsampler.reset();
+
+    if(device->mAmbiOrder > 1)
+    {
+        auto const hfscales = AmbiScale::GetHFOrderScales(1, device->mAmbiOrder,
+            device->m2DMixing);
+        auto idx = 0_uz;
+
+        auto const splitter = BandSplitter{device->mXOverFreq
+            / static_cast<float>(device->mSampleRate)};
+
+        auto &upsampler = mUpsampler.emplace();
+        for(auto &chandata : upsampler)
+        {
+            chandata.mHfScale = hfscales[idx];
+            idx = 1;
+
+            chandata.mSplitter = splitter;
+        }
+    }
 }
 
 void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
@@ -127,19 +185,6 @@ void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
         static_cast<float>(mDelay - mindelay));
 
     mFeedback = props.Feedback;
-
-    /* Gains for left and right sides */
-    const auto ispairwise = device->mRenderMode == RenderMode::Pairwise;
-    const auto lcoeffs = (!ispairwise) ? std::span{lcoeffs_nrml} : std::span{lcoeffs_pw};
-    const auto rcoeffs = (!ispairwise) ? std::span{rcoeffs_nrml} : std::span{rcoeffs_pw};
-
-    /* Attenuate the outputs by -3dB, since we duplicate a single mono input to
-     * separate left/right outputs.
-     */
-    const auto gain = slot->Gain * (1.0f/std::numbers::sqrt2_v<float>);
-    mOutTarget = target.Main->Buffer;
-    ComputePanGains(target.Main, lcoeffs, gain, mGains[0].Target);
-    ComputePanGains(target.Main, rcoeffs, gain, mGains[1].Target);
 
     if(!(props.Rate > 0.0f))
     {
@@ -173,6 +218,30 @@ void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
         auto phase = props.Phase;
         if(phase < 0) phase += 360;
         mLfoDisp = (mLfoRange*static_cast<unsigned>(phase) + 180) / 360;
+    }
+
+    mOutTarget = target.Main->Buffer;
+    target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
+        [this](usize const idx, u8 const outchan, float const outgain)
+    {
+        if(idx < mChans.size())
+        {
+            mChans[idx].mTargetChannel = outchan.c_val;
+            mChans[idx].mTargetGain = outgain;
+        }
+    });
+
+    if(mUpsampler.has_value())
+    {
+        auto &upsampler = mUpsampler.value();
+        const auto upmatrix = std::span{AmbiScale::FirstOrderUp};
+
+        auto const outgain = slot->Gain;
+        for(auto const idx : std::views::iota(0_uz, mChans.size()))
+        {
+            if(mChans[idx].mTargetChannel != InvalidChannelIndex)
+                ComputePanGains(target.Main, upmatrix[idx], outgain, upsampler[idx].mTargetGains);
+        }
     }
 }
 
@@ -254,53 +323,101 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
 void ChorusState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
 {
-    const auto delaybuf = std::span{mDelayBuffer};
-    const auto bufmask = delaybuf.size()-1;
-    const auto feedback = mFeedback;
-    const auto avgdelay = (static_cast<unsigned>(mDelay) + MixerFracHalf) >> MixerFracBits;
-    auto offset = mOffset;
+    /* Convert B-Format to A-Format for processing. */
+    const auto numInput = std::min(samplesIn.size(), NumLines);
+    for(const auto c : std::views::iota(0_uz, NumLines))
+    {
+        const auto tmpspan = std::span{mABuffer[c]}.first(samplesToDo);
+        std::ranges::fill(tmpspan, 0.0f);
+        for(const auto i : std::views::iota(0_uz, numInput))
+        {
+            std::ranges::transform(tmpspan, samplesIn[i], tmpspan.begin(),
+                [gain=B2A[c][i]](float const sample, float const in) noexcept -> float
+            { return sample + in*gain; });
+        }
+    }
+
+    /* Clear the B-Format buffer that accumulates the result. */
+    for(auto &outbuf : mBBuffer)
+        std::ranges::fill(outbuf | std::views::take(samplesToDo), 0.0f);
 
     if(mWaveform == ChorusWaveform::Sinusoid)
         calcSinusoidDelays(samplesToDo);
     else /*if(mWaveform == ChorusWaveform::Triangle)*/
         calcTriangleDelays(samplesToDo);
 
-    const auto ldelays = std::span{mModDelays[0]};
-    const auto rdelays = std::span{mModDelays[1]};
-    const auto lbuffer = std::span{mBuffer[0]};
-    const auto rbuffer = std::span{mBuffer[1]};
-    for(size_t i{0u};i < samplesToDo;++i)
+    const auto bufmask = mDelayBuffers.size()/NumLines - 1;
+    const auto feedback = mFeedback;
+    const auto avgdelay = (static_cast<unsigned>(mDelay) + MixerFracHalf) >> MixerFracBits;
+
+    for(const auto c : std::views::iota(0_uz, NumLines))
     {
-        /* Feed the buffer's input first (necessary for delays < 1). */
-        delaybuf[offset&bufmask] = samplesIn[0][i];
+        auto const moddelays = (c < NumLines/2) ? std::span{mModDelays[0]}
+            : std::span{mModDelays[1]};
 
-        /* Tap for the left output. */
-        auto delay = offset - (ldelays[i] >> gCubicTable.sTableBits);
-        auto phase = ldelays[i] & gCubicTable.sTableMask;
-        lbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
-            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
-            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
-            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
+        auto const delaybuf = std::span{mDelayBuffers}.subspan((bufmask+1)*c, bufmask+1);
+        auto offset = mOffset;
+        std::ranges::transform(mABuffer[c] | std::views::take(samplesToDo), moddelays,
+            mTempLine.begin(),
+            [bufmask, feedback, avgdelay, delaybuf, &offset](float const input,
+                unsigned const moddelay)
+        {
+            /* Feed the buffer's input first (necessary for delays < 1). */
+            delaybuf[offset&bufmask] = input;
 
-        /* Tap for the right output. */
-        delay = offset - (rdelays[i] >> gCubicTable.sTableBits);
-        phase = rdelays[i] & gCubicTable.sTableMask;
-        rbuffer[i] = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
-            delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
-            delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
-            delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
+            /* Tap for this output. */
+            auto const delay = offset - (moddelay >> gCubicTable.sTableBits);
+            auto const phase = moddelay & gCubicTable.sTableMask;
+            auto const sample = delaybuf[(delay+1) & bufmask]*gCubicTable.getCoeff0(phase) +
+                delaybuf[(delay  ) & bufmask]*gCubicTable.getCoeff1(phase) +
+                delaybuf[(delay-1) & bufmask]*gCubicTable.getCoeff2(phase) +
+                delaybuf[(delay-2) & bufmask]*gCubicTable.getCoeff3(phase);
 
-        /* Accumulate feedback from the average delay of the taps. */
-        delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
-        ++offset;
+            /* Accumulate feedback from the average delay of the taps. */
+            delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
+            ++offset;
+
+            return sample;
+        });
+
+        for(const auto i : std::views::iota(0_uz, NumLines))
+        {
+            const auto tmpspan = std::span{mBBuffer[i]}.first(samplesToDo);
+            std::ranges::transform(tmpspan, mTempLine, tmpspan.begin(),
+                [gain=A2B[i][c]](float const sample, float const in) noexcept -> float
+            { return sample + in*gain; });
+        }
     }
+    mOffset += samplesToDo;
 
-    MixSamples(lbuffer.first(samplesToDo), samplesOut, mGains[0].Current, mGains[0].Target,
-        samplesToDo, 0);
-    MixSamples(rbuffer.first(samplesToDo), samplesOut, mGains[1].Current, mGains[1].Target,
-        samplesToDo, 0);
-
-    mOffset = offset;
+    if(mUpsampler.has_value())
+    {
+        auto &upsampler = mUpsampler.value();
+        auto chandata = mChans.begin();
+        for(const auto c : std::views::iota(0_uz, NumLines))
+        {
+            auto &upchan = upsampler[c];
+            if(chandata->mTargetChannel != InvalidChannelIndex)
+            {
+                auto src = std::span{mBBuffer[c]}.first(samplesToDo);
+                upchan.mSplitter.processHfScale(src, src, upchan.mHfScale);
+                MixSamples(src, samplesOut, upchan.mCurrentGains, upchan.mTargetGains, samplesToDo,
+                    0);
+            }
+            ++chandata;
+        }
+    }
+    else
+    {
+        auto chandata = mChans.begin();
+        for(const auto c : std::views::iota(0_uz, NumLines))
+        {
+            if(auto const outidx = chandata->mTargetChannel; outidx != InvalidChannelIndex)
+                MixSamples(std::span{mBBuffer[c]}.first(samplesToDo), samplesOut[outidx],
+                    chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
+            ++chandata;
+        }
+    }
 }
 
 

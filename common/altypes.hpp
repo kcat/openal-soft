@@ -128,8 +128,8 @@ concept compatible_constant = (std::integral<U> and std::integral<T>)
 
 /* This ConstantNum class is a wrapper to handle various operations with
  * numeric constants (literals, constexpr values). It can be initialized with
- * weak or strong numeric constant types, and will fail to compile if the
- * provided value doesn't fit the type it's paired against.
+ * weak numeric constant types, and will fail to compile if the provided value
+ * doesn't fit the type it's paired against.
  */
 template<weak_number T>
 struct ConstantNum {

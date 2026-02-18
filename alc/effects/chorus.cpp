@@ -53,25 +53,26 @@ namespace {
 constexpr auto NumLines = 4_uz;
 
 /* The B-Format to A-Format conversion matrix. This produces a tetrahedral
- * array of discrete signals. Note, A0 and A1 are left-side responses while A2
- * and A3 are right-side responses, which is important to distinguish for the
- * Phase property affecting the right output separately from the left output.
+ * array of discrete signals. Note that A0 and A1 are left responses while A2
+ * and A3 are right responses.
  */
+constexpr auto DecodeCoeff = static_cast<float>(0.25 / std::numbers::sqrt3);
 alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> B2A{{
-    /*   W       Y       Z       X   */
-    {{ 0.25f,  0.25f,  0.25f,  0.25f }}, /* A0 */
-    {{ 0.25f,  0.25f, -0.25f, -0.25f }}, /* A1 */
-    {{ 0.25f, -0.25f, -0.25f,  0.25f }}, /* A2 */
-    {{ 0.25f, -0.25f,  0.25f, -0.25f }}  /* A3 */
+    /*   W          Y             Z             X      */
+    {{ 0.25f,  DecodeCoeff,  DecodeCoeff,  DecodeCoeff }}, /* A0 */
+    {{ 0.25f,  DecodeCoeff, -DecodeCoeff, -DecodeCoeff }}, /* A1 */
+    {{ 0.25f, -DecodeCoeff, -DecodeCoeff,  DecodeCoeff }}, /* A2 */
+    {{ 0.25f, -DecodeCoeff,  DecodeCoeff, -DecodeCoeff }}  /* A3 */
 }};
 
 /* Converts A-Format to B-Format for output. */
+constexpr auto EncodeCoeff = static_cast<float>(0.5 * std::numbers::sqrt3);
 alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> A2B{{
-    /*  A0     A1     A2     A3  */
-    {{ 1.0f,  1.0f,  1.0f,  1.0f }}, /* W */
-    {{ 1.0f,  1.0f, -1.0f, -1.0f }}, /* Y */
-    {{ 1.0f, -1.0f, -1.0f,  1.0f }}, /* Z */
-    {{ 1.0f, -1.0f,  1.0f, -1.0f }}  /* X */
+    /*     A0            A1            A2            A3      */
+    {{        1.0f,         1.0f,         1.0f,         1.0f }}, /* W */
+    {{ EncodeCoeff,  EncodeCoeff, -EncodeCoeff, -EncodeCoeff }}, /* Y */
+    {{ EncodeCoeff, -EncodeCoeff, -EncodeCoeff,  EncodeCoeff }}, /* Z */
+    {{ EncodeCoeff, -EncodeCoeff,  EncodeCoeff, -EncodeCoeff }}  /* X */
 }};
 
 

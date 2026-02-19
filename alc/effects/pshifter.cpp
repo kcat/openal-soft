@@ -341,9 +341,9 @@ void PshifterState::process(const size_t samplesToDo,
             {
                 const auto j = (k*mPitchShiftI + MixerFracHalf) >> MixerFracBits;
 
-                /* If more than two bins end up together, use the target
-                 * frequency bin for the one with the dominant magnitude. There
-                 * might be a better way to handle this, but it's better than
+                /* If two bins end up together, use the target frequency bin
+                 * for the one with the dominant magnitude. There might be a
+                 * better way to handle this, but it's better than
                  * last-index-wins.
                  */
                 if(mAnalysisBuffer[k].Magnitude > mSynthesisBuffer[j].Magnitude)

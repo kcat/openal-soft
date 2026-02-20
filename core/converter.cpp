@@ -161,7 +161,7 @@ void Multi2Mono(unsigned chanmask, usize const step, std::span<float> const dst,
         auto ssrc = srcspan.begin();
         std::advance(ssrc, c);
         dst.front() += LoadSample<T>(*ssrc);
-        std::ranges::for_each(dst, [&ssrc,step](float &sample)
+        std::ranges::for_each(dst | std::views::drop(1), [&ssrc,step](float &sample)
         {
             std::advance(ssrc, step);
             sample += LoadSample<T>(*ssrc);

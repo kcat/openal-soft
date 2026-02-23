@@ -108,45 +108,6 @@ using ALCdevicePtr = std::unique_ptr<ALCdevice, decltype([](ALCdevice *device)
 using ALCcontextPtr = std::unique_ptr<ALCcontext, decltype([](ALCcontext *context)
     { alcDestroyContext(context); })>;
 
-/* Filter object functions */
-auto alGenFilters = LPALGENFILTERS{};
-auto alDeleteFilters = LPALDELETEFILTERS{};
-auto alIsFilter = LPALISFILTER{};
-auto alFilteri = LPALFILTERI{};
-auto alFilteriv = LPALFILTERIV{};
-auto alFilterf = LPALFILTERF{};
-auto alFilterfv = LPALFILTERFV{};
-auto alGetFilteri = LPALGETFILTERI{};
-auto alGetFilteriv = LPALGETFILTERIV{};
-auto alGetFilterf = LPALGETFILTERF{};
-auto alGetFilterfv = LPALGETFILTERFV{};
-
-/* Effect object functions */
-auto alGenEffects = LPALGENEFFECTS{};
-auto alDeleteEffects = LPALDELETEEFFECTS{};
-auto alIsEffect = LPALISEFFECT{};
-auto alEffecti = LPALEFFECTI{};
-auto alEffectiv = LPALEFFECTIV{};
-auto alEffectf = LPALEFFECTF{};
-auto alEffectfv = LPALEFFECTFV{};
-auto alGetEffecti = LPALGETEFFECTI{};
-auto alGetEffectiv = LPALGETEFFECTIV{};
-auto alGetEffectf = LPALGETEFFECTF{};
-auto alGetEffectfv = LPALGETEFFECTFV{};
-
-/* Auxiliary Effect Slot object functions */
-auto alGenAuxiliaryEffectSlots = LPALGENAUXILIARYEFFECTSLOTS{};
-auto alDeleteAuxiliaryEffectSlots = LPALDELETEAUXILIARYEFFECTSLOTS{};
-auto alIsAuxiliaryEffectSlot = LPALISAUXILIARYEFFECTSLOT{};
-auto alAuxiliaryEffectSloti = LPALAUXILIARYEFFECTSLOTI{};
-auto alAuxiliaryEffectSlotiv = LPALAUXILIARYEFFECTSLOTIV{};
-auto alAuxiliaryEffectSlotf = LPALAUXILIARYEFFECTSLOTF{};
-auto alAuxiliaryEffectSlotfv = LPALAUXILIARYEFFECTSLOTFV{};
-auto alGetAuxiliaryEffectSloti = LPALGETAUXILIARYEFFECTSLOTI{};
-auto alGetAuxiliaryEffectSlotiv = LPALGETAUXILIARYEFFECTSLOTIV{};
-auto alGetAuxiliaryEffectSlotf = LPALGETAUXILIARYEFFECTSLOTF{};
-auto alGetAuxiliaryEffectSlotfv = LPALGETAUXILIARYEFFECTSLOTFV{};
-
 auto alcRenderSamplesSOFT = LPALCRENDERSAMPLESSOFT{};
 
 
@@ -1253,6 +1214,7 @@ auto main(std::span<std::string_view> args) -> int
 
     auto almgr = InitAL(args);
     almgr.printName();
+    LoadALExtensions();
 
     if(!args.empty() && args[0] == "-render")
     {
@@ -1398,6 +1360,7 @@ auto main(std::span<std::string_view> args) -> int
         almgr.close();
         almgr.mDevice = loopbackDev.release();
         almgr.mContext = loopbackCtx.release();
+        LoadALExtensions();
     }
 
     /* Automate effect cleanup at end of scope (before almgr destructs). */
@@ -1414,48 +1377,6 @@ auto main(std::span<std::string_view> args) -> int
     if(alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX")
         && alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_DEDICATED"))
     {
-        static constexpr auto load_proc = []<typename T>(T &func, gsl::czstring const funcname)
-        {
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<T>(alGetProcAddress(funcname));
-            if(!func) fmt::println(std::cerr, "Failed to find function '{}'", funcname);
-        };
-#define LOAD_PROC(x) load_proc(x, #x)
-        LOAD_PROC(alGenFilters);
-        LOAD_PROC(alDeleteFilters);
-        LOAD_PROC(alIsFilter);
-        LOAD_PROC(alFilterf);
-        LOAD_PROC(alFilterfv);
-        LOAD_PROC(alFilteri);
-        LOAD_PROC(alFilteriv);
-        LOAD_PROC(alGetFilterf);
-        LOAD_PROC(alGetFilterfv);
-        LOAD_PROC(alGetFilteri);
-        LOAD_PROC(alGetFilteriv);
-        LOAD_PROC(alGenEffects);
-        LOAD_PROC(alDeleteEffects);
-        LOAD_PROC(alIsEffect);
-        LOAD_PROC(alEffectf);
-        LOAD_PROC(alEffectfv);
-        LOAD_PROC(alEffecti);
-        LOAD_PROC(alEffectiv);
-        LOAD_PROC(alGetEffectf);
-        LOAD_PROC(alGetEffectfv);
-        LOAD_PROC(alGetEffecti);
-        LOAD_PROC(alGetEffectiv);
-        LOAD_PROC(alGenAuxiliaryEffectSlots);
-        LOAD_PROC(alDeleteAuxiliaryEffectSlots);
-        LOAD_PROC(alIsAuxiliaryEffectSlot);
-        LOAD_PROC(alAuxiliaryEffectSlotf);
-        LOAD_PROC(alAuxiliaryEffectSlotfv);
-        LOAD_PROC(alAuxiliaryEffectSloti);
-        LOAD_PROC(alAuxiliaryEffectSlotiv);
-        LOAD_PROC(alGetAuxiliaryEffectSlotf);
-        LOAD_PROC(alGetAuxiliaryEffectSlotfv);
-        LOAD_PROC(alGetAuxiliaryEffectSloti);
-        LOAD_PROC(alGetAuxiliaryEffectSlotiv);
-#undef LOAD_PROC
-
         alGenFilters(1, &MuteFilterID);
         alFilteri(MuteFilterID, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
         alFilterf(MuteFilterID, AL_LOWPASS_GAIN, 0.0f);

@@ -16,13 +16,90 @@
 #if HAVE_CXXMODULES
 import gsl;
 import openal.alc;
+import openal.ext;
 
 #else
 
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "gsl/gsl"
 #endif
+
+extern "C" {
+
+/* ALC_EXT_EFX */
+extern LPALGENFILTERS alGenFilters;
+extern LPALDELETEFILTERS alDeleteFilters;
+extern LPALISFILTER alIsFilter;
+extern LPALFILTERI alFilteri;
+extern LPALFILTERIV alFilteriv;
+extern LPALFILTERF alFilterf;
+extern LPALFILTERFV alFilterfv;
+extern LPALGETFILTERI alGetFilteri;
+extern LPALGETFILTERIV alGetFilteriv;
+extern LPALGETFILTERF alGetFilterf;
+extern LPALGETFILTERFV alGetFilterfv;
+extern LPALGENEFFECTS alGenEffects;
+extern LPALDELETEEFFECTS alDeleteEffects;
+extern LPALISEFFECT alIsEffect;
+extern LPALEFFECTI alEffecti;
+extern LPALEFFECTIV alEffectiv;
+extern LPALEFFECTF alEffectf;
+extern LPALEFFECTFV alEffectfv;
+extern LPALGETEFFECTI alGetEffecti;
+extern LPALGETEFFECTIV alGetEffectiv;
+extern LPALGETEFFECTF alGetEffectf;
+extern LPALGETEFFECTFV alGetEffectfv;
+extern LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
+extern LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
+extern LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
+extern LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
+extern LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
+extern LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
+extern LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
+extern LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
+extern LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
+extern LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
+extern LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
+
+/* AL_EXT_debug */
+extern LPALDEBUGMESSAGECALLBACKEXT alDebugMessageCallbackEXT;
+extern LPALDEBUGMESSAGEINSERTEXT alDebugMessageInsertEXT;
+extern LPALDEBUGMESSAGECONTROLEXT alDebugMessageControlEXT;
+extern LPALPUSHDEBUGGROUPEXT alPushDebugGroupEXT;
+extern LPALPOPDEBUGGROUPEXT alPopDebugGroupEXT;
+extern LPALGETDEBUGMESSAGELOGEXT alGetDebugMessageLogEXT;
+extern LPALOBJECTLABELEXT alObjectLabelEXT;
+extern LPALGETOBJECTLABELEXT alGetObjectLabelEXT;
+extern LPALGETPOINTEREXT alGetPointerEXT;
+extern LPALGETPOINTERVEXT alGetPointervEXT;
+
+/* AL_SOFT_source_latency */
+extern LPALSOURCEDSOFT alSourcedSOFT;
+extern LPALSOURCE3DSOFT alSource3dSOFT;
+extern LPALSOURCEDVSOFT alSourcedvSOFT;
+extern LPALGETSOURCEDSOFT alGetSourcedSOFT;
+extern LPALGETSOURCE3DSOFT alGetSource3dSOFT;
+extern LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
+extern LPALSOURCEI64SOFT alSourcei64SOFT;
+extern LPALSOURCE3I64SOFT alSource3i64SOFT;
+extern LPALSOURCEI64VSOFT alSourcei64vSOFT;
+extern LPALGETSOURCEI64SOFT alGetSourcei64SOFT;
+extern LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
+extern LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
+
+/* AL_SOFT_events */
+extern LPALEVENTCONTROLSOFT alEventControlSOFT;
+extern LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
+
+/* AL_SOFT_callback_buffer */
+extern LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
+
+/* Load AL extension functions for the current context. */
+void LoadALExtensions();
+
+} /* extern "C" */
 
 
 [[nodiscard]]

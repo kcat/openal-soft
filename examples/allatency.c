@@ -40,19 +40,6 @@
 #include "win_main_utf8.h"
 
 
-static LPALSOURCEDSOFT alSourcedSOFT;
-static LPALSOURCE3DSOFT alSource3dSOFT;
-static LPALSOURCEDVSOFT alSourcedvSOFT;
-static LPALGETSOURCEDSOFT alGetSourcedSOFT;
-static LPALGETSOURCE3DSOFT alGetSource3dSOFT;
-static LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
-static LPALSOURCEI64SOFT alSourcei64SOFT;
-static LPALSOURCE3I64SOFT alSource3i64SOFT;
-static LPALSOURCEI64VSOFT alSourcei64vSOFT;
-static LPALGETSOURCEI64SOFT alGetSourcei64SOFT;
-static LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
-static LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
-
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
  * returns the new buffer ID.
  */
@@ -167,21 +154,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
-    LOAD_PROC(LPALSOURCEDSOFT, alSourcedSOFT);
-    LOAD_PROC(LPALSOURCE3DSOFT, alSource3dSOFT);
-    LOAD_PROC(LPALSOURCEDVSOFT, alSourcedvSOFT);
-    LOAD_PROC(LPALGETSOURCEDSOFT, alGetSourcedSOFT);
-    LOAD_PROC(LPALGETSOURCE3DSOFT, alGetSource3dSOFT);
-    LOAD_PROC(LPALGETSOURCEDVSOFT, alGetSourcedvSOFT);
-    LOAD_PROC(LPALSOURCEI64SOFT, alSourcei64SOFT);
-    LOAD_PROC(LPALSOURCE3I64SOFT, alSource3i64SOFT);
-    LOAD_PROC(LPALSOURCEI64VSOFT, alSourcei64vSOFT);
-    LOAD_PROC(LPALGETSOURCEI64SOFT, alGetSourcei64SOFT);
-    LOAD_PROC(LPALGETSOURCE3I64SOFT, alGetSource3i64SOFT);
-    LOAD_PROC(LPALGETSOURCEI64VSOFT, alGetSourcei64vSOFT);
-#undef LOAD_PROC
+    LoadALExtensions();
 
     /* Load the sound into a buffer. */
     buffer = LoadSound(argv[0]);

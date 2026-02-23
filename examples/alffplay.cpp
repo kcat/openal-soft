@@ -124,11 +124,6 @@ auto EnableWideStereo = false;
 auto EnableUhj = false;
 auto EnableSuperStereo = false;
 auto DisableVideo = false;
-auto alGetSourcei64vSOFT = LPALGETSOURCEI64VSOFT{};
-auto alEventControlSOFT = LPALEVENTCONTROLSOFT{};
-auto alEventCallbackSOFT = LPALEVENTCALLBACKSOFT{};
-
-auto alBufferCallbackSOFT = LPALBUFFERCALLBACKSOFT{};
 
 constexpr auto AVNoSyncThreshold = seconds{10};
 
@@ -2168,28 +2163,14 @@ auto main(std::span<std::string_view> args) -> int
     auto almgr = InitAL(args);
     almgr.printName();
 
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
+    LoadALExtensions();
+
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
-    {
         fmt::println("Found AL_SOFT_source_latency");
-        alGetSourcei64vSOFT = reinterpret_cast<LPALGETSOURCEI64VSOFT>(
-            alGetProcAddress("alGetSourcei64vSOFT"));
-    }
     if(alIsExtensionPresent("AL_SOFT_events"))
-    {
         fmt::println("Found AL_SOFT_events");
-        alEventControlSOFT = reinterpret_cast<LPALEVENTCONTROLSOFT>(
-            alGetProcAddress("alEventControlSOFT"));
-        alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
-            alGetProcAddress("alEventCallbackSOFT"));
-    }
     if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
-    {
         fmt::println("Found AL_SOFT_callback_buffer");
-        alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
-            alGetProcAddress("alBufferCallbackSOFT"));
-    }
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
     auto curarg = args.begin();
     for(auto args_end=args.end();curarg != args_end;++curarg)

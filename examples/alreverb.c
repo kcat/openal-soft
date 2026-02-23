@@ -43,33 +43,6 @@
 #include "win_main_utf8.h"
 
 
-/* Effect object functions */
-static LPALGENEFFECTS alGenEffects;
-static LPALDELETEEFFECTS alDeleteEffects;
-static LPALISEFFECT alIsEffect;
-static LPALEFFECTI alEffecti;
-static LPALEFFECTIV alEffectiv;
-static LPALEFFECTF alEffectf;
-static LPALEFFECTFV alEffectfv;
-static LPALGETEFFECTI alGetEffecti;
-static LPALGETEFFECTIV alGetEffectiv;
-static LPALGETEFFECTF alGetEffectf;
-static LPALGETEFFECTFV alGetEffectfv;
-
-/* Auxiliary Effect Slot object functions */
-static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
-
-
 /* LoadEffect loads the given reverb properties into a new OpenAL effect
  * object, and returns the new effect ID. */
 static ALuint LoadEffect(const EFXEAXREVERBPROPERTIES *reverb)
@@ -265,33 +238,7 @@ int main(int argc, char **argv)
         CloseAL();
         return 1;
     }
-
-    /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
-    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
-    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
-    LOAD_PROC(LPALISEFFECT, alIsEffect);
-    LOAD_PROC(LPALEFFECTI, alEffecti);
-    LOAD_PROC(LPALEFFECTIV, alEffectiv);
-    LOAD_PROC(LPALEFFECTF, alEffectf);
-    LOAD_PROC(LPALEFFECTFV, alEffectfv);
-    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
-    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
-    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
-    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
-
-    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
-    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
-    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
-#undef LOAD_PROC
+    LoadALExtensions();
 
     /* Load the sound into a buffer. */
     buffer = LoadSound(argv[0]);

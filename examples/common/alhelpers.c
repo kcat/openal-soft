@@ -39,6 +39,239 @@
 #include "AL/alext.h"
 
 
+/* ALC_EXT_EFX */
+LPALGENFILTERS alGenFilters;
+LPALDELETEFILTERS alDeleteFilters;
+LPALISFILTER alIsFilter;
+LPALFILTERI alFilteri;
+LPALFILTERIV alFilteriv;
+LPALFILTERF alFilterf;
+LPALFILTERFV alFilterfv;
+LPALGETFILTERI alGetFilteri;
+LPALGETFILTERIV alGetFilteriv;
+LPALGETFILTERF alGetFilterf;
+LPALGETFILTERFV alGetFilterfv;
+LPALGENEFFECTS alGenEffects;
+LPALDELETEEFFECTS alDeleteEffects;
+LPALISEFFECT alIsEffect;
+LPALEFFECTI alEffecti;
+LPALEFFECTIV alEffectiv;
+LPALEFFECTF alEffectf;
+LPALEFFECTFV alEffectfv;
+LPALGETEFFECTI alGetEffecti;
+LPALGETEFFECTIV alGetEffectiv;
+LPALGETEFFECTF alGetEffectf;
+LPALGETEFFECTFV alGetEffectfv;
+LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
+LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
+LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
+LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
+LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
+LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
+LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
+LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
+LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
+LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
+LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
+
+/* AL_EXT_debug */
+LPALDEBUGMESSAGECALLBACKEXT alDebugMessageCallbackEXT;
+LPALDEBUGMESSAGEINSERTEXT alDebugMessageInsertEXT;
+LPALDEBUGMESSAGECONTROLEXT alDebugMessageControlEXT;
+LPALPUSHDEBUGGROUPEXT alPushDebugGroupEXT;
+LPALPOPDEBUGGROUPEXT alPopDebugGroupEXT;
+LPALGETDEBUGMESSAGELOGEXT alGetDebugMessageLogEXT;
+LPALOBJECTLABELEXT alObjectLabelEXT;
+LPALGETOBJECTLABELEXT alGetObjectLabelEXT;
+LPALGETPOINTEREXT alGetPointerEXT;
+LPALGETPOINTERVEXT alGetPointervEXT;
+
+/* AL_SOFT_source_latency */
+LPALSOURCEDSOFT alSourcedSOFT;
+LPALSOURCE3DSOFT alSource3dSOFT;
+LPALSOURCEDVSOFT alSourcedvSOFT;
+LPALGETSOURCEDSOFT alGetSourcedSOFT;
+LPALGETSOURCE3DSOFT alGetSource3dSOFT;
+LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
+LPALSOURCEI64SOFT alSourcei64SOFT;
+LPALSOURCE3I64SOFT alSource3i64SOFT;
+LPALSOURCEI64VSOFT alSourcei64vSOFT;
+LPALGETSOURCEI64SOFT alGetSourcei64SOFT;
+LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
+LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
+
+/* AL_SOFT_events */
+LPALEVENTCONTROLSOFT alEventControlSOFT;
+LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
+
+/* AL_SOFT_callback_buffer */
+LPALBUFFERCALLBACKSOFT alBufferCallbackSOFT;
+
+
+void LoadALExtensions(void)
+{
+    ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
+    if(!device)
+        return;
+
+#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
+    if(alcIsExtensionPresent(device, "ALC_EXT_EFX"))
+    {
+        LOAD_PROC(LPALGENFILTERS, alGenFilters);
+        LOAD_PROC(LPALDELETEFILTERS, alDeleteFilters);
+        LOAD_PROC(LPALISFILTER, alIsFilter);
+        LOAD_PROC(LPALFILTERI, alFilteri);
+        LOAD_PROC(LPALFILTERIV, alFilteriv);
+        LOAD_PROC(LPALFILTERF, alFilterf);
+        LOAD_PROC(LPALFILTERFV, alFilterfv);
+        LOAD_PROC(LPALGETFILTERI, alGetFilteri);
+        LOAD_PROC(LPALGETFILTERIV, alGetFilteriv);
+        LOAD_PROC(LPALGETFILTERF, alGetFilterf);
+        LOAD_PROC(LPALGETFILTERFV, alGetFilterfv);
+
+        LOAD_PROC(LPALGENEFFECTS, alGenEffects);
+        LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
+        LOAD_PROC(LPALISEFFECT, alIsEffect);
+        LOAD_PROC(LPALEFFECTI, alEffecti);
+        LOAD_PROC(LPALEFFECTIV, alEffectiv);
+        LOAD_PROC(LPALEFFECTF, alEffectf);
+        LOAD_PROC(LPALEFFECTFV, alEffectfv);
+        LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
+        LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
+        LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
+        LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
+
+        LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
+        LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
+        LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
+        LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
+        LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
+    }
+    else
+    {
+        alGenFilters = NULL;
+        alDeleteFilters = NULL;
+        alIsFilter = NULL;
+        alFilteri = NULL;
+        alFilteriv = NULL;
+        alFilterf = NULL;
+        alFilterfv = NULL;
+        alGetFilteri = NULL;
+        alGetFilteriv = NULL;
+        alGetFilterf = NULL;
+        alGetFilterfv = NULL;
+
+        alGenEffects = NULL;
+        alDeleteEffects = NULL;
+        alIsEffect = NULL;
+        alEffecti = NULL;
+        alEffectiv = NULL;
+        alEffectf = NULL;
+        alEffectfv = NULL;
+        alGetEffecti = NULL;
+        alGetEffectiv = NULL;
+        alGetEffectf = NULL;
+        alGetEffectfv = NULL;
+
+        alGenAuxiliaryEffectSlots = NULL;
+        alDeleteAuxiliaryEffectSlots = NULL;
+        alIsAuxiliaryEffectSlot = NULL;
+        alAuxiliaryEffectSloti = NULL;
+        alAuxiliaryEffectSlotiv = NULL;
+        alAuxiliaryEffectSlotf = NULL;
+        alAuxiliaryEffectSlotfv = NULL;
+        alGetAuxiliaryEffectSloti = NULL;
+        alGetAuxiliaryEffectSlotiv = NULL;
+        alGetAuxiliaryEffectSlotf = NULL;
+        alGetAuxiliaryEffectSlotfv = NULL;
+    }
+
+    if(alIsExtensionPresent("AL_EXT_debug"))
+    {
+        LOAD_PROC(LPALDEBUGMESSAGECALLBACKEXT, alDebugMessageCallbackEXT);
+        LOAD_PROC(LPALDEBUGMESSAGEINSERTEXT, alDebugMessageInsertEXT);
+        LOAD_PROC(LPALDEBUGMESSAGECONTROLEXT, alDebugMessageControlEXT);
+        LOAD_PROC(LPALPUSHDEBUGGROUPEXT, alPushDebugGroupEXT);
+        LOAD_PROC(LPALPOPDEBUGGROUPEXT, alPopDebugGroupEXT);
+        LOAD_PROC(LPALGETDEBUGMESSAGELOGEXT, alGetDebugMessageLogEXT);
+        LOAD_PROC(LPALOBJECTLABELEXT, alObjectLabelEXT);
+        LOAD_PROC(LPALGETOBJECTLABELEXT, alGetObjectLabelEXT);
+        LOAD_PROC(LPALGETPOINTEREXT, alGetPointerEXT);
+        LOAD_PROC(LPALGETPOINTERVEXT, alGetPointervEXT);
+    }
+    else
+    {
+        alDebugMessageCallbackEXT = NULL;
+        alDebugMessageInsertEXT = NULL;
+        alDebugMessageControlEXT = NULL;
+        alPushDebugGroupEXT = NULL;
+        alPopDebugGroupEXT = NULL;
+        alGetDebugMessageLogEXT = NULL;
+        alObjectLabelEXT = NULL;
+        alGetObjectLabelEXT = NULL;
+        alGetPointerEXT = NULL;
+        alGetPointervEXT = NULL;
+    }
+
+    if(alIsExtensionPresent("AL_SOFT_source_latency"))
+    {
+        LOAD_PROC(LPALSOURCEDSOFT, alSourcedSOFT);
+        LOAD_PROC(LPALSOURCE3DSOFT, alSource3dSOFT);
+        LOAD_PROC(LPALSOURCEDVSOFT, alSourcedvSOFT);
+        LOAD_PROC(LPALGETSOURCEDSOFT, alGetSourcedSOFT);
+        LOAD_PROC(LPALGETSOURCE3DSOFT, alGetSource3dSOFT);
+        LOAD_PROC(LPALGETSOURCEDVSOFT, alGetSourcedvSOFT);
+        LOAD_PROC(LPALSOURCEI64SOFT, alSourcei64SOFT);
+        LOAD_PROC(LPALSOURCE3I64SOFT, alSource3i64SOFT);
+        LOAD_PROC(LPALSOURCEI64VSOFT, alSourcei64vSOFT);
+        LOAD_PROC(LPALGETSOURCEI64SOFT, alGetSourcei64SOFT);
+        LOAD_PROC(LPALGETSOURCE3I64SOFT, alGetSource3i64SOFT);
+        LOAD_PROC(LPALGETSOURCEI64VSOFT, alGetSourcei64vSOFT);
+    }
+    else
+    {
+        alSourcedSOFT = NULL;
+        alSource3dSOFT = NULL;
+        alSourcedvSOFT = NULL;
+        alGetSourcedSOFT = NULL;
+        alGetSource3dSOFT = NULL;
+        alGetSourcedvSOFT = NULL;
+        alSourcei64SOFT = NULL;
+        alSource3i64SOFT = NULL;
+        alSourcei64vSOFT = NULL;
+        alGetSourcei64SOFT = NULL;
+        alGetSource3i64SOFT = NULL;
+        alGetSourcei64vSOFT = NULL;
+    }
+
+    if(alIsExtensionPresent("AL_SOFT_events"))
+    {
+        LOAD_PROC(LPALEVENTCONTROLSOFT, alEventControlSOFT);
+        LOAD_PROC(LPALEVENTCALLBACKSOFT, alEventCallbackSOFT);
+    }
+    else
+    {
+        alEventControlSOFT = NULL;
+        alEventCallbackSOFT = NULL;
+    }
+
+    if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
+    {
+        LOAD_PROC(LPALBUFFERCALLBACKSOFT, alBufferCallbackSOFT);
+    }
+    else
+    {
+        alBufferCallbackSOFT = NULL;
+    }
+#undef LOAD_PROC
+}
+
 /* InitAL opens a device and sets up a context using default attributes, making
  * the program ready to call OpenAL functions. */
 int InitAL(char ***argv, int *argc)

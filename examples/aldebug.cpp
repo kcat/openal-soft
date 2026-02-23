@@ -42,6 +42,7 @@
 #include "fmt/ostream.h"
 #include "fmt/std.h"
 
+#include "common/alhelpers.h"
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
@@ -110,17 +111,6 @@ constexpr auto GetDebugSeverityName(ALenum severity) noexcept -> std::string_vie
     return "<invalid severity>"sv;
 }
 
-auto alDebugMessageCallbackEXT = LPALDEBUGMESSAGECALLBACKEXT{};
-auto alDebugMessageInsertEXT = LPALDEBUGMESSAGEINSERTEXT{};
-auto alDebugMessageControlEXT = LPALDEBUGMESSAGECONTROLEXT{};
-auto alPushDebugGroupEXT = LPALPUSHDEBUGGROUPEXT{};
-auto alPopDebugGroupEXT = LPALPOPDEBUGGROUPEXT{};
-auto alGetDebugMessageLogEXT = LPALGETDEBUGMESSAGELOGEXT{};
-auto alObjectLabelEXT = LPALOBJECTLABELEXT{};
-auto alGetObjectLabelEXT = LPALGETOBJECTLABELEXT{};
-auto alGetPointerEXT = LPALGETPOINTEREXT{};
-auto alGetPointervEXT = LPALGETPOINTERVEXT{};
-
 
 auto main(std::span<std::string_view> args) -> int
 {
@@ -156,22 +146,6 @@ auto main(std::span<std::string_view> args) -> int
         return 1;
     }
 
-    /* Load the Debug API functions we're using. */
-#define LOAD_PROC(N) N = reinterpret_cast<decltype(N)>(alcGetProcAddress(device.get(), #N))
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-    LOAD_PROC(alDebugMessageCallbackEXT);
-    LOAD_PROC(alDebugMessageInsertEXT);
-    LOAD_PROC(alDebugMessageControlEXT);
-    LOAD_PROC(alPushDebugGroupEXT);
-    LOAD_PROC(alPopDebugGroupEXT);
-    LOAD_PROC(alGetDebugMessageLogEXT);
-    LOAD_PROC(alObjectLabelEXT);
-    LOAD_PROC(alGetObjectLabelEXT);
-    LOAD_PROC(alGetPointerEXT);
-    LOAD_PROC(alGetPointervEXT);
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_PROC
-
     /* Create a debug context and set it as current. If -nodebug was specified,
      * create a non-debug context (to see how debug messages react).
      */
@@ -189,6 +163,8 @@ auto main(std::span<std::string_view> args) -> int
         fmt::println(std::cerr, "Could not create and set a context!");
         return 1;
     }
+
+    LoadALExtensions();
 
     /* Enable low-severity debug messages, which are disabled by default. */
     alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,

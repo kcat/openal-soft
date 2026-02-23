@@ -72,8 +72,6 @@ namespace {
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
 
-auto alBufferCallbackSOFT = LPALBUFFERCALLBACKSOFT{};
-
 struct StreamPlayer {
     /* A buffer that can hold int16 or float samples, or raw (ADPCM) bytes. */
     std::variant<std::vector<short>, std::vector<float>, std::vector<std::byte>> mBufferVariant;
@@ -539,9 +537,7 @@ auto main(std::span<std::string_view> args) -> int
         return 1;
     }
 
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
-        alGetProcAddress("alBufferCallbackSOFT"));
+    LoadALExtensions();
 
     auto refresh = ALCint{25};
     alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);

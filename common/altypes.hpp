@@ -28,38 +28,38 @@ concept weak_number = std::integral<T> or std::floating_point<T>;
  * to be non-narrowing, e.g. int16 -> float(32) and int32 -> double(64) are
  * fine since all platforms we currently care about won't lose precision.
  */
-template<typename T, typename U>
-concept might_narrow = sizeof(T) < sizeof(U)
-    or (std::unsigned_integral<T> and std::signed_integral<U>)
-    or (std::integral<T> and std::floating_point<U>)
-    or (sizeof(T) == sizeof(U)
-        and ((std::signed_integral<T> and std::unsigned_integral<U>)
-            or (std::floating_point<T> and std::integral<U>)));
+template<typename To, typename From>
+concept might_narrow = sizeof(To) < sizeof(From)
+    or (std::unsigned_integral<To> and std::signed_integral<From>)
+    or (std::integral<To> and std::floating_point<From>)
+    or (sizeof(To) == sizeof(From)
+        and ((std::signed_integral<To> and std::unsigned_integral<From>)
+            or (std::floating_point<To> and std::integral<From>)));
 
 template<typename T, typename U>
 concept has_common = not might_narrow<T, U> or not might_narrow<U, T>;
 
 
-template<weak_number T, weak_number U> [[nodiscard]] constexpr
-auto convert_to(U const &value) noexcept(not might_narrow<T, U>) -> T
+template<weak_number To, weak_number From> [[nodiscard]] constexpr
+auto convert_to(From const &value) noexcept(not might_narrow<To, From>) -> To
 {
-    if constexpr(not might_narrow<T, U>)
-        return static_cast<T>(value);
+    if constexpr(not might_narrow<To, From>)
+        return static_cast<To>(value);
     else
     {
-        if constexpr(std::signed_integral<T> and std::unsigned_integral<U>)
+        if constexpr(std::signed_integral<To> and std::unsigned_integral<From>)
         {
-            if(U{std::numeric_limits<T>::max()} < value)
+            if(From{std::numeric_limits<To>::max()} < value)
                 throw std::out_of_range{"Too large unsigned to signed"};
         }
-        else if constexpr(std::unsigned_integral<T> and std::signed_integral<U>)
+        else if constexpr(std::unsigned_integral<To> and std::signed_integral<From>)
         {
-            if(value < U{0})
+            if(value < From{0})
                 throw std::out_of_range{"Negative signed to unsigned"};
         }
 
-        auto const ret = static_cast<T>(value);
-        if(static_cast<U>(ret) != value)
+        auto const ret = static_cast<To>(value);
+        if(static_cast<From>(ret) != value)
             throw std::out_of_range{"Conversion narrowed"};
         return ret;
     }
@@ -121,9 +121,10 @@ concept strong_floating_point = strong_number<T> and std::floating_point<typenam
  *
  * will compile and work as expected.
  */
-template<typename T, typename U>
-concept compatible_constant = (std::integral<U> and std::integral<T>)
-    or (std::floating_point<U> and (std::integral<T> or sizeof(U) >= sizeof(T)));
+template<typename ConstType, typename VarType>
+concept compatible_constant = (std::integral<ConstType> and std::integral<VarType>)
+    or (std::floating_point<VarType>
+        and (std::integral<ConstType> or sizeof(ConstType) <= sizeof(VarType)));
 
 
 /* This ConstantNum class is a wrapper to handle various operations with
@@ -237,7 +238,9 @@ public:
     number_base(ConstantNum<ValueType> const &value) noexcept : c_val{value.c_val} { }
 
     template<weak_number U> force_inline static constexpr
-    auto make_from(U const &value) noexcept(not might_narrow<ValueType, U>) -> SelfType
+    auto make_from(U const &value)
+        noexcept(not might_narrow<ValueType, U> or std::floating_point<ValueType>)
+        -> SelfType
     {
         /* Converting to a floating point type isn't checked here because it's
          * nearly impossible to otherwise ensure a large enough integer or
@@ -286,7 +289,7 @@ public:
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
-        noexcept(not might_narrow<typename U::value_t,ValueType>
+        noexcept(not might_narrow<typename U::value_t, ValueType>
             or std::floating_point<typename U::value_t>)
         -> U
     {

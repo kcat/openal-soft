@@ -124,6 +124,7 @@ auto EnableWideStereo = false;
 auto EnableUhj = false;
 auto EnableSuperStereo = false;
 auto DisableVideo = false;
+auto TimeStretchFactor = 1.0f;
 
 constexpr auto AVNoSyncThreshold = seconds{10};
 
@@ -417,6 +418,8 @@ struct AudioState {
     ALenum mFormat{AL_NONE};
     ALuint mFrameSize{0};
 
+    ALuint mPShiftSlot{};
+
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
@@ -432,6 +435,8 @@ struct AudioState {
             alDeleteSources(1, &mSource);
         if(mBuffers[0])
             alDeleteBuffers(gsl::narrow_cast<ALsizei>(mBuffers.size()), mBuffers.data());
+        if(mPShiftSlot)
+            alDeleteAuxiliaryEffectSlots(1, &mPShiftSlot);
 
         av_freep(static_cast<void*>(mSamples.data()));
     }
@@ -563,7 +568,11 @@ auto AudioState::getClockNoLock() const -> nanoseconds
      * keep going.
      */
     if(mEndTime > nanoseconds::min())
-        return std::chrono::steady_clock::now().time_since_epoch() - mEndTime + mCurrentPts;
+    {
+        auto const rtdiff = std::chrono::steady_clock::now().time_since_epoch() - mEndTime;
+        auto const diff = duration_cast<seconds_d64>(rtdiff) * TimeStretchFactor;
+        return duration_cast<nanoseconds>(diff) + mCurrentPts;
+    }
 
     /* This more safely converts fixed32 to nanoseconds, avoiding overflow
      * unlike a normal duration_cast call.
@@ -1322,10 +1331,65 @@ void AudioState::handler()
     if(ambi_order > 1)
     {
         std::ranges::for_each(mBuffers, [ambi_order](const ALuint bufid)
-        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, gsl::narrow_cast<int>(ambi_order)); });
+        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, static_cast<int>(ambi_order)); });
     }
     if(EnableSuperStereo)
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
+    if(TimeStretchFactor != 1.0f)
+    {
+        /* AL_PITCH alone will speed up or slow down playback and alter the
+         * pitch (e.g. 2.0 will play twice as fast, 12 semitones higher).
+         * AL_EFFECT_PITCH_SHIFTER can be used to adjust the sound back to its
+         * original pitch while maintaining the speed change.
+         */
+
+        /* Calculate the tuning (in semitones and cents) to counteract the
+         * pitch change from AL_PITCH.
+         */
+        auto const tune = static_cast<int>(std::lround(std::log2(TimeStretchFactor) * -1200.0f));
+        auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
+        {
+            auto const course = tune / 100;
+            auto const fine = tune % 100;
+            /* Fine-tuning is limited to -50...+50, so adjust values as needed
+             * (e.g. tune=-590: course=-5, fine=-90 -> course=-6, fine=10).
+             */
+            if(fine > 50)
+                return {course+1, fine-100};
+            if(fine < -50)
+                return {course-1, fine+100};
+            return {course, fine};
+        });
+        fmt::println("Time stretch: {} (course tuning: {}, fine tuning: {})", TimeStretchFactor,
+            course_tune, fine_tune);
+
+        /* Filter to mute the dry (un-corrected) path. */
+        auto mutefilter = ALuint{};
+        alGenFilters(1, &mutefilter);
+        alFilteri(mutefilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        alFilterf(mutefilter, AL_LOWPASS_GAIN, 0.0f);
+
+        /* Pitch shifter effect to correct the pitch after AL_PITCH adjust,emt. */
+        auto effect = ALuint{};
+        alGenEffects(1, &effect);
+        alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
+        alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, course_tune);
+        alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
+        if(auto const err = alGetError(); err != AL_NO_ERROR)
+            fmt::print("alGetError: {}\n", err);
+        else
+        {
+            alGenAuxiliaryEffectSlots(1, &mPShiftSlot);
+            alAuxiliaryEffectSloti(mPShiftSlot, AL_EFFECTSLOT_EFFECT, static_cast<ALint>(effect));
+
+            alSourcef(mSource, AL_PITCH, TimeStretchFactor);
+            alSourcei(mSource, AL_DIRECT_FILTER, static_cast<ALint>(mutefilter));
+            alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(mPShiftSlot), 0,
+                AL_FILTER_NULL);
+        }
+        alDeleteEffects(1, &effect);
+        alDeleteFilters(1, &mutefilter);
+    }
 
     if(alGetError() != AL_NO_ERROR)
         return;
@@ -1388,7 +1452,7 @@ void AudioState::handler()
          * buffered. Prerolling would be better here, but short of that, this
          * will do.
          */
-        const auto start_delay = round<seconds>(AudioBufferTotalTime/2
+        const auto start_delay = round<seconds>(AudioBufferTotalTime/2 * TimeStretchFactor
             * mCodecCtx->sample_rate).count();
         alSourcei(mSource, AL_SAMPLE_OFFSET, -gsl::narrow_cast<int>(start_delay));
     }
@@ -1495,8 +1559,8 @@ auto VideoState::getClock() -> nanoseconds
     auto displock = std::lock_guard{mDispPtsMutex};
     if(mDisplayPtsTime == microseconds::min())
         return nanoseconds::zero();
-    auto delta = get_avtime() - mDisplayPtsTime;
-    return mDisplayPts + delta;
+    auto const delta = duration_cast<seconds_d64>(get_avtime() - mDisplayPtsTime);
+    return duration_cast<nanoseconds>(mDisplayPts + delta*TimeStretchFactor);
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
@@ -1952,7 +2016,8 @@ auto MovieState::getClock() const -> nanoseconds
 {
     if(mClockBase == microseconds::min())
         return nanoseconds::zero();
-    return get_avtime() - mClockBase;
+    auto const diff = duration_cast<seconds_d64>(get_avtime() - mClockBase);
+    return duration_cast<nanoseconds>(diff * TimeStretchFactor);
 }
 
 auto MovieState::getMasterClock() -> nanoseconds
@@ -2121,6 +2186,7 @@ auto main(std::span<std::string_view> args) -> int
         fmt::println(std::cerr, "\n  Options:\n"
             "    -gain <g>     Set audio playback gain (prepend +/- or append \"dB\" to \n"
             "                  indicate decibels, otherwise it's linear amplitude)\n"
+            "    -tstretch <s> Set playback speed factor (with pitch correction)"
             "    -novideo      Disable video playback\n"
             "    -direct       Play audio directly on the output, bypassing virtualization\n"
             "    -superstereo  Apply Super Stereo processing to stereo tracks\n"
@@ -2262,6 +2328,45 @@ auto main(std::span<std::string_view> args) -> int
                         fmt::println(std::cerr, "Invalid linear gain value: {}", optarg);
                     else
                         PlaybackGain = gainval;
+                }
+            }
+            continue;
+        }
+        if(argval == "-tstretch")
+        {
+            if(curarg+1 == args_end)
+                fmt::println(std::cerr, "Missing argument for -tstretch");
+            else
+            {
+                const auto optarg = *++curarg;
+
+                auto endpos = size_t{};
+                const auto stretchval = std::invoke([optarg, &endpos]
+                {
+                    try { return std::stof(std::string{optarg}, &endpos); }
+                    catch(std::exception &e) {
+                        fmt::println(std::cerr, "Exception reading tstretch value: {}", e.what());
+                    }
+                    return std::numeric_limits<float>::quiet_NaN();
+                });
+                /* Time stretching is limited to [0.5, 2.0] because the pitch
+                 * shifter effect is limited to [-12, +12] semitones.
+                 */
+                if(!(stretchval >= 0.5f && stretchval <= 2.0f) || endpos != optarg.size())
+                    fmt::println(std::cerr, "Invalid tstretch value: {}", optarg);
+                else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
+                    fmt::println(std::cerr, "EFX not supported for time stretching");
+                else
+                {
+                    /* Make sure the pitch shifter effect works. */
+                    auto effect = ALuint{};
+                    alGenEffects(1, &effect);
+                    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
+                    if(auto const err = alGetError(); err != AL_NO_ERROR)
+                        fmt::println(std::cerr, "Pitch Shifter not supported for time stretching");
+                    else
+                        TimeStretchFactor = stretchval;
+                    alDeleteEffects(1, &effect);
                 }
             }
             continue;

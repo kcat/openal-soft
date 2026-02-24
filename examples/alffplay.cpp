@@ -418,14 +418,14 @@ struct AudioState {
     ALenum mFormat{AL_NONE};
     ALuint mFrameSize{0};
 
-    ALuint mPShiftSlot{};
-
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
     std::atomic_flag mConnected;
     ALuint mSource{0};
     std::array<ALuint,AudioBufferCount> mBuffers{};
     ALuint mBufferIdx{0};
+
+    static inline auto sPShiftSlot = ALuint{};
 
     explicit AudioState(MovieState &movie LIFETIMEBOUND) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
@@ -435,8 +435,6 @@ struct AudioState {
             alDeleteSources(1, &mSource);
         if(mBuffers[0])
             alDeleteBuffers(gsl::narrow_cast<ALsizei>(mBuffers.size()), mBuffers.data());
-        if(mPShiftSlot)
-            alDeleteAuxiliaryEffectSlots(1, &mPShiftSlot);
 
         av_freep(static_cast<void*>(mSamples.data()));
     }
@@ -1337,57 +1335,17 @@ void AudioState::handler()
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
     if(TimeStretchFactor != 1.0f)
     {
-        /* AL_PITCH alone will speed up or slow down playback and alter the
-         * pitch (e.g. 2.0 will play twice as fast, 12 semitones higher).
-         * AL_EFFECT_PITCH_SHIFTER can be used to adjust the sound back to its
-         * original pitch while maintaining the speed change.
-         */
-
-        /* Calculate the tuning (in semitones and cents) to counteract the
-         * pitch change from AL_PITCH.
-         */
-        auto const tune = static_cast<int>(std::lround(std::log2(TimeStretchFactor) * -1200.0f));
-        auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
-        {
-            auto const course = tune / 100;
-            auto const fine = tune % 100;
-            /* Fine-tuning is limited to -50...+50, so adjust values as needed
-             * (e.g. tune=-590: course=-5, fine=-90 -> course=-6, fine=10).
-             */
-            if(fine > 50)
-                return {course+1, fine-100};
-            if(fine < -50)
-                return {course-1, fine+100};
-            return {course, fine};
-        });
-        fmt::println("Time stretch: {} (course tuning: {}, fine tuning: {})", TimeStretchFactor,
-            course_tune, fine_tune);
-
         /* Filter to mute the dry (un-corrected) path. */
         auto mutefilter = ALuint{};
         alGenFilters(1, &mutefilter);
         alFilteri(mutefilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
         alFilterf(mutefilter, AL_LOWPASS_GAIN, 0.0f);
 
-        /* Pitch shifter effect to correct the pitch after AL_PITCH adjust,emt. */
-        auto effect = ALuint{};
-        alGenEffects(1, &effect);
-        alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
-        alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, course_tune);
-        alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
-        if(auto const err = alGetError(); err != AL_NO_ERROR)
-            fmt::print("alGetError: {}\n", err);
-        else
-        {
-            alGenAuxiliaryEffectSlots(1, &mPShiftSlot);
-            alAuxiliaryEffectSloti(mPShiftSlot, AL_EFFECTSLOT_EFFECT, static_cast<ALint>(effect));
+        alSourcef(mSource, AL_PITCH, TimeStretchFactor);
+        alSourcei(mSource, AL_DIRECT_FILTER, static_cast<ALint>(mutefilter));
+        alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(sPShiftSlot), 0,
+            AL_FILTER_NULL);
 
-            alSourcef(mSource, AL_PITCH, TimeStretchFactor);
-            alSourcei(mSource, AL_DIRECT_FILTER, static_cast<ALint>(mutefilter));
-            alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(mPShiftSlot), 0,
-                AL_FILTER_NULL);
-        }
-        alDeleteEffects(1, &effect);
         alDeleteFilters(1, &mutefilter);
     }
 
@@ -2357,21 +2315,64 @@ auto main(std::span<std::string_view> args) -> int
                 else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for time stretching");
                 else
-                {
-                    /* Make sure the pitch shifter effect works. */
-                    auto effect = ALuint{};
-                    alGenEffects(1, &effect);
-                    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
-                    if(auto const err = alGetError(); err != AL_NO_ERROR)
-                        fmt::println(std::cerr, "Pitch Shifter not supported for time stretching");
-                    else
-                        TimeStretchFactor = stretchval;
-                    alDeleteEffects(1, &effect);
-                }
+                    TimeStretchFactor = stretchval;
             }
             continue;
         }
         break;
+    }
+
+    auto _ = gsl::finally([]()
+    {
+        if(AudioState::sPShiftSlot)
+            alDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+        AudioState::sPShiftSlot = 0;
+    });
+    if(TimeStretchFactor != 1.0f)
+    {
+        /* AL_PITCH alone will speed up or slow down playback and alter the
+         * pitch (e.g. 2.0 will play twice as fast, 12 semitones higher).
+         * AL_EFFECT_PITCH_SHIFTER can be used to adjust the sound back to its
+         * original pitch while maintaining the speed change.
+         */
+        auto effect = ALuint{};
+        alGenEffects(1, &effect);
+        alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
+        if(auto const err = alGetError(); err != AL_NO_ERROR)
+        {
+            fmt::print(std::cerr, "Could not create the Pitch Shifter effect: {:#06x}\n", err);
+            TimeStretchFactor = 1.0f;
+        }
+        else
+        {
+            /* Calculate the tuning (in semitones and cents) to counteract the
+             * pitch change from AL_PITCH.
+             */
+            auto const tune = static_cast<int>(std::lround(std::log2(TimeStretchFactor)*-1200.0f));
+            auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
+            {
+                auto const course = tune / 100;
+                auto const fine = tune % 100;
+                /* Fine-tuning is limited to -50...+50, so adjust values as needed
+                 * (e.g. tune=-590: course=-5, fine=-90 -> course=-6, fine=10).
+                 */
+                if(fine > 50)
+                    return {course+1, fine-100};
+                if(fine < -50)
+                    return {course-1, fine+100};
+                return {course, fine};
+            });
+            fmt::println("Speed factor: {} (course tuning: {}, fine tuning: {})",
+                TimeStretchFactor, course_tune, fine_tune);
+
+            alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, course_tune);
+            alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
+
+            alGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+            alAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
+                static_cast<ALint>(effect));
+        }
+        alDeleteEffects(1, &effect);
     }
 
     auto movState = std::unique_ptr<MovieState>{};

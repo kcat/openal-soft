@@ -2476,15 +2476,13 @@ auto main(std::span<std::string_view> args) -> int
                 /* Nothing more to play. Shut everything down and quit. */
                 movState = nullptr;
 
-                almgr.close();
-
                 SDL_DestroyRenderer(renderer);
                 renderer = nullptr;
                 SDL_DestroyWindow(screen);
                 screen = nullptr;
 
                 SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-                exit(0);
+                return 0;
 
             default:
                 break;

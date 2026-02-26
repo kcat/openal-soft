@@ -747,21 +747,22 @@ auto AudioState::decodeFrame() -> int
         mCurrentPts = duration_cast<nanoseconds>(seconds_d64{av_q2d(mStream->time_base) *
             gsl::narrow_cast<double>(mDecodedFrame->best_effort_timestamp)});
 
-    if(mDecodedFrame->nb_samples > mSamplesMax)
+    auto const dst_size = swr_get_out_samples(mSwresCtx.get(), mDecodedFrame->nb_samples);
+    if(dst_size > mSamplesMax)
     {
         av_freep(static_cast<void*>(mSamples.data()));
         if(av_samples_alloc(mSamples.data(), nullptr, mCodecCtx->ch_layout.nb_channels,
-            mDecodedFrame->nb_samples, mDstSampleFmt, 0) < 0)
+            dst_size, mDstSampleFmt, 0) < 0)
         {
             mSamplesMax = 0;
             mSamplesSpan = {};
             return 0;
         }
-        mSamplesMax = mDecodedFrame->nb_samples;
+        mSamplesMax = dst_size;
         mSamplesSpan = {mSamples[0], gsl::narrow_cast<size_t>(mSamplesMax)*mFrameSize};
     }
     /* Return the amount of sample frames converted */
-    const auto data_size = swr_convert(mSwresCtx.get(), mSamples.data(), mDecodedFrame->nb_samples,
+    auto const data_size = swr_convert(mSwresCtx.get(), mSamples.data(), dst_size,
         mDecodedFrame->extended_data, mDecodedFrame->nb_samples);
 
     av_frame_unref(mDecodedFrame.get());

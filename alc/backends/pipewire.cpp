@@ -144,12 +144,30 @@ auto as_const_ptr(T *ptr) noexcept -> std::add_const_t<T>* { return ptr; }
 
 struct SpaHook : spa_hook {
     SpaHook() : spa_hook{} { }
-    ~SpaHook() { spa_hook_remove(this); }
+    ~SpaHook()
+    {
+        /* Prior to 0.3.57, spa_hook_remove will crash if the spa_hook hasn't
+         * been linked with anything, which complicates removing on destruction
+         * since the spa_hook object needs to exist before it's linked, but if
+         * linking fails, there's no function to test if it can be removed. The
+         * PipeWire headers say spa_hook should be treated as opaque, meaning
+         * accessing any fields directly risks breaking compilation in the
+         * future. So we only peek into the spa_hool to do this check on older
+         * versions that need it.
+         */
+#if !PW_CHECK_VERSION(0,3,57)
+        if(this->link.prev != nullptr)
+#endif
+            spa_hook_remove(this);
+    }
 
     void remove()
     {
-        spa_hook_remove(this);
-        static_cast<spa_hook&>(*this) = {};
+#if !PW_CHECK_VERSION(0,3,57)
+        if(this->link.prev != nullptr)
+#endif
+            spa_hook_remove(this);
+        static_cast<spa_hook&>(*this) = spa_hook{};
     }
 
     SpaHook(const SpaHook&) = delete;

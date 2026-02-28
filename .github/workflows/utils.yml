@@ -29,7 +29,7 @@ jobs:
 
     - name: Clone libmysofa
       run: |
-        git clone https://github.com/hoene/libmysofa.git --branch v1.3.3
+        git clone https://github.com/hoene/libmysofa.git --branch v1.3.4
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.1.3

@@ -62,6 +62,12 @@
 #define LIFETIMEBOUND
 #endif
 
+#if HAS_ATTRIBUTE(clang::nonblocking)
+#define NONBLOCKING [[clang::nonblocking]]
+#else
+#define NONBLOCKING
+#endif
+
 namespace al {
 
 template<typename T>

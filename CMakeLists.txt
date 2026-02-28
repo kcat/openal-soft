@@ -267,6 +267,16 @@ set(LINKER_FLAGS_DEBUG )
 set(LINKER_FLAGS_RELEASE )
 set(EXTRA_LIBS )
 
+if((CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"
+        AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.0)
+    OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+        AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20.0))
+    check_cxx_compiler_flag(-Wfunction-effects HAVE_WFUNCTION_EFFECTS)
+    if(HAVE_WFUNCTION_EFFECTS)
+        set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Wfunction-effects>)
+    endif()
+endif()
+
 if(WIN32)
     set(CPP_DEFS ${CPP_DEFS} _WIN32 NOMINMAX WIN32_LEAN_AND_MEAN)
     if(MINGW)
@@ -399,6 +409,9 @@ else()
         set(C_FLAGS ${C_FLAGS} -Werror=undef -Werror=format-security
             $<$<COMPILE_LANGUAGE:C>:-Werror=implicit -Werror=incompatible-pointer-types
                 -Werror=int-conversion>)
+        if(HAVE_WFUNCTION_EFFECTS)
+            set(C_FLAGS ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:-Werror=function-effects>)
+        endif()
     endif()
 
     # NOTE: This essentially provides the equivalent of the C++26 feature to

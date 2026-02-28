@@ -61,7 +61,6 @@ jobs:
         copy "build/Release/altonegen.exe" "Artifacts/altonegen.exe"
         copy "build/Release/openal-info.exe" "Artifacts/openal-info.exe"
         copy "build/Release/allafplay.exe" "Artifacts/allafplay.exe"
-        copy "libmysofa/windows/third-party/zlib-1.3.1/bin/zlib.dll" "Artifacts/zlib.dll"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

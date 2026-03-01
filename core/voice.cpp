@@ -656,7 +656,9 @@ void DoNfcMix(std::span<float const> const samples, std::span<FloatBufferLine> o
     DirectParams &parms, std::span<float const, MaxOutputChannels> const outGains,
     unsigned const counter, unsigned const outPos, DeviceBase *const device)
 {
-    using FilterProc = void(NfcFilter::*)(std::span<float const> src, std::span<float> dst);
+    using FilterProc = void(NfcFilter::*)(std::span<float const> src, std::span<float> dst)
+        noexcept NONBLOCKING;
+
     static constexpr auto NfcProcess = std::array{FilterProc{nullptr}, &NfcFilter::process1,
         &NfcFilter::process2, &NfcFilter::process3, &NfcFilter::process4};
     static_assert(NfcProcess.size() == MaxAmbiOrder+1);

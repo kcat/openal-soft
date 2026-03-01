@@ -3,6 +3,7 @@
 
 #include <span>
 
+#include "opthelpers.h"
 
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 class BandSplitter {
@@ -17,20 +18,22 @@ public:
     explicit BandSplitter(float const f0norm) { init(f0norm); }
     auto operator=(BandSplitter const&) -> BandSplitter& = default;
 
-    void init(float f0norm);
-    void clear() noexcept { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
-    void process(std::span<float const> input, std::span<float> hpout, std::span<float> lpout);
+    void init(float f0norm) noexcept NONBLOCKING;
+    void clear() noexcept NONBLOCKING { mLpZ1 = mLpZ2 = mApZ1 = 0.0f; }
+    void process(std::span<float const> input, std::span<float> hpout, std::span<float> lpout)
+        noexcept NONBLOCKING;
 
-    void processHfScale(std::span<float const> input, std::span<float> output, float hfscale);
+    void processHfScale(std::span<float const> input, std::span<float> output, float hfscale)
+        noexcept NONBLOCKING;
 
-    void processHfScale(std::span<float> samples, float hfscale);
-    void processScale(std::span<float> samples, float hfscale, float lfscale);
+    void processHfScale(std::span<float> samples, float hfscale) noexcept NONBLOCKING;
+    void processScale(std::span<float> samples, float hfscale, float lfscale) noexcept NONBLOCKING;
 
     /**
      * The all-pass portion of the band splitter. Applies the same phase shift
      * without splitting or scaling the signal.
      */
-    void processAllPass(std::span<float> samples);
+    void processAllPass(std::span<float> samples) noexcept NONBLOCKING;
 };
 
 #endif /* CORE_FILTERS_SPLITTER_H */

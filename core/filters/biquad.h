@@ -50,7 +50,7 @@ protected:
     Coefficients mCoeffs;
 
     static auto SetParams(BiquadType type, float f0norm, float gain, float rcpQ,
-        Coefficients &coeffs) -> bool;
+        Coefficients &coeffs) noexcept NONBLOCKING -> bool;
 
     /**
      * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using
@@ -58,7 +58,7 @@ protected:
      * \param gain 0 < gain
      * \param slope 0 < slope <= 1
      */
-    static auto rcpQFromSlope(float const gain, float const slope) -> float
+    static auto rcpQFromSlope(float const gain, float const slope) noexcept NONBLOCKING -> float
     { return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f); }
 
     /**
@@ -67,14 +67,15 @@ protected:
      * \param f0norm 0 < f0norm < 0.5.
      * \param bandwidth 0 < bandwidth
      */
-    static auto rcpQFromBandwidth(float const f0norm, float const bandwidth) -> float
+    static
+    auto rcpQFromBandwidth(float const f0norm, float const bandwidth) noexcept NONBLOCKING -> float
     {
         const auto w0 = std::numbers::pi_v<float>*2.0f * f0norm;
         return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
     }
 
 public:
-    void clear() noexcept { mZ1 = mZ2 = 0.0f; }
+    void clear() noexcept NONBLOCKING { mZ1 = mZ2 = 0.0f; }
 
     /**
      * Sets the filter state for the specified filter type and its parameters.
@@ -89,7 +90,7 @@ public:
      * \param slope Slope steepness of the transition band.
      */
     void setParamsFromSlope(BiquadType const type, float const f0norm, float gain,
-        float const slope)
+        float const slope) noexcept NONBLOCKING
     {
         gain = std::max(gain, 0.001f); /* Limit -60dB */
         SetParams(type, f0norm, gain, rcpQFromSlope(gain, slope), mCoeffs);
@@ -108,20 +109,23 @@ public:
      * \param bandwidth Normalized bandwidth of the transition band.
      */
     void setParamsFromBandwidth(BiquadType const type, float const f0norm, float const gain,
-        float const bandwidth)
+        float const bandwidth) noexcept NONBLOCKING
     { SetParams(type, f0norm, gain, rcpQFromBandwidth(f0norm, bandwidth), mCoeffs); }
 
-    void copyParamsFrom(BiquadFilter const &other) noexcept
+    void copyParamsFrom(BiquadFilter const &other) noexcept NONBLOCKING
     { mCoeffs = other.mCoeffs; }
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
     /** Processes this filter and the other at the same time. */
-    void dualProcess(BiquadFilter &other, std::span<float const> src, std::span<float> dst);
+    void dualProcess(BiquadFilter &other, std::span<float const> src, std::span<float> dst)
+        noexcept NONBLOCKING;
 
     /* Rather hacky. It's just here to support "manual" processing. */
-    [[nodiscard]] auto getComponents() const noexcept -> std::array<float, 2> { return {mZ1,mZ2}; }
-    void setComponents(float const z1, float const z2) noexcept { mZ1 = z1; mZ2 = z2; }
-    [[nodiscard]] auto processOne(float const in, float &z1, float &z2) const noexcept -> float
+    [[nodiscard]]
+    auto getComponents() const noexcept NONBLOCKING -> std::array<float, 2> { return {mZ1,mZ2}; }
+    void setComponents(float const z1, float const z2) noexcept NONBLOCKING { mZ1 = z1; mZ2 = z2; }
+    [[nodiscard]]
+    auto processOne(float const in, float &z1, float &z2) const noexcept NONBLOCKING -> float
     {
         const auto out = in*mCoeffs.mB0 + z1;
         z1 = in*mCoeffs.mB1 - out*mCoeffs.mA1 + z2;
@@ -134,10 +138,10 @@ class BiquadInterpFilter : protected BiquadFilter {
     Coefficients mTargetCoeffs;
     int mCounter{-1};
 
-    void setParams(BiquadType type, float f0norm, float gain, float rcpQ);
+    void setParams(BiquadType type, float f0norm, float gain, float rcpQ) noexcept NONBLOCKING;
 
 public:
-    void reset() noexcept
+    void reset() noexcept NONBLOCKING
     {
         BiquadFilter::clear();
         mTargetCoeffs = Coefficients{};
@@ -145,7 +149,7 @@ public:
         mCounter = -1;
     }
 
-    void clear() noexcept
+    void clear() noexcept NONBLOCKING
     {
         BiquadFilter::clear();
         mCoeffs = mTargetCoeffs;
@@ -165,7 +169,7 @@ public:
      * \param slope Slope steepness of the transition band.
      */
     void setParamsFromSlope(BiquadType const type, float const f0norm, float gain,
-        float const slope)
+        float const slope) noexcept NONBLOCKING
     {
         gain = std::max(gain, 0.001f); /* Limit -60dB */
         setParams(type, f0norm, gain, rcpQFromSlope(gain, slope));
@@ -184,28 +188,31 @@ public:
      * \param bandwidth Normalized bandwidth of the transition band.
      */
     void setParamsFromBandwidth(BiquadType const type, float const f0norm, float const gain,
-        float const bandwidth)
+        float const bandwidth) noexcept NONBLOCKING
     { setParams(type, f0norm, gain, rcpQFromBandwidth(f0norm, bandwidth)); }
 
-    void copyParamsFrom(const BiquadInterpFilter &other) noexcept;
+    void copyParamsFrom(const BiquadInterpFilter &other) noexcept NONBLOCKING;
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
     /** Processes this filter and the other at the same time. */
-    void dualProcess(BiquadInterpFilter &other, std::span<float const> src, std::span<float> dst);
+    void dualProcess(BiquadInterpFilter &other, std::span<float const> src, std::span<float> dst)
+        noexcept NONBLOCKING;
 };
 
 
 struct DualBiquad {
     BiquadFilter &f0, &f1;
 
-    void process(std::span<float const> const src, std::span<float> const dst) const
+    void process(std::span<float const> const src, std::span<float> const dst) const noexcept
+        NONBLOCKING
     { f0.dualProcess(f1, src, dst); }
 };
 
 struct DualBiquadInterp {
     BiquadInterpFilter &f0, &f1;
 
-    void process(std::span<float const> const src, std::span<float> const dst) const
+    void process(std::span<float const> const src, std::span<float> const dst) const noexcept
+        NONBLOCKING
     { f0.dualProcess(f1, src, dst); }
 };
 

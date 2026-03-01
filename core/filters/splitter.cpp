@@ -12,7 +12,7 @@
 #include "gsl/gsl"
 
 
-void BandSplitter::init(float const f0norm)
+void BandSplitter::init(float const f0norm) noexcept NONBLOCKING
 {
     auto const w = std::numbers::pi_v<float>*2.0f * std::min(f0norm, 0.49f);
     if(auto const cw = std::cos(w); cw > std::numeric_limits<float>::epsilon())
@@ -26,7 +26,7 @@ void BandSplitter::init(float const f0norm)
 }
 
 void BandSplitter::process(std::span<float const> const input, std::span<float> const hpout,
-    std::span<float> const lpout)
+    std::span<float> const lpout) noexcept NONBLOCKING
 {
     auto const ap_coeff = mCoeff;
     auto const lp_coeff = mCoeff*0.5f + 0.5f;
@@ -63,7 +63,7 @@ void BandSplitter::process(std::span<float const> const input, std::span<float> 
 }
 
 void BandSplitter::processHfScale(std::span<float const> const input, std::span<float> const output,
-    float const hfscale)
+    float const hfscale) noexcept NONBLOCKING
 {
     auto const ap_coeff = mCoeff;
     auto const lp_coeff = mCoeff*0.5f + 0.5f;
@@ -96,7 +96,8 @@ void BandSplitter::processHfScale(std::span<float const> const input, std::span<
     mApZ1 = ap_z1;
 }
 
-void BandSplitter::processHfScale(std::span<float> const samples, float const hfscale)
+void BandSplitter::processHfScale(std::span<float> const samples, float const hfscale) noexcept
+    NONBLOCKING
 {
     auto const ap_coeff = mCoeff;
     auto const lp_coeff = mCoeff*0.5f + 0.5f;
@@ -130,7 +131,7 @@ void BandSplitter::processHfScale(std::span<float> const samples, float const hf
 }
 
 void BandSplitter::processScale(std::span<float> const samples, float const hfscale,
-    float const lfscale)
+    float const lfscale) noexcept NONBLOCKING
 {
     auto const ap_coeff = mCoeff;
     auto const lp_coeff = mCoeff*0.5f + 0.5f;
@@ -159,7 +160,7 @@ void BandSplitter::processScale(std::span<float> const samples, float const hfsc
     mApZ1 = ap_z1;
 }
 
-void BandSplitter::processAllPass(std::span<float> const samples)
+void BandSplitter::processAllPass(std::span<float> const samples) noexcept NONBLOCKING
 {
     auto const coeff = mCoeff;
     auto z1 = mApZ1;

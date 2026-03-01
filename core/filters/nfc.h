@@ -4,6 +4,8 @@
 #include <array>
 #include <span>
 
+#include "opthelpers.h"
+
 
 struct NfcFilter1 {
     struct Coefficients {
@@ -13,7 +15,7 @@ struct NfcFilter1 {
     Coefficients mCoeffs;
     std::array<float, 1> mZ{};
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
 };
 struct NfcFilter2 {
     struct Coefficients {
@@ -23,7 +25,7 @@ struct NfcFilter2 {
     Coefficients mCoeffs;
     std::array<float, 2> mZ{};
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
 };
 struct NfcFilter3 {
     struct Coefficients {
@@ -33,7 +35,7 @@ struct NfcFilter3 {
     Coefficients mCoeffs;
     std::array<float, 3> mZ{};
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
 };
 struct NfcFilter4 {
     struct Coefficients {
@@ -43,7 +45,7 @@ struct NfcFilter4 {
     Coefficients mCoeffs;
     std::array<float, 4> mZ{};
 
-    void process(std::span<float const> src, std::span<float> dst);
+    void process(std::span<float const> src, std::span<float> dst) noexcept NONBLOCKING;
 };
 
 class NfcFilter {
@@ -63,23 +65,27 @@ public:
      * should not be too small relative to the control distance.
      */
 
-    void init(float w1) noexcept;
-    void adjust(float w0) noexcept;
+    void init(float w1) noexcept NONBLOCKING;
+    void adjust(float w0) noexcept NONBLOCKING;
 
     /* Near-field control filter for first-order ambisonic channels (1-3). */
-    void process1(std::span<float const> const src, std::span<float> const dst)
+    void process1(std::span<float const> const src, std::span<float> const dst) noexcept
+        NONBLOCKING
     { first.process(src, dst); }
 
     /* Near-field control filter for second-order ambisonic channels (4-8). */
-    void process2(std::span<float const> const src, std::span<float> const dst)
+    void process2(std::span<float const> const src, std::span<float> const dst) noexcept
+        NONBLOCKING
     { second.process(src, dst); }
 
     /* Near-field control filter for third-order ambisonic channels (9-15). */
-    void process3(std::span<float const> const src, std::span<float> const dst)
+    void process3(std::span<float const> const src, std::span<float> const dst) noexcept
+        NONBLOCKING
     { third.process(src, dst); }
 
     /* Near-field control filter for fourth-order ambisonic channels (16-24). */
-    void process4(std::span<float const> const src, std::span<float> const dst)
+    void process4(std::span<float const> const src, std::span<float> const dst) noexcept
+        NONBLOCKING
     { fourth.process(src, dst); }
 };
 

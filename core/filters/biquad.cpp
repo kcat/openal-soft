@@ -34,7 +34,7 @@ static_assert(std::popcount(gsl::narrow<unsigned>(SamplesPerStep)) == 1,
 
 /* Sets dst to the given value, returns true if it's meaningfully different. */
 [[nodiscard]]
-auto check_set(float &dst, float const value) noexcept -> bool
+auto check_set(float &dst, float const value) noexcept NONBLOCKING -> bool
 {
     const auto is_diff = !(std::abs(value - dst) <= 0.015625f/* 1/64 */);
     dst = value;
@@ -45,7 +45,7 @@ auto check_set(float &dst, float const value) noexcept -> bool
 
 
 auto BiquadFilter::SetParams(BiquadType const type, float const f0norm, float gain,
-    float const rcpQ, Coefficients &coeffs) -> bool
+    float const rcpQ, Coefficients &coeffs) noexcept NONBLOCKING -> bool
 {
     /* HACK: Limit gain to -100dB. This shouldn't ever happen, all callers
      * already clamp to minimum of 0.001, or have a limited range of values
@@ -128,7 +128,7 @@ auto BiquadFilter::SetParams(BiquadType const type, float const f0norm, float ga
 }
 
 void BiquadInterpFilter::setParams(BiquadType const type, float const f0norm, float const gain,
-    float const rcpQ)
+    float const rcpQ) noexcept NONBLOCKING
 {
     if(!SetParams(type, f0norm, gain, rcpQ, mTargetCoeffs))
     {
@@ -147,7 +147,7 @@ void BiquadInterpFilter::setParams(BiquadType const type, float const f0norm, fl
     }
 }
 
-void BiquadInterpFilter::copyParamsFrom(BiquadInterpFilter const &other) noexcept
+void BiquadInterpFilter::copyParamsFrom(BiquadInterpFilter const &other) noexcept NONBLOCKING
 {
     auto is_diff = check_set(mTargetCoeffs.mB0, other.mTargetCoeffs.mB0);
     is_diff |= check_set(mTargetCoeffs.mB1, other.mTargetCoeffs.mB1);
@@ -172,7 +172,8 @@ void BiquadInterpFilter::copyParamsFrom(BiquadInterpFilter const &other) noexcep
 }
 
 
-void BiquadFilter::process(std::span<float const> const src, std::span<float> const dst)
+void BiquadFilter::process(std::span<float const> const src, std::span<float> const dst) noexcept
+    NONBLOCKING
 {
     auto z1 = mZ1;
     auto z2 = mZ2;
@@ -198,7 +199,8 @@ void BiquadFilter::process(std::span<float const> const src, std::span<float> co
     mZ2 = z2;
 }
 
-void BiquadInterpFilter::process(std::span<float const> src, std::span<float> dst)
+void BiquadInterpFilter::process(std::span<float const> src, std::span<float> dst) noexcept
+    NONBLOCKING
 {
     if(mCounter > 0)
     {
@@ -249,7 +251,7 @@ void BiquadInterpFilter::process(std::span<float const> src, std::span<float> ds
 
 
 void BiquadFilter::dualProcess(BiquadFilter &other, std::span<float const> const src,
-    std::span<float> const dst)
+    std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(this != &other);
     auto z01 = mZ1;
@@ -279,7 +281,7 @@ void BiquadFilter::dualProcess(BiquadFilter &other, std::span<float const> const
 }
 
 void BiquadInterpFilter::dualProcess(BiquadInterpFilter &other, std::span<float const> src,
-    std::span<float> dst)
+    std::span<float> dst) noexcept NONBLOCKING
 {
     ASSUME(this != &other);
     if(auto const maxcounter = std::max(mCounter, other.mCounter); maxcounter > 0)

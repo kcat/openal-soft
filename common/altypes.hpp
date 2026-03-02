@@ -814,8 +814,12 @@ DECL_NUMBERTYPE(u64, std::uint64_t)
 DECL_NUMBERTYPE(f32, float)
 DECL_NUMBERTYPE(f64, double)
 
-using isize = std::make_signed_t<std::size_t>;
+DECL_NUMBERTYPE(isize, std::make_signed_t<std::size_t>);
 using usize = std::size_t;
+
+using sint = std::conditional_t<sizeof(int) == sizeof(i32), i32,
+    std::conditional_t<sizeof(int) == sizeof(i64), i64,
+    void>>;
 
 namespace al {
 
@@ -880,7 +884,10 @@ auto operator ""_f32(long double const n) noexcept { return f32::make_from(n); }
 auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize>(n); }
+auto operator ""_isize(unsigned long long const n) noexcept { return isize::make_from(n); }
+
+[[nodiscard]] consteval
+auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize::value_t>(n); }
 [[nodiscard]] consteval
 auto operator ""_uz(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
 [[nodiscard]] consteval

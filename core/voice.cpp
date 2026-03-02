@@ -200,10 +200,10 @@ constexpr auto IMA4Codeword = std::array{
 };
 
 /* IMA4 ADPCM Step index adjust decode table */
-constexpr auto IMA4Index_adjust = std::array{
+constexpr auto IMA4Index_adjust = std::to_array<sint>({
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
-};
+});
 
 /* MSADPCM Adaption table */
 constexpr auto MSADPCMAdaption = std::array{
@@ -275,7 +275,7 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
     usize const srcChan, usize const srcOffset, usize const srcStep,
     usize const samplesPerBlock) noexcept
 {
-    static constexpr auto MaxStepIndex = gsl::narrow<isize>(IMAStep_size.size()) - 1;
+    static constexpr auto MaxStepIndex = isize{std::ssize(IMAStep_size) - 1};
 
     Expects(srcStep > 0 && srcStep <= 2);
     Expects(srcChan < srcStep);
@@ -294,9 +294,9 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
          * 16-bit table index. The table index needs to be clamped.
          */
         auto sample = int{i16::bit_pack(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value).c_val};
-        auto ima_idx = isize{i16::bit_pack(src[srcChan*4 + 3].value,
-            src[srcChan*4 + 2].value).c_val};
-        ima_idx = std::clamp(ima_idx, 0_z, MaxStepIndex);
+        auto ima_idx = i16::bit_pack(src[srcChan*4 + 3].value, src[srcChan*4 + 2].value)
+            .as<isize>();
+        ima_idx = std::clamp(ima_idx, 0_isize, MaxStepIndex);
 
         auto const nibbleData = src.subspan((srcStep+srcChan)*4);
         src = src.subspan(blockBytes);
@@ -325,10 +325,11 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
             auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
             auto const codeidx = to_integer<usize>(nibble);
 
-            sample += IMA4Codeword[codeidx]*IMAStep_size[gsl::narrow_cast<unsigned>(ima_idx)]/8;
+            sample += IMA4Codeword[codeidx] * IMAStep_size[as_unsigned(ima_idx.c_val)] / 8;
             sample = std::clamp(sample, -32768, 32767);
 
-            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[codeidx], 0_z, MaxStepIndex);
+            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[codeidx], 0_isize,
+                MaxStepIndex);
 
             return sample;
         };

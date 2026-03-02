@@ -30,6 +30,7 @@
 #include <chrono>
 #include <cmath>
 #include <concepts>
+#include <cstddef>
 #include <cstdio>
 #include <iterator>
 #include <functional>
@@ -839,7 +840,7 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device,
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mBuffers->begin(),
-        gsl::narrow_cast<isize>(slidx)));
+        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
 }
 
 [[nodiscard]]
@@ -864,7 +865,7 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device,
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mFilters->begin(),
-        gsl::narrow_cast<isize>(slidx)));
+        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
 }
 
 [[nodiscard]]
@@ -888,7 +889,8 @@ auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
     auto &sublist = context->mEffectSlotList[gsl::narrow_cast<usize>(lidx)];
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.mEffectSlots->begin() + gsl::narrow_cast<isize>(slidx));
+    return std::to_address(std::next(sublist.mEffectSlots->begin(),
+        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
 }
 
 [[nodiscard]]

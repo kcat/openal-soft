@@ -391,7 +391,7 @@ auto LafStream::readChunk() -> u32
     /* Choose the smaller of std::streamsize or isize, to ensure neither the
      * read size or range drop size get truncated.
      */
-    using readsize_t = std::conditional_t<(sizeof(std::streamsize) > sizeof(isize)), isize,
+    using readsize_t = std::conditional_t<(sizeof(std::streamsize) > sizeof(isize)),isize::value_t,
         std::streamsize>;
     const auto toread = gsl::narrow<readsize_t>(numsamples * BytesFromQuality(mQuality)
         * mNumEnabled.c_val);
@@ -798,8 +798,8 @@ try {
 
     auto renderFile = std::ofstream{};
     auto renderStart = std::streamoff{};
-    auto leadIn = 0_z;
-    auto leadOut = 0_z;
+    auto leadIn = 0_isize;
+    auto leadOut = 0_isize;
     auto renderbuf = std::vector<char>{};
     if(alcRenderSamplesSOFT)
     {
@@ -873,10 +873,10 @@ try {
             alcGetInteger64vSOFT(device, ALC_DEVICE_LATENCY_SOFT, 1, &latency);
             std::ignore = alcGetError(device);
 
-            leadIn = gsl::narrow<isize>(latency * RenderSampleRate / 1'000'000'000)
-                * gsl::narrow<isize>(framesize);
-            leadOut = gsl::narrow<isize>((latency*RenderSampleRate + 999'999'999) / 1'000'000'000)
-                * gsl::narrow<isize>(framesize);
+            auto const iframesize = isize::make_from(framesize);
+            leadIn = isize::make_from(latency * RenderSampleRate / 1'000'000'000) * iframesize;
+            leadOut = isize::make_from((latency*RenderSampleRate + 999'999'999) / 1'000'000'000)
+                * iframesize;
         }
 
         auto outname = fs::path(al::char_as_u8(fname)).stem();
@@ -1038,7 +1038,7 @@ try {
                     leadIn -= std::ssize(renderbuf);
                 else if(leadIn > 0)
                 {
-                    auto const out = renderbuf | std::views::drop(leadIn);
+                    auto const out = renderbuf | std::views::drop(leadIn.c_val);
                     renderFile.write(out.data(), std::ssize(out));
                     leadIn = 0;
                 }
@@ -1152,7 +1152,7 @@ try {
                 leadIn -= std::ssize(renderbuf);
             else if(leadIn > 0)
             {
-                auto const out = renderbuf | std::views::drop(leadIn);
+                auto const out = renderbuf | std::views::drop(leadIn.c_val);
                 renderFile.write(out.data(), std::ssize(out));
                 leadIn = 0;
             }
@@ -1169,7 +1169,7 @@ try {
     {
         alcRenderSamplesSOFT(alcGetContextsDevice(alcGetCurrentContext()),
             renderbuf.data(), FramesPerPos);
-        auto const todo = std::min(std::ssize(renderbuf), leadOut);
+        auto const todo = std::min(std::ssize(renderbuf), leadOut.c_val);
         renderFile.write(renderbuf.data(), todo);
         leadOut -= todo;
     }

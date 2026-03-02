@@ -805,16 +805,18 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
     static constexpr auto P = [](isize const i, isize const l, isize const a, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
-        auto const ri1 =  R[ 1+2][gsl::narrow_cast<usize>(i+2_z)];
-        auto const rim1 = R[-1+2][gsl::narrow_cast<usize>(i+2_z)];
-        auto const ri0 =  R[ 0+2][gsl::narrow_cast<usize>(i+2_z)];
+        auto const ip2 = gsl::narrow_cast<usize>((i+2_z).c_val);
+        auto const ri1 =  R[ 1+2][ip2];
+        auto const rim1 = R[-1+2][ip2];
+        auto const ri0 =  R[ 0+2][ip2];
 
-        auto const x = last_base + gsl::narrow_cast<usize>(a+l-1);
+        auto const lm1 = gsl::narrow_cast<usize>((l-1_z).c_val);
+        auto const x = last_base + lm1 + gsl::narrow_cast<usize>(a.c_val);
         if(n == -l)
-            return ri1*R[last_base][x] + rim1*R[last_base + gsl::narrow_cast<usize>(l-1_z)*2][x];
+            return ri1*R[last_base][x] + rim1*R[last_base + lm1*2][x];
         if(n == l)
-            return ri1*R[last_base + gsl::narrow_cast<usize>(l-1_z)*2][x] - rim1*R[last_base][x];
-        return ri0*R[last_base + gsl::narrow_cast<usize>(l-1_z+n)][x];
+            return ri1*R[last_base + lm1*2][x] - rim1*R[last_base][x];
+        return ri0*R[last_base + lm1 + gsl::narrow_cast<usize>(n.c_val)][x];
     };
 
     static constexpr auto U = [](isize const l, isize const m, isize const n,
@@ -857,7 +859,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
     auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
     auto base_idx = 4_uz;
     auto last_base = 1_uz;
-    for(auto const l : std::views::iota(2, order+1))
+    for(auto const l : std::views::iota(2_isize, isize{order}+1))
     {
         auto y = base_idx;
         for(auto const n : std::views::iota(-l, l+1))
@@ -882,7 +884,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
             ++y;
         }
         last_base = base_idx;
-        base_idx += gsl::narrow_cast<usize>(l)*2_uz + 1;
+        base_idx += gsl::narrow_cast<usize>(l.c_val)*2_uz + 1;
     }
 }
 /* End ambisonic rotation helpers. */

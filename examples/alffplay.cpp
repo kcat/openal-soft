@@ -542,7 +542,6 @@ struct MovieState {
             mParseThread.join();
     }
 
-    static auto decode_interrupt_cb(void *ctx) -> int;
     auto prepare() -> bool;
     void setTitle(SDL_Window *window) const;
     void stop();
@@ -1918,14 +1917,13 @@ void VideoState::handler()
 }
 
 
-int MovieState::decode_interrupt_cb(void *ctx)
-{
-    return static_cast<MovieState*>(ctx)->mQuit.load(std::memory_order_relaxed);
-}
-
 bool MovieState::prepare()
 {
-    auto intcb = AVIOInterruptCB{decode_interrupt_cb, this};
+    auto const intcb = AVIOInterruptCB{
+        .callback = [](void *ctx) noexcept NONBLOCKING -> int
+        { return static_cast<MovieState*>(ctx)->mQuit.load(std::memory_order_relaxed); },
+        .opaque = this
+    };
     if(avio_open2(al::out_ptr(mIOContext), mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr) < 0)
     {
         fmt::println(std::cerr, "Failed to open {}", mFilename);

@@ -2514,13 +2514,13 @@ void GetProperty(const gsl::not_null<al::Source*> Source,
 }
 
 
-using source_store_single = std::array<gsl::not_null<al::Source*>,1>;
+using source_store_single = std::array<gsl::not_null<al::Source*>, 1>;
 using source_store_vector = std::vector<gsl::not_null<al::Source*>>;
 using source_store_variant = std::variant<std::monostate,source_store_single,source_store_vector>;
 
-constexpr auto get_srchandles(gsl::not_null<al::Context*> const context,
-    source_store_variant &source_store, std::span<ALuint const> const sids)
-    -> std::span<gsl::not_null<al::Source*>>
+[[nodiscard]]
+auto get_srchandles(gsl::not_null<al::Context*> const context, source_store_variant &source_store,
+    std::span<ALuint const> const sids) -> std::span<gsl::not_null<al::Source*>>
 {
     if(sids.size() == 1)
     {

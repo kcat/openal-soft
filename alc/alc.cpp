@@ -360,7 +360,8 @@ constexpr auto DitherRNGSeed = 22222u;
     constexpr auto extlist = std::string_view{GetNoDeviceExtString()};
     auto ret = std::array<std::string_view, std::ranges::count(extlist, ' ')+1>{};
     std::ranges::transform(extlist | std::views::split(' '), ret.begin(),
-        [](auto&& namerange) { return std::string_view{namerange.begin(), namerange.end()}; });
+        [](std::ranges::contiguous_range auto&& namerange)
+    { return std::string_view{std::to_address(namerange.begin()), namerange.size()}; });
     return ret;
 }
 /* Returns the above Extension string as an array of string_views. */
@@ -369,7 +370,8 @@ constexpr auto DitherRNGSeed = 22222u;
     constexpr auto extlist = std::string_view{GetExtensionString()};
     auto ret = std::array<std::string_view, std::ranges::count(extlist, ' ')+1>{};
     std::ranges::transform(extlist | std::views::split(' '), ret.begin(),
-        [](auto&& namerange) { return std::string_view{namerange.begin(), namerange.end()}; });
+        [](std::ranges::contiguous_range auto&& namerange)
+    { return std::string_view{std::to_address(namerange.begin()), namerange.size()}; });
     return ret;
 }
 

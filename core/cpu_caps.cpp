@@ -4,7 +4,7 @@
 
 #include "cpu_caps.h"
 
-#if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+#if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
 #include <windows.h>
 #ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19
@@ -39,7 +39,7 @@ inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
 #define CAN_GET_CPUID
 
 #elif defined(HAVE_CPUID_INTRINSIC) \
-    && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
+    && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || (defined(_M_X64) && !defined(_M_ARM64EC)))
 
 using reg_type = int;
 inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
@@ -137,7 +137,7 @@ auto GetCPUInfo() -> std::optional<CPUInfo>
 #if HAVE_NEON
 #ifdef __ARM_NEON
     ret.mCaps |= CPU_CAP_NEON;
-#elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+#elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
     if(IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
         ret.mCaps |= CPU_CAP_NEON;
 #else

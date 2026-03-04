@@ -389,7 +389,7 @@ void ChorusState::process(const size_t samplesToDo,
             { return sample + in*gain; });
         }
     }
-    mOffset += samplesToDo;
+    mOffset += gsl::narrow_cast<unsigned>(samplesToDo);
 
     if(mUpsampler.has_value())
     {

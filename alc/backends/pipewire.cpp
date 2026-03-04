@@ -68,7 +68,6 @@
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wpedantic\"")
 std_pragma("GCC diagnostic ignored \"-Wconversion\"")
-std_pragma("GCC diagnostic ignored \"-Warith-conversion\"")
 std_pragma("GCC diagnostic ignored \"-Wfloat-conversion\"")
 std_pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
 std_pragma("GCC diagnostic ignored \"-Wunused-parameter\"")

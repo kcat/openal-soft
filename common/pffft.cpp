@@ -149,54 +149,9 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 }
 
 /*
- * SSE1 support macros
- */
-#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
-    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
-
-#include <xmmintrin.h>
-using v4sf = __m128;
-/* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
- * finalize functions anyway so you will have to work if you want to enable AVX
- * with its 256-bit vectors.
- */
-constexpr auto SimdSize = 4u;
-force_inline auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
-force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
-force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
-force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
-{ return _mm_add_ps(_mm_mul_ps(a,b), c); }
-force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
-force_inline auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
-
-force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
-{ return _mm_setr_ps(a, b, c, d); }
-force_inline auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
-{ return _mm_move_ss(v, _mm_set_ss(a)); }
-force_inline auto vextract0(v4sf v) noexcept -> float
-{ return _mm_cvtss_f32(v); }
-
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
-{ return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
-
-force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
-{
-    out1 = _mm_unpacklo_ps(in1, in2);
-    out2 = _mm_unpackhi_ps(in1, in2);
-}
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
-{
-    out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
-    out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
-}
-
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
-{ _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
-
-/*
  * ARM NEON support macros
  */
-#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64)
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64) || defined(_M_ARM64EC)
 
 #include <arm_neon.h>
 using v4sf = float32x4_t;
@@ -255,6 +210,51 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     x2 = u1_.val[0];
     x3 = u1_.val[1];
 }
+
+/*
+ * SSE1 support macros
+ */
+#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
+    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+
+#include <xmmintrin.h>
+using v4sf = __m128;
+/* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
+ * finalize functions anyway so you will have to work if you want to enable AVX
+ * with its 256-bit vectors.
+ */
+constexpr auto SimdSize = 4u;
+force_inline auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
+force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
+force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
+force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
+{ return _mm_add_ps(_mm_mul_ps(a,b), c); }
+force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
+force_inline auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
+
+force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+{ return _mm_setr_ps(a, b, c, d); }
+force_inline auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
+{ return _mm_move_ss(v, _mm_set_ss(a)); }
+force_inline auto vextract0(v4sf v) noexcept -> float
+{ return _mm_cvtss_f32(v); }
+
+force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+{ return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
+
+force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    out1 = _mm_unpacklo_ps(in1, in2);
+    out2 = _mm_unpackhi_ps(in1, in2);
+}
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
+    out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
+}
+
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+{ _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
 /*
  * Generic GCC vector macros

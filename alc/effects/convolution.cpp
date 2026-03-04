@@ -16,10 +16,10 @@
 #include <span>
 #include <vector>
 
-#if HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
-#elif HAVE_NEON
+#if HAVE_NEON
 #include <arm_neon.h>
+#elif HAVE_SSE_INTRINSICS
+#include <xmmintrin.h>
 #endif
 
 #include "alcomplex.h"
@@ -156,7 +156,20 @@ constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 void apply_fir(std::span<float> dst, std::span<const float> input,
     const std::span<const float,ConvolveUpdateSamples> filter)
 {
-#if HAVE_SSE_INTRINSICS
+#if HAVE_NEON
+    std::ranges::generate(dst, [&input,filter]
+    {
+        auto r4 = vdupq_n_f32(0.0f);
+        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
+            r4 = vmlaq_f32(r4, vld1q_f32(&input[j]), vld1q_f32(&filter[j]));
+        input = input.subspan(1);
+
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+    });
+
+#elif HAVE_SSE_INTRINSICS
+
     std::ranges::generate(dst, [&input,filter]
     {
         auto r4 = _mm_setzero_ps();
@@ -172,19 +185,6 @@ void apply_fir(std::span<float> dst, std::span<const float> input,
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
         return _mm_cvtss_f32(r4);
-    });
-
-#elif HAVE_NEON
-
-    std::ranges::generate(dst, [&input,filter]
-    {
-        auto r4 = vdupq_n_f32(0.0f);
-        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
-            r4 = vmlaq_f32(r4, vld1q_f32(&input[j]), vld1q_f32(&filter[j]));
-        input = input.subspan(1);
-
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
     });
 
 #else

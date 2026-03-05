@@ -15,10 +15,34 @@
 #include "gsl/gsl"
 
 
+struct i8;
+struct u8;
+struct i16;
+struct u16;
+struct i32;
+struct u32;
+struct i64;
+struct u64;
+struct f32;
+struct f64;
+struct isize;
+
+using sys_int = std::conditional_t<std::same_as<int, std::int8_t>, i8,
+    std::conditional_t<std::same_as<int, std::int16_t>, i16,
+    std::conditional_t<std::same_as<int, std::int32_t>, i32,
+    std::conditional_t<std::same_as<int, std::int64_t>, i64,
+    void>>>>;
+using sys_uint = std::conditional_t<std::same_as<unsigned, std::uint8_t>, u8,
+    std::conditional_t<std::same_as<unsigned, std::uint16_t>, u16,
+    std::conditional_t<std::same_as<unsigned, std::uint32_t>, u32,
+    std::conditional_t<std::same_as<unsigned, std::uint64_t>, u64,
+    void>>>>;
+
+
 namespace al {
 
 /* A "weak number" is a standard number type. They are prone to implicit
- * conversions, unexpected type promotions, and signedness mismatches
+ * conversions, unexpected type promotions, and signedness mismatches,
  * producing unexpected results.
  */
 template<typename T>
@@ -149,9 +173,6 @@ struct ConstantNum {
     consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)} { }
     /* NOLINTEND(*-explicit-constructor) */
 };
-
-
-struct UInt;
 
 
 namespace detail_ {
@@ -371,9 +392,9 @@ public:
     }
 
     [[nodiscard]] force_inline constexpr
-    auto popcount() const noexcept -> UInt requires(std::integral<ValueType>);
+    auto popcount() const noexcept -> sys_uint requires(std::integral<ValueType>);
     [[nodiscard]] force_inline constexpr
-    auto countr_zero() const noexcept -> UInt requires(std::integral<ValueType>);
+    auto countr_zero() const noexcept -> sys_uint requires(std::integral<ValueType>);
 
     [[nodiscard]] force_inline constexpr
     auto abs() const noexcept -> SelfType { return SelfType{std::abs(c_val)}; }
@@ -843,32 +864,26 @@ DECL_NUMBERTYPE(f64, double)
 
 DECL_NUMBERTYPE(isize, std::make_signed_t<std::size_t>);
 using usize = std::size_t;
-
-using sint = std::conditional_t<sizeof(int) == sizeof(i32), i32,
-    std::conditional_t<sizeof(int) == sizeof(i64), i64,
-    void>>;
+#undef DECL_NUMBERTYPE
 
 namespace al {
 
-DECL_NUMBERTYPE(UInt, unsigned)
-#undef DECL_NUMBERTYPE
-
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
-constexpr auto number_base<T,SelfType>::popcount() const noexcept -> UInt
+constexpr auto number_base<T,SelfType>::popcount() const noexcept -> sys_uint
     requires(std::integral<T>)
 {
     using unsigned_t = std::make_unsigned_t<T>;
-    return UInt{static_cast<unsigned>(std::popcount(static_cast<unsigned_t>(c_val)))};
+    return sys_uint{static_cast<unsigned>(std::popcount(static_cast<unsigned_t>(c_val)))};
 }
 
 template<weak_number T, typename SelfType>
     requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
-constexpr auto number_base<T,SelfType>::countr_zero() const noexcept -> UInt
+constexpr auto number_base<T,SelfType>::countr_zero() const noexcept -> sys_uint
     requires(std::integral<T>)
 {
     using unsigned_t = std::make_unsigned_t<T>;
-    return UInt{static_cast<unsigned>(std::countr_zero(static_cast<unsigned_t>(c_val)))};
+    return sys_uint{static_cast<unsigned>(std::countr_zero(static_cast<unsigned_t>(c_val)))};
 }
 
 } /* namespace al */
@@ -883,7 +898,6 @@ template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT
 template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
 template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
 template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
-template<typename CharT> struct al::formatter<al::UInt, CharT> : al::UInt::formatter<CharT> { };
 
 [[nodiscard]] consteval
 auto operator ""_i8(unsigned long long const n) noexcept { return i8::from(n); }

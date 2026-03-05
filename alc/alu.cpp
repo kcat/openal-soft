@@ -147,11 +147,11 @@ void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable 
 
     if(increment > MixerFracOne)
     {
-        sf = MixerFracOne/f32::make_from(increment) - table->scaleBase;
+        sf = MixerFracOne/f32::from(increment) - table->scaleBase;
         sf = std::max(0.0_f32, BSincScaleCount*sf*table->scaleRange - 1.0f);
 
         si = float2uint(sf.c_val);
-        sf -= f32::make_from(si);
+        sf -= f32::from(si);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.

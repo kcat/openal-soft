@@ -52,8 +52,8 @@ struct BitReverser {
 
             if(idx < revidx)
             {
-                mData[ret_i][0] = u16::make_from(idx);
-                mData[ret_i][1] = u16::make_from(revidx);
+                mData[ret_i][0] = u16::from(idx);
+                mData[ret_i][1] = u16::from(revidx);
                 ++ret_i;
             }
         }

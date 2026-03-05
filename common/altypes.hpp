@@ -238,7 +238,7 @@ public:
     number_base(ConstantNum<ValueType> const &value) noexcept : c_val{value.c_val} { }
 
     template<weak_number U> force_inline static constexpr
-    auto make_from(U const &value)
+    auto from(U const &value)
         noexcept(not might_narrow<ValueType, U> or std::floating_point<ValueType>)
         -> SelfType
     {
@@ -293,9 +293,7 @@ public:
             or std::floating_point<typename U::value_t>)
         -> U
     {
-        /* Like make_from, converting to a floating point type isn't checked
-         * here.
-         */
+        /* Like from(), converting to a floating point type isn't checked here. */
         if constexpr(std::floating_point<typename U::value_t>)
             return U{static_cast<typename U::value_t>(c_val)};
         else
@@ -859,32 +857,32 @@ template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT
 template<typename CharT> struct al::formatter<al::UInt, CharT> : al::UInt::formatter<CharT> { };
 
 [[nodiscard]] consteval
-auto operator ""_i8(unsigned long long const n) noexcept { return i8::make_from(n); }
+auto operator ""_i8(unsigned long long const n) noexcept { return i8::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u8(unsigned long long const n) noexcept { return u8::make_from(n); }
+auto operator ""_u8(unsigned long long const n) noexcept { return u8::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i16(unsigned long long const n) noexcept { return i16::make_from(n); }
+auto operator ""_i16(unsigned long long const n) noexcept { return i16::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u16(unsigned long long const n) noexcept { return u16::make_from(n); }
+auto operator ""_u16(unsigned long long const n) noexcept { return u16::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i32(unsigned long long const n) noexcept { return i32::make_from(n); }
+auto operator ""_i32(unsigned long long const n) noexcept { return i32::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u32(unsigned long long const n) noexcept { return u32::make_from(n); }
+auto operator ""_u32(unsigned long long const n) noexcept { return u32::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i64(unsigned long long const n) noexcept { return i64::make_from(n); }
+auto operator ""_i64(unsigned long long const n) noexcept { return i64::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u64(unsigned long long const n) noexcept { return u64::make_from(n); }
+auto operator ""_u64(unsigned long long const n) noexcept { return u64::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_f32(long double const n) noexcept { return f32::make_from(n); }
+auto operator ""_f32(long double const n) noexcept { return f32::from(n); }
 [[nodiscard]] consteval
-auto operator ""_f64(long double const n) noexcept { return f64::make_from(n); }
+auto operator ""_f64(long double const n) noexcept { return f64::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_isize(unsigned long long const n) noexcept { return isize::make_from(n); }
+auto operator ""_isize(unsigned long long const n) noexcept { return isize::from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize::value_t>(n); }

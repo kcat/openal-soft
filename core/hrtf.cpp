@@ -588,8 +588,7 @@ try {
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
             [delay_scale](float const fdelay) -> u8
         {
-            return u8::make_from(al::saturate_cast<u8::value_t>(
-                float2int(fdelay*delay_scale + 0.5f)));
+            return u8::from(al::saturate_cast<u8::value_t>(float2int(fdelay*delay_scale + 0.5f)));
         });
 
         /* Scale the IR size for the new sample rate and update the stored

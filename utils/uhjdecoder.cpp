@@ -393,7 +393,7 @@ auto main(std::span<std::string_view> args) -> int
             return;
         }
 
-        auto const inchannels = u32::make_from(ininfo.channels);
+        auto const inchannels = u32::from(ininfo.channels);
         auto outchans = u32{};
         if(inchannels == 2)
             outchans = 3;
@@ -427,9 +427,9 @@ auto main(std::span<std::string_view> args) -> int
         // 16-bit val, channel count
         fwrite16le(outchans.cast_to<u16>(), outfile);
         // 32-bit val, frequency
-        fwrite32le(u32::make_from(ininfo.samplerate), outfile);
+        fwrite32le(u32::from(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
-        fwrite32le(u32::make_from(ininfo.samplerate)*outchans*sizeof(float), outfile);
+        fwrite32le(u32::from(ininfo.samplerate)*outchans*sizeof(float), outfile);
         // 16-bit val, frame size
         fwrite16le((sizeof(float)*outchans).cast_to<u16>(), outfile);
         // 16-bit val, bits per sample
@@ -512,9 +512,9 @@ auto main(std::span<std::string_view> args) -> int
         {
             auto const dataLen = DataEnd - DataStart;
             if(outfile.seekp(4))
-                fwrite32le(u32::make_from(DataEnd-8), outfile); // 'WAVE' header len
+                fwrite32le(u32::from(DataEnd-8), outfile); // 'WAVE' header len
             if(outfile.seekp(DataStart-4))
-                fwrite32le(u32::make_from(dataLen), outfile); // 'data' header len
+                fwrite32le(u32::from(dataLen), outfile); // 'data' header len
         }
         outfile.flush();
         ++num_decoded;

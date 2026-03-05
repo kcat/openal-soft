@@ -179,7 +179,7 @@ struct BSincFilterArray {
             const auto l = floor(m*0.5_f64) - 1.0_f64;
             const auto o = size_t{BSincPointsMax-m.c_val} / 2u;
             const auto scale = lerp(hdr.scaleBase, 1.0_f64,
-                f64::make_from(si+1u)/f64{BSincScaleCount});
+                f64::from(si+1u)/f64{BSincScaleCount});
 
             /* Calculate an appropriate cutoff frequency. An explanation may be
              * in order here.
@@ -241,11 +241,11 @@ struct BSincFilterArray {
 
             for(const auto pi : std::views::iota(0_uz, BSincPhaseCount))
             {
-                const auto phase = l + f64::make_from(pi)/f64{BSincPhaseCount};
+                const auto phase = l + f64::from(pi)/f64{BSincPhaseCount};
 
                 for(const auto i : std::views::iota(0_uz, m))
                 {
-                    const auto x = f64::make_from(i) - phase;
+                    const auto x = f64::from(i) - phase;
                     filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, besseli_0_beta) * cutoff2 *
                         Sinc(cutoff2*x);
                 }

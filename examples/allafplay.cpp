@@ -410,7 +410,7 @@ auto LafStream::readChunk() -> u32
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
     mCurrentSample += u64{numsamples};
-    return u32::make_from(numsamples);
+    return u32::from(numsamples);
 }
 
 auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::span<std::byte>
@@ -816,7 +816,7 @@ try {
             case ALC_SURROUND_6_1_SOFT: return 7_u32;
             case ALC_SURROUND_7_1_SOFT: return 8_u32;
             case ALC_BFORMAT3D_SOFT:
-                return u32::make_from((RenderAmbiOrder+1) * (RenderAmbiOrder+1));
+                return u32::from((RenderAmbiOrder+1) * (RenderAmbiOrder+1));
             default:
                 throw std::runtime_error{fmt::format("Unexpected channel enum: {:#x}",
                     RenderChannels)};
@@ -873,9 +873,9 @@ try {
             alcGetInteger64vSOFT(device, ALC_DEVICE_LATENCY_SOFT, 1, &latency);
             std::ignore = alcGetError(device);
 
-            auto const iframesize = isize::make_from(framesize);
-            leadIn = isize::make_from(latency * RenderSampleRate / 1'000'000'000) * iframesize;
-            leadOut = isize::make_from((latency*RenderSampleRate + 999'999'999) / 1'000'000'000)
+            auto const iframesize = isize::from(framesize);
+            leadIn = isize::from(latency * RenderSampleRate / 1'000'000'000) * iframesize;
+            leadOut = isize::from((latency*RenderSampleRate + 999'999'999) / 1'000'000'000)
                 * iframesize;
         }
 

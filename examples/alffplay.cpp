@@ -125,6 +125,7 @@ auto EnableUhj = false;
 auto EnableSuperStereo = false;
 auto DisableVideo = false;
 auto TimeStretchFactor = 1.0f;
+auto PitchTuneFactor = 1.0f;
 
 constexpr auto AVNoSyncThreshold = seconds{10};
 
@@ -1333,7 +1334,7 @@ void AudioState::handler()
     }
     if(EnableSuperStereo)
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
-    if(TimeStretchFactor != 1.0f)
+    if(sPShiftSlot != 0)
     {
         /* Filter to mute the dry (un-corrected) path. */
         auto mutefilter = ALuint{};
@@ -2144,6 +2145,7 @@ auto main(std::span<std::string_view> args) -> int
             "    -gain <g>     Set audio playback gain (prepend +/- or append \"dB\" to \n"
             "                  indicate decibels, otherwise it's linear amplitude)\n"
             "    -tstretch <s> Set playback speed factor (with pitch correction)"
+            "    -tune <st>    Adjust pitch tuning (in semitones, decimals allowed)"
             "    -novideo      Disable video playback\n"
             "    -direct       Play audio directly on the output, bypassing virtualization\n"
             "    -superstereo  Apply Super Stereo processing to stereo tracks\n"
@@ -2306,15 +2308,39 @@ auto main(std::span<std::string_view> args) -> int
                     }
                     return std::numeric_limits<float>::quiet_NaN();
                 });
-                /* Time stretching is limited to [0.5, 2.0] because the pitch
-                 * shifter effect is limited to [-12, +12] semitones.
-                 */
-                if(!(stretchval >= 0.5f && stretchval <= 2.0f) || endpos != optarg.size())
+                if(!(stretchval > 0.0f) || endpos != optarg.size())
                     fmt::println(std::cerr, "Invalid tstretch value: {}", optarg);
                 else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for time stretching");
                 else
                     TimeStretchFactor = stretchval;
+            }
+            continue;
+        }
+        if(argval == "-tune")
+        {
+            if(curarg+1 == args_end)
+                fmt::println(std::cerr, "Missing argument for -tstretch");
+            else
+            {
+                const auto optarg = *++curarg;
+
+                auto endpos = size_t{};
+                const auto tuneval = std::invoke([optarg, &endpos]
+                {
+                    try { return std::stof(std::string{optarg}, &endpos); }
+                    catch(std::exception &e) {
+                        fmt::println(std::cerr, "Exception reading tstretch value: {}", e.what());
+                    }
+                    return std::numeric_limits<float>::quiet_NaN();
+                });
+                auto const pitchtune = std::pow(2.0f, tuneval / 12.0f);
+                if(!std::isfinite(pitchtune) || endpos != optarg.size())
+                    fmt::println(std::cerr, "Invalid tune value: {}", optarg);
+                else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
+                    fmt::println(std::cerr, "EFX not supported for pitch tuning");
+                else
+                    PitchTuneFactor = pitchtune;
             }
             continue;
         }
@@ -2327,7 +2353,7 @@ auto main(std::span<std::string_view> args) -> int
             alDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
         AudioState::sPShiftSlot = 0;
     });
-    if(TimeStretchFactor != 1.0f)
+    if(TimeStretchFactor != 1.0f || PitchTuneFactor != 1.0f)
     {
         /* AL_PITCH alone will speed up or slow down playback and alter the
          * pitch (e.g. 2.0 will play twice as fast, 12 semitones higher).
@@ -2347,29 +2373,38 @@ auto main(std::span<std::string_view> args) -> int
             /* Calculate the tuning (in semitones and cents) to counteract the
              * pitch change from AL_PITCH.
              */
-            auto const tune = static_cast<int>(std::lround(std::log2(TimeStretchFactor)*-1200.0f));
-            auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
+            auto const pitch = PitchTuneFactor / TimeStretchFactor;
+            if(!(pitch >= 0.5f && pitch <= 2.0f))
             {
-                auto const course = tune / 100;
-                auto const fine = tune % 100;
-                /* Fine-tuning is limited to -50...+50, so adjust values as needed
-                 * (e.g. tune=-590: course=-5, fine=-90 -> course=-6, fine=10).
-                 */
-                if(fine > 50)
-                    return {course+1, fine-100};
-                if(fine < -50)
-                    return {course-1, fine+100};
-                return {course, fine};
-            });
-            fmt::println("Speed factor: {} (course tuning: {}, fine tuning: {})",
-                TimeStretchFactor, course_tune, fine_tune);
+                fmt::println(std::cerr, "Pitch tuning out of range: {}", pitch);
+                TimeStretchFactor = 1.0f;
+            }
+            else
+            {
+                auto const tune = static_cast<int>(std::lround(std::log2(pitch) * 1200.0f));
+                auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
+                {
+                    auto const course = tune / 100;
+                    auto const fine = tune % 100;
+                    /* Fine-tuning is limited to -50...+50, so adjust values as
+                     * needed (e.g. course=-5, fine=-90 -> course=-6, fine=10).
+                     */
+                    if(fine > 50)
+                        return {course+1, fine-100};
+                    if(fine < -50)
+                        return {course-1, fine+100};
+                    return {course, fine};
+                });
+                fmt::println("Speed factor: {} (pitch adj: {}; course tuning: {}, fine tuning: {})",
+                    TimeStretchFactor, pitch, course_tune, fine_tune);
 
-            alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, course_tune);
-            alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
+                alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, std::clamp(course_tune, -12, +12));
+                alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
 
-            alGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
-            alAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
-                static_cast<ALint>(effect));
+                alGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+                alAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
+                    static_cast<ALint>(effect));
+            }
         }
         alDeleteEffects(1, &effect);
     }

@@ -985,7 +985,7 @@ namespace std {
  * common_type_t<A, B> results in A, then common_type_t<B, A> must also result
  * in A. Similarly, if common_type_t<A, B> results in C, then
  * common_type_t<B, A> must also result in C. Consequently, since isize and
- * usize may be inter-convertible with other types, these base specializations
+ * usize may be interconvertible with other types, these base specializations
  * will never result in isize or usize.
  */
 template<al::strong_number T, al::strong_number U>
@@ -1015,6 +1015,14 @@ template<> struct common_type<u32, i8> { using type = i64; };
 template<> struct common_type<u16, i16> { using type = i32; };
 template<> struct common_type<u32, i16> { using type = i64; };
 template<> struct common_type<u32, i32> { using type = i64; };
+
+/* Declare the common type between equal-sized strong integer and floating
+ * point types, where a larger floating point type is needed.
+ */
+template<> struct common_type<f32, i32> { using type = f64; };
+template<> struct common_type<f32, u32> { using type = f64; };
+template<> struct common_type<i32, f32> { using type = f64; };
+template<> struct common_type<u32, f32> { using type = f64; };
 
 /* Declare the common type between strong integer types where isize (and later
  * usize) is the appropriate result type.

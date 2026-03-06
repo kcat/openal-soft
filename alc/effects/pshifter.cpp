@@ -301,7 +301,7 @@ void PshifterState::process(const size_t samplesToDo,
                     tmp *= std::numbers::inv_pi_v<float>;
                     auto const qpd = float2int(tmp);
                     tmp -= static_cast<float>(qpd + (qpd%2));
-                    tmp *= 0.5f * OversampleFactor;
+                    tmp *= float{0.5f*OversampleFactor};
 
                     /* Compute the k-th partials' frequency bin target. We
                      * don't need the "true frequency" since it's a linear
@@ -334,13 +334,15 @@ void PshifterState::process(const size_t samplesToDo,
                      * frequency bin, and accumulate it to get the actual bin
                      * phase.
                      */
-                    auto tmp = mSumPhase[k] + mSynthesisBuffer[k].FreqBin*expected_cycles;
+                    auto const bin_offset = static_cast<float>(k%OversampleFactor)
+                        - static_cast<float>(k);
+                    auto tmp = (mSynthesisBuffer[k].FreqBin+bin_offset) * expected_cycles;
 
                     /* Wrap between -pi and +pi for the sum. If mSumPhase is
-                     * left to grow indefinitely, it will lose precision and
-                     * produce less exact phase over time.
+                     * left to accumulate indefinitely, it will lose precision
+                     * and produce less exact phase over time.
                      */
-                    tmp *= std::numbers::inv_pi_v<float>;
+                    tmp = (tmp+mSumPhase[k]) * std::numbers::inv_pi_v<float>;
                     auto const qpd = float2int(tmp);
                     tmp -= static_cast<float>(qpd + (qpd%2));
                     mSumPhase[k] = tmp * std::numbers::pi_v<float>;

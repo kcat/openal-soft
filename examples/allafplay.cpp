@@ -278,7 +278,7 @@ struct SampleInfo<i8> {
  * channels, resulting in a full set of positions being specified over 48
  * sample frames.
  */
-constexpr auto FramesPerPos = 48_uz;
+constexpr auto FramesPerPos = 48u;
 
 struct Channel {
     ALuint mSource{};

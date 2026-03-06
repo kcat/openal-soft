@@ -27,17 +27,29 @@ struct f32;
 struct f64;
 struct isize;
 
-using sys_int = std::conditional_t<std::same_as<int, std::int8_t>, i8,
-    std::conditional_t<std::same_as<int, std::int16_t>, i16,
-    std::conditional_t<std::same_as<int, std::int32_t>, i32,
-    std::conditional_t<std::same_as<int, std::int64_t>, i64,
-    void>>>>;
-using sys_uint = std::conditional_t<std::same_as<unsigned, std::uint8_t>, u8,
-    std::conditional_t<std::same_as<unsigned, std::uint16_t>, u16,
-    std::conditional_t<std::same_as<unsigned, std::uint32_t>, u32,
-    std::conditional_t<std::same_as<unsigned, std::uint64_t>, u64,
-    void>>>>;
+namespace al {
 
+template<typename>
+struct make_strong { };
+
+template<> struct make_strong<std::int8_t> { using type = i8; };
+template<> struct make_strong<std::uint8_t> { using type = u8; };
+template<> struct make_strong<std::int16_t> { using type = i16; };
+template<> struct make_strong<std::uint16_t> { using type = u16; };
+template<> struct make_strong<std::int32_t> { using type = i32; };
+template<> struct make_strong<std::uint32_t> { using type = u32; };
+template<> struct make_strong<std::int64_t> { using type = i64; };
+template<> struct make_strong<std::uint64_t> { using type = u64; };
+template<> struct make_strong<float> { using type = f32; };
+template<> struct make_strong<double> { using type = f64; };
+
+template<typename T>
+using make_strong_t = typename make_strong<T>::type;
+
+} /* namespace al */
+
+using sys_int = al::make_strong_t<int>;
+using sys_uint = al::make_strong_t<unsigned>;
 
 namespace al {
 
@@ -936,6 +948,64 @@ auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isi
 auto operator ""_uz(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
 [[nodiscard]] consteval
 auto operator ""_zu(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
+
+
+namespace std {
+
+/* Declare the common type between strong number types, where one fits the
+ * other. Note that the result must be order invariant, that is, if
+ * common_type_t<A, B> results in A, then common_type_t<B, A> must also result
+ * in A. Similarly, if common_type_t<A, B> results in C, then
+ * common_type_t<B, A> must also result in C. Consequently, since isize and
+ * usize may be inter-convertible with other types, these base specializations
+ * will never result in isize or usize.
+ */
+template<al::strong_number T, al::strong_number U>
+    requires(not std::same_as<T, isize> and not std::same_as<T, usize>
+        and not al::might_narrow<typename T::value_t, typename U::value_t>)
+struct common_type<T, U> { using type = T; };
+
+template<al::strong_number T, al::strong_number U>
+    requires(not std::same_as<U, isize> and not std::same_as<U, usize>
+        and not al::might_narrow<typename U::value_t, typename T::value_t>
+        and al::might_narrow<typename T::value_t, typename U::value_t>)
+struct common_type<T, U> { using type = U; };
+
+/* Declare the common type between signed and unsigned strong number types,
+ * where a larger signed type is needed.
+ */
+template<> struct common_type<i8, u8> { using type = i16; };
+template<> struct common_type<i8, u16> { using type = i32; };
+template<> struct common_type<i8, u32> { using type = i64; };
+template<> struct common_type<i16, u16> { using type = i32; };
+template<> struct common_type<i16, u32> { using type = i64; };
+template<> struct common_type<i32, u32> { using type = i64; };
+
+template<> struct common_type<u8, i8> { using type = i16; };
+template<> struct common_type<u16, i8> { using type = i32; };
+template<> struct common_type<u32, i8> { using type = i64; };
+template<> struct common_type<u16, i16> { using type = i32; };
+template<> struct common_type<u32, i16> { using type = i64; };
+template<> struct common_type<u32, i32> { using type = i64; };
+
+/* Declare the common type between strong integer types where isize (and later
+ * usize) is the appropriate result type.
+ */
+template<al::strong_integral T> requires(sizeof(T) < sizeof(isize) or std::same_as<T, isize>)
+struct common_type<isize, T> { using type = isize; };
+template<al::strong_integral T> requires(sizeof(T) < sizeof(isize))
+struct common_type<T, isize> { using type = isize; };
+
+/* Declare the common type between a strong and weak number type, ensuring the
+ * appropriate strong number type is provided.
+ */
+template<al::strong_number T, al::weak_number U>
+struct common_type<T, U> : common_type<T, al::make_strong_t<U>> { };
+
+template<al::weak_number T, al::strong_number U>
+struct common_type<T, U> : common_type<al::make_strong_t<T>, U> { };
+
+} /* namespace std */
 
 
 template<al::strong_number T> [[nodiscard]] force_inline constexpr

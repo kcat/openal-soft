@@ -296,11 +296,40 @@ public:
     }
 
     [[nodiscard]] force_inline static constexpr
+    auto bit_pack(std::byte const value) noexcept -> SelfType requires(sizeof(value_t) == 1)
+    {
+        return std::bit_cast<SelfType>(value);
+    }
+
+    [[nodiscard]] force_inline static constexpr
     auto bit_pack(std::byte const hi, std::byte const lo) noexcept -> SelfType
         requires(sizeof(value_t) == 2)
     {
         auto const ret = static_cast<std::uint16_t>((to_integer<std::uint16_t>(hi)<<8)
             | to_integer<std::uint16_t>(lo));
+        return std::bit_cast<SelfType>(ret);
+    }
+
+    [[nodiscard]] force_inline static constexpr
+    auto bit_pack(std::byte const hi, std::byte const midhi, std::byte const midlo,
+        std::byte const lo) noexcept -> SelfType requires(sizeof(value_t) == 4)
+    {
+        auto const ret = (to_integer<std::uint32_t>(hi)<<24)
+            | (to_integer<std::uint32_t>(midhi)<<16) | (to_integer<std::uint32_t>(midlo)<<8)
+            | to_integer<std::uint32_t>(lo);
+        return std::bit_cast<SelfType>(ret);
+    }
+
+    [[nodiscard]] force_inline static constexpr
+    auto bit_pack(std::byte const hi, std::byte const mid6, std::byte const mid5,
+        std::byte const mid4, std::byte const mid3, std::byte const mid2, std::byte const mid1,
+        std::byte const lo) noexcept -> SelfType requires(sizeof(value_t) == 8)
+    {
+        auto const ret = (to_integer<std::uint64_t>(hi)<<56)
+            | (to_integer<std::uint64_t>(mid6)<<48) | (to_integer<std::uint64_t>(mid5)<<40)
+            | (to_integer<std::uint64_t>(mid4)<<32) | (to_integer<std::uint64_t>(mid3)<<24)
+            | (to_integer<std::uint64_t>(mid2)<<16) | (to_integer<std::uint64_t>(mid1)<<8)
+            | to_integer<std::uint64_t>(lo);
         return std::bit_cast<SelfType>(ret);
     }
 

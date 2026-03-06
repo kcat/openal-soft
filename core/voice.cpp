@@ -382,8 +382,8 @@ void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData
          * nibble sample value. This is followed by the two initial 16-bit
          * sample history values.
          */
-        auto const blockpred = u8{std::min(to_integer<u8::value_t>(src[srcChan].value),
-            u8::value_t{MSADPCMAdaptionCoeff.size()-1})};
+        auto const blockpred = std::min(u8::bit_pack(src[srcChan].value),
+            u8{MSADPCMAdaptionCoeff.size()-1});
         auto scale = i16::bit_pack(src[srcStep + 2*srcChan + 1].value,
             src[srcStep + 2*srcChan + 0].value).as<i32>();
 

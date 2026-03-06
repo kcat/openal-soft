@@ -192,15 +192,16 @@ namespace detail_ {
 template<typename>
 struct signed_difference { using type = void; };
 
-template<typename T> requires(std::integral<T>)
+template<std::integral T>
 struct signed_difference<T> { using type = std::make_signed_t<T>; };
 
 }
 
 /* Strong numbers are implemented using CRTP to act as a mixin of sorts. */
 template<weak_number ValueType, typename SelfType>
-    requires(not std::is_const_v<ValueType> and not std::is_volatile_v<ValueType>)
 class number_base {
+    static_assert(not std::is_const_v<ValueType> and not std::is_volatile_v<ValueType>);
+
     friend SelfType;
 
     /* Force printing smaller types as (unsigned) int. Always treat these as
@@ -912,21 +913,19 @@ using usize = std::size_t;
 
 namespace al {
 
-template<weak_number T, typename SelfType>
-    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
-constexpr auto number_base<T,SelfType>::popcount() const noexcept -> sys_uint
-    requires(std::integral<T>)
+template<weak_number ValueType, typename SelfType> [[nodiscard]] force_inline
+constexpr auto number_base<ValueType, SelfType>::popcount() const noexcept -> sys_uint
+    requires(std::integral<ValueType>)
 {
-    using unsigned_t = std::make_unsigned_t<T>;
+    using unsigned_t = std::make_unsigned_t<ValueType>;
     return sys_uint{static_cast<unsigned>(std::popcount(static_cast<unsigned_t>(c_val)))};
 }
 
-template<weak_number T, typename SelfType>
-    requires(not std::is_const_v<T> and not std::is_volatile_v<T>) [[nodiscard]] force_inline
-constexpr auto number_base<T,SelfType>::countr_zero() const noexcept -> sys_uint
-    requires(std::integral<T>)
+template<weak_number ValueType, typename SelfType> [[nodiscard]] force_inline
+constexpr auto number_base<ValueType, SelfType>::countr_zero() const noexcept -> sys_uint
+    requires(std::integral<ValueType>)
 {
-    using unsigned_t = std::make_unsigned_t<T>;
+    using unsigned_t = std::make_unsigned_t<ValueType>;
     return sys_uint{static_cast<unsigned>(std::countr_zero(static_cast<unsigned_t>(c_val)))};
 }
 

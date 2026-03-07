@@ -1,5 +1,5 @@
-#ifndef PHASE_SHIFTER_H
-#define PHASE_SHIFTER_H
+#ifndef PHASE_SHIFTER_HPP
+#define PHASE_SHIFTER_HPP
 
 #include "config_simd.h"
 
@@ -206,4 +206,4 @@ public:
 template<std::size_t N> inline
 auto const gPShifter = PhaseShifterT<N>{};
 
-#endif /* PHASE_SHIFTER_H */
+#endif /* PHASE_SHIFTER_HPP */

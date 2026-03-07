@@ -19,7 +19,7 @@
 #include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
-#include "phase_shifter.h"
+#include "phase_shifter.hpp"
 #include "vector.h"
 
 

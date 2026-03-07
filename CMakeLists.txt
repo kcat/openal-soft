@@ -755,7 +755,7 @@ set(COMMON_OBJS
     common/opthelpers.h
     common/pffft.cpp
     common/pffft.h
-    common/phase_shifter.h
+    common/phase_shifter.hpp
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h

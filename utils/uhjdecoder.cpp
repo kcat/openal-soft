@@ -48,7 +48,7 @@
 #include "fmt/ostream.h"
 #include "fmt/std.h"
 #include "opthelpers.h"
-#include "phase_shifter.h"
+#include "phase_shifter.hpp"
 #include "vector.h"
 
 #include "sndfile.h"

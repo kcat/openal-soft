@@ -44,6 +44,12 @@
 #include "core/logging.h"
 #include "fmt/ranges.h"
 
+#if HAVE_CXXMODULES
+import window.hann;
+#else
+#include "hann_window.hpp"
+#endif
+
 struct BufferStorage;
 struct ContextBase;
 
@@ -70,25 +76,7 @@ constexpr auto OversampleMask = OversampleFactor - 1u;
 static_assert(StftSize%OversampleFactor == 0, "Factor must be a clean divisor of the size");
 constexpr auto StftStep = StftSize / OversampleFactor;
 
-/* Define a Hann window, used to filter the STFT input and output. */
-struct Windower {
-    alignas(16) std::array<float,StftSize> mData{};
-
-    Windower() noexcept
-    {
-        static constexpr auto scale = std::numbers::pi / double{StftSize};
-        /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0u, unsigned{StftHalfSize}), mData.begin(),
-            [](unsigned const i) -> float
-        {
-            const auto val = std::sin((i+0.5) * scale);
-            return static_cast<float>(val * val);
-        });
-        std::ranges::copy(mData | std::views::take(StftHalfSize), mData.rbegin());
-    }
-};
-const Windower gWindow{};
-
+auto &gWindow = gHannWindow<StftSize>;
 
 struct FrequencyBin {
     float Magnitude;

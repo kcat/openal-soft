@@ -750,6 +750,7 @@ set(COMMON_OBJS
     common/filesystem.cpp
     common/filesystem.h
     common/flexarray.h
+    common/hann_window.hpp
     common/intrusive_ptr.h
     common/opthelpers.h
     common/pffft.cpp
@@ -1585,7 +1586,9 @@ set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
 if(HAVE_CXXMODULES)
     set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/gsl.cppm)
-    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES alsoft-modules/gsl.cppm)
+    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES
+        alsoft-modules/gsl.cppm
+        alsoft-modules/hann_window.cppm)
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")

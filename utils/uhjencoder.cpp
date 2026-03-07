@@ -93,7 +93,7 @@ struct UhjEncoder {
         const std::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
 };
 
-const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
+auto &PShift = gPShifter<UhjEncoder::sFilterDelay*2>;
 
 
 /* Encoding UHJ from B-Format is done as:

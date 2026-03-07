@@ -203,4 +203,7 @@ public:
     }
 };
 
+template<std::size_t N> inline
+auto const gPShifter = PhaseShifterT<N>{};
+
 #endif /* PHASE_SHIFTER_H */

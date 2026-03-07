@@ -124,7 +124,7 @@ struct UhjDecoder {
         std::span<FloatBufferLine> OutSamples, usize SamplesToDo);
 };
 
-auto const PShift = PhaseShifterT<UhjDecoder::sFilterDelay*2>{};
+auto const &PShift = gPShifter<UhjDecoder::sFilterDelay*2>;
 
 
 /* Decoding UHJ is done as:

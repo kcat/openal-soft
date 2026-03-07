@@ -11,7 +11,6 @@
 #include "alcomplex.h"
 #include "altypes.hpp"
 #include "gsl/gsl"
-#include "phase_shifter.h"
 #include "pffft.h"
 #include "vector.h"
 
@@ -98,10 +97,7 @@ struct SegmentedFilter {
     }
 };
 
-template<usize N>
-inline const SegmentedFilter<N> gSegmentedFilter;
-
-template<usize N>
-inline const PhaseShifterT<N> gPShifter;
+template<std::size_t N> inline
+auto const gSegmentedFilter = SegmentedFilter<N>{};
 
 #endif /* CORE_ALLPASS_CONV_HPP */

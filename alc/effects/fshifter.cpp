@@ -274,16 +274,16 @@ void FshifterState::process(const size_t samplesToDo,
         {
             /* Real signal windowing and store in Analytic buffer */
             const auto [_, windowiter, analyticiter] = std::ranges::transform(
-                chandata.mInFIFO | std::views::drop(mPos), gWindow.mData, mAnalytic.begin(),
+                chandata.mInFIFO | std::views::drop(mPos), gWindow, mAnalytic.begin(),
                 std::multiplies{});
             std::ranges::transform(chandata.mInFIFO.begin(), chandata.mInFIFO.end(), windowiter,
-                gWindow.mData.end(), analyticiter, std::multiplies{});
+                gWindow.end(), analyticiter, std::multiplies{});
 
             /* Processing signal by Discrete Hilbert Transform (analytical signal). */
             complex_hilbert(mAnalytic);
 
             /* Windowing and add to output accumulator */
-            std::ranges::transform(mAnalytic, gWindow.mData, mAnalytic.begin(),
+            std::ranges::transform(mAnalytic, gWindow, mAnalytic.begin(),
                 [](const complex_d &a, const double w)  { return 2.0/OversampleFactor*w*a; });
 
             const auto accumrange = chandata.mOutputAccum | std::views::drop(mPos);

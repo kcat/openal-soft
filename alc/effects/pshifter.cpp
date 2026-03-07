@@ -250,10 +250,9 @@ void PshifterState::process(const size_t samplesToDo,
              * forward FFT to get the frequency-domain signal.
              */
             const auto [_, windowiter, fftbufiter] = std::ranges::transform(
-                fifo | std::views::drop(mPos), gWindow.mData, mFftBuffer.begin(),
+                fifo | std::views::drop(mPos), gWindow, mFftBuffer.begin(), std::multiplies{});
+            std::ranges::transform(fifo.begin(), fifo.end(), windowiter, gWindow.end(), fftbufiter,
                 std::multiplies{});
-            std::ranges::transform(fifo.begin(), fifo.end(), windowiter, gWindow.mData.end(),
-                fftbufiter, std::multiplies{});
 
             mFft.transform_ordered(mFftBuffer.begin(), mFftBuffer.begin(), mFftWorkBuffer.begin(),
                 PFFFT_FORWARD);
@@ -420,7 +419,7 @@ void PshifterState::process(const size_t samplesToDo,
                 PFFFT_BACKWARD);
 
             static constexpr auto scale = float{3.0f / OversampleFactor / StftSize};
-            std::ranges::transform(mFftBuffer, gWindow.mData, mFftBuffer.begin(),
+            std::ranges::transform(mFftBuffer, gWindow, mFftBuffer.begin(),
                 [](const float a, const float w) noexcept { return w*a*scale; });
 
             auto outputAccum = std::span{chandata.mOutputAccum};

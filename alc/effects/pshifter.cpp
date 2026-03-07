@@ -53,16 +53,19 @@ namespace {
 /* To keep from being too intensive with these FFTs, only process up to second
  * order (9 channels) and upsample higher orders.
  */
-constexpr auto EffectMaxOrder = 2_uz;
+constexpr auto EffectMaxOrder = 2u;
 constexpr auto UpsampleMatrix = std::span{AmbiScale::SecondOrderUp};
 constexpr auto NumLines = AmbiChannelsFromOrder(EffectMaxOrder);
 
 
 using complex_f = std::complex<float>;
 
-constexpr auto StftSize = 1024_uz;
-constexpr auto StftHalfSize = StftSize >> 1;
-constexpr auto OversampleFactor = 8_uz;
+constexpr auto StftSize = 1024u;
+constexpr auto StftHalfSize = StftSize >> 1u;
+constexpr auto OversampleFactor = 8u;
+
+static_assert(std::popcount(OversampleFactor) == 1, "Factor must be a power of two");
+constexpr auto OversampleMask = OversampleFactor - 1u;
 
 static_assert(StftSize%OversampleFactor == 0, "Factor must be a clean divisor of the size");
 constexpr auto StftStep = StftSize / OversampleFactor;
@@ -289,7 +292,7 @@ void PshifterState::process(const size_t samplesToDo,
                      * increments by 1/OversampleFactor for every frequency
                      * bin. So, the offset wraps every 'OversampleFactor' bin.
                      */
-                    auto const bin_offset = static_cast<float>(k % OversampleFactor);
+                    auto const bin_offset = static_cast<float>(k & OversampleMask);
                     auto tmp = (phase - mLastPhase[k]) - bin_offset*expected_cycles;
                     /* Store the actual phase for the next update. */
                     mLastPhase[k] = phase;
@@ -331,16 +334,28 @@ void PshifterState::process(const size_t samplesToDo,
                 for(auto k = 0_uz;k < StftHalfSize+1;++k)
                 {
                     /* Calculate the actual delta phase for this bin's target
-                     * frequency bin, and accumulate it to get the actual bin
-                     * phase.
+                     * frequency bin. Subtract the bin index and convert the
+                     * bin deviation to phase deviation, accounting for
+                     * oversampling. Also add the expected phase cycle for this
+                     * index, accounting for oversampling.
+                     *
+                     * tmp = (freqbin - k) * pi*2 / oversamplefactor
+                     * tmp += (k&oversamplemask) * expected_cycles
+                     *
+                     * Equivalently:
+                     *
+                     * tmp = (freqbin-k)*expected_cycles + (k&oversamplemask)*expected_cycles
+                     *     = (freqbin - k + (k&oversamplemask)) * expected_cycles
+                     *     = (freqbin - (k - (k&oversamplemask))) * expected_cycles
+                     *     = (freqbin - (k & ~oversamplemask)) * expected_cycles
                      */
-                    auto const bin_offset = static_cast<float>(k%OversampleFactor)
-                        - static_cast<float>(k);
-                    auto tmp = (mSynthesisBuffer[k].FreqBin+bin_offset) * expected_cycles;
+                    auto const bin_offset = static_cast<float>(k & ~std::size_t{OversampleMask});
+                    auto tmp = (mSynthesisBuffer[k].FreqBin-bin_offset) * expected_cycles;
 
-                    /* Wrap between -pi and +pi for the sum. If mSumPhase is
-                     * left to accumulate indefinitely, it will lose precision
-                     * and produce less exact phase over time.
+                    /* Accumulate the phase delta to get the actual bin phase,
+                     * and wrap between -pi and +pi for the sum. If mSumPhase
+                     * is left to accumulate indefinitely, it will grow and
+                     * lose precision, producing less exact phase over time.
                      */
                     tmp = (tmp+mSumPhase[k]) * std::numbers::inv_pi_v<float>;
                     auto const qpd = float2int(tmp);
@@ -361,7 +376,7 @@ void PshifterState::process(const size_t samplesToDo,
             }
             else
             {
-                static constexpr auto bin_limit = size_t{
+                static constexpr auto bin_limit = unsigned{
                     ((StftHalfSize+1)<<MixerFracBits)-MixerFracHalf - 1};
                 auto const bin_count = size_t{std::min(StftHalfSize+1,
                     bin_limit/mPitchShiftI + 1)};

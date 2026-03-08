@@ -10,7 +10,6 @@
 #include <type_traits>
 
 #include "alformat.hpp"
-#include "altypes.hpp"
 #include "opthelpers.h"
 #include "gsl/gsl"
 

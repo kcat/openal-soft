@@ -1593,7 +1593,9 @@ if(HAVE_CXXMODULES)
     set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/gsl.cppm)
     target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES
         alsoft-modules/gsl.cppm
-        alsoft-modules/hann_window.cppm)
+        alsoft-modules/hann_window.cppm
+        alsoft-modules/phase_shifter.cppm
+    )
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")

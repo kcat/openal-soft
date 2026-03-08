@@ -44,7 +44,6 @@
 #include "fmt/ostream.h"
 #include "fmt/ranges.h"
 #include "fmt/std.h"
-#include "phase_shifter.hpp"
 #include "vector.h"
 
 #include "sndfile.h"
@@ -53,8 +52,10 @@
 
 #if HAVE_CXXMODULES
 import gsl;
+import phase_shifter;
 #else
 #include "gsl/gsl"
+#include "phase_shifter.hpp"
 #endif
 
 namespace {

@@ -19,9 +19,13 @@
 #include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
-#include "phase_shifter.hpp"
 #include "vector.h"
 
+#if HAVE_CXXMODULES
+import phase_shifter;
+#else
+#include "phase_shifter.hpp"
+#endif
 
 /* UHJ is primarily defined in terms of classical B-Format. In particular,
  * classical B-Format defines the encoding gains for a given sound at

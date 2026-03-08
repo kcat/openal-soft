@@ -31,7 +31,7 @@ namespace {
 [[maybe_unused]]
 auto disable_denormals() -> unsigned int
 {
-#if HAVE_SSE_INTRINSICS
+#if HAVE_SSE_INTRINSICS && !defined(__powerpc64__)
     const auto state = _mm_getcsr();
     auto sseState = state;
     sseState &= ~(_MM_FLUSH_ZERO_MASK | _MM_DENORMALS_ZERO_MASK);
@@ -39,7 +39,7 @@ auto disable_denormals() -> unsigned int
     _mm_setcsr(sseState);
     return state;
 
-#elif HAVE_SSE
+#elif HAVE_SSE && !defined(__powerpc64__)
 
     const auto state = _mm_getcsr();
     auto sseState = state;
@@ -65,7 +65,7 @@ auto disable_denormals() -> unsigned int
 [[maybe_unused]]
 void reset_fpu(unsigned int state [[maybe_unused]])
 {
-#if HAVE_SSE_INTRINSICS || HAVE_SSE
+#if (HAVE_SSE_INTRINSICS || HAVE_SSE) && !defined(__powerpc64__)
     _mm_setcsr(state);
 #endif
 }

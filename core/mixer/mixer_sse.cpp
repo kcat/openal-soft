@@ -21,7 +21,7 @@
 #include "opthelpers.h"
 
 
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE__)
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE__) && !defined(__powerpc64__)
 #pragma GCC target("sse")
 #endif
 

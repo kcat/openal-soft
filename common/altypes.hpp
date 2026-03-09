@@ -387,7 +387,7 @@ public:
         {
             if constexpr(std::floating_point<ValueType>)
             {
-                if constexpr(strong_signed_integral<U>)
+                if constexpr(strong_unsigned_integral<U>)
                 {
                     /* fp -> unsigned integral */
                     if(signbit())

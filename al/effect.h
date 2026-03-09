@@ -11,7 +11,7 @@
 #include "AL/efx.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/effects/base.h"
 #include "effects/effects.h"
 #include "gsl/gsl"

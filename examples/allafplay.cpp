@@ -80,6 +80,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"

@@ -18,7 +18,7 @@
 #include "AL/alext.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/context.h"
 #include "core/voice.h"
 #include "gsl/gsl"

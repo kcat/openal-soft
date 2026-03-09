@@ -5,16 +5,14 @@
 
 #include <array>
 #include <atomic>
-#include <cstdint>
 #include <string_view>
-#include <utility>
 #include <variant>
 
 #include "AL/al.h"
 
 #include "alc/inprogext.h"
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/buffer_storage.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"

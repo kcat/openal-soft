@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdlib>
-#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -45,7 +44,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"
@@ -313,7 +311,7 @@ auto TrIsOperator(TokenReaderT *tr, const std::string_view op) -> bool
     if(!TrSkipWhitespace(tr))
         return false;
     auto out = tr->mOut;
-    auto len = 0_uz;
+    auto len = std::size_t{0};
     while(len < op.size() && out < tr->mIn)
     {
         if(tr->mRing[out&TRRingMask] != op[len])
@@ -517,7 +515,7 @@ auto TrReadString(TokenReaderT *tr) -> std::optional<std::string>
         if(char ch{tr->mRing[tr->mOut&TRRingMask]}; ch == '\"')
         {
             tr->mOut++;
-            auto len = 0_uz;
+            auto len = std::size_t{0};
             while(TrLoad(tr))
             {
                 ch = tr->mRing[tr->mOut&TRRingMask];
@@ -554,7 +552,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> bool
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
-        auto len = 0_uz;
+        auto len = std::size_t{0};
         while(len < op.size() && TrLoad(tr))
         {
             if(tr->mRing[tr->mOut&TRRingMask] != op[len])
@@ -948,7 +946,7 @@ auto LoadAsciiSource(std::istream &istream, const SourceRefT *src, const std::sp
             &dummy))
             return false;
     }
-    for(size_t i{0_uz};i < hrir.size();++i)
+    for(size_t i{0};i < hrir.size();++i)
     {
         if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<unsigned>(src->mBits),
             &hrir[i]))
@@ -969,7 +967,7 @@ auto LoadBinarySource(std::istream &istream, const SourceRefT *src, const std::e
     const std::span<double> hrir) -> bool
 {
     istream.seekg(static_cast<long>(src->mOffset), std::ios::beg);
-    for(size_t i{0_uz};i < hrir.size();++i)
+    for(size_t i{0};i < hrir.size();++i)
     {
         if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits,
             &hrir[i]))
@@ -1119,8 +1117,8 @@ auto LoadSofaSource(SourceRefT *src, unsigned const hrirRate, std::span<double> 
         return false;
     }
 
-    auto coords = std::span{sofa->hrtf->SourcePosition.values, sofa->hrtf->M*3_uz}
-        .subspan(static_cast<unsigned>(nearest)*3_uz).first<3>();
+    auto coords = std::span{sofa->hrtf->SourcePosition.values, sofa->hrtf->M*std::size_t{3}}
+        .subspan(static_cast<unsigned>(nearest)*std::size_t{3}).first<3>();
     if(std::abs(coords[0] - target[0]) > 0.001 || std::abs(coords[1] - target[1]) > 0.001
         || std::abs(coords[2] - target[2]) > 0.001)
     {
@@ -1794,14 +1792,13 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, unsigned const outRate) 
             if(!sofa) return false;
 
             const auto srcPosValues = std::span{sofa->hrtf->SourcePosition.values,
-                sofa->hrtf->M*3_uz};
-            for(auto const si : std::views::iota(0u, sofa->hrtf->M))
+                sofa->hrtf->M*std::size_t{3}};
+            for(auto const si : std::views::iota(std::size_t{0}, sofa->hrtf->M))
             {
                 fmt::print("\rLoading sources... {} of {}", si+1, sofa->hrtf->M);
                 std::cout.flush();
 
-                std::array aer{srcPosValues[3_uz*si], srcPosValues[3_uz*si + 1],
-                    srcPosValues[3_uz*si + 2]};
+                std::array aer{srcPosValues[3*si], srcPosValues[3*si + 1], srcPosValues[3*si + 2]};
                 mysofa_c2s(aer.data());
 
                 if(std::fabs(aer[1]) >= 89.999f)

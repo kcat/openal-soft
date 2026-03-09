@@ -73,7 +73,7 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"

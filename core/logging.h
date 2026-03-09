@@ -1,16 +1,16 @@
 #ifndef CORE_LOGGING_H
 #define CORE_LOGGING_H
 
+#include <cstdint>
 #include <string_view>
 
 #include "alformat.hpp"
-#include "alnumeric.h"
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 
 
-enum class LogLevel : u8::value_t {
+enum class LogLevel : std::uint8_t {
     Disable,
     Error,
     Warning,

@@ -34,6 +34,7 @@
 #include <array>
 #include <bit>
 #include <cctype>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <istream>
@@ -188,7 +189,7 @@ void LoadConfigFromFile(std::istream &f)
 
     auto curSection = std::string{};
     auto buffer = std::string{};
-    auto linenum = 0_uz;
+    auto linenum = std::size_t{0};
 
     while(std::getline(f, buffer))
     {

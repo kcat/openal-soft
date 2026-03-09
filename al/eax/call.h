@@ -1,11 +1,11 @@
 #ifndef EAX_EAX_CALL_INCLUDED
 #define EAX_EAX_CALL_INCLUDED
 
+#include <limits>
 #include <span>
 #include <string_view>
 
 #include "AL/al.h"
-#include "alnumeric.h"
 #include "api.h"
 #include "fx_slot_index.h"
 
@@ -51,7 +51,8 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto as_span(size_t max_count=~0_uz) const -> std::span<TValue>
+    [[nodiscard]] auto as_span(size_t const max_count=std::numeric_limits<size_t>::max()) const
+        -> std::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();

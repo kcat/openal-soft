@@ -7,7 +7,7 @@
 
 #include "AL/al.h"
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "opthelpers.h"
 
 

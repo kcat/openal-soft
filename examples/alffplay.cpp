@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -33,6 +32,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

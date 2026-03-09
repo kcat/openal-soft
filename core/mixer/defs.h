@@ -1,12 +1,15 @@
 #ifndef CORE_MIXER_DEFS_H
 #define CORE_MIXER_DEFS_H
 
+#include "config_simd.h"
+
 #include <array>
+#include <cstddef>
 #include <ranges>
 #include <span>
 #include <variant>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
 
@@ -79,22 +82,24 @@ void Resample_##T##_##I(InterpState const *state, std::span<float const> src, \
 #define DECL_MIXER(I)                                                         \
 void Mix_##I(std::span<float const> InSamples,                                \
     std::span<FloatBufferLine> OutBuffer, std::span<float> CurrentGains,      \
-    std::span<float const> TargetGains, usize Counter, usize OutPos);         \
+    std::span<float const> TargetGains, std::size_t Counter,                  \
+    std::size_t OutPos);                                                      \
 void Mix_##I(std::span<float const> InSamples, std::span<float> OutBuffer,    \
-    float &CurrentGain, float TargetGain, usize Counter);
+    float &CurrentGain, float TargetGain, std::size_t Counter);
 
 #define DECL_HRTF_MIXER(I)                                                    \
 void MixHrtf_##I(std::span<float const> InSamples,                            \
     std::span<f32x2> AccumSamples, unsigned IrSize,                           \
-    MixHrtfFilter const *hrtfparams, usize SamplesToDo);                      \
+    MixHrtfFilter const *hrtfparams, std::size_t SamplesToDo);                \
 void MixHrtfBlend_##I(std::span<float const> InSamples,                       \
     std::span<f32x2> AccumSamples, unsigned IrSize,                           \
     HrtfFilter const *oldparams, MixHrtfFilter const *newparams,              \
-    usize SamplesToDo);                                                       \
+    std::size_t SamplesToDo);                                                 \
 void MixDirectHrtf_##I(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,     \
     std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,\
     std::span<float, BufferLineSize> TempBuf,                                 \
-    std::span<HrtfChannelState> ChanState, usize IrSize, usize SamplesToDo);
+    std::span<HrtfChannelState> ChanState, std::size_t IrSize,                \
+    std::size_t SamplesToDo);
 
 
 DECL_RESAMPLER(Point, C)
@@ -137,8 +142,8 @@ DECL_RESAMPLER(Cubic, SSE4)
 #undef DECL_RESAMPLER
 
 /* Vectorized resampler helpers */
-template<usize N>
-constexpr void InitPosArrays(unsigned const pos, unsigned const frac, unsigned const increment,
+template<std::size_t N> constexpr
+void InitPosArrays(unsigned const pos, unsigned const frac, unsigned const increment,
     std::span<unsigned, N> const frac_arr, std::span<unsigned, N> const pos_arr)
 {
     static_assert(pos_arr.size() == frac_arr.size());

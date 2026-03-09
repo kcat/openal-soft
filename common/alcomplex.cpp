@@ -9,7 +9,7 @@
 #include <numbers>
 #include <ranges>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "gsl/gsl"
 
 
@@ -19,7 +19,7 @@ using u16x2 = std::array<u16, 2>;
 using complex_d = std::complex<double>;
 
 [[nodiscard]]
-constexpr auto BitReverseCounter(usize const log2_size) noexcept -> usize
+constexpr auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::size_t
 {
     /* Some magic math that calculates the number of swaps needed for a
      * sequence of bit-reversed indices when index < reversed_index.
@@ -28,7 +28,7 @@ constexpr auto BitReverseCounter(usize const log2_size) noexcept -> usize
 }
 
 
-template<usize N>
+template<std::size_t N>
 struct BitReverser {
     static_assert(N <= sizeof(u16)*8, "Too many bits for the bit-reversal table.");
 
@@ -113,7 +113,7 @@ void complex_fft(std::span<std::complex<double>> const buffer, double const sign
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
      * the main loop count.
      */
-    if(auto const log2_size = gsl::narrow_cast<usize>(std::countr_zero(fftsize));
+    if(auto const log2_size = gsl::narrow_cast<std::size_t>(std::countr_zero(fftsize));
         log2_size < gBitReverses.size()) [[likely]]
     {
         for(auto &rev : gBitReverses[log2_size])

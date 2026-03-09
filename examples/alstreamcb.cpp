@@ -30,8 +30,6 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
-#include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -47,6 +45,7 @@
 #include "sndfile.h"
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"

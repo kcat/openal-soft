@@ -3,6 +3,7 @@
 
 #include "logging.h"
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -36,7 +37,7 @@ using namespace std::string_view_literals;
 
 using lpvoid = void*;
 
-enum class LogState : u8::value_t {
+enum class LogState : std::uint8_t {
     FirstRun,
     Ready,
     Disable

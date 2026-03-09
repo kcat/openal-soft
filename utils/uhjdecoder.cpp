@@ -43,6 +43,7 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -469,7 +470,7 @@ auto main(std::span<std::string_view> args) -> int
         auto LeadOut = usize{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
-            auto got = al::saturate_cast<usize>(sf_readf_float(infile.get(), inmem.data(),
+            auto got = al::saturate_cast<std::size_t>(sf_readf_float(infile.get(), inmem.data(),
                 BufferLineSize));
             if(got < BufferLineSize)
             {

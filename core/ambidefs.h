@@ -4,7 +4,7 @@
 #include <array>
 #include <numbers>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "opthelpers.h"
 
 
@@ -12,7 +12,7 @@
  * needed will be (o+1)**2, thus zero-order has 1, first-order has 4, second-
  * order has 9, third-order has 16, and fourth-order has 25.
  */
-constexpr auto AmbiChannelsFromOrder(usize const order) noexcept -> usize
+constexpr auto AmbiChannelsFromOrder(std::size_t const order) noexcept -> std::size_t
 { return (order+1) * (order+1); }
 
 inline constexpr auto MaxAmbiOrder = 4_uz;
@@ -38,7 +38,7 @@ inline constexpr auto AmbiPeriphonicMask = 0xfe7ce4u;
  * representation. This is 2 per each order above zero-order, plus 1 for zero-
  * order. Or simply, o*2 + 1.
  */
-constexpr auto Ambi2DChannelsFromOrder(usize const order) noexcept -> usize
+constexpr auto Ambi2DChannelsFromOrder(std::size_t const order) noexcept -> std::size_t
 { return order*2 + 1; }
 inline constexpr auto MaxAmbi2DChannels = Ambi2DChannelsFromOrder(MaxAmbiOrder);
 
@@ -125,7 +125,7 @@ namespace AmbiScale {
         1.0f, /* 2.218529919f, ACN 24, sqrt(315)/8 */
     };
 
-    template<usize N>
+    template<std::size_t N>
     using UpsamplerArrays = std::array<std::array<float, MaxAmbiChannels>, N>;
     DECL_HIDDEN extern constinit UpsamplerArrays<4> const FirstOrderUp;
     DECL_HIDDEN extern constinit UpsamplerArrays<4> const FirstOrder2DUp;
@@ -141,7 +141,7 @@ namespace AmbiScale {
 } /* namespace AmbiScale */
 
 namespace AmbiIndex {
-    inline constexpr auto FromFuMa = std::array{
+    inline constexpr auto FromFuMa = std::to_array<u8>({
         0_u8,  /* W */
         3_u8,  /* X */
         1_u8,  /* Y */
@@ -163,8 +163,8 @@ namespace AmbiIndex {
          * I hear otherwise, I don't want to make assumptions here.
          */
         0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
-    };
-    inline constexpr auto FromFuMa2D = std::array{
+    });
+    inline constexpr auto FromFuMa2D = std::to_array<u8>({
         0_u8,  /* W */
         3_u8,  /* X */
         1_u8,  /* Y */
@@ -176,7 +176,7 @@ namespace AmbiIndex {
          * a pattern suggesting 24,16.
          */
         0_u8, 0_u8,
-    };
+    });
 
     inline constexpr auto FromACN = std::array<u8, MaxAmbiChannels>{
         0_u8,
@@ -191,7 +191,8 @@ namespace AmbiIndex {
 
 
     inline constexpr auto OrderFromChannel = std::array<u8, MaxAmbiChannels>{
-        0_u8, 1_u8,1_u8,1_u8,
+        0_u8,
+        1_u8,1_u8,1_u8,
         2_u8,2_u8,2_u8,2_u8,2_u8,
         3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,
         4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,

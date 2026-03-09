@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstddef>
 #include <numbers>
 #include <ranges>
 
@@ -205,7 +206,7 @@ void BiquadInterpFilter::process(std::span<float const> src, std::span<float> ds
     if(mCounter > 0)
     {
         auto counter = mCounter / SamplesPerStep;
-        auto steprem = gsl::narrow_cast<usize>(SamplesPerStep - (mCounter&SamplesPerStepMask));
+        auto steprem = gsl::narrow_cast<std::size_t>(SamplesPerStep-(mCounter&SamplesPerStepMask));
         while(counter > 0)
         {
             auto const td = std::min(steprem, src.size());
@@ -287,7 +288,8 @@ void BiquadInterpFilter::dualProcess(BiquadInterpFilter &other, std::span<float 
     if(auto const maxcounter = std::max(mCounter, other.mCounter); maxcounter > 0)
     {
         auto counter = maxcounter / SamplesPerStep;
-        auto steprem = gsl::narrow_cast<usize>(SamplesPerStep - (maxcounter&SamplesPerStepMask));
+        auto steprem = gsl::narrow_cast<std::size_t>(
+            SamplesPerStep - (maxcounter&SamplesPerStepMask));
         while(counter > 0)
         {
             auto const td = std::min(steprem, src.size());

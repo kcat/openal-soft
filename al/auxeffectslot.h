@@ -7,14 +7,12 @@
 #include <atomic>
 #include <bitset>
 #include <concepts>
-#include <cstdint>
 #include <functional>
 #include <string_view>
-#include <utility>
 
 #include "AL/al.h"
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "gsl/gsl"

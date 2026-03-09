@@ -4,7 +4,7 @@
 #include <array>
 #include <span>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/filters/splitter.h"
 
 

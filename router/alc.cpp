@@ -15,7 +15,7 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "alstring.h"
 #include "strutils.hpp"
 
@@ -397,7 +397,7 @@ public:
 
     explicit operator bool() const noexcept { return !mEnumeratedDevices.empty(); }
 
-    void reserveDeviceCount(usize const count) { mEnumeratedDevices.reserve(count); }
+    void reserveDeviceCount(std::size_t const count) { mEnumeratedDevices.reserve(count); }
     void appendDeviceList(gsl::czstring names, ALCuint idx);
     void finishEnumeration();
 

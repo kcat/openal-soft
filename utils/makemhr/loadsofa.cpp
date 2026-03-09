@@ -41,7 +41,6 @@
 #include <thread>
 #include <vector>
 
-#include "alnumeric.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "makemhr.h"
@@ -167,7 +166,7 @@ auto GetSampleRate(MYSOFA_HRTF const *const sofaHrtf) -> float
     return values[0];
 }
 
-enum class DelayType : u8::value_t {
+enum class DelayType : std::uint8_t {
     None,
     I_R, /* [1][Channels] */
     M_R, /* [HRIRs][Channels] */
@@ -282,15 +281,16 @@ auto LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, DelayType const dela
             restmp.resize(sofaHrtf->N);
         }
 
-        const auto srcPosValues = std::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz};
+        const auto srcPosValues = std::span{sofaHrtf->SourcePosition.values,
+            sofaHrtf->M*std::size_t{3}};
         const auto irValues = std::span{sofaHrtf->DataIR.values,
             size_t{sofaHrtf->M}*sofaHrtf->R*sofaHrtf->N};
-        for(auto si=0u;si < sofaHrtf->M;++si)
+        for(auto const si : std::views::iota(std::size_t{0}, sofaHrtf->M))
         {
             loaded_count.fetch_add(1u);
 
-            std::array aer{srcPosValues[3_uz*si], srcPosValues[3_uz*si + 1],
-                srcPosValues[3_uz*si + 2]};
+            std::array aer{srcPosValues[3*si], srcPosValues[3*si + 1],
+                srcPosValues[3*si + 2]};
             mysofa_c2s(aer.data());
 
             if(std::abs(aer[1]) >= 89.999f)
@@ -490,11 +490,11 @@ bool LoadSofaFile(std::string_view const filename, unsigned const numThreads,
 
     if(!CheckIrData(sofaHrtf.get()))
         return false;
-    if(!PrepareLayout(std::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*3_uz}, hData))
+    if(!PrepareLayout(std::span{sofaHrtf->SourcePosition.values, sofaHrtf->M*std::size_t{3}}, hData))
         return false;
     if(!LoadResponses(sofaHrtf.get(), hData, *delayType, outRate))
         return false;
-    sofaHrtf = nullptr;
+    sofaHrtf.reset();
 
     for(auto fi=0u;fi < hData->mFds.size();fi++)
     {

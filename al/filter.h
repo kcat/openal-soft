@@ -4,14 +4,13 @@
 #include <array>
 #include <cstdint>
 #include <string_view>
-#include <utility>
 #include <variant>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "gsl/gsl"
 
 namespace al {

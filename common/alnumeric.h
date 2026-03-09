@@ -9,7 +9,6 @@
 #include <cmath>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <limits>
 #include <string_view>
 #include <type_traits>
@@ -20,7 +19,6 @@
 #include <emmintrin.h>
 #endif
 
-#include "altypes.hpp"
 #include "gsl/gsl"
 #include "opthelpers.h"
 
@@ -74,7 +72,7 @@ auto saturate_cast(T val) noexcept -> R
 {
     if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
     {
-        if constexpr(std::is_signed_v<R> && std::is_signed_v<T>)
+        if constexpr(std::signed_integral<R> && std::signed_integral<T>)
         {
             if(val < std::numeric_limits<R>::min())
                 return std::numeric_limits<R>::min();
@@ -82,7 +80,7 @@ auto saturate_cast(T val) noexcept -> R
         if(val > T{std::numeric_limits<R>::max()})
             return std::numeric_limits<R>::max();
     }
-    if constexpr(std::is_unsigned_v<R> && std::is_signed_v<T>)
+    if constexpr(std::unsigned_integral<R> && std::signed_integral<T>)
     {
         if(val < 0)
             return R{0};
@@ -103,7 +101,7 @@ auto as_signed(T value) noexcept
 
 
 [[nodiscard]] constexpr
-auto GetCounterSuffix(usize const count) noexcept -> std::string_view
+auto GetCounterSuffix(std::size_t const count) noexcept -> std::string_view
 {
     using namespace std::string_view_literals;
     return (((count%100)/10) == 1) ? "th"sv :

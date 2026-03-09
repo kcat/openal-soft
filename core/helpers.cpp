@@ -345,7 +345,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     const auto datadirs = std::string{al::getenv("XDG_DATA_DIRS")
         .value_or("/usr/local/share/:/usr/share/")};
 
-    auto curpos = 0_uz;
+    auto curpos = std::size_t{0};
     while(curpos < datadirs.size())
     {
         auto nextpos = datadirs.find(':', curpos);

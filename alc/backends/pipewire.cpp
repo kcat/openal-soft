@@ -52,7 +52,6 @@
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
@@ -135,6 +134,12 @@ constexpr auto PwIdAny = PW_ID_ANY;
 } // namespace
 /* NOLINTEND */
 DIAGNOSTIC_POP
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 namespace {
 

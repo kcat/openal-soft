@@ -8,11 +8,16 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include "oboe/Oboe.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

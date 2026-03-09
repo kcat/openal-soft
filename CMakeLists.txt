@@ -1619,6 +1619,22 @@ foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS} ${MODULES_OBJ
     endif()
 endforeach()
 
+if(HAVE_CXXMODULES)
+    add_library(alsoft.core-modules OBJECT EXCLUDE_FROM_ALL)
+    target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES
+        core/logging.cppm)
+    target_include_directories(alsoft.core-modules PRIVATE
+        ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/common
+    )
+    target_compile_definitions(alsoft.core-modules PRIVATE ${CPP_DEFS})
+    target_compile_options(alsoft.core-modules PRIVATE ${C_FLAGS})
+    target_link_libraries(alsoft.core-modules PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
+        ${MATH_LIB} alsoft::fmt alsoft.modules)
+    set_target_properties(alsoft.core-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+        POSITION_INDEPENDENT_CODE TRUE)
+    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/core/logging.cppm")
+endif()
+
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
     if(TARGET openal.modules)
@@ -1708,6 +1724,9 @@ else()
     endif()
     target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
         ${MATH_LIB} alsoft::fmt)
+    if(TARGET alsoft.core-modules)
+        target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.core-modules)
+    endif()
 
     if(ALSOFT_UWP)
         find_package(cppwinrt CONFIG)

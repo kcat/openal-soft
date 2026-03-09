@@ -94,7 +94,6 @@
 #include "core/front_stablizer.h"
 #include "core/helpers.h"
 #include "core/hrtf.h"
-#include "core/logging.h"
 #include "core/mastering.h"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
@@ -170,6 +169,12 @@
 #if ALSOFT_EAX
 #include "al/eax/api.h"
 #include "al/eax/globals.h"
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 

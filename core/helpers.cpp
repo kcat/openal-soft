@@ -24,8 +24,13 @@
 #include "alstring.h"
 #include "filesystem.h"
 #include "gsl/gsl"
-#include "logging.h"
 #include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
+#endif
 
 
 namespace {

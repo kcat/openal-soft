@@ -20,18 +20,22 @@
 #include "AL/alext.h"
 
 #include "alc/context.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/async_event.h"
-#include "core/context.h"
 #include "core/effects/base.h"
+#include "core/context.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

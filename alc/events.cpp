@@ -6,11 +6,15 @@
 #include <ranges>
 #include <span>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
-#include "core/logging.h"
 #include "device.h"
 #include "gsl/gsl"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

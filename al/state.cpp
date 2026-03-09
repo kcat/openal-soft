@@ -42,11 +42,9 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
-#include "core/logging.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
@@ -59,6 +57,12 @@
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

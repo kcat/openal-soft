@@ -63,14 +63,12 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -101,6 +99,12 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,0x20, 0x67,0xd1,0x46,0xa8,0x50,0xe0, 14);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x8c,0x23, 0xe0,0xc0,0xff,0xee,0x7f,0x0e, 0);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x23,0xe0, 0xc0,0xff,0xee,0x7f,0x0e, 4 );
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

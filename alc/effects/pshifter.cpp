@@ -41,8 +41,6 @@
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 #include "pffft.h"
-#include "core/logging.h"
-#include "fmt/ranges.h"
 
 #if HAVE_CXXMODULES
 import window.hann;

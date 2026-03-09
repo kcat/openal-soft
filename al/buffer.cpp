@@ -25,10 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <bit>
 #include <cstddef>
-#include <cstdint>
-#include <cstring>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -50,12 +47,10 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/device.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"
@@ -70,6 +65,11 @@
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 namespace {
 

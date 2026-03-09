@@ -17,7 +17,12 @@
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "hrtf.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
 #include "logging.h"
+#endif
 
 
 namespace {

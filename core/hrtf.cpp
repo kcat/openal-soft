@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -34,9 +33,14 @@
 #include "helpers.h"
 #include "hrtf_loader.hpp"
 #include "hrtf_resource.hpp"
-#include "logging.h"
 #include "mixer/hrtfdefs.h"
 #include "polyphase_resampler.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
+#endif
 
 
 namespace {

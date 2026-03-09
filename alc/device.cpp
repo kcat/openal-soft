@@ -8,9 +8,7 @@
 #endif
 
 #include <algorithm>
-#include <bit>
 #include <csignal>
-#include <cstddef>
 #include <numeric>
 
 #include "al/buffer.h"
@@ -21,10 +19,15 @@
 #include "backends/base.h"
 #include "core/devformat.h"
 #include "core/hrtf.h"
-#include "core/logging.h"
 #include "core/mastering.h"
 #include "flexarray.h"
 #include "gsl/gsl"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

@@ -36,12 +36,10 @@
 #include <unistd.h>
 #include <vector>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/converter.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
@@ -53,6 +51,12 @@
 #else
 #include <IOKit/audio/IOAudioTypes.h>
 #define CAN_ENUMERATE 1
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

@@ -49,7 +49,6 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "filesystem.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
@@ -61,6 +60,12 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 using namespace winrt;
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

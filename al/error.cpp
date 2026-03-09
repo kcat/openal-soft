@@ -26,9 +26,7 @@
 
 #include <csignal>
 #include <cstdarg>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <optional>
 #include <string>
 #include <utility>
@@ -39,13 +37,17 @@
 #include "al/debug.h"
 #include "alc/alconfig.h"
 #include "alc/context.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
 #include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

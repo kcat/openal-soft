@@ -23,8 +23,6 @@
 #include "auxeffectslot.h"
 
 #include <algorithm>
-#include <bit>
-#include <cstddef>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -46,7 +44,6 @@
 #include "alc/device.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -54,7 +51,6 @@
 #include "core/device.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "effect.h"
 #include "flexarray.h"
@@ -66,6 +62,12 @@
 #include "eax/call.h"
 #include "eax/effect.h"
 #include "eax/fx_slot_index.h"
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

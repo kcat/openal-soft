@@ -36,14 +36,17 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "filesystem.h"
 #include "gsl/gsl"
-#include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

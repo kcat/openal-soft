@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cerrno>
 #include <chrono>
 #include <cstring>
 #include <exception>
@@ -43,12 +42,17 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <alsa/asoundlib.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

@@ -24,7 +24,6 @@
 
 #include <cstdlib>
 #include <cstdio>
-#include <memory.h>
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -38,12 +37,10 @@
 #include <thread>
 #include <vector>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
@@ -51,6 +48,12 @@
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

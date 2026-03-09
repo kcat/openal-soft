@@ -34,9 +34,14 @@
 #include "alc/context.h"
 #include "alnumeric.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

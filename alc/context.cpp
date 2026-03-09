@@ -5,8 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
-#include <cstddef>
 #include <functional>
 #include <numeric>
 #include <optional>
@@ -29,7 +27,6 @@
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/effectslot.h"
-#include "core/logging.h"
 #include "core/voice_change.h"
 #include "device.h"
 #include "flexarray.h"
@@ -43,6 +40,12 @@
 #include "al/eax/call.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 namespace {
 

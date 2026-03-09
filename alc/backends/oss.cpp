@@ -49,7 +49,6 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
@@ -76,6 +75,12 @@
  */
 #ifdef __FreeBSD__
 #define ALC_OSS_DEVNODE_TRUC
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

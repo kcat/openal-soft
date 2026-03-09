@@ -23,9 +23,6 @@
 #include "filter.h"
 
 #include <algorithm>
-#include <bit>
-#include <cstdarg>
-#include <cstdio>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -43,10 +40,15 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 /* Null filter parameter handlers */

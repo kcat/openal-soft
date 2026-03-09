@@ -23,19 +23,22 @@
 #include "portaudio.hpp"
 
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <utility>
 
 #include "alc/alconfig.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 
 #include <portaudio.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

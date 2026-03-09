@@ -35,19 +35,16 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
-#include <memory.h>
 #include <span>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
@@ -84,6 +81,12 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 #endif
 #ifndef KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {

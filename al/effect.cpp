@@ -23,8 +23,6 @@
 #include "effect.h"
 
 #include <algorithm>
-#include <bit>
-#include <cstring>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -32,7 +30,6 @@
 #include <numeric>
 #include <span>
 #include <string_view>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -51,10 +48,15 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 constinit const std::array<EffectList,16> gEffectList{{

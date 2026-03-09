@@ -22,7 +22,6 @@
 
 #include "sdl3.h"
 
-#include <cstdlib>
 #include <cstring>
 #include <span>
 #include <string>
@@ -31,7 +30,6 @@
 
 #include "alnumeric.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "pragmadefs.h"
 
@@ -45,6 +43,12 @@ namespace {
 constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
 } /* namespace */
 DIAGNOSTIC_POP
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

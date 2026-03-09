@@ -25,13 +25,11 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <bit>
 #include <bitset>
 #include <chrono>
 #include <cmath>
 #include <concepts>
 #include <cstddef>
-#include <cstdio>
 #include <iterator>
 #include <functional>
 #include <limits>
@@ -58,7 +56,6 @@
 #include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -66,7 +63,6 @@
 #include "buffer.h"
 #include "core/buffer_storage.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "core/mixer/defs.h"
 #include "core/voice_change.h"
 #include "direct_defs.h"
@@ -81,6 +77,12 @@
 #include "eax/call.h"
 #include "eax/fx_slot_index.h"
 #include "eax/utils.h"
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 

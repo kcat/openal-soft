@@ -56,7 +56,6 @@
 #include "core/filters/splitter.h"
 #include "core/front_stablizer.h"
 #include "core/hrtf.h"
-#include "core/logging.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
@@ -65,7 +64,12 @@
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "vector.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

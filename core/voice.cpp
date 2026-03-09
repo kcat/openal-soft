@@ -31,7 +31,6 @@
 #include "filters/splitter.h"
 #include "fmt_traits.h"
 #include "gsl/gsl"
-#include "logging.h"
 #include "mixer.h"
 #include "mixer/defs.h"
 #include "mixer/hrtfdefs.h"
@@ -40,6 +39,12 @@
 #include "ringbuffer.h"
 #include "vector.h"
 #include "voice_change.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
+#endif
 
 
 namespace {

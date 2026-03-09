@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "logging.h"
-
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -12,8 +10,10 @@
 #include <string_view>
 #include <utility>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "fmt/std.h"
 #include "strutils.hpp"
 
@@ -22,6 +22,12 @@
 #include <windows.h>
 #elif defined(__ANDROID__)
 #include <android/log.h>
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
 #endif
 
 

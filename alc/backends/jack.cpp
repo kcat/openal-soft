@@ -23,10 +23,7 @@
 #include "jack.h"
 
 #include <array>
-#include <cstdlib>
-#include <cstdio>
 #include <cstring>
-#include <memory.h>
 #include <memory>
 #include <mutex>
 #include <ranges>
@@ -40,7 +37,6 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
@@ -48,6 +44,12 @@
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

@@ -12,7 +12,6 @@
 
 #include "alc/context.h"
 #include "alnumeric.h"
-#include "core/logging.h"
 #include "effects.h"
 #include "gsl/gsl"
 
@@ -23,6 +22,12 @@
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

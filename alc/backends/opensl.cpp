@@ -37,12 +37,11 @@
 #include <thread>
 #include <functional>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
@@ -51,6 +50,12 @@
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 #include <SLES/OpenSLES_AndroidConfiguration.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

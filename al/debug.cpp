@@ -23,12 +23,10 @@
 
 #include "alc/context.h"
 #include "alc/device.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "core/voice.h"
 #include "direct_defs.h"
 #include "effect.h"
@@ -36,6 +34,12 @@
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "source.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

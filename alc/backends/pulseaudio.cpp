@@ -42,18 +42,22 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "base.h"
 #include "core/devformat.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
 
 #include <pulse/pulseaudio.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {

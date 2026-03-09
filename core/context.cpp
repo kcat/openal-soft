@@ -12,10 +12,15 @@
 #include "device.h"
 #include "effectslot.h"
 #include "gsl/gsl"
-#include "logging.h"
 #include "ringbuffer.h"
 #include "voice.h"
 #include "voice_change.h"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
+#endif
 
 
 #ifdef __cpp_lib_atomic_is_always_lock_free

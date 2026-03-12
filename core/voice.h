@@ -10,10 +10,10 @@
 #include <span>
 #include <string>
 
-#include "alnumeric.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
+#include "decoderbase.hpp"
 #include "devformat.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
@@ -21,7 +21,6 @@
 #include "mixer/defs.h"
 #include "mixer/hrtfdefs.h"
 #include "resampler_limits.h"
-#include "uhjfilter.h"
 #include "vector.h"
 
 struct ContextBase;

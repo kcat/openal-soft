@@ -37,8 +37,7 @@
 #include "opthelpers.h"
 #include "resampler_limits.h"
 #include "ringbuffer.h"
-#include "vector.h"
-#include "voice_change.h"
+#include "uhjfilter.h"
 
 #if HAVE_CXXMODULES
 import logging;

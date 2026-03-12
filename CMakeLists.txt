@@ -808,6 +808,7 @@ set(CORE_OBJS
     core/cubic_defs.h
     core/cubic_tables.cpp
     core/cubic_tables.h
+    core/decoderbase.hpp
     core/devformat.cpp
     core/devformat.h
     core/device.cpp

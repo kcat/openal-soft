@@ -19,14 +19,15 @@
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bufferline.h"
+#include "decoderbase.hpp"
 #include "devformat.h"
+#include "encoderbase.hpp"
 #include "filters/nfc.h"
 #include "flexarray.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 #include "resampler_limits.h"
-#include "uhjfilter.h"
 #include "vector.h"
 
 class BFormatDec;

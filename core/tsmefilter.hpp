@@ -25,7 +25,7 @@ inline auto TsmeDecodeQuality = TsmeQualityType::Default;
 inline auto TsmeEncodeQuality = TsmeQualityType::Default;
 
 
-template<usize N>
+template<std::size_t N>
 struct TsmeEncoder final : EncoderBase {
     struct Tag { using encoder_t = TsmeEncoder; };
 
@@ -52,7 +52,7 @@ struct TsmeEncoder final : EncoderBase {
     alignas(16) std::array<float,BufferLineSize> mD{};
 
     /* History and temp storage for the convolution filter. */
-    usize mFifoPos{}, mCurrentSegment{};
+    std::size_t mFifoPos{}, mCurrentSegment{};
     alignas(16) std::array<float,sFftLength> mWXInOut{};
     alignas(16) std::array<float,sFftLength> mFftBuffer{};
     alignas(16) std::array<float,sFftLength> mWorkData{};
@@ -60,7 +60,7 @@ struct TsmeEncoder final : EncoderBase {
 
     alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
-    auto getDelay() noexcept -> usize final { return sFilterDelay; }
+    auto getDelay() noexcept -> std::size_t final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel tetraphonic surround matrix-encoded (stereo
@@ -93,7 +93,7 @@ struct TsmeEncoderIIR final : EncoderBase {
     std::array<AllPassFilter,2> mFilter1Direct;
     std::array<float,2> mDirectDelay{};
 
-    auto getDelay() noexcept -> usize final { return sFilterDelay; }
+    auto getDelay() noexcept -> std::size_t final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel tetraphonic surround matrix-encoded (stereo

@@ -26,7 +26,7 @@ inline auto UhjDecodeQuality = UhjQualityType::Default;
 inline auto UhjEncodeQuality = UhjQualityType::Default;
 
 
-template<usize N>
+template<std::size_t N>
 struct UhjEncoder final : EncoderBase {
     struct Tag { using encoder_t = UhjEncoder; };
 
@@ -52,7 +52,7 @@ struct UhjEncoder final : EncoderBase {
     alignas(16) std::array<float,BufferLineSize> mD{};
 
     /* History and temp storage for the convolution filter. */
-    usize mFifoPos{}, mCurrentSegment{};
+    std::size_t mFifoPos{}, mCurrentSegment{};
     alignas(16) std::array<float,sFftLength> mWXInOut{};
     alignas(16) std::array<float,sFftLength> mFftBuffer{};
     alignas(16) std::array<float,sFftLength> mWorkData{};
@@ -60,7 +60,7 @@ struct UhjEncoder final : EncoderBase {
 
     alignas(16) std::array<std::array<float,sFilterDelay>,2> mDirectDelay{};
 
-    auto getDelay() noexcept -> usize final { return sFilterDelay; }
+    auto getDelay() noexcept -> std::size_t final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
@@ -92,7 +92,7 @@ struct UhjEncoderIIR final : EncoderBase {
     std::array<AllPassFilter,2> mFilter1Direct;
     std::array<float,2> mDirectDelay{};
 
-    auto getDelay() noexcept -> usize final { return sFilterDelay; }
+    auto getDelay() noexcept -> std::size_t final { return sFilterDelay; }
 
     /**
      * Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
@@ -133,7 +133,7 @@ struct DecoderBase {
     float mWidthControl{0.46f};
 };
 
-template<usize N>
+template<std::size_t N>
 struct UhjDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjDecoder; };
 
@@ -185,7 +185,7 @@ struct UhjDecoderIIR final : DecoderBase {
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
-template<usize N>
+template<std::size_t N>
 struct UhjStereoDecoder final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoder; };
 

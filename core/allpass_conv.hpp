@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <complex>
+#include <cstddef>
 #include <numbers>
 #include <ranges>
 #include <vector>
@@ -38,7 +39,7 @@
  * being applied in the frequency domain, so these "overflow" samples need to
  * be accounted for.
  */
-template<usize FilterSize>
+template<std::size_t FilterSize>
 struct SegmentedFilter {
     static constexpr auto sFftLength = 256_uz;
     static constexpr auto sSampleLength = sFftLength / 2_uz;
@@ -52,20 +53,21 @@ struct SegmentedFilter {
     SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
         /* To set up the filter, we first need to generate the desired
-         * response (not reversed).
+         * response.
          */
         auto tmpBuffer = std::vector(FilterSize, 0.0);
         for(const auto i : std::views::iota(0_uz, FilterSize/2))
         {
             const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/double{FilterSize}
-                * gsl::narrow_cast<double>(i*2 + 1);
+            /* Calculate the Blackman window value for this coefficient. */
+            const auto w = 2.0*std::numbers::pi/double{FilterSize/2-1}
+                * gsl::narrow_cast<double>(i);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
             const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
-            tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
+            tmpBuffer[i*2 + 1] = window * 2.0 / pk;
         }
 
         /* The response is split into segments that are converted to the

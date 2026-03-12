@@ -185,7 +185,7 @@ void Voice::InitMixer(std::optional<std::string> const &resopt)
 namespace {
 
 /* IMA ADPCM Stepsize table */
-constexpr auto IMAStep_size = std::array{
+constexpr auto IMAStep_size = std::to_array<i32>({
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
       21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
       60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
@@ -195,13 +195,13 @@ constexpr auto IMAStep_size = std::array{
     4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,10442,
    11487,12635,13899,15289,16818,18500,20350,22358,24633,27086,29794,
    32767
-};
+});
 
 /* IMA4 ADPCM Codeword decode table */
-constexpr auto IMA4Codeword = std::array{
+constexpr auto IMA4Codeword = std::to_array<i32>({
     1, 3, 5, 7, 9, 11, 13, 15,
    -1,-3,-5,-7,-9,-11,-13,-15,
-};
+});
 
 /* IMA4 ADPCM Step index adjust decode table */
 constexpr auto IMA4Index_adjust = std::to_array<i32>({

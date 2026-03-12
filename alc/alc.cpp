@@ -553,6 +553,18 @@ void alc_initconfig()
         else
             WARN("Unsupported uhj/encode-filter: {}", *uhjfiltopt);
     }
+
+    if(auto tsmefiltopt = ConfigValueStr({}, "tsme"sv, "decode-filter"sv))
+    {
+        if(al::case_compare(*tsmefiltopt, "fir256"sv) == 0)
+            TsmeDecodeQuality = TsmeQualityType::FIR256;
+        else if(al::case_compare(*tsmefiltopt, "fir512"sv) == 0)
+            TsmeDecodeQuality = TsmeQualityType::FIR512;
+        else if(al::case_compare(*tsmefiltopt, "iir"sv) == 0)
+            TsmeDecodeQuality = TsmeQualityType::IIR;
+        else
+            WARN("Unsupported tsme/decode-filter: {}", *tsmefiltopt);
+    }
     if(auto tsmefiltopt = ConfigValueStr({}, "tsme"sv, "encode-filter"sv))
     {
         if(al::case_compare(*tsmefiltopt, "fir256"sv) == 0)

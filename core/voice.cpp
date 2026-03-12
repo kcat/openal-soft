@@ -37,6 +37,7 @@
 #include "opthelpers.h"
 #include "resampler_limits.h"
 #include "ringbuffer.h"
+#include "tsmefilter.hpp"
 #include "uhjfilter.h"
 
 #if HAVE_CXXMODULES
@@ -1228,17 +1229,35 @@ void Voice::prepare(DeviceBase *device)
     };
     if(mFmtChannels == FmtSuperStereo)
     {
-        switch(UhjDecodeQuality)
+        if(std::holds_alternative<TsmePostProcess>(device->mPostProcess))
         {
-        case UhjQualityType::IIR:
-            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoderIIR::Tag{});
-            break;
-        case UhjQualityType::FIR256:
-            std::tie(mDecoder,mDecoderPadding)=init_decoder(UhjStereoDecoder<UhjLength256>::Tag{});
-            break;
-        case UhjQualityType::FIR512:
-            std::tie(mDecoder,mDecoderPadding)=init_decoder(UhjStereoDecoder<UhjLength512>::Tag{});
-            break;
+            switch(TsmeDecodeQuality)
+            {
+            case TsmeQualityType::IIR:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoderIIR::Tag{});
+                break;
+            case TsmeQualityType::FIR256:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder<TsmeLength256>::Tag{});
+                break;
+            case TsmeQualityType::FIR512:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder<TsmeLength512>::Tag{});
+                break;
+            }
+        }
+        else
+        {
+            switch(UhjDecodeQuality)
+            {
+            case UhjQualityType::IIR:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoderIIR::Tag{});
+                break;
+            case UhjQualityType::FIR256:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder<UhjLength256>::Tag{});
+                break;
+            case UhjQualityType::FIR512:
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder<UhjLength512>::Tag{});
+                break;
+            }
         }
     }
     else if(IsUHJ(mFmtChannels))

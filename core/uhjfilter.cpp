@@ -38,7 +38,7 @@ import phase_shifter;
  *
  * That is, FuMa with an additional sqrt(2) scaling. The encoding and decoding
  * functions below work according to N3D scaling, which has the gains:
-*
+ *
  * W = 1
  * X = sqrt(3) * cos(a) * cos(e)
  * Y = sqrt(3) * sin(a) * cos(e)

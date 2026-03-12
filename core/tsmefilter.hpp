@@ -8,6 +8,7 @@
 #include "allpass_iir.hpp"
 #include "altypes.hpp"
 #include "bufferline.h"
+#include "decoderbase.hpp"
 #include "encoderbase.hpp"
 
 
@@ -102,6 +103,51 @@ struct TsmeEncoderIIR final : EncoderBase {
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;
+};
+
+template<std::size_t N>
+struct TsmeStereoDecoder final : DecoderBase {
+    struct Tag { using decoder_t = TsmeStereoDecoder; };
+
+    static constexpr auto sInputPadding = N/2_uz;
+
+    float mCurrentWidth{-1.0f};
+
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
+
+    alignas(16) std::array<float,sInputPadding-1> mDTHistory{};
+    alignas(16) std::array<float,sInputPadding-1> mSHistory{};
+
+    alignas(16) std::array<float,BufferLineSize + sInputPadding*2_uz> mTemp{};
+
+    /**
+     * Applies Super Stereo processing on a stereo signal to create a B-Format
+     * signal with FuMa channel ordering and N3D scaling. The samples span
+     * should contain 3 channels, the first two being the left and right stereo
+     * channels, and the third left empty.
+     */
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
+};
+
+struct TsmeStereoDecoderIIR final : DecoderBase {
+    struct Tag { using decoder_t = TsmeStereoDecoderIIR; };
+
+    static constexpr auto sInputPadding = 1_uz;
+
+    bool mFirstRun{true};
+    float mCurrentWidth{-1.0f};
+
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mS{};
+    alignas(16) std::array<float,BufferLineSize+sInputPadding> mD{};
+    alignas(16) std::array<float,BufferLineSize> mTemp{};
+
+    AllPassFilter mFilter1S;
+    AllPassFilter mFilter2D;
+    AllPassFilter mFilter1D;
+    AllPassFilter mFilter2S;
+
+    void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
 
 #endif /* CORE_TSMEFILTER_HPP */

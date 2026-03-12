@@ -1,15 +1,23 @@
 
+#include "config.h"
+
 #include <algorithm>
 
 #include "allpass_conv.hpp"
 #include "altypes.hpp"
 #include "tsmefilter.hpp"
 
+#if HAVE_CXXMODULES
+import phase_shifter;
+#else
+#include "phase_shifter.hpp"
+#endif
+
 namespace {
 
-template<usize A, typename T, usize N>
-constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span<T,N>
-{ return std::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
+template<std::size_t A, typename T, std::size_t N> constexpr
+auto assume_aligned_span(std::span<T, N> const s) noexcept -> std::span<T, N>
+{ return std::span<T, N>{std::assume_aligned<A>(s.data()), s.size()}; }
 
 } /* namespace */
 
@@ -320,5 +328,184 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
         right[i] = mS[i] - mD[i] + mTemp[i];
 }
 
+
+/* This Super Stereo decoder is copied from uhjfilter.cpp. The reason for a
+ * separate implementation is due to the phase shift not interacting well with
+ * the TSME encoder, resulting in severely reduced stereo separation. Reversing
+ * the phase shift fixes it to retain stereo separation, although causes
+ * reduced stereo separation with the UHJ encoder.
+ *
+ * For N3D output scaling, this becomes:
+ *
+ * S = Left + Right
+ * D = Left - Right
+ *
+ * W = 0.6098637*S - j(0.6896511*w*D)
+ * X = 1.05631501729*S + j(0.934107402059*w*D)
+ * Y = 2.06031664957*w*D - j(0.264078754323*S)
+ *
+ * where j is a +90 degree phase shift. w is a variable control for the
+ * resulting stereo width, with the range 0 <= w <= 0.7.
+ */
+template<std::size_t N>
+void TsmeStereoDecoder<N>::decode(std::span<std::span<float>> const samples,
+    bool const updateState)
+{
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
+
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+
+    {
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
+
+        std::ranges::transform(left, right, mS.begin(), std::plus{});
+
+        /* Pre-apply the width factor to the difference signal D. Smoothly
+         * interpolate when it changes.
+         */
+        const auto wtarget = mWidthControl;
+        const auto wcurrent = (mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth;
+        if(wtarget == wcurrent || !updateState)
+        {
+            std::ranges::transform(left, right, mD.begin(), [wcurrent](float l, float r) noexcept
+            { return (l-r) * wcurrent; });
+            mCurrentWidth = wcurrent;
+        }
+        else
+        {
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
+            auto fi = 0.0f;
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::ranges::transform(lfade, right, mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+            {
+                const float ret{(l-r) * (wcurrent + wstep*fi)};
+                fi += 1.0f;
+                return ret;
+            }).out;
+
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
+            std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
+            { return (l-r) * wtarget; });
+            mCurrentWidth = wtarget;
+        }
+    }
+
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
+
+    /* Precompute j*D and store in xoutput. */
+    auto tmpiter = std::ranges::copy(mDTHistory, mTemp.begin()).out;
+    std::ranges::copy(mD | std::views::take(samplesToDo+sInputPadding), tmpiter);
+    if(updateState) [[likely]]
+        std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
+            mDTHistory.begin());
+    gPShifter<N>.process(xoutput, mTemp);
+
+    /* W = 0.6098637*S - j(0.6896511*w*D) */
+    std::ranges::transform(mS, xoutput, woutput.begin(), [](const float s, const float jd) noexcept
+    { return 0.6098637f*s - 0.6896511f*jd; });
+    /* X = 1.05631501729*S + j(0.934107402059*w*D) */
+    std::ranges::transform(mS, xoutput, xoutput.begin(), [](const float s, const float jd) noexcept
+    { return 1.05631501729f*s + 0.934107402059f*jd; });
+
+    /* Precompute j*S and store in youtput. */
+    tmpiter = std::ranges::copy(mSHistory, mTemp.begin()).out;
+    std::ranges::copy(mS | std::views::take(samplesToDo+sInputPadding), tmpiter);
+    if(updateState) [[likely]]
+        std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
+            mSHistory.begin());
+    gPShifter<N>.process(youtput, mTemp);
+
+    /* Y = 2.06031664957*w*D - j(0.264078754323*S) */
+    std::ranges::transform(mD, youtput, youtput.begin(), [](const float d, const float js) noexcept
+    { return 2.06031664957f*d - 0.264078754323f*js; });
+}
+
+void TsmeStereoDecoderIIR::decode(std::span<std::span<float>> const samples,
+    bool const updateState)
+{
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
+
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+
+    {
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
+
+        std::ranges::transform(left, right, mS.begin(), std::plus{});
+
+        /* Pre-apply the width factor to the difference signal D. Smoothly
+         * interpolate when it changes.
+         */
+        const auto wtarget = mWidthControl;
+        const auto wcurrent = (mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth;
+        if(wtarget == wcurrent || !updateState)
+        {
+            std::ranges::transform(left, right, mD.begin(), [wcurrent](float l, float r) noexcept
+            { return (l-r) * wcurrent; });
+            mCurrentWidth = wcurrent;
+        }
+        else
+        {
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
+            auto fi = 0.0f;
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::ranges::transform(lfade, right, mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+            {
+                const float ret{(l-r) * (wcurrent + wstep*fi)};
+                fi += 1.0f;
+                return ret;
+            }).out;
+
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
+            std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
+            { return (l-r) * wtarget; });
+            mCurrentWidth = wtarget;
+        }
+    }
+
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
+
+    /* Apply filter1 to S and store in mTemp. */
+    process(mFilter1S, Filter1Coeff, std::span{mS}.first(samplesToDo), updateState, mTemp);
+
+    /* Precompute j*D and store in xoutput. */
+    if(mFirstRun) processOne(mFilter2D, Filter2Coeff, mD[0]);
+    process(mFilter2D, Filter2Coeff, std::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
+
+    /* W = 0.6098637*S - j(0.6896511*w*D) */
+    std::ranges::transform(mTemp, xoutput, woutput.begin(), [](float s, float jd) noexcept
+    { return 0.6098637f*s - 0.6896511f*jd; });
+    /* X = 1.05631501729*S + j(0.934107402059*w*D) */
+    std::ranges::transform(mTemp, xoutput, xoutput.begin(), [](float s, float jd) noexcept
+    { return 1.05631501729f*s + 0.934107402059f*jd; });
+
+    /* Precompute j*S and store in youtput. */
+    if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
+    process(mFilter2S, Filter2Coeff, std::span{mS}.subspan(1, samplesToDo), updateState, youtput);
+
+    /* Apply filter1 to D and store in mTemp. */
+    process(mFilter1D, Filter1Coeff, std::span{mD}.first(samplesToDo), updateState, mTemp);
+
+    /* Y = 2.06031664957*w*D - j(0.264078754323*S) */
+    std::ranges::transform(mTemp, youtput, youtput.begin(), [](float d, float js) noexcept
+    { return 2.06031664957f*d - 0.264078754323f*js; });
+
+    mFirstRun = false;
+}
+
+
 template struct TsmeEncoder<TsmeLength256>;
+template struct TsmeStereoDecoder<TsmeLength256>;
 template struct TsmeEncoder<TsmeLength512>;
+template struct TsmeStereoDecoder<TsmeLength512>;

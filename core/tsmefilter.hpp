@@ -12,9 +12,6 @@
 #include "encoderbase.hpp"
 
 
-inline constexpr auto TsmeLength256 = 256_uz;
-inline constexpr auto TsmeLength512 = 512_uz;
-
 enum class TsmeQualityType : u8::value_t {
     IIR = 0,
     FIR256,
@@ -71,6 +68,8 @@ struct TsmeEncoder final : EncoderBase {
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;
 };
+using TsmeEncoder256 = TsmeEncoder<256>;
+using TsmeEncoder512 = TsmeEncoder<512>;
 
 struct TsmeEncoderIIR final : EncoderBase {
     struct Tag { using encoder_t = TsmeEncoderIIR; };
@@ -129,6 +128,8 @@ struct TsmeStereoDecoder final : DecoderBase {
      */
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
+using TsmeStereoDecoder256 = TsmeStereoDecoder<256>;
+using TsmeStereoDecoder512 = TsmeStereoDecoder<512>;
 
 struct TsmeStereoDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = TsmeStereoDecoderIIR; };

@@ -1237,10 +1237,10 @@ void Voice::prepare(DeviceBase *device)
                 std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoderIIR::Tag{});
                 break;
             case TsmeQualityType::FIR256:
-                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder<TsmeLength256>::Tag{});
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder256::Tag{});
                 break;
             case TsmeQualityType::FIR512:
-                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder<TsmeLength512>::Tag{});
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(TsmeStereoDecoder512::Tag{});
                 break;
             }
         }
@@ -1252,10 +1252,10 @@ void Voice::prepare(DeviceBase *device)
                 std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoderIIR::Tag{});
                 break;
             case UhjQualityType::FIR256:
-                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder<UhjLength256>::Tag{});
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder256::Tag{});
                 break;
             case UhjQualityType::FIR512:
-                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder<UhjLength512>::Tag{});
+                std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjStereoDecoder512::Tag{});
                 break;
             }
         }
@@ -1268,10 +1268,10 @@ void Voice::prepare(DeviceBase *device)
             std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoderIIR::Tag{});
             break;
         case UhjQualityType::FIR256:
-            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder<UhjLength256>::Tag{});
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder256::Tag{});
             break;
         case UhjQualityType::FIR512:
-            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder<UhjLength512>::Tag{});
+            std::tie(mDecoder, mDecoderPadding) = init_decoder(UhjDecoder512::Tag{});
             break;
         }
     }

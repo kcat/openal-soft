@@ -1372,10 +1372,10 @@ void aluInitRenderer(al::Device *const device, int const hrtf_id,
                 std::tie(proc, ftype) = init_encoder(UhjEncoderIIR::Tag{});
                 break;
             case UhjQualityType::FIR256:
-                std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength256>::Tag{});
+                std::tie(proc, ftype) = init_encoder(UhjEncoder256::Tag{});
                 break;
             case UhjQualityType::FIR512:
-                std::tie(proc, ftype) = init_encoder(UhjEncoder<UhjLength512>::Tag{});
+                std::tie(proc, ftype) = init_encoder(UhjEncoder512::Tag{});
                 break;
             }
             Ensures(proc != nullptr);
@@ -1395,10 +1395,10 @@ void aluInitRenderer(al::Device *const device, int const hrtf_id,
                     std::tie(proc, ftype) = init_encoder(TsmeEncoderIIR::Tag{});
                     break;
                 case TsmeQualityType::FIR256:
-                    std::tie(proc, ftype) = init_encoder(TsmeEncoder<TsmeLength256>::Tag{});
+                    std::tie(proc, ftype) = init_encoder(TsmeEncoder256::Tag{});
                     break;
                 case TsmeQualityType::FIR512:
-                    std::tie(proc, ftype) = init_encoder(TsmeEncoder<TsmeLength512>::Tag{});
+                    std::tie(proc, ftype) = init_encoder(TsmeEncoder512::Tag{});
                     break;
             }
             Ensures(proc != nullptr);

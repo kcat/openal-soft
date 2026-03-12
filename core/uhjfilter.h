@@ -13,9 +13,6 @@
 #include "encoderbase.hpp"
 
 
-inline constexpr auto UhjLength256 = 256_uz;
-inline constexpr auto UhjLength512 = 512_uz;
-
 enum class UhjQualityType : u8::value_t {
     IIR = 0,
     FIR256,
@@ -70,6 +67,8 @@ struct UhjEncoder final : EncoderBase {
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
         std::span<const std::span<const float>> InSamples) -> void final;
 };
+using UhjEncoder256 = UhjEncoder<256>;
+using UhjEncoder512 = UhjEncoder<512>;
 
 struct UhjEncoderIIR final : EncoderBase {
     struct Tag { using encoder_t = UhjEncoderIIR; };
@@ -130,6 +129,8 @@ struct UhjDecoder final : DecoderBase {
      */
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
+using UhjDecoder256 = UhjDecoder<256>;
+using UhjDecoder512 = UhjDecoder<512>;
 
 struct UhjDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = UhjDecoderIIR; };
@@ -180,6 +181,8 @@ struct UhjStereoDecoder final : DecoderBase {
      */
     void decode(std::span<std::span<float>> samples, bool updateState) final;
 };
+using UhjStereoDecoder256 = UhjStereoDecoder<256>;
+using UhjStereoDecoder512 = UhjStereoDecoder<512>;
 
 struct UhjStereoDecoderIIR final : DecoderBase {
     struct Tag { using decoder_t = UhjStereoDecoderIIR; };

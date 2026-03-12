@@ -606,10 +606,10 @@ void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, cons
 }
 
 
-template struct UhjEncoder<UhjLength256>;
-template struct UhjDecoder<UhjLength256>;
-template struct UhjStereoDecoder<UhjLength256>;
+template struct UhjEncoder<256>;
+template struct UhjDecoder<256>;
+template struct UhjStereoDecoder<256>;
 
-template struct UhjEncoder<UhjLength512>;
-template struct UhjDecoder<UhjLength512>;
-template struct UhjStereoDecoder<UhjLength512>;
+template struct UhjEncoder<512>;
+template struct UhjDecoder<512>;
+template struct UhjStereoDecoder<512>;

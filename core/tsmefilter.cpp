@@ -505,7 +505,7 @@ void TsmeStereoDecoderIIR::decode(std::span<std::span<float>> const samples,
 }
 
 
-template struct TsmeEncoder<TsmeLength256>;
-template struct TsmeStereoDecoder<TsmeLength256>;
-template struct TsmeEncoder<TsmeLength512>;
-template struct TsmeStereoDecoder<TsmeLength512>;
+template struct TsmeEncoder<256>;
+template struct TsmeStereoDecoder<256>;
+template struct TsmeEncoder<512>;
+template struct TsmeStereoDecoder<512>;

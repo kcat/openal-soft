@@ -31,7 +31,9 @@ class PhaseShifterT {
     static_assert(FilterSize >= 16, "FilterSize needs to be at least 16");
     static_assert((FilterSize&(FilterSize-1)) == 0, "FilterSize needs to be power-of-two");
 
-    alignas(16) std::array<float,FilterSize/2> mCoeffs{};
+    static constexpr auto sFilterHalfSize = unsigned{FilterSize/2};
+
+    alignas(16) std::array<float, sFilterHalfSize> mCoeffs{};
 
 #if HAVE_NEON
     static auto load4(float32_t a, float32_t b, float32_t c, float32_t d) -> float32x4_t
@@ -63,12 +65,14 @@ public:
          * calculated coefficients are in reverse to make applying in the time-
          * domain more efficient.
          */
-        for(const auto i : std::views::iota(0_uz, FilterSize/2))
+        for(const auto i : std::views::iota(0_uz, sFilterHalfSize))
         {
-            const auto k = gsl::narrow_cast<int>(i*2 + 1) - int{FilterSize/2};
+            const auto k = gsl::narrow_cast<int>(i*2 + 1) - int{sFilterHalfSize};
 
-            /* Calculate the Blackman window value for this coefficient. */
-            const auto w = 2.0*std::numbers::pi/double{FilterSize/2-1}
+            /* Calculate the Blackman-Nuttall window value for this
+             * coefficient.
+             */
+            const auto w = 2.0*std::numbers::pi/double{sFilterHalfSize-1}
                 * gsl::narrow_cast<double>(i);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);

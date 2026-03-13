@@ -988,12 +988,12 @@ namespace std {
  * will never result in isize or usize.
  */
 template<al::strong_number T, al::strong_number U>
-    requires(not std::same_as<T, isize> and not std::same_as<T, usize>
+    requires(not std::derived_from<T, isize> and not std::derived_from<T, usize>
         and not al::might_narrow<typename T::value_t, typename U::value_t>)
 struct common_type<T, U> { using type = T; };
 
 template<al::strong_number T, al::strong_number U>
-    requires(not std::same_as<U, isize> and not std::same_as<U, usize>
+    requires(not std::derived_from<U, isize> and not std::derived_from<U, usize>
         and not al::might_narrow<typename U::value_t, typename T::value_t>
         and al::might_narrow<typename T::value_t, typename U::value_t>)
 struct common_type<T, U> { using type = U; };

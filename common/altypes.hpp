@@ -11,7 +11,6 @@
 
 #include "alformat.hpp"
 #include "opthelpers.h"
-#include "gsl/gsl"
 
 
 struct i8;
@@ -970,11 +969,12 @@ auto operator ""_f64(long double const n) noexcept { return f64::from(n); }
 auto operator ""_isize(unsigned long long const n) noexcept { return isize::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_z(unsigned long long const n) noexcept { return gsl::narrow<isize::value_t>(n); }
+auto operator ""_z(unsigned long long const n) noexcept
+{ return al::convert_to<isize::value_t>(n); }
 [[nodiscard]] consteval
-auto operator ""_uz(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
+auto operator ""_uz(unsigned long long const n) noexcept { return al::convert_to<std::size_t>(n); }
 [[nodiscard]] consteval
-auto operator ""_zu(unsigned long long const n) noexcept { return gsl::narrow<usize>(n); }
+auto operator ""_zu(unsigned long long const n) noexcept { return al::convert_to<std::size_t>(n); }
 
 
 namespace std {

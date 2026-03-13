@@ -13,15 +13,15 @@ template<std::size_t N>
 struct MakeHannWindow : std::array<float, N> {
     MakeHannWindow() noexcept
     {
-        static constexpr auto scale = std::numbers::pi / double{N};
+        static constexpr auto scale = std::numbers::pi / double{N+1};
         /* Create lookup table of the Hann window for the desired size. */
-        std::ranges::transform(std::views::iota(0u, unsigned{N/2}), this->begin(),
+        auto const end = std::ranges::transform(std::views::iota(0u, unsigned{N/2}), this->begin(),
             [](unsigned const i) -> float
         {
-            const auto val = std::sin((i+0.5) * scale);
+            const auto val = std::sin((i+1.0) * scale);
             return static_cast<float>(val * val);
-        });
-        std::ranges::copy(*this | std::views::take(N/2), this->rbegin());
+        }).out;
+        std::ranges::copy(this->begin(), end, this->rbegin());
     }
 };
 

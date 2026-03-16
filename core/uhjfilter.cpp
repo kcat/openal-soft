@@ -4,22 +4,16 @@
 #include "uhjfilter.h"
 
 #include <algorithm>
-#include <cmath>
 #include <complex>
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
-#include <vector>
 
-#include "alcomplex.h"
-#include "alnumeric.h"
 #include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
-#include "vector.h"
 
 #if HAVE_CXXMODULES
 import phase_shifter;
@@ -85,7 +79,7 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  * segmented FFT'd response for the desired shift.
  */
 
-template<usize N>
+template<std::size_t N>
 void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
     const std::span<const std::span<const float>> InSamples)
 {
@@ -303,7 +297,7 @@ void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float
  * Y = 0.974857725791*D - 0.82840763305*T + j(0.228577809582*S)
  * Z = 1.25332058063*Q
  */
-template<size_t N>
+template<std::size_t N>
 void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
@@ -450,7 +444,7 @@ void UhjDecoderIIR::decode(const std::span<std::span<float>> samples, const bool
  * X = 1.05631501729*S - j(0.934107402059*w*D)
  * Y = 2.06031664957*w*D + j(0.264078754323*S)
  */
-template<size_t N>
+template<std::size_t N>
 void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");

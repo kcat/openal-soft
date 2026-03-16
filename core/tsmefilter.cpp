@@ -134,7 +134,7 @@ auto assume_aligned_span(std::span<T, N> const s) noexcept -> std::span<T, N>
  * Right = S - D
  */
 
-template<usize N>
+template<std::size_t N>
 void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
     const std::span<const std::span<const float>> InSamples)
 {

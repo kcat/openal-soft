@@ -732,39 +732,41 @@ endif()
 
 # Common sources used by both the OpenAL implementation library, the OpenAL
 # router, and certain tools and examples.
-set(COMMON MODOBJS )
-set(COMMON_OBJS
-    common/albit.h
+set(COMMON_MODS )
+set(COMMON_SRCS
     common/alcomplex.cpp
+    common/almalloc.cpp
+    common/alstring.cpp
+    common/althrd_setname.cpp
+    common/dynload.cpp
+    common/filesystem.cpp
+    common/pffft.cpp
+    common/polyphase_resampler.cpp
+    common/strutils.cpp
+)
+set(COMMON_HDRS
+    common/albit.h
     common/alcomplex.h
     common/alformat.hpp
-    common/almalloc.cpp
     common/almalloc.h
     common/alnumeric.h
-    common/alstring.cpp
     common/alstring.h
-    common/althrd_setname.cpp
     common/althrd_setname.h
     common/althreads.h
     common/altypes.hpp
     common/atomic.h
     common/comptr.h
-    common/dynload.cpp
     common/dynload.h
     common/dlopennote.h
     common/expected.hpp
-    common/filesystem.cpp
     common/filesystem.h
     common/flexarray.h
     common/intrusive_ptr.h
     common/opthelpers.h
-    common/pffft.cpp
     common/pffft.h
-    common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h
     common/ringbuffer.h
-    common/strutils.cpp
     common/strutils.hpp
     common/vecmat.h
     common/vector.h
@@ -780,13 +782,13 @@ set(COMMON_OBJS
     gsl/include/gsl/zstring
 )
 if(HAVE_CXXMODULES)
-    set(COMMON_MODOBJS ${COMMON_MODOBJS}
+    set(COMMON_MODS ${COMMON_MODS}
         alsoft-modules/gsl.cppm
         alsoft-modules/hann_window.cppm
         alsoft-modules/phase_shifter.cppm
     )
 else()
-    set(COMMON_OBJS ${COMMON_OBJS}
+    set(COMMON_HDRS ${COMMON_HDRS}
         common/hann_window.hpp
         common/phase_shifter.hpp
     )
@@ -794,84 +796,85 @@ endif()
 
 
 # Core library routines
-set(CORE_MODOBJS )
-set(CORE_OBJS
+set(CORE_MODS )
+set(CORE_SRCS
+    core/ambdec.cpp
+    core/ambidefs.cpp
+    core/bformatdec.cpp
+    core/bs2b.cpp
+    core/bsinc_tables.cpp
+    core/context.cpp
+    core/converter.cpp
+    core/cpu_caps.cpp
+    core/cubic_tables.cpp
+    core/devformat.cpp
+    core/device.cpp
+    core/effectslot.cpp
+    core/except.cpp
+    core/filters/biquad.cpp
+    core/filters/nfc.cpp
+    core/filters/splitter.cpp
+    core/fpu_ctrl.cpp
+    core/helpers.cpp
+    core/hrtf.cpp
+    core/hrtf_loader.cpp
+    core/hrtf_resource.cpp
+    core/logging.cpp
+    core/mastering.cpp
+    core/mixer.cpp
+    core/storage_formats.cpp
+    core/tsmefilter.cpp
+    core/uhjfilter.cpp
+    core/uiddefs.cpp
+    core/voice.cpp)
+set(CORE_HDRS
     core/allpass_conv.hpp
     core/allpass_iir.hpp
-    core/ambdec.cpp
     core/ambdec.h
-    core/ambidefs.cpp
     core/ambidefs.h
     core/async_event.h
-    core/bformatdec.cpp
     core/bformatdec.h
-    core/bs2b.cpp
     core/bs2b.h
     core/bsinc_defs.h
-    core/bsinc_tables.cpp
     core/bsinc_tables.h
     core/bufferline.h
     core/buffer_storage.h
-    core/context.cpp
     core/context.h
-    core/converter.cpp
     core/converter.h
-    core/cpu_caps.cpp
     core/cpu_caps.h
     core/cubic_defs.h
-    core/cubic_tables.cpp
     core/cubic_tables.h
     core/decoderbase.hpp
-    core/devformat.cpp
     core/devformat.h
-    core/device.cpp
     core/device.h
     core/effects/base.h
-    core/effectslot.cpp
     core/effectslot.h
     core/encoderbase.hpp
-    core/except.cpp
     core/except.h
     core/filters/biquad.h
-    core/filters/biquad.cpp
-    core/filters/nfc.cpp
     core/filters/nfc.h
-    core/filters/splitter.cpp
     core/filters/splitter.h
     core/fmt_traits.h
-    core/fpu_ctrl.cpp
     core/fpu_ctrl.h
     core/front_stablizer.h
-    core/helpers.cpp
     core/helpers.h
-    core/hrtf.cpp
     core/hrtf.h
-    core/hrtf_loader.cpp
     core/hrtf_loader.hpp
-    core/hrtf_resource.cpp
     core/hrtf_resource.hpp
-    core/logging.cpp
-    core/mastering.cpp
     core/mastering.h
-    core/mixer.cpp
     core/mixer.h
     core/resampler_limits.h
-    core/storage_formats.cpp
     core/storage_formats.h
-    core/tsmefilter.cpp
     core/tsmefilter.hpp
-    core/uhjfilter.cpp
     core/uhjfilter.h
-    core/uiddefs.cpp
-    core/voice.cpp
     core/voice.h
     core/voice_change.h)
 if(HAVE_CXXMODULES)
-    set(CORE_MODOBJS ${CORE_MODOBJS}
+    set(CORE_MODS ${CORE_MODS}
         core/logging.cppm
     )
 else()
-    set(CORE_OBJS ${CORE_OBJS}
+    set(CORE_HDRS ${CORE_HDRS}
         core/logging.h
     )
 endif()
@@ -887,7 +890,8 @@ if(NOT WIN32)
         endif()
         if(DBus1_FOUND OR DBUS_FOUND)
             set(HAVE_RTKIT 1)
-            set(CORE_OBJS ${CORE_OBJS} core/rtkit.cpp core/rtkit.h)
+            set(CORE_SRCS ${CORE_SRCS} core/rtkit.cpp)
+            set(CORE_HDRS ${CORE_HDRS} core/rtkit.h)
             if(NOT DBus1_FOUND)
                 set(INC_PATHS ${INC_PATHS} ${DBUS_INCLUDE_DIRS})
                 set(CPP_DEFS ${CPP_DEFS} ${DBUS_CFLAGS_OTHER})
@@ -918,23 +922,19 @@ if(ALSOFT_REQUIRE_RTKIT AND NOT HAVE_RTKIT)
 endif()
 
 # Default mixers, always available
-set(CORE_OBJS ${CORE_OBJS}
+set(CORE_SRCS ${CORE_SRCS}
+    core/mixer/mixer_c.cpp)
+set(CORE_HDRS ${CORE_HDRS}
     core/mixer/defs.h
     core/mixer/hrtfbase.h
-    core/mixer/hrtfdefs.h
-    core/mixer/mixer_c.cpp)
+    core/mixer/hrtfdefs.h)
 
 # AL and related routines
-set(OPENAL_OBJS
+set(OPENAL_SRCS
     al/auxeffectslot.cpp
-    al/auxeffectslot.h
     al/buffer.cpp
-    al/buffer.h
     al/debug.cpp
-    al/debug.h
-    al/direct_defs.h
     al/effect.cpp
-    al/effect.h
     al/effects/autowah.cpp
     al/effects/chorus.cpp
     al/effects/compressor.cpp
@@ -943,7 +943,6 @@ set(OPENAL_OBJS
     al/effects/distortion.cpp
     al/effects/echo.cpp
     al/effects/effects.cpp
-    al/effects/effects.h
     al/effects/equalizer.cpp
     al/effects/fshifter.cpp
     al/effects/modulator.cpp
@@ -953,28 +952,30 @@ set(OPENAL_OBJS
     al/effects/vmorpher.cpp
     al/error.cpp
     al/event.cpp
-    al/event.h
     al/extension.cpp
     al/filter.cpp
-    al/filter.h
     al/listener.cpp
-    al/listener.h
     al/source.cpp
-    al/source.h
     al/state.cpp)
+set(OPENAL_HDRS
+    al/auxeffectslot.h
+    al/buffer.h
+    al/debug.h
+    al/direct_defs.h
+    al/effect.h
+    al/effects/effects.h
+    al/event.h
+    al/filter.h
+    al/listener.h
+    al/source.h)
 
 # ALC and related routines
-set(ALC_OBJS
+set(ALC_SRCS
     alc/alc.cpp
     alc/alu.cpp
-    alc/alu.h
     alc/alconfig.cpp
-    alc/alconfig.h
     alc/context.cpp
-    alc/context.h
     alc/device.cpp
-    alc/device.h
-    alc/effects/base.h
     alc/effects/autowah.cpp
     alc/effects/chorus.cpp
     alc/effects/compressor.cpp
@@ -990,28 +991,35 @@ set(ALC_OBJS
     alc/effects/reverb.cpp
     alc/effects/vmorpher.cpp
     alc/events.cpp
+    alc/panning.cpp)
+set(ALC_HDRS
+    alc/alu.h
+    alc/alconfig.h
+    alc/context.h
+    alc/device.h
+    alc/effects/base.h
     alc/events.h
     alc/export_list.h
-    alc/inprogext.h
-    alc/panning.cpp)
+    alc/inprogext.h)
 
 if(ALSOFT_EAX)
-    set(OPENAL_OBJS
-        ${OPENAL_OBJS}
+    set(OPENAL_SRCS ${OPENAL_SRCS}
         al/eax.cpp
         al/eax/api.cpp
-        al/eax/api.h
         al/eax/call.cpp
+        al/eax/exception.cpp
+        al/eax/fx_slot_index.cpp
+        al/eax/fx_slots.cpp
+        al/eax/utils.cpp
+    )
+    set(OPENAL_HDRS ${OPENAL_HDRS}
+        al/eax/api.h
         al/eax/call.h
         al/eax/effect.h
-        al/eax/exception.cpp
         al/eax/exception.h
-        al/eax/fx_slot_index.cpp
         al/eax/fx_slot_index.h
-        al/eax/fx_slots.cpp
         al/eax/fx_slots.h
         al/eax/globals.h
-        al/eax/utils.cpp
         al/eax/utils.h
         al/eax/x_ram.h
     )
@@ -1020,23 +1028,23 @@ endif()
 # Include SIMD mixers
 set(CPU_EXTS "Default")
 if(HAVE_SSE)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse.cpp)
+    set(CORE_SRCS  ${CORE_SRCS} core/mixer/mixer_sse.cpp)
     set(CPU_EXTS "${CPU_EXTS}, SSE")
 endif()
 if(HAVE_SSE2)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse2.cpp)
+    set(CORE_SRCS  ${CORE_SRCS} core/mixer/mixer_sse2.cpp)
     set(CPU_EXTS "${CPU_EXTS}, SSE2")
 endif()
 if(HAVE_SSE3)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse3.cpp)
+    set(CORE_SRCS  ${CORE_SRCS} core/mixer/mixer_sse3.cpp)
     set(CPU_EXTS "${CPU_EXTS}, SSE3")
 endif()
 if(HAVE_SSE4_1)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_sse41.cpp)
+    set(CORE_SRCS  ${CORE_SRCS} core/mixer/mixer_sse41.cpp)
     set(CPU_EXTS "${CPU_EXTS}, SSE4.1")
 endif()
 if(HAVE_NEON)
-    set(CORE_OBJS  ${CORE_OBJS} core/mixer/mixer_neon.cpp)
+    set(CORE_SRCS  ${CORE_SRCS} core/mixer/mixer_neon.cpp)
     set(CPU_EXTS "${CPU_EXTS}, Neon")
 endif()
 
@@ -1070,13 +1078,15 @@ else()
 endif()
 
 set(BACKENDS "")
-set(ALC_OBJS  ${ALC_OBJS}
+set(ALC_SRCS ${ALC_SRCS}
     alc/backends/base.cpp
-    alc/backends/base.h
     # Default backends, always available
     alc/backends/loopback.cpp
-    alc/backends/loopback.h
     alc/backends/null.cpp
+)
+set(ALC_HDRS ${ALC_HDRS}
+    alc/backends/base.h
+    alc/backends/loopback.h
     alc/backends/null.h
 )
 
@@ -1088,7 +1098,8 @@ if(ALSOFT_BACKEND_PIPEWIRE AND PkgConfig_FOUND)
     if(PIPEWIRE_FOUND)
         set(HAVE_PIPEWIRE 1)
         set(BACKENDS  "${BACKENDS} PipeWire${IS_LINKED},")
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/pipewire.cpp alc/backends/pipewire.h)
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/pipewire.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/pipewire.h)
         add_backend_libs(${PIPEWIRE_LIBRARIES})
         set(INC_PATHS ${INC_PATHS} ${PIPEWIRE_INCLUDE_DIRS})
     endif()
@@ -1105,7 +1116,8 @@ if(ALSOFT_BACKEND_PULSEAUDIO)
     if(PULSEAUDIO_FOUND)
         set(HAVE_PULSEAUDIO 1)
         set(BACKENDS  "${BACKENDS} PulseAudio${IS_LINKED},")
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/pulseaudio.cpp alc/backends/pulseaudio.h)
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/pulseaudio.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/pulseaudio.h)
         add_backend_libs(${PULSEAUDIO_LIBRARY})
         set(INC_PATHS ${INC_PATHS} ${PULSEAUDIO_INCLUDE_DIR})
     endif()
@@ -1123,7 +1135,8 @@ if(NOT WIN32)
         if(ALSA_FOUND)
             set(HAVE_ALSA 1)
             set(BACKENDS  "${BACKENDS} ALSA${IS_LINKED},")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/alsa.cpp alc/backends/alsa.h)
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/alsa.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/alsa.h)
             add_backend_libs(${ALSA_LIBRARIES})
             set(INC_PATHS ${INC_PATHS} ${ALSA_INCLUDE_DIRS})
         endif()
@@ -1137,7 +1150,8 @@ if(NOT WIN32)
         if(OSS_FOUND)
             set(HAVE_OSS 1)
             set(BACKENDS  "${BACKENDS} OSS,")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/oss.cpp alc/backends/oss.h)
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/oss.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/oss.h)
             if(OSS_LIBRARIES)
                 set(EXTRA_LIBS ${OSS_LIBRARIES} ${EXTRA_LIBS})
             endif()
@@ -1153,7 +1167,8 @@ if(NOT WIN32)
         if(AUDIOIO_FOUND)
             set(HAVE_SOLARIS 1)
             set(BACKENDS  "${BACKENDS} Solaris,")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/solaris.cpp alc/backends/solaris.h)
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/solaris.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/solaris.h)
             set(INC_PATHS ${INC_PATHS} ${AUDIOIO_INCLUDE_DIRS})
         endif()
     endif()
@@ -1170,7 +1185,8 @@ if(NOT WIN32)
         if(SNDIO_FOUND)
             set(HAVE_SNDIO 1)
             set(BACKENDS  "${BACKENDS} SndIO (linked),")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/sndio.cpp alc/backends/sndio.hpp)
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/sndio.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/sndio.hpp)
             set(EXTRA_LIBS ${SNDIO_LIBRARIES} ${EXTRA_LIBS})
             set(INC_PATHS ${INC_PATHS} ${SNDIO_INCLUDE_DIRS})
         endif()
@@ -1199,8 +1215,8 @@ if(WIN32)
         if(HAVE_MMDEVICEAPI_H)
             set(HAVE_WASAPI 1)
             set(BACKENDS  "${BACKENDS} WASAPI,")
-            set(ALC_OBJS  ${ALC_OBJS} alc/backends/wasapi.cpp alc/backends/wasapi.h)
-
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/wasapi.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/wasapi.h)
             if(NOT ALSOFT_UWP)
                 set(EXTRA_LIBS avrt ${EXTRA_LIBS})
             endif()
@@ -1221,8 +1237,8 @@ if(WIN32)
             if(HAVE_DSOUND_H OR DSOUND_INCLUDE_DIR)
                 set(HAVE_DSOUND 1)
                 set(BACKENDS "${BACKENDS} DirectSound,")
-                set(ALC_OBJS ${ALC_OBJS} alc/backends/dsound.cpp alc/backends/dsound.h)
-
+                set(ALC_SRCS ${ALC_SRCS} alc/backends/dsound.cpp)
+                set(ALC_HDRS ${ALC_HDRS} alc/backends/dsound.h)
                 if(NOT HAVE_DSOUND_H)
                     set(INC_PATHS ${INC_PATHS} ${DSOUND_INCLUDE_DIR})
                 endif()
@@ -1235,7 +1251,8 @@ if(WIN32)
         if(ALSOFT_BACKEND_WINMM)
             set(HAVE_WINMM 1)
             set(BACKENDS "${BACKENDS} WinMM,")
-            set(ALC_OBJS ${ALC_OBJS} alc/backends/winmm.cpp alc/backends/winmm.h)
+            set(ALC_SRCS ${ALC_SRCS} alc/backends/winmm.cpp)
+            set(ALC_HDRS ${ALC_HDRS} alc/backends/winmm.h)
             # There doesn't seem to be good way to search for winmm.lib for MSVC.
             # find_library doesn't find it without being told to look in a specific
             # place in the WindowsSDK, but it links anyway. If there ends up being
@@ -1262,7 +1279,8 @@ if(ALSOFT_BACKEND_JACK)
     if(JACK_FOUND)
         set(HAVE_JACK 1)
         set(BACKENDS  "${BACKENDS} JACK${IS_LINKED},")
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/jack.cpp alc/backends/jack.h)
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/jack.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/jack.h)
         add_backend_libs(${JACK_LIBRARIES})
         set(INC_PATHS ${INC_PATHS} ${JACK_INCLUDE_DIRS})
     endif()
@@ -1279,8 +1297,9 @@ if(ALSOFT_BACKEND_COREAUDIO)
     find_path(AUDIOUNIT_INCLUDE_DIR NAMES AudioUnit/AudioUnit.h)
     if(COREAUDIO_FRAMEWORK AND AUDIOUNIT_INCLUDE_DIR)
         set(HAVE_COREAUDIO 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/coreaudio.cpp alc/backends/coreaudio.h)
         set(BACKENDS  "${BACKENDS} CoreAudio,")
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/coreaudio.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/coreaudio.h)
 
         set(EXTRA_LIBS -Wl,-framework,CoreAudio ${EXTRA_LIBS})
         if(CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS|visionOS)$")
@@ -1329,8 +1348,9 @@ if(ALSOFT_BACKEND_OBOE)
 
     if(OBOE_TARGET)
         set(HAVE_OBOE 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/oboe.cpp alc/backends/oboe.h)
         set(BACKENDS  "${BACKENDS} Oboe,")
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/oboe.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/oboe.h)
         set(EXTRA_LIBS ${OBOE_TARGET} ${EXTRA_LIBS})
     endif()
 endif()
@@ -1345,8 +1365,9 @@ if(ALSOFT_BACKEND_OPENSL)
     find_package(OpenSL)
     if(OPENSL_FOUND)
         set(HAVE_OPENSL 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/opensl.cpp alc/backends/opensl.h)
         set(BACKENDS  "${BACKENDS} OpenSL${IS_LINKED},")
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/opensl.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/opensl.h)
         add_backend_libs(${OPENSL_LIBRARIES})
         set(INC_PATHS ${INC_PATHS} ${OPENSL_INCLUDE_DIRS})
     endif()
@@ -1363,7 +1384,8 @@ if(ALSOFT_BACKEND_PORTAUDIO)
     if(PORTAUDIO_FOUND)
         set(HAVE_PORTAUDIO 1)
         set(BACKENDS  "${BACKENDS} PortAudio${IS_LINKED},")
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/portaudio.cpp alc/backends/portaudio.hpp)
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/portaudio.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/portaudio.hpp)
         add_backend_libs(${PORTAUDIO_LIBRARIES})
         set(INC_PATHS ${INC_PATHS} ${PORTAUDIO_INCLUDE_DIRS})
     endif()
@@ -1380,8 +1402,9 @@ option(ALSOFT_REQUIRE_SDL3 "Require SDL3 backend" OFF)
 if(ALSOFT_BACKEND_SDL3)
     if(SDL3_FOUND)
         set(HAVE_SDL3 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/sdl3.cpp alc/backends/sdl3.h)
         set(BACKENDS  "${BACKENDS} SDL3,")
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/sdl3.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/sdl3.h)
         set(EXTRA_LIBS ${EXTRA_LIBS} SDL3::SDL3)
     else()
         message(STATUS "Could NOT find SDL3")
@@ -1397,8 +1420,9 @@ if(ALSOFT_BACKEND_SDL2 AND NOT HAVE_SDL3)
     find_package(SDL2)
     if(SDL2_FOUND)
         set(HAVE_SDL2 1)
-        set(ALC_OBJS  ${ALC_OBJS} alc/backends/sdl2.cpp alc/backends/sdl2.h)
         set(BACKENDS  "${BACKENDS} SDL2,")
+        set(ALC_SRCS ${ALC_SRCS} alc/backends/sdl2.cpp)
+        set(ALC_HDRS ${ALC_HDRS} alc/backends/sdl2.h)
         set(EXTRA_LIBS ${EXTRA_LIBS} SDL2::SDL2)
     else()
         message(STATUS "Could NOT find SDL2")
@@ -1412,8 +1436,9 @@ endif()
 option(ALSOFT_BACKEND_WAVE "Enable Wave Writer backend" ON)
 if(ALSOFT_BACKEND_WAVE)
     set(HAVE_WAVE 1)
-    set(ALC_OBJS  ${ALC_OBJS} alc/backends/wave.cpp alc/backends/wave.h)
     set(BACKENDS  "${BACKENDS} WaveFile,")
+    set(ALC_SRCS ${ALC_SRCS} alc/backends/wave.cpp)
+    set(ALC_HDRS ${ALC_HDRS} alc/backends/wave.h)
 endif()
 
 # This is always available
@@ -1472,7 +1497,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
             DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
         )
-        set(ALC_OBJS  ${ALC_OBJS} "${outfile}")
+        set(ALC_HDRS  ${ALC_HDRS} "${outfile}")
     endmacro()
 
     make_hrtf_header("Default HRTF.mhr" "default_hrtf")
@@ -1573,48 +1598,60 @@ configure_file(
     @ONLY)
 
 
-set(MODULES_OBJS )
+set(PUBLIC_MODULES )
 if(HAVE_CXXMODULES)
-    set(MODULES_OBJS  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
+    set(PUBLIC_MODULES  modules/alc.cppm modules/al.cppm modules/alstd.cppm modules/efx.cppm
         modules/alext.cppm modules/openal.cppm)
 
     # For importing while building the examples and utilities (functions are
     # set to be imported from the shared library, or as free functions with
     # static library builds).
+    # TODO: Expose a "pure" version of this target for projects that have
+    # OpenAL Soft as a sub-project in its own build? It would depend on the
+    # parent or builder setting properties globally for this to inherit the
+    # desired build settings, since modules need to build with the same
+    # settings as the sources they're imported into.
     add_library(openal.modules OBJECT EXCLUDE_FROM_ALL)
-    target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES ${MODULES_OBJS})
+    target_sources(openal.modules PUBLIC FILE_SET CXX_MODULES FILES ${PUBLIC_MODULES})
     target_include_directories(openal.modules PRIVATE ${OpenAL_SOURCE_DIR}/include)
     target_compile_definitions(openal.modules PRIVATE ${CPP_DEFS})
     target_compile_options(openal.modules PRIVATE ${C_FLAGS})
     set_target_properties(openal.modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         POSITION_INDEPENDENT_CODE TRUE)
-    set(MODULES_TARGET openal.modules)
+    add_library(openal::modules ALIAS openal.modules)
+    set(MODULES_TARGET openal::modules)
 
     # For importing while building the library (functions are set to be
     # exported from the shared library).
     add_library(alsoft.modules OBJECT EXCLUDE_FROM_ALL)
-    target_sources(alsoft.modules PUBLIC FILE_SET CXX_MODULES FILES ${MODULES_OBJS})
+    target_sources(alsoft.modules PUBLIC FILE_SET CXX_MODULES FILES ${PUBLIC_MODULES})
     target_compile_definitions(alsoft.modules PRIVATE AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
         "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
     target_compile_options(alsoft.modules PRIVATE ${C_FLAGS})
     set_target_properties(alsoft.modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         POSITION_INDEPENDENT_CODE TRUE)
+    add_library(alsoft::modules ALIAS alsoft.modules)
 else()
     set(MODULES_TARGET )
 endif()
 
-add_library(alsoft.common STATIC EXCLUDE_FROM_ALL ${COMMON_OBJS})
-target_include_directories(alsoft.common PRIVATE ${OpenAL_SOURCE_DIR}/include
+add_library(alsoft.common STATIC EXCLUDE_FROM_ALL)
+if(CMAKE_VERSION GREATER_EQUAL 3.23)
+    target_sources(alsoft.common PRIVATE ${COMMON_SRCS}
+        PUBLIC FILE_SET HEADERS FILES ${COMMON_HDRS})
+    if(HAVE_CXXMODULES)
+        target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_MODS})
+    endif()
+else()
+    target_sources(alsoft.common PRIVATE ${COMMON_SRCS} PUBLIC ${COMMON_HDRS})
+endif()
+target_include_directories(alsoft.common
     PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common ${OpenAL_SOURCE_DIR}/gsl/include)
 target_compile_definitions(alsoft.common PRIVATE ${CPP_DEFS})
 target_compile_options(alsoft.common PRIVATE ${C_FLAGS})
 target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
 set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
-if(HAVE_CXXMODULES)
-    set(MODULES_OBJS  ${MODULES_OBJS} ${COMMON_MODOBJS})
-    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_MODOBJS})
-endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
     # Targeting versions prior to macOS 10.13 requires specifying custom
@@ -1622,19 +1659,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     # exist and it can use them.
     target_compile_options(alsoft.common PUBLIC "-faligned-allocation")
 endif()
+add_library(alsoft::common ALIAS alsoft.common)
 
 if(HAVE_CXXMODULES)
-    set(MODULES_OBJS  ${MODULES_OBJS} ${CORE_MODOBJS})
-
     add_library(alsoft.core-modules OBJECT EXCLUDE_FROM_ALL)
-    target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES ${CORE_MODOBJS})
+    target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES ${CORE_MODS})
     target_include_directories(alsoft.core-modules PRIVATE
         ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/common
     )
     target_compile_definitions(alsoft.core-modules PRIVATE ${CPP_DEFS})
     target_compile_options(alsoft.core-modules PRIVATE ${C_FLAGS})
-    target_link_libraries(alsoft.core-modules PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
-        ${MATH_LIB} alsoft::fmt alsoft.modules)
+    target_link_libraries(alsoft.core-modules PRIVATE alsoft::common ${LINKER_FLAGS} ${EXTRA_LIBS}
+        ${MATH_LIB} alsoft::fmt)
     set_target_properties(alsoft.core-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
         POSITION_INDEPENDENT_CODE TRUE)
 endif()
@@ -1645,7 +1681,8 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
 
 set(NEED_ANALYZE_SOURCE_FILES "")
-foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS} ${MODULES_OBJS})
+foreach(obj ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS}
+    ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
     # CMake 3.20+ can use cmake_path(COMPARE ...), or CMake 3.24+ can use
     # PATH_EQUAL.
     if(NOT obj STREQUAL "${OpenAL_BINARY_DIR}/default_hrtf.txt")
@@ -1653,24 +1690,40 @@ foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS} ${MODULES_OBJ
     endif()
 endforeach()
 
+set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
+    include/AL/efx-presets.h)
+
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
     if(TARGET openal.modules)
         target_compile_definitions(openal.modules PUBLIC AL_LIBTYPE_STATIC)
     endif()
 
-    add_library(${IMPL_TARGET} STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS})
+    add_library(${IMPL_TARGET} STATIC)
+    if(CMAKE_VERSION GREATER_EQUAL 3.23)
+        target_sources(${IMPL_TARGET}
+            PRIVATE ${COMMON_SRCS} ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS}
+            PRIVATE FILE_SET internal_headers TYPE HEADERS
+                FILES ${COMMON_HDRS} ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
+            PUBLIC FILE_SET public_headers TYPE HEADERS
+                BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS}
+        )
+        if(HAVE_CXXMODULES)
+            target_sources(${IMPL_TARGET} PRIVATE FILE_SET CXX_MODULES
+                FILES ${COMMON_MODS} ${CORE_MODS})
+        endif()
+    else()
+        target_sources(${IMPL_TARGET} PRIVATE ${COMMON_SRCS} ${COMMON_HDRS} ${OPENAL_SRCS}
+            ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS})
+    endif()
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB}
         $<BUILD_LOCAL_INTERFACE:alsoft::fmt>)
-    if(TARGET alsoft.core-modules)
-        target_link_libraries(${IMPL_TARGET} PRIVATE $<BUILD_LOCAL_INTERFACE:alsoft.core-modules>)
-    endif()
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
         AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
-        # The static library doesn't link with alsoft.common, so needs this
+        # The static library doesn't link with alsoft::common, so needs this
         # compile flag set for itself.
         target_compile_options(${IMPL_TARGET} PRIVATE "-faligned-allocation")
     endif()
@@ -1687,32 +1740,31 @@ if(LIBTYPE STREQUAL "STATIC")
 else()
     set(RC_CONFIG resources/openal32.rc)
     if(WIN32 AND ALSOFT_BUILD_ROUTER)
-        if(HAVE_CXXMODULES)
-            add_library(alsoft.router-modules OBJECT EXCLUDE_FROM_ALL)
-            target_sources(alsoft.router-modules PUBLIC FILE_SET CXX_MODULES FILES
-                alsoft-modules/router.cppm)
-            target_compile_definitions(alsoft.router-modules PRIVATE AL_ALEXT_PROTOTYPES
-                "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
-            target_compile_options(alsoft.router-modules PRIVATE ${C_FLAGS})
-            target_link_libraries(alsoft.router-modules PRIVATE alsoft::fmt alsoft.modules)
-            set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
-                POSITION_INDEPENDENT_CODE TRUE)
-            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/alsoft-modules/router.cppm")
+        add_library(OpenAL SHARED)
+        if(CMAKE_VERSION GREATER_EQUAL 3.23)
+            target_sources(OpenAL
+                PRIVATE resources/router.rc router/router.cpp router/alc.cpp router/al.cpp
+                PUBLIC FILE_SET public_headers TYPE HEADERS
+                    BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS})
+            if(HAVE_CXXMODULES)
+                target_sources(OpenAL PRIVATE FILE_SET CXX_MODULES
+                    FILES alsoft-modules/router.cppm)
+            else()
+                target_sources(OpenAL PRIVATE FILE_SET internal_headers TYPE HEADERS
+                    FILES router/router.h)
+            endif()
+        else()
+            target_sources(OpenAL PRIVATE resources/router.rc router/router.cpp router/router.h
+                router/alc.cpp router/al.cpp)
         endif()
-
-        add_library(OpenAL SHARED
-            resources/router.rc
-            router/router.cpp
-            router/router.h
-            router/alc.cpp
-            router/al.cpp
-        )
         target_compile_definitions(OpenAL
             PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}"
             "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
         target_compile_options(OpenAL PRIVATE ${C_FLAGS})
-        target_link_libraries(OpenAL PRIVATE alsoft.common ${LINKER_FLAGS} alsoft::fmt
-            $<$<BOOL:${HAVE_CXXMODULES}>:alsoft.modules alsoft.router-modules>)
+        target_link_libraries(OpenAL PRIVATE alsoft::common ${LINKER_FLAGS} alsoft::fmt)
+        if(HAVE_CXXMODULES)
+            target_link_libraries(OpenAL PRIVATE alsoft::modules)
+        endif()
         target_include_directories(OpenAL
             PUBLIC
                 $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
@@ -1733,18 +1785,34 @@ else()
         set(RC_CONFIG resources/soft_oal.rc)
     endif()
 
-    # !important: for osx framework public header works, the headers must be in
-    # the project
-    set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
-        include/AL/efx-presets.h)
+    add_library(${IMPL_TARGET} SHARED)
+    if(CMAKE_VERSION GREATER_EQUAL 3.23)
+        target_sources(${IMPL_TARGET}
+            PRIVATE ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS} ${RC_CONFIG}
+            PRIVATE FILE_SET internal_headers TYPE HEADERS
+                FILES ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
+            PUBLIC FILE_SET public_headers TYPE HEADERS
+                BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS})
+        # FIXME: Why can't I do this without CMake complaining that the private
+        # alsoft.common and alsoft.fmt libs aren't in some export set? Yet
+        # adding alsoft.core-modules as another lib that has the modules works
+        # without error?
+        #if(HAVE_CXXMODULES)
+        #    target_sources(${IMPL_TARGET} PRIVATE FILE_SET CXX_MODULES FILES ${CORE_MODS})
+        #endif()
+    else()
+        target_sources(${IMPL_TARGET} PRIVATE ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS}
+            ${CORE_SRCS} ${CORE_HDRS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
+    endif()
 
-    add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS} ${RC_CONFIG}
-        ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
         set_target_properties(${IMPL_TARGET} PROPERTIES PREFIX "")
     endif()
-    target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
+    target_link_libraries(${IMPL_TARGET} PRIVATE alsoft::common ${LINKER_FLAGS} ${EXTRA_LIBS}
         ${MATH_LIB} alsoft::fmt)
+    # FIXME: Can't have the modules as part of ${IMPL_TARGET} directly for some
+    # reason, causing problems with the private alsoft.common and alsoft.fmt
+    # libs, so they're added through this target to work around the bug.
     if(TARGET alsoft.core-modules)
         target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.core-modules)
     endif()
@@ -1916,9 +1984,16 @@ add_library(OpenAL::OpenAL ALIAS OpenAL)
 if(ALSOFT_INSTALL)
     configure_package_config_file(OpenALConfig.cmake.in OpenALConfig.cmake
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL)
-    install(TARGETS OpenAL EXPORT OpenAL
-        FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+    if(CMAKE_VERSION GREATER_EQUAL 3.23)
+        install(TARGETS OpenAL EXPORT OpenAL FILE_SET public_headers
+            FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+    else()
+        install(TARGETS OpenAL EXPORT OpenAL
+            FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} ${CMAKE_INSTALL_INCLUDEDIR}/AL)
+        install(DIRECTORY include/AL TYPE INCLUDE)
+    endif()
     export(TARGETS OpenAL
         NAMESPACE OpenAL::
         FILE OpenALTargets.cmake)
@@ -1926,8 +2001,6 @@ if(ALSOFT_INSTALL)
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
         NAMESPACE OpenAL::
         FILE OpenALTargets.cmake)
-    install(DIRECTORY include/AL
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     install(FILES "${OpenAL_BINARY_DIR}/openal.pc"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
     install(FILES "${OpenAL_BINARY_DIR}/OpenALConfig.cmake"
@@ -1982,7 +2055,7 @@ if(ALSOFT_UTILS)
         target_include_directories(uhjdecoder
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjdecoder PRIVATE ${C_FLAGS})
-        target_link_libraries(uhjdecoder PUBLIC alsoft.common
+        target_link_libraries(uhjdecoder PUBLIC alsoft::common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjdecoder PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/uhjdecoder.cpp")
@@ -1992,7 +2065,7 @@ if(ALSOFT_UTILS)
         target_include_directories(uhjencoder
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(uhjencoder PRIVATE ${C_FLAGS})
-        target_link_libraries(uhjencoder PUBLIC alsoft.common
+        target_link_libraries(uhjencoder PUBLIC alsoft::common
             PRIVATE ${LINKER_FLAGS} SndFile::SndFile ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(uhjencoder PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/uhjencoder.cpp")
@@ -2006,7 +2079,7 @@ if(ALSOFT_UTILS)
         target_compile_definitions(alsoft.sofa-support PRIVATE ${CPP_DEFS})
         target_include_directories(alsoft.sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(alsoft.sofa-support PRIVATE ${C_FLAGS})
-        target_link_libraries(alsoft.sofa-support PUBLIC alsoft.common MySOFA::MySOFA
+        target_link_libraries(alsoft.sofa-support PUBLIC alsoft::common MySOFA::MySOFA
             PRIVATE ${LINKER_FLAGS} alsoft::fmt)
         set_target_properties(alsoft.sofa-support PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/sofa-support.cpp"
@@ -2043,7 +2116,7 @@ if(ALSOFT_UTILS)
         target_include_directories(sofa-info
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
         target_compile_options(sofa-info PRIVATE ${C_FLAGS})
-        target_link_libraries(sofa-info PRIVATE alsoft.common ${LINKER_FLAGS} alsoft.sofa-support
+        target_link_libraries(sofa-info PRIVATE alsoft::common ${LINKER_FLAGS} alsoft.sofa-support
             ${UNICODE_FLAG} alsoft::fmt)
         set_target_properties(sofa-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/sofa-info.cpp")
@@ -2099,13 +2172,13 @@ if(ALSOFT_EXAMPLES)
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alrecord.c")
 
     add_executable(aldebug examples/aldebug.cpp)
-    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
+    target_link_libraries(aldebug PRIVATE ${LINKER_FLAGS} alsoft::common alsoft.excommon
         ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(aldebug PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/aldebug.cpp")
 
     add_executable(allafplay examples/allafplay.cpp)
-    target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft.common alsoft.excommon
+    target_link_libraries(allafplay PRIVATE ${LINKER_FLAGS} alsoft::common alsoft.excommon
         ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
     set_target_properties(allafplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/allafplay.cpp")
@@ -2154,19 +2227,19 @@ if(ALSOFT_EXAMPLES)
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alhrtf.c")
 
         add_executable(alstreamcb examples/alstreamcb.cpp)
-        target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
+        target_link_libraries(alstreamcb PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft::common
             alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(alstreamcb PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alstreamcb.cpp")
 
         add_executable(aldirect examples/aldirect.cpp)
-        target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft.common
+        target_link_libraries(aldirect PRIVATE ${LINKER_FLAGS} SndFile::SndFile alsoft::common
             alsoft.excommon ${UNICODE_FLAG} alsoft::fmt ${MODULES_TARGET})
         set_target_properties(aldirect PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/aldirect.cpp")
 
         add_executable(alconvolve examples/alconvolve.c)
-        target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} alsoft.common SndFile::SndFile
+        target_link_libraries(alconvolve PRIVATE ${LINKER_FLAGS} alsoft::common SndFile::SndFile
             alsoft.excommon ${UNICODE_FLAG})
         set_target_properties(alconvolve PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alconvolve.c")
@@ -2221,7 +2294,7 @@ if(ALSOFT_EXAMPLES)
             add_executable(alffplay examples/alffplay.cpp)
             target_include_directories(alffplay PRIVATE ${FFMPEG_INCLUDE_DIRS})
             target_link_libraries(alffplay
-                PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft.common
+                PRIVATE ${LINKER_FLAGS} SDL3::SDL3 ${FFMPEG_LIBRARIES} alsoft::common
                 alsoft.excommon alsoft::fmt ${MODULES_TARGET})
             set_target_properties(alffplay PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
             list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alffplay.cpp")

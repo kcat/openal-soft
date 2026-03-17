@@ -732,6 +732,7 @@ endif()
 
 # Common sources used by both the OpenAL implementation library, the OpenAL
 # router, and certain tools and examples.
+set(COMMON MODOBJS )
 set(COMMON_OBJS
     common/albit.h
     common/alcomplex.cpp
@@ -755,12 +756,10 @@ set(COMMON_OBJS
     common/filesystem.cpp
     common/filesystem.h
     common/flexarray.h
-    common/hann_window.hpp
     common/intrusive_ptr.h
     common/opthelpers.h
     common/pffft.cpp
     common/pffft.h
-    common/phase_shifter.hpp
     common/polyphase_resampler.cpp
     common/polyphase_resampler.h
     common/pragmadefs.h
@@ -780,8 +779,22 @@ set(COMMON_OBJS
     gsl/include/gsl/util
     gsl/include/gsl/zstring
 )
+if(HAVE_CXXMODULES)
+    set(COMMON_MODOBJS ${COMMON_MODOBJS}
+        alsoft-modules/gsl.cppm
+        alsoft-modules/hann_window.cppm
+        alsoft-modules/phase_shifter.cppm
+    )
+else()
+    set(COMMON_OBJS ${COMMON_OBJS}
+        common/hann_window.hpp
+        common/phase_shifter.hpp
+    )
+endif()
+
 
 # Core library routines
+set(CORE_MODOBJS )
 set(CORE_OBJS
     core/allpass_conv.hpp
     core/allpass_iir.hpp
@@ -838,7 +851,6 @@ set(CORE_OBJS
     core/hrtf_resource.cpp
     core/hrtf_resource.hpp
     core/logging.cpp
-    core/logging.h
     core/mastering.cpp
     core/mastering.h
     core/mixer.cpp
@@ -854,6 +866,15 @@ set(CORE_OBJS
     core/voice.cpp
     core/voice.h
     core/voice_change.h)
+if(HAVE_CXXMODULES)
+    set(CORE_MODOBJS ${CORE_MODOBJS}
+        core/logging.cppm
+    )
+else()
+    set(CORE_OBJS ${CORE_OBJS}
+        core/logging.h
+    )
+endif()
 
 set(HAVE_RTKIT 0)
 if(NOT WIN32)
@@ -1591,12 +1612,8 @@ target_link_libraries(alsoft.common PRIVATE alsoft::fmt)
 set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
 if(HAVE_CXXMODULES)
-    set(MODULES_OBJS  ${MODULES_OBJS} alsoft-modules/gsl.cppm)
-    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES
-        alsoft-modules/gsl.cppm
-        alsoft-modules/hann_window.cppm
-        alsoft-modules/phase_shifter.cppm
-    )
+    set(MODULES_OBJS  ${MODULES_OBJS} ${COMMON_MODOBJS})
+    target_sources(alsoft.common PUBLIC FILE_SET CXX_MODULES FILES ${COMMON_MODOBJS})
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
@@ -1604,6 +1621,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     # alignment-aware operators, which we do. This lets the compiler know they
     # exist and it can use them.
     target_compile_options(alsoft.common PUBLIC "-faligned-allocation")
+endif()
+
+if(HAVE_CXXMODULES)
+    set(MODULES_OBJS  ${MODULES_OBJS} ${CORE_MODOBJS})
+
+    add_library(alsoft.core-modules OBJECT EXCLUDE_FROM_ALL)
+    target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES ${CORE_MODOBJS})
+    target_include_directories(alsoft.core-modules PRIVATE
+        ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/common
+    )
+    target_compile_definitions(alsoft.core-modules PRIVATE ${CPP_DEFS})
+    target_compile_options(alsoft.core-modules PRIVATE ${C_FLAGS})
+    target_link_libraries(alsoft.core-modules PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
+        ${MATH_LIB} alsoft::fmt alsoft.modules)
+    set_target_properties(alsoft.core-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+        POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 
@@ -1620,22 +1653,6 @@ foreach(obj ${CORE_OBJS} ${OPENAL_OBJS} ${ALC_OBJS} ${COMMON_OBJS} ${MODULES_OBJ
     endif()
 endforeach()
 
-if(HAVE_CXXMODULES)
-    add_library(alsoft.core-modules OBJECT EXCLUDE_FROM_ALL)
-    target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES
-        core/logging.cppm)
-    target_include_directories(alsoft.core-modules PRIVATE
-        ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/common
-    )
-    target_compile_definitions(alsoft.core-modules PRIVATE ${CPP_DEFS})
-    target_compile_options(alsoft.core-modules PRIVATE ${C_FLAGS})
-    target_link_libraries(alsoft.core-modules PRIVATE alsoft.common ${LINKER_FLAGS} ${EXTRA_LIBS}
-        ${MATH_LIB} alsoft::fmt alsoft.modules)
-    set_target_properties(alsoft.core-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
-        POSITION_INDEPENDENT_CODE TRUE)
-    list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/core/logging.cppm")
-endif()
-
 # Build main library
 if(LIBTYPE STREQUAL "STATIC")
     if(TARGET openal.modules)
@@ -1647,6 +1664,9 @@ if(LIBTYPE STREQUAL "STATIC")
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
     target_link_libraries(${IMPL_TARGET} PRIVATE ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB}
         $<BUILD_LOCAL_INTERFACE:alsoft::fmt>)
+    if(TARGET alsoft.core-modules)
+        target_link_libraries(${IMPL_TARGET} PRIVATE $<BUILD_LOCAL_INTERFACE:alsoft.core-modules>)
+    endif()
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
         AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
@@ -1694,12 +1714,12 @@ else()
         target_link_libraries(OpenAL PRIVATE alsoft.common ${LINKER_FLAGS} alsoft::fmt
             $<$<BOOL:${HAVE_CXXMODULES}>:alsoft.modules alsoft.router-modules>)
         target_include_directories(OpenAL
-          PUBLIC
-            $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-          PRIVATE
-            ${OpenAL_SOURCE_DIR}/common
-            ${OpenAL_BINARY_DIR}
+            PUBLIC
+                $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
+                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+            PRIVATE
+                ${OpenAL_SOURCE_DIR}/common
+                ${OpenAL_BINARY_DIR}
         )
         set_target_properties(OpenAL PROPERTIES ${ALSOFT_STD_VERSION_PROPS} PREFIX ""
             OUTPUT_NAME ${LIBNAME})
@@ -1731,7 +1751,7 @@ else()
 
     if(ALSOFT_UWP)
         find_package(cppwinrt CONFIG)
-        if (TARGET Microsoft::CppWinRT)
+        if(TARGET Microsoft::CppWinRT)
             target_link_libraries(${IMPL_TARGET} PRIVATE Microsoft::CppWinRT)
         else()
             set(ALSOFT_CPPWINRT_VERSION "2.0.230706.1" CACHE STRING "The soft-oal default cppwinrt version")
@@ -1803,17 +1823,17 @@ else()
 endif()
 
 target_include_directories(${IMPL_TARGET}
-  PUBLIC
-    $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
-  INTERFACE
-    $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include/AL>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/AL>
-  PRIVATE
-    ${INC_PATHS}
-    ${OpenAL_BINARY_DIR}
-    ${OpenAL_SOURCE_DIR}
-    ${OpenAL_SOURCE_DIR}/common
+    PUBLIC
+        $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include>
+    INTERFACE
+        $<BUILD_INTERFACE:${OpenAL_SOURCE_DIR}/include/AL>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/AL>
+    PRIVATE
+        ${INC_PATHS}
+        ${OpenAL_BINARY_DIR}
+        ${OpenAL_SOURCE_DIR}
+        ${OpenAL_SOURCE_DIR}/common
 )
 
 set_target_properties(${IMPL_TARGET} PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
@@ -1822,7 +1842,7 @@ set_target_properties(${IMPL_TARGET} PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     SOVERSION ${OpenAL_VERSION_MAJOR}
 )
 target_compile_definitions(${IMPL_TARGET}
-    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES  "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
+    PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}"
     ${CPP_DEFS})
 target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 

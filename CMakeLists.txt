@@ -796,6 +796,7 @@ endif()
 
 
 # Core library routines
+set(CORE_GEN_HDRS )
 set(CORE_MODS )
 set(CORE_SRCS
     core/ambdec.cpp
@@ -1497,7 +1498,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
             DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
         )
-        set(ALC_HDRS  ${ALC_HDRS} "${outfile}")
+        set(CORE_GEN_HDRS ${CORE_GEN_HDRS} "${outfile}")
     endmacro()
 
     make_hrtf_header("Default HRTF.mhr" "default_hrtf")
@@ -1682,7 +1683,7 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
 set(NEED_ANALYZE_SOURCE_FILES "")
 foreach(obj ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS}
-    ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
+    ${CORE_GEN_HDRS} ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
     # CMake 3.20+ can use cmake_path(COMPARE ...), or CMake 3.24+ can use
     # PATH_EQUAL.
     if(NOT obj STREQUAL "${OpenAL_BINARY_DIR}/default_hrtf.txt")
@@ -1705,6 +1706,8 @@ if(LIBTYPE STREQUAL "STATIC")
             PRIVATE ${COMMON_SRCS} ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS}
             PRIVATE FILE_SET internal_headers TYPE HEADERS
                 FILES ${COMMON_HDRS} ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
+            PRIVATE FILE_SET internal_generated_headers TYPE HEADERS
+                BASE_DIRS "${OpenAL_BINARY_DIR}" FILES ${CORE_GEN_HDRS}
             PUBLIC FILE_SET public_headers TYPE HEADERS
                 BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS}
         )
@@ -1714,7 +1717,7 @@ if(LIBTYPE STREQUAL "STATIC")
         endif()
     else()
         target_sources(${IMPL_TARGET} PRIVATE ${COMMON_SRCS} ${COMMON_HDRS} ${OPENAL_SRCS}
-            ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS})
+            ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS} ${CORE_GEN_HDRS})
     endif()
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
@@ -1801,6 +1804,8 @@ else()
             PRIVATE ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS} ${RC_CONFIG}
             PRIVATE FILE_SET internal_headers TYPE HEADERS
                 FILES ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
+            PRIVATE FILE_SET internal_generated_headers TYPE HEADERS
+                BASE_DIRS "${OpenAL_BINARY_DIR}" FILES ${CORE_GEN_HDRS}
             PUBLIC FILE_SET public_headers TYPE HEADERS
                 BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS})
         # FIXME: Why can't I do this without CMake complaining that the private
@@ -1812,7 +1817,7 @@ else()
         #endif()
     else()
         target_sources(${IMPL_TARGET} PRIVATE ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS}
-            ${CORE_SRCS} ${CORE_HDRS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
+            ${CORE_SRCS} ${CORE_HDRS} ${CORE_GEN_HDRS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
     endif()
 
     if(WIN32)

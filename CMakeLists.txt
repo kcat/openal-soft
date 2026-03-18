@@ -1740,16 +1740,26 @@ if(LIBTYPE STREQUAL "STATIC")
 else()
     set(RC_CONFIG resources/openal32.rc)
     if(WIN32 AND ALSOFT_BUILD_ROUTER)
+        if(HAVE_CXXMODULES)
+            add_library(alsoft.router-modules OBJECT EXCLUDE_FROM_ALL)
+            target_sources(alsoft.router-modules PUBLIC FILE_SET CXX_MODULES FILES
+                alsoft-modules/router.cppm)
+            target_compile_definitions(alsoft.router-modules PRIVATE AL_ALEXT_PROTOTYPES
+                "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
+            target_compile_options(alsoft.router-modules PRIVATE ${C_FLAGS})
+            target_link_libraries(alsoft.router-modules PRIVATE alsoft::fmt alsoft::modules)
+            set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
+                POSITION_INDEPENDENT_CODE TRUE)
+            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/alsoft-modules/router.cppm")
+        endif()
+
         add_library(OpenAL SHARED)
         if(CMAKE_VERSION GREATER_EQUAL 3.23)
             target_sources(OpenAL
                 PRIVATE resources/router.rc router/router.cpp router/alc.cpp router/al.cpp
                 PUBLIC FILE_SET public_headers TYPE HEADERS
                     BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS})
-            if(HAVE_CXXMODULES)
-                target_sources(OpenAL PRIVATE FILE_SET CXX_MODULES
-                    FILES alsoft-modules/router.cppm)
-            else()
+            if(NOT HAVE_CXXMODULES)
                 target_sources(OpenAL PRIVATE FILE_SET internal_headers TYPE HEADERS
                     FILES router/router.h)
             endif()
@@ -1763,7 +1773,7 @@ else()
         target_compile_options(OpenAL PRIVATE ${C_FLAGS})
         target_link_libraries(OpenAL PRIVATE alsoft::common ${LINKER_FLAGS} alsoft::fmt)
         if(HAVE_CXXMODULES)
-            target_link_libraries(OpenAL PRIVATE alsoft::modules)
+            target_link_libraries(OpenAL PRIVATE alsoft.router-modules alsoft::modules)
         endif()
         target_include_directories(OpenAL
             PUBLIC

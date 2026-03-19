@@ -1746,7 +1746,7 @@ else()
         if(HAVE_CXXMODULES)
             add_library(alsoft.router-modules OBJECT EXCLUDE_FROM_ALL)
             target_sources(alsoft.router-modules PUBLIC FILE_SET CXX_MODULES FILES
-                alsoft-modules/router.cppm)
+                router/router.cppm)
             target_compile_definitions(alsoft.router-modules PRIVATE AL_ALEXT_PROTOTYPES
                 "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
             target_compile_options(alsoft.router-modules PRIVATE ${C_FLAGS})
@@ -1755,7 +1755,7 @@ else()
             set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
                 POSITION_INDEPENDENT_CODE TRUE)
             set(ROUTER_MODULES_TARGET alsoft.router-modules)
-            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/alsoft-modules/router.cppm")
+            list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/router/router.cppm")
         endif()
 
         add_library(OpenAL SHARED)

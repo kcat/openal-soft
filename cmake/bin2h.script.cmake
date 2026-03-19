@@ -9,4 +9,7 @@ file(READ "${INPUT_FILE}" indata HEX)
 string(REGEX REPLACE "(..)" "    static_cast<char>\(0x\\1\),\n" output "${indata}")
 
 # Write the list of hex chars to the output file
-file(WRITE "${OUTPUT_FILE}" "${output}")
+file(WRITE "${OUTPUT_FILE}" "#pragma once
+
+char ${VARNAME}[] = {
+${output}};")

@@ -1489,11 +1489,11 @@ option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library foot
 if(ALSOFT_EMBED_HRTF_DATA)
     macro(make_hrtf_header FILENAME VARNAME)
         set(infile  "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
-        set(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.txt")
+        set(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.hpp")
 
         add_custom_command(OUTPUT "${outfile}"
             COMMAND ${CMAKE_COMMAND} -D "INPUT_FILE=${infile}" -D "OUTPUT_FILE=${outfile}"
-                -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
+                -D "VARNAME=${VARNAME}" -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
             DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
@@ -1683,9 +1683,9 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 set(NEED_ANALYZE_SOURCE_FILES "")
 foreach(obj ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS}
     ${CORE_GEN_HDRS} ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
-    # CMake 3.20+ can use cmake_path(COMPARE ...), or CMake 3.24+ can use
-    # PATH_EQUAL.
-    if(NOT obj STREQUAL "${OpenAL_BINARY_DIR}/default_hrtf.txt")
+    if(IS_ABSOLUTE "${obj}")
+        list(APPEND NEED_ANALYZE_SOURCE_FILES "${obj}")
+    else()
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/${obj}")
     endif()
 endforeach()

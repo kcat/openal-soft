@@ -164,7 +164,7 @@ jobs:
             build_type: "Release"
           }
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: '0'
 
@@ -221,7 +221,7 @@ jobs:
         cp ${{github.workspace}}/build/libopenal.so archive/
 
     - name: Upload build as a workflow artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: ${{ contains(matrix.config.name, 'Win') || contains(matrix.config.name, 'Android') }}
       with:
         name: soft_oal-${{matrix.config.name}}
@@ -240,7 +240,7 @@ jobs:
     steps:
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v8
       with:
         path: "build"
         pattern: "*-Win??-Release"

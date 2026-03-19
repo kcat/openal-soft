@@ -796,7 +796,6 @@ endif()
 
 
 # Core library routines
-set(CORE_GEN_HDRS )
 set(CORE_MODS )
 set(CORE_SRCS
     core/ambdec.cpp
@@ -1485,20 +1484,29 @@ else()
 endif()
 
 
+set(HRTF_DATA_FILES )
+set(HRTF_DATA_TARGETS )
 option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library footprint)" ON)
 if(ALSOFT_EMBED_HRTF_DATA)
     macro(make_hrtf_header FILENAME VARNAME)
-        set(infile  "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
-        set(outfile  "${OpenAL_BINARY_DIR}/${VARNAME}.hpp")
+        set(infile "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
+        set(outfile "${OpenAL_BINARY_DIR}/${VARNAME}.hpp")
+        set(witnessfile "${OpenAL_BINARY_DIR}/${VARNAME}_witness.txt")
 
-        add_custom_command(OUTPUT "${outfile}"
+        add_custom_command(OUTPUT "${witnessfile}"
+            BYPRODUCTS "${outfile}"
             COMMAND ${CMAKE_COMMAND} -D "INPUT_FILE=${infile}" -D "OUTPUT_FILE=${outfile}"
                 -D "VARNAME=${VARNAME}" -P "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
+            COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/${VARNAME}_witness.txt"
             WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
-            DEPENDS "${infile}" "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
+            MAIN_DEPENDENCY "${infile}"
+            DEPENDS "${CMAKE_MODULE_PATH}/bin2h.script.cmake"
             VERBATIM
         )
-        set(CORE_GEN_HDRS ${CORE_GEN_HDRS} "${outfile}")
+
+        add_custom_target(alsoft.${VARNAME}_data DEPENDS "${witnessfile}")
+        list(APPEND HRTF_DATA_FILES "${outfile}")
+        list(APPEND HRTF_DATA_TARGETS "alsoft.${VARNAME}_data")
     endmacro()
 
     make_hrtf_header("Default HRTF.mhr" "default_hrtf")
@@ -1682,7 +1690,7 @@ set(IMPL_TARGET OpenAL) # Either OpenAL or soft_oal.
 
 set(NEED_ANALYZE_SOURCE_FILES "")
 foreach(obj ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS}
-    ${CORE_GEN_HDRS} ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
+    ${CORE_MODS} ${COMMON_SRCS} ${COMMON_HDRS} ${COMMON_MODS} ${PUBLIC_MODULES})
     if(IS_ABSOLUTE "${obj}")
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${obj}")
     else()
@@ -1705,8 +1713,6 @@ if(LIBTYPE STREQUAL "STATIC")
             PRIVATE ${COMMON_SRCS} ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS}
             PRIVATE FILE_SET internal_headers TYPE HEADERS
                 FILES ${COMMON_HDRS} ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
-            PRIVATE FILE_SET internal_generated_headers TYPE HEADERS
-                BASE_DIRS "${OpenAL_BINARY_DIR}" FILES ${CORE_GEN_HDRS}
             PUBLIC FILE_SET public_headers TYPE HEADERS
                 BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS}
         )
@@ -1716,7 +1722,7 @@ if(LIBTYPE STREQUAL "STATIC")
         endif()
     else()
         target_sources(${IMPL_TARGET} PRIVATE ${COMMON_SRCS} ${COMMON_HDRS} ${OPENAL_SRCS}
-            ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS} ${CORE_GEN_HDRS})
+            ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS} ${CORE_SRCS} ${CORE_HDRS})
     endif()
     target_compile_definitions(${IMPL_TARGET} PUBLIC AL_LIBTYPE_STATIC)
     target_include_directories(${IMPL_TARGET} PRIVATE ${OpenAL_SOURCE_DIR}/gsl/include)
@@ -1804,8 +1810,6 @@ else()
             PRIVATE ${OPENAL_SRCS} ${ALC_SRCS} ${CORE_SRCS} ${RC_CONFIG}
             PRIVATE FILE_SET internal_headers TYPE HEADERS
                 FILES ${OPENAL_HDRS} ${ALC_HDRS} ${CORE_HDRS}
-            PRIVATE FILE_SET internal_generated_headers TYPE HEADERS
-                BASE_DIRS "${OpenAL_BINARY_DIR}" FILES ${CORE_GEN_HDRS}
             PUBLIC FILE_SET public_headers TYPE HEADERS
                 BASE_DIRS "${OpenAL_SOURCE_DIR}/include" FILES ${TARGET_PUBLIC_HEADERS})
         # FIXME: Why can't I do this without CMake complaining that the private
@@ -1817,7 +1821,7 @@ else()
         #endif()
     else()
         target_sources(${IMPL_TARGET} PRIVATE ${OPENAL_SRCS} ${OPENAL_HDRS} ${ALC_SRCS} ${ALC_HDRS}
-            ${CORE_SRCS} ${CORE_HDRS} ${CORE_GEN_HDRS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
+            ${CORE_SRCS} ${CORE_HDRS} ${RC_CONFIG} ${TARGET_PUBLIC_HEADERS})
     endif()
 
     if(WIN32)
@@ -1932,6 +1936,7 @@ target_compile_options(${IMPL_TARGET} PRIVATE ${C_FLAGS})
 if(TARGET alsoft.build_version)
     add_dependencies(${IMPL_TARGET} alsoft.build_version)
 endif()
+add_dependencies(${IMPL_TARGET} ${HRTF_DATA_TARGETS})
 
 if(WIN32 AND MINGW AND ALSOFT_BUILD_IMPORT_LIB AND NOT LIBTYPE STREQUAL "STATIC")
     find_program(SED_EXECUTABLE NAMES sed DOC "sed executable")
@@ -2327,7 +2332,10 @@ set(CLANG_TIDY_EXECUTABLE "clang-tidy")
 if(DEFINED ENV{CLANG_TIDY_EXECUTABLE})
     set(CLANG_TIDY_EXECUTABLE $ENV{CLANG_TIDY_EXECUTABLE})
 endif()
-add_custom_target(clang-tidy-check ${CLANG_TIDY_EXECUTABLE} -format-style=file -p ${CMAKE_BINARY_DIR}/compile_commands.json ${NEED_ANALYZE_SOURCE_FILES} DEPENDS ${NEED_ANALYZE_SOURCE_FILES})
+add_custom_target(clang-tidy-check
+    ${CLANG_TIDY_EXECUTABLE} -format-style=file -p ${CMAKE_BINARY_DIR}/compile_commands.json
+        ${NEED_ANALYZE_SOURCE_FILES} ${HRTF_DATA_FILES}
+    DEPENDS ${NEED_ANALYZE_SOURCE_FILES} ${HRTF_DATA_TARGETS})
 
 if(ALSOFT_TESTS)
 add_subdirectory(tests)

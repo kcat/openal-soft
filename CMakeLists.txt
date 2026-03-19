@@ -2038,13 +2038,11 @@ if(ALSOFT_INSTALL_CONFIG)
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     message(STATUS "Installing sample configuration")
 endif()
-
 if(ALSOFT_INSTALL_HRTF_DATA)
     install(DIRECTORY hrtf
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
     message(STATUS "Installing HRTF data files")
 endif()
-
 if(ALSOFT_INSTALL_AMBDEC_PRESETS)
     install(DIRECTORY presets
         DESTINATION ${CMAKE_INSTALL_DATADIR}/openal)
@@ -2056,7 +2054,6 @@ set(UNICODE_FLAG )
 if(MINGW)
     set(UNICODE_FLAG ${UNICODE_FLAG} -municode)
 endif()
-set(EXTRA_INSTALLS )
 if(ALSOFT_UTILS)
     add_executable(openal-info utils/openal-info.c)
     target_include_directories(openal-info
@@ -2066,7 +2063,7 @@ if(ALSOFT_UTILS)
     set_target_properties(openal-info PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/openal-info.c")
     if(ALSOFT_INSTALL_UTILS)
-        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} openal-info)
+        install(TARGETS openal-info)
     endif()
 
     if(SNDFILE_FOUND)
@@ -2092,10 +2089,8 @@ if(ALSOFT_UTILS)
     endif()
 
     if(MYSOFA_FOUND)
-        set(SOFA_SUPPORT_SRCS
-            utils/sofa-support.cpp
+        add_library(alsoft.sofa-support STATIC EXCLUDE_FROM_ALL utils/sofa-support.cpp
             utils/sofa-support.h)
-        add_library(alsoft.sofa-support STATIC EXCLUDE_FROM_ALL ${SOFA_SUPPORT_SRCS})
         target_compile_definitions(alsoft.sofa-support PRIVATE ${CPP_DEFS})
         target_include_directories(alsoft.sofa-support PUBLIC ${OpenAL_SOURCE_DIR}/common)
         target_compile_options(alsoft.sofa-support PRIVATE ${C_FLAGS})
@@ -2105,14 +2100,9 @@ if(ALSOFT_UTILS)
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/utils/sofa-support.cpp"
             "${OpenAL_SOURCE_DIR}/utils/sofa-support.h")
 
-        set(MAKEMHR_SRCS
-            utils/makemhr/loaddef.cpp
-            utils/makemhr/loaddef.h
-            utils/makemhr/loadsofa.cpp
-            utils/makemhr/loadsofa.h
-            utils/makemhr/makemhr.cpp
-            utils/makemhr/makemhr.h)
-        add_executable(makemhr ${MAKEMHR_SRCS})
+        add_executable(makemhr utils/makemhr/loaddef.cpp utils/makemhr/loaddef.h
+            utils/makemhr/loadsofa.cpp utils/makemhr/loadsofa.h
+            utils/makemhr/makemhr.cpp utils/makemhr/makemhr.h)
         target_compile_definitions(makemhr PRIVATE ${CPP_DEFS})
         target_include_directories(makemhr
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
@@ -2127,11 +2117,10 @@ if(ALSOFT_UTILS)
             "${OpenAL_SOURCE_DIR}/utils/makemhr/makemhr.cpp"
             "${OpenAL_SOURCE_DIR}/utils/makemhr/makemhr.h")
         if(ALSOFT_INSTALL_UTILS)
-            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} makemhr)
+            install(TARGETS makemhr)
         endif()
 
-        set(SOFAINFO_SRCS  utils/sofa-info.cpp)
-        add_executable(sofa-info ${SOFAINFO_SRCS})
+        add_executable(sofa-info utils/sofa-info.cpp)
         target_compile_definitions(sofa-info PRIVATE ${CPP_DEFS})
         target_include_directories(sofa-info
             PRIVATE ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/utils)
@@ -2157,7 +2146,7 @@ if(ALSOFT_UTILS)
             message(STATUS "Building configuration program")
 
             if(ALSOFT_INSTALL_UTILS)
-                set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alsoft-config)
+                install(TARGETS alsoft-config)
             endif()
         endif()
     endif()
@@ -2204,7 +2193,7 @@ if(ALSOFT_EXAMPLES)
     list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/allafplay.cpp")
 
     if(ALSOFT_INSTALL_EXAMPLES)
-        set(EXTRA_INSTALLS ${EXTRA_INSTALLS} altonegen alrecord aldebug allafplay)
+        install(TARGETS altonegen alrecord aldebug allafplay)
     endif()
 
     message(STATUS "Building example programs")
@@ -2265,8 +2254,7 @@ if(ALSOFT_EXAMPLES)
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alconvolve.c")
 
         if(ALSOFT_INSTALL_EXAMPLES)
-            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alplay alstream alreverb almultireverb allatency
-                alhrtf aldirect)
+            install(TARGETS alplay alstream alreverb almultireverb allatency alhrtf aldirect)
         endif()
 
         message(STATUS "Building SndFile example programs")
@@ -2283,7 +2271,7 @@ if(ALSOFT_EXAMPLES)
         list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alloopback.c")
 
         if(ALSOFT_INSTALL_EXAMPLES)
-            set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alloopback)
+            install(TARGETS alloopback)
         endif()
 
         set(FFVER_OK FALSE)
@@ -2320,7 +2308,7 @@ if(ALSOFT_EXAMPLES)
             list(APPEND NEED_ANALYZE_SOURCE_FILES "${OpenAL_SOURCE_DIR}/examples/alffplay.cpp")
 
             if(ALSOFT_INSTALL_EXAMPLES)
-                set(EXTRA_INSTALLS ${EXTRA_INSTALLS} alffplay)
+                install(TARGETS alffplay)
             endif()
             message(STATUS "Building SDL3+FFmpeg example programs")
         endif()
@@ -2339,12 +2327,4 @@ add_custom_target(clang-tidy-check
 
 if(ALSOFT_TESTS)
 add_subdirectory(tests)
-endif()
-
-if(EXTRA_INSTALLS)
-    install(TARGETS ${EXTRA_INSTALLS}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        BUNDLE  DESTINATION ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

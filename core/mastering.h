@@ -2,12 +2,11 @@
 #define CORE_MASTERING_H
 
 #include <array>
-#include <bitset>
 #include <memory>
 #include <span>
 
-#include "alnumeric.h"
 #include "altypes.hpp"
+#include "bitset.hpp"
 #include "bufferline.h"
 #include "vector.h"
 
@@ -46,11 +45,11 @@ class Compressor {
     float mAttack{0.0f};
     float mRelease{0.0f};
 
-    alignas(16) std::array<float,BufferLineSize*2_uz> mSideChain{};
-    alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
+    alignas(16) std::array<float, BufferLineSize*2_uz> mSideChain{};
+    alignas(16) std::array<float, BufferLineSize> mCrestFactor{};
 
     std::unique_ptr<SlidingHold> mHold;
-    al::vector<FloatBufferLine,16> mDelay;
+    al::vector<FloatBufferLine, 16> mDelay;
 
     float mCrestCoeff{0.0f};
     float mGainEstimate{0.0f};
@@ -66,10 +65,11 @@ class Compressor {
 
     struct PrivateToken { };
 public:
-    enum {
-        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, FlagsCount
+    enum class Flags {
+        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip,
+        Max = AutoDeclip
     };
-    using FlagBits = std::bitset<FlagsCount>;
+    using FlagBits = al::bitset<Flags::Max>;
 
     Compressor() = delete;
     explicit Compressor(PrivateToken);
@@ -108,10 +108,10 @@ public:
      * \param ReleaseTime   Release time (in seconds). Acts as a maximum when
      *        automating release time.
      */
-    static auto Create(const size_t NumChans, const float SampleRate, const FlagBits AutoFlags,
-        const float LookAheadTime, const float HoldTime, const float PreGainDb,
-        const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
-        const float AttackTime, const float ReleaseTime) -> std::unique_ptr<Compressor>;
+    static auto Create(std::size_t NumChans, float SampleRate, FlagBits AutoFlags,
+        float LookAheadTime, float HoldTime, float PreGainDb, float PostGainDb, float ThresholdDb,
+        float Ratio, float KneeDb, float AttackTime, float ReleaseTime)
+        -> std::unique_ptr<Compressor>;
 };
 using CompressorPtr = std::unique_ptr<Compressor>;
 

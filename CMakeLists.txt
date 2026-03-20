@@ -754,6 +754,7 @@ set(COMMON_HDRS
     common/althreads.h
     common/altypes.hpp
     common/atomic.h
+    common/bitset.hpp
     common/comptr.h
     common/dynload.h
     common/dlopennote.h

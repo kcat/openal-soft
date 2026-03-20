@@ -1069,8 +1069,9 @@ auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, float co
     static constexpr auto AttackTime = 0.02f;
     static constexpr auto ReleaseTime = 0.2f;
 
-    auto const flags = Compressor::FlagBits{}.set(Compressor::AutoKnee).set(Compressor::AutoAttack)
-        .set(Compressor::AutoRelease).set(Compressor::AutoPostGain).set(Compressor::AutoDeclip);
+    auto const flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
+        .set(Compressor::Flags::AutoAttack).set(Compressor::Flags::AutoRelease)
+        .set(Compressor::Flags::AutoPostGain).set(Compressor::Flags::AutoDeclip);
 
     return Compressor::Create(device->RealOut.Buffer.size(),
         gsl::narrow_cast<float>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,

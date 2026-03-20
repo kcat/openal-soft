@@ -115,11 +115,11 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
         BufferLineSize-1.0f));
 
     auto Comp = std::make_unique<Compressor>(PrivateToken{});
-    Comp->mAuto.Knee = AutoFlags.test(AutoKnee);
-    Comp->mAuto.Attack = AutoFlags.test(AutoAttack);
-    Comp->mAuto.Release = AutoFlags.test(AutoRelease);
-    Comp->mAuto.PostGain = AutoFlags.test(AutoPostGain);
-    Comp->mAuto.Declip = AutoFlags.test(AutoPostGain) && AutoFlags.test(AutoDeclip);
+    Comp->mAuto.Knee = AutoFlags.test(Flags::AutoKnee);
+    Comp->mAuto.Attack = AutoFlags.test(Flags::AutoAttack);
+    Comp->mAuto.Release = AutoFlags.test(Flags::AutoRelease);
+    Comp->mAuto.PostGain = AutoFlags.test(Flags::AutoPostGain);
+    Comp->mAuto.Declip = AutoFlags.test(Flags::AutoPostGain) && AutoFlags.test(Flags::AutoDeclip);
     Comp->mLookAhead = lookAhead;
     Comp->mPreGain = std::pow(10.0f, PreGainDb / 20.0f);
     Comp->mPostGain = std::log(10.0f)/20.0f * PostGainDb;
@@ -133,7 +133,7 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
      * varying the knee width, it can effectively be seen as applying
      * compression over a wide range of ratios.
      */
-    if(AutoFlags.test(AutoKnee))
+    if(AutoFlags.test(Flags::AutoKnee))
         Comp->mSlope = -1.0f;
 
     if(lookAhead > 0)

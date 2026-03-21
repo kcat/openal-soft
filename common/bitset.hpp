@@ -18,12 +18,13 @@ namespace detail_ {
 template<typename T>
 concept scoped_enum = std::is_enum_v<T> and requires { detail_::test_int_conversion(T{}); };
 
-
-template<scoped_enum auto MaxIndex>
+/* The given enum type's "MaxValue" enumeration specifies the largest index
+ * that will be used for the bitset.
+ */
+template<scoped_enum EnumType>
 class bitset {
-    using EnumType = decltype(MaxIndex);
     using UnderlyingType = std::make_unsigned_t<std::underlying_type_t<EnumType>>;
-    static constexpr std::unsigned_integral auto Count = static_cast<UnderlyingType>(MaxIndex)+1u;
+    static constexpr auto Count = static_cast<UnderlyingType>(EnumType::MaxValue) + 1u;
 
     using BitsetType = std::bitset<Count>;
     BitsetType mBits;

@@ -245,7 +245,7 @@ struct DeviceBase {
     DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
 
     // Device flags
-    al::bitset<DeviceFlag::MaxValue> mFlags;
+    al::bitset<DeviceFlag> mFlags;
     DeviceState mDeviceState{DeviceState::Unprepared};
 
     unsigned NumAuxSends{};

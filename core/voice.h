@@ -228,7 +228,7 @@ struct Voice {
 
     InterpState mResampleState;
 
-    al::bitset<VoiceFlag::MaxValue> mFlags;
+    al::bitset<VoiceFlag> mFlags;
     unsigned mNumCallbackBlocks{0u};
     unsigned mCallbackBlockOffset{0u};
 

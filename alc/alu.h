@@ -25,7 +25,7 @@ enum class CompatFlags : std::uint8_t {
 
     MaxValue = ReverseZ
 };
-using CompatFlagBitset = al::bitset<CompatFlags::MaxValue>;
+using CompatFlagBitset = al::bitset<CompatFlags>;
 
 void aluInit(CompatFlagBitset flags, float nfcscale);
 

@@ -67,9 +67,9 @@ class Compressor {
 public:
     enum class Flags {
         AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip,
-        Max = AutoDeclip
+        MaxValue = AutoDeclip
     };
-    using FlagBits = al::bitset<Flags::Max>;
+    using FlagBits = al::bitset<Flags>;
 
     Compressor() = delete;
     explicit Compressor(PrivateToken);

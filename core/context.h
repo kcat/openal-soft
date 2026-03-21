@@ -145,7 +145,7 @@ struct ContextBase {
     FifoBufferPtr<AsyncEvent> mAsyncEvents;
     /* uint32 to work with macOS wait/notify wrappers, but really just a bool. */
     std::atomic<std::uint32_t> mEventsPending;
-    using AsyncEventBitset = al::bitset<AsyncEnableBits::MaxValue>;
+    using AsyncEventBitset = al::bitset<AsyncEnableBits>;
     std::atomic<AsyncEventBitset> mEnabledEvts;
 
     /* Asynchronous voice change actions are processed as a linked list of

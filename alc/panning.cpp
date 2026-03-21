@@ -22,7 +22,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <charconv>
 #include <chrono>
 #include <cmath>
@@ -1301,7 +1300,7 @@ void aluInitRenderer(al::Device *const device, int const hrtf_id,
      * the device is headphones, try to enable it.
      */
     if(stereomode.value_or(StereoEncoding::Default) == StereoEncoding::Hrtf
-        || (!stereomode && device->Flags.test(DirectEar)))
+        || (!stereomode && device->mFlags.test(DeviceFlag::DirectEar)))
     {
         if(device->mHrtfList.empty())
             device->enumerateHrtfs();

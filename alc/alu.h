@@ -1,9 +1,10 @@
 #ifndef ALU_H
 #define ALU_H
 
-#include <bitset>
 #include <cstdint>
 #include <optional>
+
+#include "bitset.hpp"
 
 struct EffectSlotBase;
 
@@ -17,14 +18,14 @@ struct Device;
 constexpr inline auto GainMixMax = 1000.0f; /* +60dB */
 
 
-enum CompatFlags : std::uint8_t {
+enum class CompatFlags : std::uint8_t {
     ReverseX,
     ReverseY,
     ReverseZ,
 
-    Count
+    MaxValue = ReverseZ
 };
-using CompatFlagBitset = std::bitset<CompatFlags::Count>;
+using CompatFlagBitset = al::bitset<CompatFlags::MaxValue>;
 
 void aluInit(CompatFlagBitset flags, float nfcscale);
 

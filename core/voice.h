@@ -3,7 +3,6 @@
 
 #include <array>
 #include <atomic>
-#include <bitset>
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -11,6 +10,7 @@
 #include <string>
 
 #include "ambidefs.h"
+#include "bitset.hpp"
 #include "bufferline.h"
 #include "buffer_storage.h"
 #include "decoderbase.hpp"
@@ -161,16 +161,16 @@ struct VoicePropsItem : VoiceProps {
     std::atomic<VoicePropsItem*> next{nullptr};
 };
 
-enum : unsigned {
-    VoiceIsStatic,
-    VoiceIsCallback,
-    VoiceIsAmbisonic,
-    VoiceCallbackStopped,
-    VoiceIsFading,
-    VoiceHasHrtf,
-    VoiceHasNfc,
+enum class VoiceFlag : u8::value_t {
+    IsStatic,
+    IsCallback,
+    IsAmbisonic,
+    CallbackStopped,
+    IsFading,
+    HasHrtf,
+    HasNfc,
 
-    VoiceFlagCount
+    MaxValue = HasNfc
 };
 
 struct Voice {
@@ -228,7 +228,7 @@ struct Voice {
 
     InterpState mResampleState;
 
-    std::bitset<VoiceFlagCount> mFlags;
+    al::bitset<VoiceFlag::MaxValue> mFlags;
     unsigned mNumCallbackBlocks{0u};
     unsigned mCallbackBlockOffset{0u};
 

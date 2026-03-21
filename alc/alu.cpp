@@ -27,10 +27,7 @@
 #include <array>
 #include <atomic>
 #include <cmath>
-#include <cstdarg>
 #include <cstddef>
-#include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -938,7 +935,7 @@ void CalcAmbisonicPanning(Voice *const voice, float const xpos, float const ypos
             voice->mChans[0].mDryParams.NFCtrlFilter.adjust(w0);
         }
 
-        voice->mFlags.set(VoiceHasNfc);
+        voice->mFlags.set(VoiceFlag::HasNfc);
     }
 
     /* Panning a B-Format sound toward some direction is easy. Just pan the
@@ -1334,7 +1331,7 @@ void CalcNormalPanning(Voice *const voice, float const xpos, float const ypos, f
             for(auto &chanparams : voice->mChans | std::views::take(chans.size()))
                 chanparams.mDryParams.NFCtrlFilter.adjust(w0);
 
-            voice->mFlags.set(VoiceHasNfc);
+            voice->mFlags.set(VoiceFlag::HasNfc);
         }
 
         if(voice->mFmtChannels == FmtMono && !props.mPanningEnabled)
@@ -1421,7 +1418,7 @@ void CalcNormalPanning(Voice *const voice, float const xpos, float const ypos, f
             for(auto &chanparams : voice->mChans | std::views::take(chans.size()))
                 chanparams.mDryParams.NFCtrlFilter.adjust(w0);
 
-            voice->mFlags.set(VoiceHasNfc);
+            voice->mFlags.set(VoiceFlag::HasNfc);
         }
 
         /* With no distance, spread is only meaningful for 3D mono sources
@@ -1576,7 +1573,7 @@ void CalcPanningAndFilters(Voice *const voice, float const xpos, float const ypo
         return {props.DirectChannels, {}};
     });
 
-    voice->mFlags.reset(VoiceHasHrtf).reset(VoiceHasNfc);
+    voice->mFlags.reset(VoiceFlag::HasHrtf).reset(VoiceFlag::HasNfc);
     if(auto *const decoder = voice->mDecoder.get())
         decoder->mWidthControl = std::min(props.EnhWidth, 0.7f);
 
@@ -1604,7 +1601,7 @@ void CalcPanningAndFilters(Voice *const voice, float const xpos, float const ypo
             sendslots, device);
 
         voice->mDuplicateMono = voice->mFmtChannels == FmtMono && props.mPanningEnabled;
-        voice->mFlags.set(VoiceHasHrtf);
+        voice->mFlags.set(VoiceFlag::HasHrtf);
     }
     else
     {
@@ -2137,7 +2134,7 @@ void ProcessVoiceChanges(ContextBase *const ctx)
             }
             oldvoice->mPendingChange.store(false, std::memory_order_release);
         }
-        if(sendevt && enabledevt.test(al::to_underlying(AsyncEnableBits::SourceState)))
+        if(sendevt && enabledevt.test(AsyncEnableBits::SourceState))
             SendSourceStateEvent(ctx, cur->mSourceID, cur->mState);
 
         next = cur->mNext.load(std::memory_order_acquire);

@@ -352,7 +352,7 @@ auto DSoundPlayback::reset() -> bool
         mDevice->FmtType = DevFmtUByte;
         break;
     case DevFmtFloat:
-        if(mDevice->Flags.test(SampleTypeRequest))
+        if(mDevice->mFlags.test(DeviceFlag::SampleTypeRequest))
             break;
         [[fallthrough]];
     case DevFmtUShort:
@@ -375,7 +375,7 @@ auto DSoundPlayback::reset() -> bool
             "Failed to get speaker config: {:#x}", as_unsigned(hr)};
 
     speakers = DSSPEAKER_CONFIG(speakers);
-    if(!mDevice->Flags.test(ChannelsRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         if(speakers == DSSPEAKER_MONO)
             mDevice->FmtChans = DevFmtMono;
@@ -390,7 +390,7 @@ auto DSoundPlayback::reset() -> bool
         else
             ERR("Unknown system speaker config: {:#x}", speakers);
     }
-    mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
+    mDevice->mFlags.set(DeviceFlag::DirectEar, (speakers == DSSPEAKER_HEADPHONE));
     auto const isRear51 = speakers == DSSPEAKER_5POINT1_BACK;
 
     switch(mDevice->FmtChans)

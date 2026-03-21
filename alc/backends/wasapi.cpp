@@ -1679,7 +1679,7 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
      * supported.
      */
     auto chansok = false;
-    if(mDevice->Flags.test(ChannelsRequest))
+    if(mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         /* When requesting a channel configuration, make sure it fits the
          * mask's lsb (to ensure no gaps in the output channels). If there's no
@@ -1870,10 +1870,10 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
     /* Match the output rate if not requesting anything specific. */
-    if(!mDevice->Flags.test(FrequencyRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
         mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
 
-    auto getTypeMask = [](DevFmtChannels chans) noexcept
+    auto getTypeMask = [](DevFmtChannels const chans) noexcept
     {
         switch(chans)
         {
@@ -1913,7 +1913,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mFormat = OutputType;
 
     mDevice->FmtType = DevFmtFloat;
-    mDevice->Flags.reset(DirectEar).set(Virtualization);
+    mDevice->mFlags.reset(DeviceFlag::DirectEar).set(DeviceFlag::Virtualization);
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
         mDevice->FmtChans = DevFmtStereo;
     if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
@@ -1987,7 +1987,7 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
             return S_OK;
     }
 
-    mDevice->Flags.reset(Virtualization);
+    mDevice->mFlags.reset(DeviceFlag::Virtualization);
     mMonoUpsample = false;
     mExclusiveMode = false;
 
@@ -2022,9 +2022,9 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
     /* Update the mDevice format for non-requested properties. */
     auto isRear51 = false;
-    if(!mDevice->Flags.test(FrequencyRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
         mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
-    if(!mDevice->Flags.test(ChannelsRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         /* If not requesting a channel configuration, auto-select given what
          * fits the mask's lsb (to ensure no gaps in the output channels). If
@@ -2194,9 +2194,9 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
 #if !ALSOFT_UWP
     const auto formfactor = GetDeviceFormfactor(mmdev.get());
-    mDevice->Flags.set(DirectEar, (formfactor == Headphones || formfactor == Headset));
+    mDevice->mFlags.set(DeviceFlag::DirectEar, (formfactor==Headphones || formfactor==Headset));
 #else
-    mDevice->Flags.set(DirectEar, false);
+    mDevice->mFlags.set(DeviceFlag::DirectEar, false);
 #endif
     setDefaultWFXChannelOrder();
 
@@ -3119,9 +3119,6 @@ auto WasapiBackendFactory::queryEventSupport(alc::EventType const eventType, Bac
 #if !ALSOFT_UWP
         return alc::EventSupport::FullSupport;
 #endif
-
-    case alc::EventType::Count:
-        break;
     }
     return alc::EventSupport::NoSupport;
 }

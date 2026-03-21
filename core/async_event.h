@@ -15,7 +15,8 @@ enum class AsyncEnableBits : u8::value_t {
     SourceState,
     BufferCompleted,
     Disconnected,
-    Count
+
+    MaxValue = Disconnected
 };
 
 

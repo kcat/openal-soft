@@ -38,6 +38,28 @@ public:
     constexpr bitset(bitset const &rhs) noexcept = default;
     constexpr ~bitset() noexcept = default;
 
+    force_inline explicit constexpr bitset(unsigned long long const arg) noexcept : mBits{arg} { }
+
+    template<typename CharT, typename Traits, typename Alloc> force_inline explicit constexpr
+    bitset(std::basic_string<CharT,Traits,Alloc> const& str,
+        typename std::basic_string<CharT,Traits,Alloc>::size_type const pos=0,
+        typename std::basic_string<CharT,Traits,Alloc>::size_type const
+            n=std::basic_string<CharT,Traits,Alloc>::npos,
+        CharT const zero=CharT{'0'}, CharT const one=CharT{'1'}) : mBits{str, pos, n, zero, one}
+    { }
+
+    template<typename CharT, typename Traits> force_inline explicit constexpr
+    bitset(std::basic_string_view<CharT,Traits> const str, std::size_t const pos=0,
+        std::size_t const n=static_cast<std::size_t>(-1), CharT const zero=CharT{'0'},
+        CharT const one=CharT{'1'}) : mBits{str, pos, n, zero, one}
+    { }
+
+    template<typename CharT> force_inline explicit constexpr
+    bitset(CharT const *const str, std::size_t const n=static_cast<std::size_t>(-1),
+        CharT const zero=CharT{'0'}, CharT const one=CharT{'1'}) : mBits{str, n, zero, one}
+    { }
+
+
     [[nodiscard]] force_inline constexpr
     auto get_bitset() const noexcept LIFETIMEBOUND -> BitsetType const& { return mBits; }
 

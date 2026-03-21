@@ -1538,7 +1538,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             device->mAmbiLayout = *optlayout;
             device->mAmbiScale = *optscale;
         }
-        device->Flags.set(FrequencyRequest).set(ChannelsRequest).set(SampleTypeRequest);
+        device->mFlags.set(DeviceFlag::FrequencyRequest).set(DeviceFlag::ChannelsRequest)
+            .set(DeviceFlag::SampleTypeRequest);
     }
     else
     {
@@ -1548,9 +1549,9 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         device->mBufferSize = buffer_size;
         device->mUpdateSize = period_size;
         device->mSampleRate = optsrate.value_or(DefaultOutputRate);
-        device->Flags.set(FrequencyRequest, optsrate.has_value())
-            .set(ChannelsRequest, optchans.has_value())
-            .set(SampleTypeRequest, opttype.has_value());
+        device->mFlags.set(DeviceFlag::FrequencyRequest, optsrate.has_value())
+            .set(DeviceFlag::ChannelsRequest, optchans.has_value())
+            .set(DeviceFlag::SampleTypeRequest, opttype.has_value());
 
         if(device->FmtChans == DevFmtAmbi3D)
         {
@@ -1569,9 +1570,11 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     }
 
     TRACE("Pre-reset: {}{}, {}{}, {}{}hz, {} / {} buffer",
-        device->Flags.test(ChannelsRequest)?"*":"", DevFmtChannelsString(device->FmtChans),
-        device->Flags.test(SampleTypeRequest)?"*":"", DevFmtTypeString(device->FmtType),
-        device->Flags.test(FrequencyRequest)?"*":"", device->mSampleRate,
+        device->mFlags.test(DeviceFlag::ChannelsRequest) ? "*" : "",
+        DevFmtChannelsString(device->FmtChans),
+        device->mFlags.test(DeviceFlag::SampleTypeRequest) ? "*" : "",
+        DevFmtTypeString(device->FmtType),
+        device->mFlags.test(DeviceFlag::FrequencyRequest) ? "*" : "", device->mSampleRate,
         device->mUpdateSize, device->mBufferSize);
 
     const auto oldFreq = device->mSampleRate;
@@ -1587,22 +1590,22 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         return ALC_INVALID_DEVICE;
     }
 
-    if(device->FmtChans != oldChans && device->Flags.test(ChannelsRequest))
+    if(device->FmtChans != oldChans && device->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         ERR("Failed to set {}, got {} instead", DevFmtChannelsString(oldChans),
             DevFmtChannelsString(device->FmtChans));
-        device->Flags.reset(ChannelsRequest);
+        device->mFlags.reset(DeviceFlag::ChannelsRequest);
     }
-    if(device->FmtType != oldType && device->Flags.test(SampleTypeRequest))
+    if(device->FmtType != oldType && device->mFlags.test(DeviceFlag::SampleTypeRequest))
     {
         ERR("Failed to set {}, got {} instead", DevFmtTypeString(oldType),
             DevFmtTypeString(device->FmtType));
-        device->Flags.reset(SampleTypeRequest);
+        device->mFlags.reset(DeviceFlag::SampleTypeRequest);
     }
-    if(device->mSampleRate != oldFreq && device->Flags.test(FrequencyRequest))
+    if(device->mSampleRate != oldFreq && device->mFlags.test(DeviceFlag::FrequencyRequest))
     {
         WARN("Failed to set {}hz, got {}hz instead", oldFreq, device->mSampleRate);
-        device->Flags.reset(FrequencyRequest);
+        device->mFlags.reset(DeviceFlag::FrequencyRequest);
     }
 
     TRACE("Post-reset: {}, {}, {}hz, {} / {} buffer",
@@ -1614,9 +1617,9 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         if(auto modeopt = device->configValue<std::string>({}, "stereo-mode"))
         {
             if(al::case_compare(*modeopt, "headphones"sv) == 0)
-                device->Flags.set(DirectEar);
+                device->mFlags.set(DeviceFlag::DirectEar);
             else if(al::case_compare(*modeopt, "speakers"sv) == 0)
-                device->Flags.reset(DirectEar);
+                device->mFlags.reset(DeviceFlag::DirectEar);
             else if(al::case_compare(*modeopt, "auto"sv) != 0)
                 ERR("Unexpected stereo-mode: {}", *modeopt);
         }
@@ -1893,7 +1896,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     mixer_mode.leave();
 
     device->mDeviceState = DeviceState::Configured;
-    if(!device->Flags.test(DevicePaused))
+    if(!device->mFlags.test(DeviceFlag::DevicePaused))
     {
         try {
             auto backend = device->Backend.get();
@@ -3197,9 +3200,9 @@ try {
     device->mSampleRate = frequency;
     device->FmtChans = decompfmt->chans;
     device->FmtType = decompfmt->type;
-    device->Flags.set(FrequencyRequest);
-    device->Flags.set(ChannelsRequest);
-    device->Flags.set(SampleTypeRequest);
+    device->mFlags.set(DeviceFlag::FrequencyRequest);
+    device->mFlags.set(DeviceFlag::ChannelsRequest);
+    device->mFlags.set(DeviceFlag::SampleTypeRequest);
 
     device->mUpdateSize = gsl::narrow_cast<ALCuint>(samples);
     device->mBufferSize = gsl::narrow_cast<ALCuint>(samples);
@@ -3503,7 +3506,7 @@ try {
             dev->Backend->stop();
             dev->mDeviceState = DeviceState::Configured;
         }
-        dev->Flags.set(DevicePaused);
+        dev->mFlags.set(DeviceFlag::DevicePaused);
     }
 }
 catch(al::base_exception&) {
@@ -3520,7 +3523,7 @@ try {
     }
 
     auto statelock = std::lock_guard{dev->StateLock};
-    if(!dev->Flags.test(DevicePaused))
+    if(!dev->mFlags.test(DeviceFlag::DevicePaused))
         return;
     if(dev->mDeviceState < DeviceState::Configured)
     {
@@ -3534,7 +3537,7 @@ try {
         dev->setError(ALC_INVALID_DEVICE);
         return;
     }
-    dev->Flags.reset(DevicePaused);
+    dev->mFlags.reset(DeviceFlag::DevicePaused);
     if(dev->mContexts.load()->empty())
         return;
 

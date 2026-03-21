@@ -549,8 +549,8 @@ void InitVoice(Voice *const voice, gsl::not_null<al::Source*> const source,
     voice->mAmbiScaling = IsUHJ(voice->mFmtChannels) ? AmbiScaling::N3D : buffer->mAmbiScaling;
     voice->mAmbiOrder = (voice->mFmtChannels == FmtSuperStereo) ? 1 : buffer->mAmbiOrder;
 
-    if(buffer->mCallback) voice->mFlags.set(VoiceIsCallback);
-    else if(source->mSourceType == AL_STATIC) voice->mFlags.set(VoiceIsStatic);
+    if(buffer->mCallback) voice->mFlags.set(VoiceFlag::IsCallback);
+    else if(source->mSourceType == AL_STATIC) voice->mFlags.set(VoiceFlag::IsStatic);
     voice->mNumCallbackBlocks = 0;
     voice->mCallbackBlockOffset = 0;
 
@@ -665,7 +665,7 @@ auto SetVoiceOffset(Voice *const oldvoice, const VoicePos &vpos,
     newvoice->mFlags.reset();
     if(vpos.pos > 0 || (vpos.pos == 0 && vpos.frac > 0)
         || vpos.bufferitem != &source->mQueue.front())
-        newvoice->mFlags.set(VoiceIsFading);
+        newvoice->mFlags.set(VoiceFlag::IsFading);
     InitVoice(newvoice, source, vpos.bufferitem, context, device);
     source->mVoiceIdx = vidx;
 
@@ -2689,7 +2689,7 @@ void StartSources(gsl::not_null<al::Context*> const context,
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
                 if(vpos->pos > 0 || (vpos->pos == 0 && vpos->frac > 0)
                     || vpos->bufferitem != &source->mQueue.front())
-                    voice->mFlags.set(VoiceIsFading);
+                    voice->mFlags.set(VoiceFlag::IsFading);
             }
         }
         InitVoice(voice, source, &*BufferList, context, device);

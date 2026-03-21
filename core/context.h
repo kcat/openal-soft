@@ -5,7 +5,6 @@
 
 #include <array>
 #include <atomic>
-#include <bitset>
 #include <memory>
 #include <span>
 #include <thread>
@@ -15,6 +14,7 @@
 #include "altypes.hpp"
 #include "async_event.h"
 #include "atomic.h"
+#include "bitset.hpp"
 #include "flexarray.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
@@ -145,8 +145,8 @@ struct ContextBase {
     FifoBufferPtr<AsyncEvent> mAsyncEvents;
     /* uint32 to work with macOS wait/notify wrappers, but really just a bool. */
     std::atomic<std::uint32_t> mEventsPending;
-    using AsyncEventBitset = std::bitset<al::to_underlying(AsyncEnableBits::Count)>;
-    std::atomic<AsyncEventBitset> mEnabledEvts{0u};
+    using AsyncEventBitset = al::bitset<AsyncEnableBits::MaxValue>;
+    std::atomic<AsyncEventBitset> mEnabledEvts;
 
     /* Asynchronous voice change actions are processed as a linked list of
      * VoiceChange objects by the mixer, which is atomically appended to.

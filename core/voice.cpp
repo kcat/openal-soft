@@ -721,7 +721,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
     /* If the static voice's current position is beyond the buffer loop end
      * position, disable looping.
      */
-    if(mFlags.test(VoiceIsStatic) && bufferLoopItem)
+    if(mFlags.test(VoiceFlag::IsStatic) && bufferLoopItem)
     {
         if(std::cmp_greater_equal(bufPosInt, bufferListItem->mLoopEnd))
             bufferLoopItem = nullptr;
@@ -881,7 +881,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
 
                 std::ranges::fill(std::next(srciter), srcbuf.end(), *srciter);
             }
-            else if(mFlags.test(VoiceIsStatic))
+            else if(mFlags.test(VoiceFlag::IsStatic))
             {
                 auto const uintPos = gsl::narrow_cast<unsigned>(std::max(intPos, 0));
                 auto const bufferSamples = resampleBuffer.first(srcBufferSize)
@@ -889,12 +889,12 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
                 LoadBufferStatic(bufferListItem, bufferLoopItem, uintPos, chan, mFrameStep,
                     bufferSamples);
             }
-            else if(mFlags.test(VoiceIsCallback))
+            else if(mFlags.test(VoiceFlag::IsCallback))
             {
                 auto const bufferOffset = usize{cbOffset};
                 auto const needSamples = bufferOffset + srcBufferSize - srcSampleDelay;
                 auto const needBlocks = (needSamples + mSamplesPerBlock-1) / mSamplesPerBlock;
-                if(!mFlags.test(VoiceCallbackStopped) && needBlocks > mNumCallbackBlocks)
+                if(!mFlags.test(VoiceFlag::CallbackStopped) && needBlocks > mNumCallbackBlocks)
                 {
                     auto const byteOffset = mNumCallbackBlocks * usize{mBytesPerBlock};
                     auto const needBytes = (needBlocks-mNumCallbackBlocks) * usize{mBytesPerBlock};
@@ -905,10 +905,10 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
                     auto const gotBytes = bufferListItem->mCallback(bufferListItem->mUserData,
                         &samples[byteOffset], gsl::narrow_cast<int>(needBytes));
                     if(gotBytes < 0)
-                        mFlags.set(VoiceCallbackStopped);
+                        mFlags.set(VoiceFlag::CallbackStopped);
                     else if(gsl::narrow_cast<unsigned>(gotBytes) < needBytes)
                     {
-                        mFlags.set(VoiceCallbackStopped);
+                        mFlags.set(VoiceFlag::CallbackStopped);
                         mNumCallbackBlocks += gsl::narrow_cast<unsigned>(gotBytes)/mBytesPerBlock;
                     }
                     else
@@ -993,7 +993,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
         { return samples.first(samplesToMix); });
     }
 
-    if(mFlags.test(VoiceIsAmbisonic))
+    if(mFlags.test(VoiceFlag::IsAmbisonic))
     {
         auto chandata = mChans.begin();
         for(auto const samplespan : mixingSamples)
@@ -1004,13 +1004,13 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
         }
     }
 
-    auto const counter = mFlags.test(VoiceIsFading) ? std::min(samplesToMix, 64u) : 0u;
+    auto const counter = mFlags.test(VoiceFlag::IsFading) ? std::min(samplesToMix, 64u) : 0u;
     if(!counter)
     {
         /* No fading, just overwrite the old/current params. */
         for(auto &chandata : mChans)
         {
-            if(auto &parms = chandata.mDryParams; !mFlags.test(VoiceHasHrtf))
+            if(auto &parms = chandata.mDryParams; !mFlags.test(VoiceFlag::HasHrtf))
                 parms.Gains.Current = parms.Gains.Target;
             else
                 parms.Hrtf.Old = parms.Hrtf.Target;
@@ -1035,7 +1035,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
             auto const samples = DoFilters(parms.LowPass, parms.HighPass, FilterBuf, samplespan,
                 mDirect.FilterActive);
 
-            if(mFlags.test(VoiceHasHrtf))
+            if(mFlags.test(VoiceFlag::HasHrtf))
             {
                 auto const targetGain = parms.Hrtf.Target.Gain
                     * gsl::narrow_cast<float>(vstate == Playing);
@@ -1046,7 +1046,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
             {
                 auto const targetGains = (vstate == Playing) ? std::span{parms.Gains.Target}
                     : std::span{SilentTarget};
-                if(mFlags.test(VoiceHasNfc))
+                if(mFlags.test(VoiceFlag::HasNfc))
                     DoNfcMix(samples, mDirect.Buffer, parms, targetGains, counter, outPos, device);
                 else
                     MixSamples(samples, mDirect.Buffer, parms.Gains.Current, targetGains, counter,
@@ -1072,7 +1072,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
         ++chandata;
     }
 
-    mFlags.set(VoiceIsFading);
+    mFlags.set(VoiceFlag::IsFading);
 
     /* Don't update positions and buffers if we were stopping. */
     if(vstate == Stopping) [[unlikely]]
@@ -1090,7 +1090,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
     auto buffers_done = 0u;
     if(bufferListItem && bufPosInt > 0) [[likely]]
     {
-        if(mFlags.test(VoiceIsStatic))
+        if(mFlags.test(VoiceFlag::IsStatic))
         {
             if(bufferLoopItem)
             {
@@ -1111,7 +1111,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
                     bufferListItem = nullptr;
             }
         }
-        else if(mFlags.test(VoiceIsCallback))
+        else if(mFlags.test(VoiceFlag::IsCallback))
         {
             /* Handle callback buffer source */
             auto const endOffset = mCallbackBlockOffset
@@ -1168,7 +1168,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
 
     /* Send any events now, after the position/buffer info was updated. */
     auto const enabledevt = context->mEnabledEvts.load(std::memory_order_acquire);
-    if(buffers_done > 0 && enabledevt.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
+    if(buffers_done > 0 && enabledevt.test(AsyncEnableBits::BufferCompleted))
     {
         auto *ring = context->mAsyncEvents.get();
         if(auto const evt_vec = ring->getWriteVector(); !evt_vec[0].empty())
@@ -1186,7 +1186,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
          * ensures any residual noise fades to 0 amplitude.
          */
         mPlayState.store(Stopping, std::memory_order_release);
-        if(enabledevt.test(al::to_underlying(AsyncEnableBits::SourceState)))
+        if(enabledevt.test(AsyncEnableBits::SourceState))
             SendSourceStoppedEvent(context, sourceID);
     }
 }
@@ -1313,7 +1313,7 @@ void Voice::prepare(DeviceBase *device)
         mChans[0].mAmbiLFScale = DecoderBase::sWLFScale;
         mChans[1].mAmbiLFScale = DecoderBase::sXYLFScale;
         mChans[2].mAmbiLFScale = DecoderBase::sXYLFScale;
-        mFlags.set(VoiceIsAmbisonic);
+        mFlags.set(VoiceFlag::IsAmbisonic);
     }
     /* Don't need to set the VoiceIsAmbisonic flag if the device is not higher
      * order than the voice. No HF scaling is necessary to mix it.
@@ -1340,7 +1340,7 @@ void Voice::prepare(DeviceBase *device)
                 SendParams{});
             return true;
         });
-        mFlags.set(VoiceIsAmbisonic);
+        mFlags.set(VoiceFlag::IsAmbisonic);
     }
     else
     {
@@ -1351,6 +1351,6 @@ void Voice::prepare(DeviceBase *device)
             std::ranges::fill(chandata.mWetParams | std::views::take(device->NumAuxSends),
                 SendParams{});
         });
-        mFlags.reset(VoiceIsAmbisonic);
+        mFlags.reset(VoiceFlag::IsAmbisonic);
     }
 }

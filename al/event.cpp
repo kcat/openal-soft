@@ -4,7 +4,6 @@
 #include "event.h"
 
 #include <atomic>
-#include <bitset>
 #include <exception>
 #include <mutex>
 #include <optional>
@@ -26,15 +25,15 @@
 #include "core/context.h"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "ringbuffer.h"
 
 #if HAVE_CXXMODULES
+import gsl;
 import logging;
 #else
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 
@@ -77,8 +76,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                 },
                 [context,enabledevts](AsyncSourceStateEvent const &evt)
                 {
-                    if(!context->mEventCb
-                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::SourceState)))
+                    if(!context->mEventCb || !enabledevts.test(AsyncEnableBits::SourceState))
                         return;
 
                     auto state = ALuint{};
@@ -110,8 +108,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                 },
                 [context,enabledevts](AsyncBufferCompleteEvent const &evt)
                 {
-                    if(!context->mEventCb
-                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::BufferCompleted)))
+                    if(!context->mEventCb || !enabledevts.test(AsyncEnableBits::BufferCompleted))
                         return;
 
                     const auto msg = al::format("{} buffer{} completed", evt.mCount,
@@ -121,8 +118,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                 },
                 [context,enabledevts](AsyncDisconnectEvent const &evt)
                 {
-                    if(!context->mEventCb
-                        || !enabledevts.test(al::to_underlying(AsyncEnableBits::Disconnected)))
+                    if(!context->mEventCb || !enabledevts.test(AsyncEnableBits::Disconnected))
                         return;
 
                     context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
@@ -165,7 +161,7 @@ try {
         if(!etype)
             context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
                 as_unsigned(evttype));
-        flags.set(al::to_underlying(*etype));
+        flags.set(*etype);
     });
 
     if(enable)

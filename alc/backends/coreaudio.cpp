@@ -501,7 +501,8 @@ void CoreAudioPlayback::open(std::string_view name)
         else
         {
             TRACE("Got device type '{}'", FourCCPrinter{type}.c_str());
-            mDevice->Flags.set(DirectEar, (type == kIOAudioOutputPortSubTypeHeadphones));
+            mDevice->mFlags.set(DeviceFlag::DirectEar,
+               (type == kIOAudioOutputPortSubTypeHeadphones));
         }
     }
 
@@ -555,7 +556,7 @@ bool CoreAudioPlayback::reset()
         { DevFmtMono, MonoChanMap, false }
     }};
 
-    if(!mDevice->Flags.test(ChannelsRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         auto propSize = UInt32{};
         auto writable = Boolean{};
@@ -1106,7 +1107,6 @@ alc::EventSupport CoreAudioBackendFactory::queryEventSupport(alc::EventType even
 
     case alc::EventType::DeviceAdded:
     case alc::EventType::DeviceRemoved:
-    case alc::EventType::Count:
         break;
     }
     return alc::EventSupport::NoSupport;

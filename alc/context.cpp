@@ -499,7 +499,7 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
          */
         if(std::holds_alternative<UhjPostProcess>(mDevice->mPostProcess))
             return SPEAKERS_7;
-        if(mDevice->Flags.test(DirectEar))
+        if(mDevice->mFlags.test(DeviceFlag::DirectEar))
             return HEADPHONES;
         return SPEAKERS_2;
     case DevFmtQuad: return SPEAKERS_4;

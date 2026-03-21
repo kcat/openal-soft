@@ -26,7 +26,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <bitset>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -37,7 +36,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <sys/types.h>
 #include <utility>
 #include <vector>
 
@@ -47,16 +45,17 @@
 #include "core/devformat.h"
 #include "core/device.h"
 #include "dynload.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "strutils.hpp"
 
 #include <pulse/pulseaudio.h>
 
 #if HAVE_CXXMODULES
+import gsl;
 import logging;
 #else
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 
@@ -805,7 +804,7 @@ void PulsePlayback::sinkInfoCallback(pa_context*, pa_sink_info const *const info
     { return pa_channel_map_superset(&info->channel_map, &chanmap.map); });
     if(chaniter != chanmaps.end())
     {
-        if(!mDevice->Flags.test(ChannelsRequest))
+        if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
             mDevice->FmtChans = chaniter->fmt;
         mIs51Rear = chaniter->is_51rear;
     }
@@ -819,7 +818,7 @@ void PulsePlayback::sinkInfoCallback(pa_context*, pa_sink_info const *const info
 
     if(info->active_port)
         TRACE("Active port: {} ({})", info->active_port->name, info->active_port->description);
-    mDevice->Flags.set(DirectEar, (info->active_port
+    mDevice->mFlags.set(DeviceFlag::DirectEar, (info->active_port
         && info->active_port->name == "analog-output-headphones"sv));
 }
 
@@ -941,7 +940,7 @@ auto PulsePlayback::reset() -> bool
         flags |= PA_STREAM_ADJUST_LATENCY;
     }
     if(GetConfigValueBool(mDevice->mDeviceName, "pulse", "fix-rate", false)
-        || !mDevice->Flags.test(FrequencyRequest))
+        || !mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
         flags |= PA_STREAM_FIX_RATE;
 
     auto chanmap = pa_channel_map{};
@@ -1586,9 +1585,6 @@ auto PulseBackendFactory::queryEventSupport(alc::EventType const eventType, Back
     case alc::EventType::DeviceRemoved:
     case alc::EventType::DefaultDeviceChanged:
         return alc::EventSupport::FullSupport;
-
-    case alc::EventType::Count:
-        break;
     }
     return alc::EventSupport::NoSupport;
 }

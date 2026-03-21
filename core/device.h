@@ -3,7 +3,6 @@
 
 #include <array>
 #include <atomic>
-#include <bitset>
 #include <chrono>
 #include <concepts>
 #include <functional>
@@ -18,6 +17,7 @@
 #include "alnumeric.h"
 #include "ambidefs.h"
 #include "atomic.h"
+#include "bitset.hpp"
 #include "bufferline.h"
 #include "decoderbase.hpp"
 #include "devformat.h"
@@ -192,7 +192,7 @@ using PostProcess = std::variant<std::monostate,
     Bs2bPostProcess>;
 
 
-enum {
+enum class DeviceFlag : u8::value_t {
     // Frequency was requested by the app or config file
     FrequencyRequest,
     // Channel configuration was requested by the app or config file
@@ -212,7 +212,7 @@ enum {
      */
     Virtualization,
 
-    DeviceFlagsCount
+    MaxValue = Virtualization
 };
 
 enum class DeviceState : u8::value_t {
@@ -245,7 +245,7 @@ struct DeviceBase {
     DevAmbiScaling mAmbiScale{DevAmbiScaling::Default};
 
     // Device flags
-    std::bitset<DeviceFlagsCount> Flags;
+    al::bitset<DeviceFlag::MaxValue> mFlags;
     DeviceState mDeviceState{DeviceState::Unprepared};
 
     unsigned NumAuxSends{};

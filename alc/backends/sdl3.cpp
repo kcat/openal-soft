@@ -238,9 +238,9 @@ auto Sdl3Backend::reset() -> bool
     if(!SDL_GetAudioDeviceFormat(mDeviceID, &want, nullptr))
         ERR("Failed to get device format: {}", SDL_GetError());
 
-    if(mDevice->Flags.test(FrequencyRequest) || want.freq < int{MinOutputRate})
+    if(mDevice->mFlags.test(DeviceFlag::FrequencyRequest) || want.freq < int{MinOutputRate})
         want.freq = gsl::narrow_cast<int>(mDevice->mSampleRate);
-    if(mDevice->Flags.test(SampleTypeRequest)
+    if(mDevice->mFlags.test(DeviceFlag::SampleTypeRequest)
         || !(want.format == SDL_AUDIO_U8 || want.format == SDL_AUDIO_S8
              || want.format == SDL_AUDIO_S16 || want.format == SDL_AUDIO_S32
              || want.format == SDL_AUDIO_F32))
@@ -256,7 +256,7 @@ auto Sdl3Backend::reset() -> bool
         case DevFmtFloat:  want.format = SDL_AUDIO_F32; break;
         }
     }
-    if(mDevice->Flags.test(ChannelsRequest) || want.channels < 1)
+    if(mDevice->mFlags.test(DeviceFlag::ChannelsRequest) || want.channels < 1)
         want.channels = al::saturate_cast<int>(mDevice->channelsFromFmt());
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
@@ -278,7 +278,7 @@ auto Sdl3Backend::reset() -> bool
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to get stream format: {}", SDL_GetError()};
 
-    if(!mDevice->Flags.test(ChannelsRequest)
+    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest)
         || (std::cmp_not_equal(have.channels, mDevice->channelsFromFmt())
             && !(mDevice->FmtChans == DevFmtStereo && have.channels >= 2)))
     {

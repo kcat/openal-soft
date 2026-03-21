@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <bitset>
 #include <cinttypes>
 #include <cmath>
 #include <cstdio>
@@ -55,7 +54,6 @@
 #include "dynload.h"
 #include "fmt/core.h"
 #include "fmt/ranges.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
@@ -133,12 +131,14 @@ constexpr auto PwIdAny = PW_ID_ANY;
 
 } // namespace
 /* NOLINTEND */
-DIAGNOSTIC_POP
+DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
+import gsl;
 import logging;
 #else
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {
@@ -1648,7 +1648,7 @@ auto PipeWirePlayback::reset() -> bool
      * match its format.
      */
     auto is51rear = false;
-    mDevice->Flags.reset(DirectEar);
+    mDevice->mFlags.reset(DeviceFlag::DirectEar);
     if(mTargetId != PwIdAny)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
@@ -1657,7 +1657,7 @@ auto PipeWirePlayback::reset() -> bool
         const auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
         if(match != devlist.end())
         {
-            if(!mDevice->Flags.test(FrequencyRequest) && match->mSampleRate > 0)
+            if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest) && match->mSampleRate > 0)
             {
                 /* Scale the update size if the sample rate changes. */
                 const auto scale = gsl::narrow_cast<double>(match->mSampleRate)
@@ -1683,10 +1683,11 @@ auto PipeWirePlayback::reset() -> bool
                 }
                 mDevice->mSampleRate = match->mSampleRate;
             }
-            if(!mDevice->Flags.test(ChannelsRequest) && match->mChannels != InvalidChannelConfig)
+            if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest)
+                && match->mChannels != InvalidChannelConfig)
                 mDevice->FmtChans = match->mChannels;
             if(match->mChannels == DevFmtStereo && match->mIsHeadphones)
-                mDevice->Flags.set(DirectEar);
+                mDevice->mFlags.set(DeviceFlag::DirectEar);
             is51rear = match->mIs51Rear;
         }
     }
@@ -2338,9 +2339,6 @@ auto PipeWireBackendFactory::queryEventSupport(alc::EventType const eventType, B
     case alc::EventType::DeviceAdded:
     case alc::EventType::DeviceRemoved:
         return alc::EventSupport::FullSupport;
-
-    case alc::EventType::Count:
-        break;
     }
     return alc::EventSupport::NoSupport;
 }

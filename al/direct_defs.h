@@ -22,10 +22,13 @@ inline auto verify_context(ALCcontext *context) -> gsl::not_null<al::Context*>
 namespace detail_ {
 
 template<typename T>
-constexpr T DefaultVal() noexcept { return T{}; }
-
-template<>
-constexpr void DefaultVal() noexcept { }
+constexpr auto DefaultVal() noexcept -> T
+{
+    if constexpr(std::same_as<T, void>)
+        return;
+    else
+        return T{};
+}
 
 } // namespace detail_
 

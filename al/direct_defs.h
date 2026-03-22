@@ -33,7 +33,7 @@ constexpr auto DefaultVal() noexcept -> T
 
 } // namespace detail_
 
-#if !defined(_WIN32) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
+#if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
 #define DefineFuncAlias(X, R, ...) extern "C" DECL_HIDDEN [[gnu::alias(#X)]]  \
     auto AL_APIENTRY X##_(__VA_ARGS__) noexcept -> R;
 

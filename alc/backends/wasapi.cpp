@@ -3118,6 +3118,8 @@ auto WasapiBackendFactory::queryEventSupport(alc::EventType const eventType, Bac
     case alc::EventType::DeviceRemoved:
 #if !ALSOFT_UWP
         return alc::EventSupport::FullSupport;
+#else
+        break;
 #endif
     }
     return alc::EventSupport::NoSupport;

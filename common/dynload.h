@@ -3,14 +3,14 @@
 
 #include "config.h"
 
+#if HAVE_DYNLOAD
+
 #if defined(_WIN32) || defined(HAVE_DLFCN_H)
 
 #include <string>
 
 #include "expected.hpp"
 #include "gsl/gsl"
-
-#define HAVE_DYNLOAD 1
 
 #include "dlopennote.h"
 
@@ -20,9 +20,7 @@ void CloseLib(void *handle);
 [[nodiscard]]
 auto GetSymbol(void *handle, gsl::czstring name) -> al::expected<void*, std::string>;
 
-#else
-
-#define HAVE_DYNLOAD 0
+#endif
 
 #endif
 

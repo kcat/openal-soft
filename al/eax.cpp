@@ -37,7 +37,7 @@ catch(...) {
 
 } // namespace
 
-FORCE_ALIGN DECL_FUNC5(ALenum, EAXSet, const GUID*,property_set_id, ALuint,property_id,
+DECL_FUNC5(FORCE_ALIGN, ALenum, EAXSet, const GUID*,property_set_id, ALuint,property_id,
     ALuint,source_id, ALvoid*,value, ALuint,value_size)
-FORCE_ALIGN DECL_FUNC5(ALenum, EAXGet, const GUID*,property_set_id, ALuint,property_id,
+DECL_FUNC5(FORCE_ALIGN, ALenum, EAXGet, const GUID*,property_set_id, ALuint,property_id,
     ALuint,source_id, ALvoid*,value, ALuint,value_size)

@@ -1660,43 +1660,43 @@ catch(std::exception &e) {
 
 } // namespace
 
-AL_API DECL_FUNC2(void, alGenBuffers, ALsizei,n, ALuint*,buffers)
-AL_API DECL_FUNC2(void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
-AL_API DECL_FUNC1(ALboolean, alIsBuffer, ALuint,buffer)
+DECL_FUNC2(AL_API, void, alGenBuffers, ALsizei,n, ALuint*,buffers)
+DECL_FUNC2(AL_API, void, alDeleteBuffers, ALsizei,n, const ALuint*,buffers)
+DECL_FUNC1(AL_API, ALboolean, alIsBuffer, ALuint,buffer)
 
-AL_API DECL_FUNC5(void, alBufferData, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq)
-AL_API DECL_FUNCEXT6(void, alBufferStorage,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq, ALbitfieldSOFT,flags)
-FORCE_ALIGN DECL_FUNC5(void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
-AL_API DECL_FUNCEXT5(void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
-AL_API DECL_FUNCEXT5(void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
+DECL_FUNC5(AL_API, void, alBufferData, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq)
+DECL_FUNCEXT6(AL_API, void, alBufferStorage,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,size, ALsizei,freq, ALbitfieldSOFT,flags)
+DECL_FUNC5(FORCE_ALIGN, void, alBufferDataStatic, ALuint,buffer, ALenum,format, ALvoid*,data, ALsizei,size, ALsizei,freq)
+DECL_FUNCEXT5(AL_API, void, alBufferCallback,SOFT, ALuint,buffer, ALenum,format, ALsizei,freq, ALBUFFERCALLBACKTYPESOFT,callback, ALvoid*,userptr)
+DECL_FUNCEXT5(AL_API, void, alBufferSubData,SOFT, ALuint,buffer, ALenum,format, const ALvoid*,data, ALsizei,offset, ALsizei,length)
 
-AL_API DECL_FUNCEXT4(void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
-AL_API DECL_FUNCEXT1(void, alUnmapBuffer,SOFT, ALuint,buffer)
-AL_API DECL_FUNCEXT3(void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
+DECL_FUNCEXT4(AL_API, void*, alMapBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length, ALbitfieldSOFT,access)
+DECL_FUNCEXT1(AL_API, void, alUnmapBuffer,SOFT, ALuint,buffer)
+DECL_FUNCEXT3(AL_API, void, alFlushMappedBuffer,SOFT, ALuint,buffer, ALsizei,offset, ALsizei,length)
 
-AL_API DECL_FUNC3(void, alBufferf, ALuint,buffer, ALenum,param, ALfloat,value)
-AL_API DECL_FUNC5(void, alBuffer3f, ALuint,buffer, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-AL_API DECL_FUNC3(void, alBufferfv, ALuint,buffer, ALenum,param, const ALfloat*,values)
+DECL_FUNC3(AL_API, void, alBufferf, ALuint,buffer, ALenum,param, ALfloat,value)
+DECL_FUNC5(AL_API, void, alBuffer3f, ALuint,buffer, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
+DECL_FUNC3(AL_API, void, alBufferfv, ALuint,buffer, ALenum,param, const ALfloat*,values)
 
-AL_API DECL_FUNC3(void, alBufferi, ALuint,buffer, ALenum,param, ALint,value)
-AL_API DECL_FUNC5(void, alBuffer3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-AL_API DECL_FUNC3(void, alBufferiv, ALuint,buffer, ALenum,param, const ALint*,values)
+DECL_FUNC3(AL_API, void, alBufferi, ALuint,buffer, ALenum,param, ALint,value)
+DECL_FUNC5(AL_API, void, alBuffer3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
+DECL_FUNC3(AL_API, void, alBufferiv, ALuint,buffer, ALenum,param, const ALint*,values)
 
-AL_API DECL_FUNC3(void, alGetBufferf, ALuint,buffer, ALenum,param, ALfloat*,value)
-AL_API DECL_FUNC5(void, alGetBuffer3f, ALuint,buffer, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-AL_API DECL_FUNC3(void, alGetBufferfv, ALuint,buffer, ALenum,param, ALfloat*,values)
+DECL_FUNC3(AL_API, void, alGetBufferf, ALuint,buffer, ALenum,param, ALfloat*,value)
+DECL_FUNC5(AL_API, void, alGetBuffer3f, ALuint,buffer, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
+DECL_FUNC3(AL_API, void, alGetBufferfv, ALuint,buffer, ALenum,param, ALfloat*,values)
 
-AL_API DECL_FUNC3(void, alGetBufferi, ALuint,buffer, ALenum,param, ALint*,value)
-AL_API DECL_FUNC5(void, alGetBuffer3i, ALuint,buffer, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-AL_API DECL_FUNC3(void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,values)
+DECL_FUNC3(AL_API, void, alGetBufferi, ALuint,buffer, ALenum,param, ALint*,value)
+DECL_FUNC5(AL_API, void, alGetBuffer3i, ALuint,buffer, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
+DECL_FUNC3(AL_API, void, alGetBufferiv, ALuint,buffer, ALenum,param, ALint*,values)
 
-AL_API DECL_FUNCEXT3(void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
-AL_API DECL_FUNCEXT5(void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
-AL_API DECL_FUNCEXT3(void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
+DECL_FUNCEXT3(AL_API, void, alGetBufferPtr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value)
+DECL_FUNCEXT5(AL_API, void, alGetBuffer3Ptr,SOFT, ALuint,buffer, ALenum,param, ALvoid**,value1, ALvoid**,value2, ALvoid**,value3)
+DECL_FUNCEXT3(AL_API, void, alGetBufferPtrv,SOFT, ALuint,buffer, ALenum,param, ALvoid**,values)
 
 #if ALSOFT_EAX
-FORCE_ALIGN DECL_FUNC3(ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
-FORCE_ALIGN DECL_FUNC2(ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
+DECL_FUNC3(FORCE_ALIGN, ALboolean, EAXSetBufferMode, ALsizei,n, const ALuint*,buffers, ALint,value)
+DECL_FUNC2(FORCE_ALIGN, ALenum, EAXGetBufferMode, ALuint,buffer, ALint*,pReserved)
 #endif // ALSOFT_EAX
 
 

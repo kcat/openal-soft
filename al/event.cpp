@@ -245,5 +245,5 @@ void StopEventThrd(al::Context *ctx)
     ctx->mEventThread.join();
 }
 
-AL_API DECL_FUNCEXT3(void, alEventControl,SOFT, ALsizei,count, const ALenum*,types, ALboolean,enable)
-AL_API DECL_FUNCEXT2(void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)
+DECL_FUNCEXT3(AL_API, void, alEventControl,SOFT, ALsizei,count, const ALenum*,types, ALboolean,enable)
+DECL_FUNCEXT2(AL_API, void, alEventCallback,SOFT, ALEVENTPROCSOFT,callback, void*,userParam)

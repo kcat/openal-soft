@@ -488,18 +488,18 @@ catch(std::exception &e) {
 
 } // namespace
 
-AL_API DECL_FUNC2(void, alGenEffects, ALsizei,n, ALuint*,effects)
-AL_API DECL_FUNC2(void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
-AL_API DECL_FUNC1(ALboolean, alIsEffect, ALuint,effect)
+DECL_FUNC2(AL_API, void, alGenEffects, ALsizei,n, ALuint*,effects)
+DECL_FUNC2(AL_API, void, alDeleteEffects, ALsizei,n, const ALuint*,effects)
+DECL_FUNC1(AL_API, ALboolean, alIsEffect, ALuint,effect)
 
-AL_API DECL_FUNC3(void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
-AL_API DECL_FUNC3(void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
-AL_API DECL_FUNC3(void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
-AL_API DECL_FUNC3(void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
-AL_API DECL_FUNC3(void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
-AL_API DECL_FUNC3(void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
-AL_API DECL_FUNC3(void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
-AL_API DECL_FUNC3(void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
+DECL_FUNC3(AL_API, void, alEffecti, ALuint,effect, ALenum,param, ALint,value)
+DECL_FUNC3(AL_API, void, alEffectiv, ALuint,effect, ALenum,param, const ALint*,values)
+DECL_FUNC3(AL_API, void, alEffectf, ALuint,effect, ALenum,param, ALfloat,value)
+DECL_FUNC3(AL_API, void, alEffectfv, ALuint,effect, ALenum,param, const ALfloat*,values)
+DECL_FUNC3(AL_API, void, alGetEffecti, ALuint,effect, ALenum,param, ALint*,value)
+DECL_FUNC3(AL_API, void, alGetEffectiv, ALuint,effect, ALenum,param, ALint*,values)
+DECL_FUNC3(AL_API, void, alGetEffectf, ALuint,effect, ALenum,param, ALfloat*,value)
+DECL_FUNC3(AL_API, void, alGetEffectfv, ALuint,effect, ALenum,param, ALfloat*,values)
 
 
 void InitEffect(al::Effect *const effect)

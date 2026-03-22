@@ -49,7 +49,7 @@ auto alIsExtensionPresent(gsl::not_null<al::Context*> context, const ALchar *ext
 
 } // namespace
 
-AL_API DECL_FUNC1(ALboolean, alIsExtensionPresent, const ALchar*,extName)
+DECL_FUNC1(AL_API, ALboolean, alIsExtensionPresent, const ALchar*,extName)
 
 AL_API auto AL_APIENTRY alGetProcAddress(const ALchar *funcName) noexcept -> ALvoid*
 {

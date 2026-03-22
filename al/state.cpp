@@ -531,9 +531,9 @@ AL_API auto AL_APIENTRY alsoft_get_version() noexcept -> const ALchar*
 }
 
 
-AL_API DECL_FUNC1(void, alEnable, ALenum,capability)
-AL_API DECL_FUNC1(void, alDisable, ALenum,capability)
-AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum,capability)
+DECL_FUNC1(AL_API, void, alEnable, ALenum,capability)
+DECL_FUNC1(AL_API, void, alDisable, ALenum,capability)
+DECL_FUNC1(AL_API, ALboolean, alIsEnabled, ALenum,capability)
 
 #define DECL_GETFUNC(DECL, R, Name, Ext)                                      \
 DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
@@ -574,16 +574,16 @@ DECL_GETFUNC(AL_API, ALvoidptr, alGetPointer,SOFT)
 #undef DECL_GETFUNC
 
 
-AL_API DECL_FUNC1(const ALchar*, alGetString, ALenum,pname)
+DECL_FUNC1(AL_API, const ALchar*, alGetString, ALenum,pname)
 
-AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat,value)
-AL_API DECL_FUNC1(void, alSpeedOfSound, ALfloat,value)
-AL_API DECL_FUNC1(void, alDistanceModel, ALenum,value)
+DECL_FUNC1(AL_API, void, alDopplerFactor, ALfloat,value)
+DECL_FUNC1(AL_API, void, alSpeedOfSound, ALfloat,value)
+DECL_FUNC1(AL_API, void, alDistanceModel, ALenum,value)
 
-AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
-AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
+DECL_FUNCEXT(AL_API, void, alDeferUpdates,SOFT)
+DECL_FUNCEXT(AL_API, void, alProcessUpdates,SOFT)
 
-AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
+DECL_FUNCEXT2(AL_API, const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
 
 
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept

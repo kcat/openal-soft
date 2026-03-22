@@ -796,18 +796,18 @@ catch(std::exception &e) {
 } // namespace
 
 
-DECL_FUNC2(AL_API, void, alGenAuxiliaryEffectSlots, ALsizei,n, ALuint*,effectslots)
-DECL_FUNC2(AL_API, void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
-DECL_FUNC1(AL_API, ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
+DECL_FUNC(AL_API, void, alGenAuxiliaryEffectSlots, ALsizei,n, ALuint*,effectslots)
+DECL_FUNC(AL_API, void, alDeleteAuxiliaryEffectSlots, ALsizei,n, const ALuint*,effectslots)
+DECL_FUNC(AL_API, ALboolean, alIsAuxiliaryEffectSlot, ALuint,effectslot)
 
-DECL_FUNC3(AL_API, void, alAuxiliaryEffectSloti, ALuint,effectslot, ALenum,param, ALint,value)
-DECL_FUNC3(AL_API, void, alAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, const ALint*,values)
-DECL_FUNC3(AL_API, void, alAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat,value)
-DECL_FUNC3(AL_API, void, alAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, const ALfloat*,values)
-DECL_FUNC3(AL_API, void, alGetAuxiliaryEffectSloti, ALuint,effectslot, ALenum,param, ALint*,value)
-DECL_FUNC3(AL_API, void, alGetAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, ALint*,values)
-DECL_FUNC3(AL_API, void, alGetAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat*,value)
-DECL_FUNC3(AL_API, void, alGetAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, ALfloat*,values)
+DECL_FUNC(AL_API, void, alAuxiliaryEffectSloti, ALuint,effectslot, ALenum,param, ALint,value)
+DECL_FUNC(AL_API, void, alAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, const ALint*,values)
+DECL_FUNC(AL_API, void, alAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat,value)
+DECL_FUNC(AL_API, void, alAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, const ALfloat*,values)
+DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSloti, ALuint,effectslot, ALenum,param, ALint*,value)
+DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSlotiv, ALuint,effectslot, ALenum,param, ALint*,values)
+DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,param, ALfloat*,value)
+DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, ALfloat*,values)
 
 
 al::EffectSlot::EffectSlot(gsl::not_null<al::Context*> context) : mSlot{context->getEffectSlot()}

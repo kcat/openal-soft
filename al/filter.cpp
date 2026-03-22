@@ -603,18 +603,18 @@ catch(std::exception &e) {
 
 } // namespace
 
-DECL_FUNC2(AL_API, void, alGenFilters, ALsizei,n, ALuint*,filters)
-DECL_FUNC2(AL_API, void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
-DECL_FUNC1(AL_API, ALboolean, alIsFilter, ALuint,filter)
+DECL_FUNC(AL_API, void, alGenFilters, ALsizei,n, ALuint*,filters)
+DECL_FUNC(AL_API, void, alDeleteFilters, ALsizei,n, const ALuint*,filters)
+DECL_FUNC(AL_API, ALboolean, alIsFilter, ALuint,filter)
 
-DECL_FUNC3(AL_API, void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
-DECL_FUNC3(AL_API, void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
-DECL_FUNC3(AL_API, void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
-DECL_FUNC3(AL_API, void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
-DECL_FUNC3(AL_API, void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
-DECL_FUNC3(AL_API, void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
-DECL_FUNC3(AL_API, void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
-DECL_FUNC3(AL_API, void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
+DECL_FUNC(AL_API, void, alFilteri, ALuint,filter, ALenum,param, ALint,value)
+DECL_FUNC(AL_API, void, alFilteriv, ALuint,filter, ALenum,param, const ALint*,values)
+DECL_FUNC(AL_API, void, alFilterf, ALuint,filter, ALenum,param, ALfloat,value)
+DECL_FUNC(AL_API, void, alFilterfv, ALuint,filter, ALenum,param, const ALfloat*,values)
+DECL_FUNC(AL_API, void, alGetFilteri, ALuint,filter, ALenum,param, ALint*,value)
+DECL_FUNC(AL_API, void, alGetFilteriv, ALuint,filter, ALenum,param, ALint*,values)
+DECL_FUNC(AL_API, void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,value)
+DECL_FUNC(AL_API, void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
 
 
 void al::Filter::SetName(gsl::not_null<al::Context*> const context, ALuint const id,

@@ -471,18 +471,18 @@ catch(std::exception &e) {
 
 } // namespace
 
-DECL_FUNC2(AL_API, void, alListenerf, ALenum,param, ALfloat,value)
-DECL_FUNC4(AL_API, void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-DECL_FUNC2(AL_API, void, alListenerfv, ALenum,param, const ALfloat*,values)
+DECL_FUNC(AL_API, void, alListenerf, ALenum,param, ALfloat,value)
+DECL_FUNC(AL_API, void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
+DECL_FUNC(AL_API, void, alListenerfv, ALenum,param, const ALfloat*,values)
 
-DECL_FUNC2(AL_API, void, alListeneri, ALenum,param, ALint,value)
-DECL_FUNC4(AL_API, void, alListener3i, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-DECL_FUNC2(AL_API, void, alListeneriv, ALenum,param, const ALint*,values)
+DECL_FUNC(AL_API, void, alListeneri, ALenum,param, ALint,value)
+DECL_FUNC(AL_API, void, alListener3i, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
+DECL_FUNC(AL_API, void, alListeneriv, ALenum,param, const ALint*,values)
 
-DECL_FUNC2(AL_API, void, alGetListenerf, ALenum,param, ALfloat*,value)
-DECL_FUNC4(AL_API, void, alGetListener3f, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-DECL_FUNC2(AL_API, void, alGetListenerfv, ALenum,param, ALfloat*,values)
+DECL_FUNC(AL_API, void, alGetListenerf, ALenum,param, ALfloat*,value)
+DECL_FUNC(AL_API, void, alGetListener3f, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
+DECL_FUNC(AL_API, void, alGetListenerfv, ALenum,param, ALfloat*,values)
 
-DECL_FUNC2(AL_API, void, alGetListeneri, ALenum,param, ALint*,value)
-DECL_FUNC4(AL_API, void, alGetListener3i, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-DECL_FUNC2(AL_API, void, alGetListeneriv, ALenum,param, ALint*,values)
+DECL_FUNC(AL_API, void, alGetListeneri, ALenum,param, ALint*,value)
+DECL_FUNC(AL_API, void, alGetListener3i, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
+DECL_FUNC(AL_API, void, alGetListeneriv, ALenum,param, ALint*,values)

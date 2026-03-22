@@ -97,8 +97,12 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     return Name(al::verify_context(context), n1, n2, n3, n4, n5);             \
 }
 
+#define DECL_FUNC_SELECTOR(ATTR, R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5, NAME, ...) NAME
+#define DECL_FUNC(...) DECL_FUNC_SELECTOR(__VA_ARGS__,                        \
+    DECL_FUNC5, Misdefined, DECL_FUNC4, Misdefined, DECL_FUNC3, Misdefined,   \
+    DECL_FUNC2, Misdefined, DECL_FUNC1, Misdefined, DECL_FUNC0)(__VA_ARGS__)
 
-#define DECL_FUNCEXT(ATTR, R, Name,Ext)                                       \
+#define DECL_FUNCEXT0(ATTR, R, Name,Ext)                                      \
 ATTR auto AL_APIENTRY Name##Ext() noexcept -> R                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
@@ -209,5 +213,14 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     return Name##Ext(al::verify_context(context), n1, n2, n3, n4, n5, n6, n7, \
         n8);                                                                  \
 }
+
+#define DECL_FUNCEXT_SELECTOR(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4,  \
+    T5,n5, T6,n6, T7,n7, T8,n8, NAME, ...) NAME
+#define DECL_FUNCEXT(...) DECL_FUNCEXT_SELECTOR(__VA_ARGS__,                  \
+    DECL_FUNCEXT8, Misdefined, DECL_FUNCEXT7, Misdefined,                     \
+    DECL_FUNCEXT6, Misdefined, DECL_FUNCEXT5, Misdefined,                     \
+    DECL_FUNCEXT4, Misdefined, DECL_FUNCEXT3, Misdefined,                     \
+    DECL_FUNCEXT2, Misdefined, DECL_FUNCEXT1, Misdefined,                     \
+    DECL_FUNCEXT0)(__VA_ARGS__)
 
 #endif /* AL_DIRECT_DEFS_H */

@@ -3589,58 +3589,58 @@ catch(std::exception &e) {
 
 } // namespace
 
-DECL_FUNC2(AL_API, void, alGenSources, ALsizei,n, ALuint*,sources)
-DECL_FUNC2(AL_API, void, alDeleteSources, ALsizei,n, const ALuint*,sources)
-DECL_FUNC1(AL_API, ALboolean, alIsSource, ALuint,source)
+DECL_FUNC(AL_API, void, alGenSources, ALsizei,n, ALuint*,sources)
+DECL_FUNC(AL_API, void, alDeleteSources, ALsizei,n, const ALuint*,sources)
+DECL_FUNC(AL_API, ALboolean, alIsSource, ALuint,source)
 
-DECL_FUNC3(AL_API, void, alSourcef, ALuint,source, ALenum,param, ALfloat,value)
-DECL_FUNC5(AL_API, void, alSource3f, ALuint,source, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-DECL_FUNC3(AL_API, void, alSourcefv, ALuint,source, ALenum,param, const ALfloat*,values)
+DECL_FUNC(AL_API, void, alSourcef, ALuint,source, ALenum,param, ALfloat,value)
+DECL_FUNC(AL_API, void, alSource3f, ALuint,source, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
+DECL_FUNC(AL_API, void, alSourcefv, ALuint,source, ALenum,param, const ALfloat*,values)
 
-DECL_FUNCEXT3(AL_API, void, alSourced,SOFT, ALuint,source, ALenum,param, ALdouble,value)
-DECL_FUNCEXT5(AL_API, void, alSource3d,SOFT, ALuint,source, ALenum,param, ALdouble,value1, ALdouble,value2, ALdouble,value3)
-DECL_FUNCEXT3(AL_API, void, alSourcedv,SOFT, ALuint,source, ALenum,param, const ALdouble*,values)
+DECL_FUNCEXT(AL_API, void, alSourced,SOFT, ALuint,source, ALenum,param, ALdouble,value)
+DECL_FUNCEXT(AL_API, void, alSource3d,SOFT, ALuint,source, ALenum,param, ALdouble,value1, ALdouble,value2, ALdouble,value3)
+DECL_FUNCEXT(AL_API, void, alSourcedv,SOFT, ALuint,source, ALenum,param, const ALdouble*,values)
 
-DECL_FUNC3(AL_API, void, alSourcei, ALuint,source, ALenum,param, ALint,value)
-DECL_FUNC5(AL_API, void, alSource3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-DECL_FUNC3(AL_API, void, alSourceiv, ALuint,source, ALenum,param, const ALint*,values)
+DECL_FUNC(AL_API, void, alSourcei, ALuint,source, ALenum,param, ALint,value)
+DECL_FUNC(AL_API, void, alSource3i, ALuint,buffer, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
+DECL_FUNC(AL_API, void, alSourceiv, ALuint,source, ALenum,param, const ALint*,values)
 
-DECL_FUNCEXT3(AL_API, void, alSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value)
-DECL_FUNCEXT5(AL_API, void, alSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value1, ALint64SOFT,value2, ALint64SOFT,value3)
-DECL_FUNCEXT3(AL_API, void, alSourcei64v,SOFT, ALuint,source, ALenum,param, const ALint64SOFT*,values)
+DECL_FUNCEXT(AL_API, void, alSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value)
+DECL_FUNCEXT(AL_API, void, alSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT,value1, ALint64SOFT,value2, ALint64SOFT,value3)
+DECL_FUNCEXT(AL_API, void, alSourcei64v,SOFT, ALuint,source, ALenum,param, const ALint64SOFT*,values)
 
-DECL_FUNC3(AL_API, void, alGetSourcef, ALuint,source, ALenum,param, ALfloat*,value)
-DECL_FUNC5(AL_API, void, alGetSource3f, ALuint,source, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-DECL_FUNC3(AL_API, void, alGetSourcefv, ALuint,source, ALenum,param, ALfloat*,values)
+DECL_FUNC(AL_API, void, alGetSourcef, ALuint,source, ALenum,param, ALfloat*,value)
+DECL_FUNC(AL_API, void, alGetSource3f, ALuint,source, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
+DECL_FUNC(AL_API, void, alGetSourcefv, ALuint,source, ALenum,param, ALfloat*,values)
 
-DECL_FUNCEXT3(AL_API, void, alGetSourced,SOFT, ALuint,source, ALenum,param, ALdouble*,value)
-DECL_FUNCEXT5(AL_API, void, alGetSource3d,SOFT, ALuint,source, ALenum,param, ALdouble*,value1, ALdouble*,value2, ALdouble*,value3)
-DECL_FUNCEXT3(AL_API, void, alGetSourcedv,SOFT, ALuint,source, ALenum,param, ALdouble*,values)
+DECL_FUNCEXT(AL_API, void, alGetSourced,SOFT, ALuint,source, ALenum,param, ALdouble*,value)
+DECL_FUNCEXT(AL_API, void, alGetSource3d,SOFT, ALuint,source, ALenum,param, ALdouble*,value1, ALdouble*,value2, ALdouble*,value3)
+DECL_FUNCEXT(AL_API, void, alGetSourcedv,SOFT, ALuint,source, ALenum,param, ALdouble*,values)
 
-DECL_FUNC3(AL_API, void, alGetSourcei, ALuint,source, ALenum,param, ALint*,value)
-DECL_FUNC5(AL_API, void, alGetSource3i, ALuint,source, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-DECL_FUNC3(AL_API, void, alGetSourceiv, ALuint,source, ALenum,param, ALint*,values)
+DECL_FUNC(AL_API, void, alGetSourcei, ALuint,source, ALenum,param, ALint*,value)
+DECL_FUNC(AL_API, void, alGetSource3i, ALuint,source, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
+DECL_FUNC(AL_API, void, alGetSourceiv, ALuint,source, ALenum,param, ALint*,values)
 
-DECL_FUNCEXT3(AL_API, void, alGetSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value)
-DECL_FUNCEXT5(AL_API, void, alGetSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value1, ALint64SOFT*,value2, ALint64SOFT*,value3)
-DECL_FUNCEXT3(AL_API, void, alGetSourcei64v,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,values)
+DECL_FUNCEXT(AL_API, void, alGetSourcei64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value)
+DECL_FUNCEXT(AL_API, void, alGetSource3i64,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,value1, ALint64SOFT*,value2, ALint64SOFT*,value3)
+DECL_FUNCEXT(AL_API, void, alGetSourcei64v,SOFT, ALuint,source, ALenum,param, ALint64SOFT*,values)
 
-DECL_FUNC1(AL_API, void, alSourcePlay, ALuint,source)
-DECL_FUNCEXT2(FORCE_ALIGN, void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)
-DECL_FUNC2(AL_API, void, alSourcePlayv, ALsizei,n, const ALuint*,sources)
-DECL_FUNCEXT3(FORCE_ALIGN, void, alSourcePlayAtTimev,SOFT, ALsizei,n, const ALuint*,sources, ALint64SOFT,start_time)
+DECL_FUNC(AL_API, void, alSourcePlay, ALuint,source)
+DECL_FUNCEXT(FORCE_ALIGN, void, alSourcePlayAtTime,SOFT, ALuint,source, ALint64SOFT,start_time)
+DECL_FUNC(AL_API, void, alSourcePlayv, ALsizei,n, const ALuint*,sources)
+DECL_FUNCEXT(FORCE_ALIGN, void, alSourcePlayAtTimev,SOFT, ALsizei,n, const ALuint*,sources, ALint64SOFT,start_time)
 
-DECL_FUNC1(AL_API, void, alSourcePause, ALuint,source)
-DECL_FUNC2(AL_API, void, alSourcePausev, ALsizei,n, const ALuint*,sources)
+DECL_FUNC(AL_API, void, alSourcePause, ALuint,source)
+DECL_FUNC(AL_API, void, alSourcePausev, ALsizei,n, const ALuint*,sources)
 
-DECL_FUNC1(AL_API, void, alSourceStop, ALuint,source)
-DECL_FUNC2(AL_API, void, alSourceStopv, ALsizei,n, const ALuint*,sources)
+DECL_FUNC(AL_API, void, alSourceStop, ALuint,source)
+DECL_FUNC(AL_API, void, alSourceStopv, ALsizei,n, const ALuint*,sources)
 
-DECL_FUNC1(AL_API, void, alSourceRewind, ALuint,source)
-DECL_FUNC2(AL_API, void, alSourceRewindv, ALsizei,n, const ALuint*,sources)
+DECL_FUNC(AL_API, void, alSourceRewind, ALuint,source)
+DECL_FUNC(AL_API, void, alSourceRewindv, ALsizei,n, const ALuint*,sources)
 
-DECL_FUNC3(AL_API, void, alSourceQueueBuffers, ALuint,source, ALsizei,nb, const ALuint*,buffers)
-DECL_FUNC3(AL_API, void, alSourceUnqueueBuffers, ALuint,source, ALsizei,nb, ALuint*,buffers)
+DECL_FUNC(AL_API, void, alSourceQueueBuffers, ALuint,source, ALsizei,nb, const ALuint*,buffers)
+DECL_FUNC(AL_API, void, alSourceUnqueueBuffers, ALuint,source, ALsizei,nb, ALuint*,buffers)
 
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALuint*) noexcept

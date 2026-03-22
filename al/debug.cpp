@@ -658,16 +658,16 @@ void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debu
 }
 
 
-DECL_FUNCEXT2(FORCE_ALIGN, void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
 
-DECL_FUNCEXT6(FORCE_ALIGN, void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
 
-DECL_FUNCEXT6(FORCE_ALIGN, void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
 
-DECL_FUNCEXT4(FORCE_ALIGN, void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
+DECL_FUNCEXT(FORCE_ALIGN, void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
 DECL_FUNCEXT(FORCE_ALIGN, void, alPopDebugGroup,EXT)
 
-DECL_FUNCEXT8(FORCE_ALIGN, ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
+DECL_FUNCEXT(FORCE_ALIGN, ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
 
-DECL_FUNCEXT4(FORCE_ALIGN, void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
-DECL_FUNCEXT5(FORCE_ALIGN, void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
+DECL_FUNCEXT(FORCE_ALIGN, void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
+DECL_FUNCEXT(FORCE_ALIGN, void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)

@@ -135,8 +135,10 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     }
     return deferror;
 }
+DefineFuncAlias(alGetError, ALenum)
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
     return alGetError(al::verify_context(context));
 }
+DefineFuncAlias(alGetErrorDirect, ALenum, ALCcontext*)

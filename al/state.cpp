@@ -544,6 +544,7 @@ DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
         GetValue(gsl::make_not_null(context.get()), pname, &value);           \
     return value;                                                             \
 }                                                                             \
+DefineFuncAlias(Name##Ext,R,ALenum)                                           \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
@@ -551,17 +552,20 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     GetValue(al::verify_context(context), pname, &value);                     \
     return value;                                                             \
 }                                                                             \
+DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,ALenum)                       \
 DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(context) [[likely]]                                                    \
         GetValue(gsl::make_not_null(context.get()), pname, values);           \
 }                                                                             \
+DefineFuncAlias(Name##v##Ext,void,ALenum,R*)                                  \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
     GetValue(al::verify_context(context), pname, values);                     \
-}
+}                                                                             \
+DefineFuncAlias(Name##v##Direct##Ext,void,ALCcontext*,ALenum,R*)
 
 DECL_GETFUNC(AL_API, ALboolean, alGetBoolean,)
 DECL_GETFUNC(AL_API, ALdouble, alGetDouble,)
@@ -606,6 +610,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
         UpdateProps(context.get());
     }
 }
+DefineFuncAlias(alDopplerVelocity, void, ALfloat)
 
 
 void UpdateContextProps(al::Context *context)

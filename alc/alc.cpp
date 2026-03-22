@@ -199,6 +199,12 @@ auto APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/) -> BO
 
 namespace {
 
+#if !defined(_WIN32) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
+#define DefineAlcAlias(X) extern "C" DECL_HIDDEN [[gnu::alias(#X)]] decltype(X) X##_;
+#else
+#define DefineAlcAlias(X)
+#endif
+
 using namespace std::string_view_literals;
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
@@ -2047,6 +2053,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device) noexcept
         return al::Device::sLastGlobalError.exchange(ALC_NO_ERROR);
     }
 }
+DefineAlcAlias(alcGetError)
 
 
 ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context) noexcept
@@ -2067,6 +2074,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcSuspendContext)
 
 ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context) noexcept
 try {
@@ -2086,6 +2094,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcProcessContext)
 
 
 ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum param) noexcept -> const ALCchar*
@@ -2190,6 +2199,7 @@ try {
 catch(al::base_exception&) {
     return nullptr;
 }
+DefineAlcAlias(alcGetString)
 
 namespace {
 auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint> const values)
@@ -2525,6 +2535,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcGetIntegerv)
 
 ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size,
     ALCint64SOFT *values) noexcept
@@ -2674,6 +2685,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcGetInteger64vSOFT)
 
 
 ALC_API auto ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extName) noexcept
@@ -2700,11 +2712,13 @@ try {
 catch(al::base_exception&) {
     return ALC_FALSE;
 }
+DefineAlcAlias(alcIsExtensionPresent)
 
 
 auto ALC_APIENTRY alcGetProcAddress2(ALCdevice *device, const ALCchar *funcName) noexcept
     -> ALCvoid*
 { return alcGetProcAddress(device, funcName); }
+DefineAlcAlias(alcGetProcAddress2)
 
 ALC_API auto ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcName) noexcept
     -> ALCvoid*
@@ -2734,6 +2748,7 @@ try {
 catch(al::base_exception&) {
     return nullptr;
 }
+DefineAlcAlias(alcGetProcAddress)
 
 
 ALC_API auto ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumName) noexcept
@@ -2763,6 +2778,7 @@ try {
 catch(al::base_exception&) {
     return 0;
 }
+DefineAlcAlias(alcGetEnumValue)
 
 
 ALC_API auto ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList) noexcept
@@ -2874,6 +2890,7 @@ catch(std::exception &e) {
     ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return nullptr;
 }
+DefineAlcAlias(alcCreateContext)
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
 {
@@ -2907,6 +2924,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
         device->mDeviceState = DeviceState::Configured;
     }
 }
+DefineAlcAlias(alcDestroyContext)
 
 
 ALC_API auto ALC_APIENTRY alcGetCurrentContext() noexcept -> ALCcontext*
@@ -2915,10 +2933,12 @@ ALC_API auto ALC_APIENTRY alcGetCurrentContext() noexcept -> ALCcontext*
     if(!Context) Context = al::Context::sGlobalContext.load();
     return Context;
 }
+DefineAlcAlias(alcGetCurrentContext)
 
 /** Returns the currently active thread-local context. */
 ALC_API auto ALC_APIENTRY alcGetThreadContext() noexcept -> ALCcontext*
 { return al::Context::getThreadContext(); }
+DefineAlcAlias(alcGetThreadContext)
 
 ALC_API auto ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) noexcept -> ALCboolean
 try {
@@ -2949,6 +2969,7 @@ try {
 catch(al::base_exception&) {
     return ALC_FALSE;
 }
+DefineAlcAlias(alcMakeContextCurrent)
 
 /** Makes the given context the active context for the current thread. */
 ALC_API auto ALC_APIENTRY alcSetThreadContext(ALCcontext *context) noexcept -> ALCboolean
@@ -2965,6 +2986,7 @@ try {
 catch(al::base_exception&) {
     return ALC_FALSE;
 }
+DefineAlcAlias(alcSetThreadContext)
 
 
 ALC_API auto ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context) noexcept -> ALCdevice*
@@ -2974,6 +2996,7 @@ try {
 catch(al::base_exception&) {
     return nullptr;
 }
+DefineAlcAlias(alcGetContextsDevice)
 
 
 ALC_API auto ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName) noexcept -> ALCdevice*
@@ -3093,6 +3116,7 @@ catch(std::exception &e) {
     ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return nullptr;
 }
+DefineAlcAlias(alcOpenDevice)
 
 ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboolean
 {
@@ -3149,6 +3173,7 @@ ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboole
 
     return ALC_TRUE;
 }
+DefineAlcAlias(alcCloseDevice)
 
 
 /************************************************
@@ -3246,6 +3271,7 @@ catch(std::exception &e) {
     ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return nullptr;
 }
+DefineAlcAlias(alcCaptureOpenDevice)
 
 ALC_API auto ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept -> ALCboolean
 {
@@ -3278,6 +3304,7 @@ ALC_API auto ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device) noexcept -> A
 
     return ALC_TRUE;
 }
+DefineAlcAlias(alcCaptureCloseDevice)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device) noexcept
 try {
@@ -3308,6 +3335,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcCaptureStart)
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device) noexcept
 try {
@@ -3326,6 +3354,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcCaptureStop)
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
     noexcept
@@ -3360,6 +3389,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcCaptureSamples)
 
 
 /************************************************
@@ -3435,6 +3465,7 @@ catch(std::exception &e) {
     ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return nullptr;
 }
+DefineAlcAlias(alcLoopbackOpenDeviceSOFT)
 
 /**
  * Determines if the loopback device supports the given format for rendering.
@@ -3459,6 +3490,7 @@ try {
 catch(al::base_exception&) {
     return ALC_FALSE;
 }
+DefineAlcAlias(alcIsRenderFormatSupportedSOFT)
 
 /**
  * Renders some samples into a buffer, using the format last set by the
@@ -3486,6 +3518,7 @@ ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffe
         return dev->setError(ALC_INVALID_VALUE);
     dev->renderSamples(buffer, gsl::narrow_cast<ALCuint>(samples), dev->channelsFromFmt());
 }
+DefineAlcAlias(alcRenderSamplesSOFT)
 
 
 /************************************************
@@ -3511,6 +3544,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcDevicePauseSOFT)
 
 /** Resume the DSP to restart audio processing. */
 ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device) noexcept
@@ -3558,6 +3592,7 @@ try {
 }
 catch(al::base_exception&) {
 }
+DefineAlcAlias(alcDeviceResumeSOFT)
 
 
 /************************************************
@@ -3588,6 +3623,7 @@ try {
 catch(al::base_exception&) {
     return nullptr;
 }
+DefineAlcAlias(alcGetStringiSOFT)
 
 /** Resets the given device output, using the specified attribute list. */
 ALC_API auto ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs) noexcept
@@ -3618,6 +3654,7 @@ try {
 catch(al::base_exception&) {
     return ALC_FALSE;
 }
+DefineAlcAlias(alcResetDeviceSOFT)
 
 
 /************************************************
@@ -3741,6 +3778,7 @@ catch(std::exception &e) {
     ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
     return ALC_FALSE;
 }
+DefineAlcAlias(alcReopenDeviceSOFT)
 
 /************************************************
  * ALC event query functions
@@ -3774,3 +3812,4 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum eventType, ALCenum
     al::Device::SetGlobalError(ALC_INVALID_ENUM);
     return ALC_FALSE;
 }
+DefineAlcAlias(alcEventIsSupportedSOFT)

@@ -8,6 +8,7 @@
 
 #include "alnumeric.h"
 #include "device.h"
+#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import gsl;
@@ -19,6 +20,12 @@ import logging;
 
 
 namespace {
+
+#if !defined(_WIN32) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
+#define DefineAlcAlias(X) extern "C" DECL_HIDDEN [[gnu::alias(#X)]] decltype(X) X##_;
+#else
+#define DefineAlcAlias(X)
+#endif
 
 using EventBitSet = al::bitset<alc::EventType>;
 auto gEventsEnabled = EventBitSet{0};
@@ -104,6 +111,7 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
     else gEventsEnabled &= ~eventSet;
     return ALC_TRUE;
 }
+DefineAlcAlias(alcEventControlSOFT)
 
 FORCE_ALIGN void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) noexcept
 {
@@ -111,3 +119,4 @@ FORCE_ALIGN void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback
     alc::EventCallback = callback;
     alc::EventUserPtr = userParam;
 }
+DefineAlcAlias(alcEventCallbackSOFT)

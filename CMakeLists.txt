@@ -497,14 +497,10 @@ if(NOT LIBTYPE STREQUAL "STATIC")
 
         check_c_source_compiles("int foo() __attribute__((visibility(\"protected\")));
                                 int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
-        if(HAVE_GCC_PROTECTED_VISIBILITY)
-            set(EXPORT_DECL "__attribute__((visibility(\"protected\")))")
-        else()
-            check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
-                                    int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
-            if(HAVE_GCC_DEFAULT_VISIBILITY)
-                set(EXPORT_DECL "__attribute__((visibility(\"default\")))")
-            endif()
+        check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
+                                int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
+        if(HAVE_GCC_DEFAULT_VISIBILITY)
+            set(EXPORT_DECL "__attribute__((visibility(\"default\")))")
         endif()
         if(HAVE_GCC_PROTECTED_VISIBILITY OR HAVE_GCC_DEFAULT_VISIBILITY)
             set(CMAKE_C_VISIBILITY_PRESET hidden)

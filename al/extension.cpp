@@ -56,6 +56,7 @@ AL_API auto AL_APIENTRY alGetProcAddress(const ALchar *funcName) noexcept -> ALv
     if(!funcName) return nullptr;
     return alcGetProcAddress(nullptr, funcName);
 }
+DefineFuncAlias(alGetProcAddress, ALvoid*, ALchar const*)
 
 FORCE_ALIGN auto AL_APIENTRY alGetProcAddressDirect(ALCcontext*, const ALchar *funcName) noexcept
     -> ALvoid*
@@ -63,12 +64,14 @@ FORCE_ALIGN auto AL_APIENTRY alGetProcAddressDirect(ALCcontext*, const ALchar *f
     if(!funcName) return nullptr;
     return alcGetProcAddress(nullptr, funcName);
 }
+DefineFuncAlias(alGetProcAddressDirect, ALvoid*, ALCcontext*, ALchar const*)
 
 AL_API auto AL_APIENTRY alGetEnumValue(const ALchar *enumName) noexcept -> ALenum
 {
     if(!enumName) return ALenum{0};
     return alcGetEnumValue(nullptr, enumName);
 }
+DefineFuncAlias(alGetEnumValue, ALenum, ALchar const*)
 
 FORCE_ALIGN auto AL_APIENTRY alGetEnumValueDirect(ALCcontext*, const ALchar *enumName) noexcept
     -> ALenum
@@ -76,3 +79,4 @@ FORCE_ALIGN auto AL_APIENTRY alGetEnumValueDirect(ALCcontext*, const ALchar *enu
     if(!enumName) return ALenum{0};
     return alcGetEnumValue(nullptr, enumName);
 }
+DefineFuncAlias(alGetEnumValueDirect, ALenum, ALCcontext*, ALchar const*)

@@ -563,10 +563,10 @@ inline constinit auto TrapALError = false;
 
 
 #if ALSOFT_EAX
-auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+extern "C" auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
 
-auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+extern "C" auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
     ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
 #endif // ALSOFT_EAX
 

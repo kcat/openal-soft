@@ -46,6 +46,9 @@
 /* Define to 1 if we have C++20 modules, else 0 */
 #cmakedefine01 HAVE_CXXMODULES
 
+/* Define to 1 to enable dynamic loading of optional libs, else 0 */
+#cmakedefine01 HAVE_DYNLOAD
+
 /* Define to 1 if we have DBus/RTKit, else 0 */
 #cmakedefine01 HAVE_RTKIT
 

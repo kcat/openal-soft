@@ -662,12 +662,17 @@ if(HAVE_LIBRT)
 endif()
 
 # Check for the dlopen API (for dynamically loading backend libs)
+set(HAVE_DYNLOAD 0)
 if(ALSOFT_DLOPEN)
     check_include_file(dlfcn.h HAVE_DLFCN_H)
     check_library_exists(dl dlopen "" HAVE_LIBDL)
     if(HAVE_LIBDL)
         list(APPEND EXTRA_LIBS dl)
         list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
+    endif()
+
+    if(HAVE_LIBDL OR WIN32)
+      set(HAVE_DYNLOAD 1)
     endif()
 endif()
 

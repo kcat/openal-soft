@@ -11,7 +11,7 @@
 
 namespace {
 
-auto EAXSet(gsl::not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXSet_(gsl::not_null<al::Context*> context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
@@ -23,7 +23,7 @@ catch(...) {
     return AL_INVALID_OPERATION;
 }
 
-auto EAXGet(gsl::not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXGet_(gsl::not_null<al::Context*> context, const GUID *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};

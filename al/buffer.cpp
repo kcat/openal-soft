@@ -734,7 +734,7 @@ auto DecomposeUserFormat(ALenum const format) noexcept -> std::optional<DecompRe
 }
 
 
-void alGenBuffers(gsl::not_null<al::Context*> const context, ALsizei const n,
+void alGenBuffers_(gsl::not_null<al::Context*> const context, ALsizei const n,
     ALuint *const buffers) noexcept
 try {
     if(n < 0)
@@ -757,7 +757,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alDeleteBuffers(gsl::not_null<al::Context*> const context, ALsizei const n,
+void alDeleteBuffers_(gsl::not_null<al::Context*> const context, ALsizei const n,
     const ALuint *const buffers) noexcept
 try {
     if(n < 0)
@@ -790,7 +790,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto alIsBuffer(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
+auto alIsBuffer_(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
     -> ALboolean
 {
     auto const device = al::get_not_null(context->mALDevice);
@@ -801,7 +801,7 @@ auto alIsBuffer(gsl::not_null<al::Context*> const context, ALuint const buffer) 
 }
 
 
-void alBufferStorageSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alBufferStorageSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, void const *const data, ALsizei const size, ALsizei const freq,
     ALbitfieldSOFT const flags) noexcept
 try {
@@ -835,13 +835,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alBufferData(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alBufferData_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, void const *const data, ALsizei const size, ALsizei const freq) noexcept
 {
-    alBufferStorageSOFT(context, buffer, format, data, size, freq, 0);
+    alBufferStorageSOFT_(context, buffer, format, data, size, freq, 0);
 }
 
-void alBufferDataStatic(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alBufferDataStatic_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, void *const data, ALsizei const size, ALsizei const freq) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -867,7 +867,7 @@ catch(std::exception &e) {
 }
 
 
-void alBufferCallbackSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alBufferCallbackSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, ALsizei const freq, ALBUFFERCALLBACKTYPESOFT const callback,
     void *const userptr) noexcept
 try {
@@ -893,7 +893,7 @@ catch(std::exception &e) {
 }
 
 
-void alBufferSubDataSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alBufferSubDataSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, void const *const data, ALsizei const offset, ALsizei const length)
     noexcept
 try {
@@ -951,7 +951,7 @@ catch(std::exception &e) {
 }
 
 
-auto alMapBufferSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+auto alMapBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALsizei const offset, ALsizei const length, ALbitfieldSOFT const access) noexcept -> void*
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1000,7 +1000,7 @@ catch(std::exception &e) {
     return nullptr;
 }
 
-void alUnmapBufferSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
+void alUnmapBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock = std::lock_guard{device->BufferLock};
@@ -1019,7 +1019,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFlushMappedBufferSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alFlushMappedBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALsizei const offset, ALsizei const length) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1049,7 +1049,7 @@ catch(std::exception &e) {
 }
 
 
-void alBufferf(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
+void alBufferf_(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
     float const value [[maybe_unused]]) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1066,8 +1066,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alBuffer3f(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
-    float const value1 [[maybe_unused]], float const value2 [[maybe_unused]],
+void alBuffer3f_(gsl::not_null<al::Context*> const context, ALuint const buffer,
+    ALenum const param, float const value1 [[maybe_unused]], float const value2 [[maybe_unused]],
     float const value3 [[maybe_unused]]) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1084,8 +1084,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alBufferfv(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
-    float const *const values) noexcept
+void alBufferfv_(gsl::not_null<al::Context*> const context, ALuint const buffer,
+    ALenum const param, float const *const values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
@@ -1104,7 +1104,7 @@ catch(std::exception &e) {
 }
 
 
-void alBufferi(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
+void alBufferi_(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
     ALint const value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1173,8 +1173,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alBuffer3i(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
-    ALint const value1 [[maybe_unused]], ALint const value2 [[maybe_unused]],
+void alBuffer3i_(gsl::not_null<al::Context*> const context, ALuint const buffer,
+    ALenum const param, ALint const value1 [[maybe_unused]], ALint const value2 [[maybe_unused]],
     ALint const value3 [[maybe_unused]]) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1191,8 +1191,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alBufferiv(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
-    ALint const *const values) noexcept
+void alBufferiv_(gsl::not_null<al::Context*> const context, ALuint const buffer,
+    ALenum const param, ALint const *const values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -1204,7 +1204,7 @@ try {
     case AL_AMBISONIC_LAYOUT_SOFT:
     case AL_AMBISONIC_SCALING_SOFT:
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        alBufferi(context, buffer, param, *values);
+        alBufferi_(context, buffer, param, *values);
         return;
     }
 
@@ -1239,7 +1239,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetBufferf(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferf_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float *const value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1266,7 +1266,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBuffer3f(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBuffer3f_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float *const value1, float *const value2, float *const value3) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1285,13 +1285,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBufferfv(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferfv_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float *const values) noexcept
 try {
     switch(param)
     {
     case AL_SEC_LENGTH_SOFT:
-        alGetBufferf(context, buffer, param, values);
+        alGetBufferf_(context, buffer, param, values);
         return;
     }
 
@@ -1312,7 +1312,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetBufferi(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferi_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint *const value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1385,7 +1385,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBuffer3i(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBuffer3i_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint *const value1, ALint *const value2, ALint *const value3) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1404,7 +1404,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBufferiv(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferiv_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint *const values) noexcept
 try {
     switch(param)
@@ -1421,7 +1421,7 @@ try {
     case AL_AMBISONIC_LAYOUT_SOFT:
     case AL_AMBISONIC_SCALING_SOFT:
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        alGetBufferi(context, buffer, param, values);
+        alGetBufferi_(context, buffer, param, values);
         return;
     }
 
@@ -1451,7 +1451,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetBufferPtrSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferPtrSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, void **const value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1481,7 +1481,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBuffer3PtrSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBuffer3PtrSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, void **const value1, void **const value2, void **const value3) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -1500,14 +1500,14 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetBufferPtrvSOFT(gsl::not_null<al::Context*> const context, ALuint const buffer,
+void alGetBufferPtrvSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, void **const values) noexcept
 try {
     switch(param)
     {
     case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
     case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
-        alGetBufferPtrSOFT(context, buffer, param, values);
+        alGetBufferPtrSOFT_(context, buffer, param, values);
         return;
     }
 
@@ -1529,7 +1529,7 @@ catch(std::exception &e) {
 
 
 #if ALSOFT_EAX
-auto EAXSetBufferMode(gsl::not_null<al::Context*> const context, ALsizei const n,
+auto EAXSetBufferMode_(gsl::not_null<al::Context*> const context, ALsizei const n,
     ALuint const *const buffers, ALint const value) noexcept -> ALboolean
 try {
     if(!eax_g_is_enabled)
@@ -1634,7 +1634,7 @@ catch(std::exception &e) {
     return AL_FALSE;
 }
 
-auto EAXGetBufferMode(gsl::not_null<al::Context*> const context, ALuint const buffer,
+auto EAXGetBufferMode_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALint *const pReserved) noexcept -> ALenum
 try {
     if(!eax_g_is_enabled)

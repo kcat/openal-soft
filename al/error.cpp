@@ -52,7 +52,7 @@ import logging;
 
 namespace {
 
-auto alGetError(gsl::not_null<al::Context*> context) noexcept -> ALenum
+auto alGetError_(gsl::not_null<al::Context*> context) noexcept -> ALenum
 {
     auto ret = context->mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
@@ -101,7 +101,7 @@ void al::Context::throw_error_impl(ALenum const errorCode, al::string_view const
 AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 {
     if(auto context = GetContextRef()) [[likely]]
-        return alGetError(gsl::make_not_null(context.get()));
+        return alGetError_(gsl::make_not_null(context.get()));
 
     static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
     {
@@ -135,10 +135,10 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     }
     return deferror;
 }
-DefineFuncAlias(alGetError, ALenum)
+DefineFuncAlias(alGetError)
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    return alGetError(al::verify_context(context));
+    return alGetError_(al::verify_context(context));
 }
-DefineFuncAlias(alGetErrorDirect, ALenum, ALCcontext*)
+DefineFuncAlias(alGetErrorDirect)

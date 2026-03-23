@@ -355,7 +355,7 @@ inline void UpdateProps(al::Context *context)
 }
 
 
-void alEnable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
+void alEnable_(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -379,7 +379,7 @@ void alEnable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
         as_unsigned(capability));
 }
 
-void alDisable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
+void alDisable_(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -403,7 +403,7 @@ void alDisable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
         as_unsigned(capability));
 }
 
-auto alIsEnabled(gsl::not_null<al::Context*> context, ALenum capability) noexcept -> ALboolean
+auto alIsEnabled_(gsl::not_null<al::Context*> context, ALenum capability) noexcept -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
     switch(capability)
@@ -419,7 +419,7 @@ auto alIsEnabled(gsl::not_null<al::Context*> context, ALenum capability) noexcep
 }
 
 
-auto alGetString(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> gsl::czstring
+auto alGetString_(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> gsl::czstring
 {
     switch(pname)
     {
@@ -450,7 +450,7 @@ auto alGetString(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> 
 }
 
 
-void alDopplerFactor(gsl::not_null<al::Context*> context, ALfloat value) noexcept
+void alDopplerFactor_(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -462,7 +462,7 @@ void alDopplerFactor(gsl::not_null<al::Context*> context, ALfloat value) noexcep
     }
 }
 
-void alSpeedOfSound(gsl::not_null<al::Context*> context, ALfloat value) noexcept
+void alSpeedOfSound_(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -474,7 +474,7 @@ void alSpeedOfSound(gsl::not_null<al::Context*> context, ALfloat value) noexcept
     }
 }
 
-void alDistanceModel(gsl::not_null<al::Context*> context, ALenum value) noexcept
+void alDistanceModel_(gsl::not_null<al::Context*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -489,7 +489,7 @@ void alDistanceModel(gsl::not_null<al::Context*> context, ALenum value) noexcept
 }
 
 
-auto alGetStringiSOFT(gsl::not_null<al::Context*> context, ALenum pname, ALsizei index) noexcept
+auto alGetStringiSOFT_(gsl::not_null<al::Context*> context, ALenum pname, ALsizei index) noexcept
     -> gsl::czstring
 {
     switch(pname)
@@ -506,13 +506,13 @@ auto alGetStringiSOFT(gsl::not_null<al::Context*> context, ALenum pname, ALsizei
 }
 
 
-void alDeferUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
+void alDeferUpdatesSOFT_(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void alProcessUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
+void alProcessUpdatesSOFT_(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();
@@ -544,7 +544,7 @@ DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
         GetValue(gsl::make_not_null(context.get()), pname, &value);           \
     return value;                                                             \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,ALenum)                                           \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
@@ -552,20 +552,20 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     GetValue(al::verify_context(context), pname, &value);                     \
     return value;                                                             \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,ALenum)                       \
+DefineFuncAlias(Name##Direct##Ext)                                            \
 DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(context) [[likely]]                                                    \
         GetValue(gsl::make_not_null(context.get()), pname, values);           \
 }                                                                             \
-DefineFuncAlias(Name##v##Ext,void,ALenum,R*)                                  \
+DefineFuncAlias(Name##v##Ext)                                                 \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
     GetValue(al::verify_context(context), pname, values);                     \
 }                                                                             \
-DefineFuncAlias(Name##v##Direct##Ext,void,ALCcontext*,ALenum,R*)
+DefineFuncAlias(Name##v##Direct##Ext)
 
 DECL_GETFUNC(AL_API, ALboolean, alGetBoolean,)
 DECL_GETFUNC(AL_API, ALdouble, alGetDouble,)
@@ -610,7 +610,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
         UpdateProps(context.get());
     }
 }
-DefineFuncAlias(alDopplerVelocity, void, ALfloat)
+DefineFuncAlias(alDopplerVelocity)
 
 
 void UpdateContextProps(al::Context *context)

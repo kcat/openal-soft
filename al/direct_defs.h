@@ -34,12 +34,9 @@ constexpr auto DefaultVal() noexcept -> T
 } // namespace detail_
 
 #if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
-#define DefineFuncAlias(X, R, ...) extern "C" DECL_HIDDEN [[gnu::alias(#X)]]  \
-    auto AL_APIENTRY X##_(__VA_ARGS__) noexcept -> R;
-
+#define DefineFuncAlias(Name) extern "C" DECL_HIDDEN [[gnu::alias(#Name)]] decltype(Name) Name##_;
 #else
-
-#define DefineFuncAlias(...)
+#define DefineFuncAlias(Name)
 #endif
 
 #define DECL_FUNC1(ATTR, R, Name, T1,n1)                                      \
@@ -47,75 +44,75 @@ ATTR auto AL_APIENTRY Name(T1 n1) noexcept -> R                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name(gsl::make_not_null(context.get()), n1);                       \
+    return Name##_(gsl::make_not_null(context.get()), n1);                    \
 }                                                                             \
-DefineFuncAlias(Name,R,T1)                                                    \
+DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1) noexcept\
     -> R                                                                      \
 {                                                                             \
-    return Name(al::verify_context(context), n1);                             \
+    return Name##_(al::verify_context(context), n1);                          \
 }                                                                             \
-DefineFuncAlias(Name##Direct,R,ALCcontext*,T1)
+DefineFuncAlias(Name##Direct)
 
 #define DECL_FUNC2(ATTR, R, Name, T1,n1, T2,n2)                               \
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                        \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name(gsl::make_not_null(context.get()), n1, n2);                   \
+    return Name##_(gsl::make_not_null(context.get()), n1, n2);                \
 }                                                                             \
-DefineFuncAlias(Name,R,T1,T2)                                                 \
+DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2)  \
     noexcept -> R                                                             \
 {                                                                             \
-    return Name(al::verify_context(context), n1, n2);                         \
+    return Name##_(al::verify_context(context), n1, n2);                      \
 }                                                                             \
-DefineFuncAlias(Name##Direct,R,ALCcontext*,T1,T2)
+DefineFuncAlias(Name##Direct)
 
 #define DECL_FUNC3(ATTR, R, Name, T1,n1, T2,n2, T3,n3)                        \
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                 \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name(gsl::make_not_null(context.get()), n1, n2, n3);               \
+    return Name##_(gsl::make_not_null(context.get()), n1, n2, n3);            \
 }                                                                             \
-DefineFuncAlias(Name,R,T1,T2,T3)                                              \
+DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3) noexcept -> R                                                      \
 {                                                                             \
-    return Name(al::verify_context(context), n1, n2, n3);                     \
+    return Name##_(al::verify_context(context), n1, n2, n3);                  \
 }                                                                             \
-DefineFuncAlias(Name##Direct,R,ALCcontext*,T1,T2,T3)
+DefineFuncAlias(Name##Direct)
 
 #define DECL_FUNC4(ATTR, R, Name, T1,n1, T2,n2, T3,n3, T4,n4)                 \
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name(gsl::make_not_null(context.get()), n1, n2, n3, n4);           \
+    return Name##_(gsl::make_not_null(context.get()), n1, n2, n3, n4);        \
 }                                                                             \
-DefineFuncAlias(Name,R,T1,T2,T3,T4)                                           \
+DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3, T4 n4) noexcept -> R                                               \
 {                                                                             \
-    return Name(al::verify_context(context), n1, n2, n3, n4);                 \
+    return Name##_(al::verify_context(context), n1, n2, n3, n4);              \
 }                                                                             \
-DefineFuncAlias(Name##Direct,R,ALCcontext*,T1,T2,T3,T4)
+DefineFuncAlias(Name##Direct)
 
 #define DECL_FUNC5(ATTR, R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)          \
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5);       \
+    return Name##_(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5);    \
 }                                                                             \
-DefineFuncAlias(Name,R,T1,T2,T3,T4,T5)                                        \
+DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3, T4 n4, T5 n5) noexcept -> R                                        \
 {                                                                             \
-    return Name(al::verify_context(context), n1, n2, n3, n4, n5);             \
+    return Name##_(al::verify_context(context), n1, n2, n3, n4, n5);          \
 }                                                                             \
-DefineFuncAlias(Name##Direct,R,ALCcontext*,T1,T2,T3,T4,T5)
+DefineFuncAlias(Name##Direct)
 
 #define DECL_FUNC_SELECTOR(ATTR, R, Name, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5, NAME, ...) NAME
 #define DECL_PASS(...) __VA_ARGS__
@@ -128,75 +125,75 @@ ATTR auto AL_APIENTRY Name##Ext() noexcept -> R                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()));                      \
+    return Name##Ext##_(gsl::make_not_null(context.get()));                   \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R)                                                  \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context) noexcept  \
     -> R                                                                      \
 {                                                                             \
-    return Name##Ext(al::verify_context(context));                            \
+    return Name##Ext##_(al::verify_context(context));                         \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT1(ATTR, R, Name,Ext, T1,n1)                               \
 ATTR auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                          \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1);                  \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1);               \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1)                                               \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1)    \
     noexcept -> R                                                             \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1);                        \
+    return Name##Ext##_(al::verify_context(context), n1);                     \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT2(ATTR, R, Name,Ext, T1,n1, T2,n2)                        \
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                   \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2);              \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2);           \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2)                                            \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2) noexcept -> R                                                      \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2);                    \
+    return Name##Ext##_(al::verify_context(context), n1, n2);                 \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT3(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3)                 \
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3) noexcept -> R            \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3);          \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2, n3);       \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2,T3)                                         \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3) noexcept -> R                                               \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2, n3);                \
+    return Name##Ext##_(al::verify_context(context), n1, n2, n3);             \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2,T3)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT4(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4)          \
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R     \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4);      \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2, n3, n4);   \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2,T3,T4)                                      \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4) noexcept -> R                                        \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2, n3, n4);            \
+    return Name##Ext##_(al::verify_context(context), n1, n2, n3, n4);         \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2,T3,T4)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT5(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5)   \
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept   \
@@ -204,15 +201,16 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept   \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5);  \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2, n3, n4,    \
+        n5);                                                                  \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2,T3,T4,T5)                                   \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R                                 \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2, n3, n4, n5);        \
+    return Name##Ext##_(al::verify_context(context), n1, n2, n3, n4, n5);     \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2,T3,T4,T5)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT6(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5,   \
     T6,n6) \
@@ -221,16 +219,16 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6)     \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,   \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,\
         n6);                                                                  \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2,T3,T4,T5,T6)                                \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept -> R                          \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2, n3, n4, n5, n6);    \
+    return Name##Ext##_(al::verify_context(context), n1, n2, n3, n4, n5, n6); \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2,T3,T4,T5,T6)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT8(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4, T5,n5,   \
     T6,n6, T7,n7, T8,n8)                                                      \
@@ -239,17 +237,17 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6,     \
 {                                                                             \
     auto const context = GetContextRef();                                     \
     if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
-    return Name##Ext(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,   \
+    return Name##Ext##_(gsl::make_not_null(context.get()), n1, n2, n3, n4, n5,\
         n6, n7, n8);                                                          \
 }                                                                             \
-DefineFuncAlias(Name##Ext,R,T1,T2,T3,T4,T5,T6,T7,T8)                          \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5, T6 n6, T7 n7, T8 n8) noexcept -> R            \
 {                                                                             \
-    return Name##Ext(al::verify_context(context), n1, n2, n3, n4, n5, n6, n7, \
-        n8);                                                                  \
+    return Name##Ext##_(al::verify_context(context), n1, n2, n3, n4, n5, n6,  \
+        n7, n8);                                                              \
 }                                                                             \
-DefineFuncAlias(Name##Direct##Ext,R,ALCcontext*,T1,T2,T3,T4,T5,T6,T7,T8)
+DefineFuncAlias(Name##Direct##Ext)
 
 #define DECL_FUNCEXT_SELECTOR(ATTR, R, Name,Ext, T1,n1, T2,n2, T3,n3, T4,n4,  \
     T5,n5, T6,n6, T7,n7, T8,n8, NAME, ...) NAME

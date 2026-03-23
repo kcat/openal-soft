@@ -368,7 +368,7 @@ auto LookupFilter(gsl::not_null<al::Context*> const context, ALuint const id)
 }
 
 
-void alGenFilters(gsl::not_null<al::Context*> context, ALsizei n, ALuint *filters) noexcept
+void alGenFilters_(gsl::not_null<al::Context*> context, ALsizei n, ALuint *filters) noexcept
 try {
     if(n < 0)
         context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
@@ -390,7 +390,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alDeleteFilters(gsl::not_null<al::Context*> context, ALsizei n, const ALuint *filters)
+void alDeleteFilters_(gsl::not_null<al::Context*> context, ALsizei n, const ALuint *filters)
     noexcept
 try {
     if(n < 0)
@@ -418,7 +418,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto alIsFilter(gsl::not_null<al::Context*> context, ALuint filter) noexcept -> ALboolean
+auto alIsFilter_(gsl::not_null<al::Context*> context, ALuint filter) noexcept -> ALboolean
 {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -428,7 +428,7 @@ auto alIsFilter(gsl::not_null<al::Context*> context, ALuint filter) noexcept -> 
 }
 
 
-void alFilteri(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint value)
+void alFilteri_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint value)
     noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -456,13 +456,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilteriv(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
+void alFilteriv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
     const ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alFilteri(context, filter, param, *values);
+        alFilteri_(context, filter, param, *values);
         return;
     }
 
@@ -481,7 +481,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilterf(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALfloat value)
+void alFilterf_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALfloat value)
     noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -499,7 +499,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilterfv(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
+void alFilterfv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
     const ALfloat *values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -517,7 +517,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilteri(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint *value)
+void alGetFilteri_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint *value)
     noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
@@ -540,13 +540,13 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilteriv(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint *values)
-    noexcept
+void alGetFilteriv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
+    ALint *values) noexcept
 try {
     switch(param)
     {
     case AL_FILTER_TYPE:
-        alGetFilteri(context, filter, param, values);
+        alGetFilteri_(context, filter, param, values);
         return;
     }
 
@@ -565,8 +565,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilterf(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALfloat *value)
-    noexcept
+void alGetFilterf_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
+    ALfloat *value) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);
     auto filterlock = std::lock_guard{device->FilterLock};
@@ -583,7 +583,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilterfv(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
+void alGetFilterfv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
     ALfloat *values) noexcept
 try {
     auto const device = al::get_not_null(context->mALDevice);

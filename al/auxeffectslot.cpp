@@ -1465,7 +1465,7 @@ auto eax_create_al_effect_slot(gsl::not_null<al::Context*> const context) -> Eax
         ERR(EAX_PREFIX "Out of memory.");
         return nullptr;
     }
-    if(!EnsureEffectSlots(context, 1))
+    if(!EnsureEffectSlots(context, 1u))
     {
         ERR(EAX_PREFIX "Failed to ensure.");
         return nullptr;

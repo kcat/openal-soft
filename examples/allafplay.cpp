@@ -202,12 +202,12 @@ auto BytesFromQuality(Quality const quality) noexcept -> usize
 {
     switch(quality)
     {
-    case Quality::s8: return 1;
-    case Quality::s16: return 2;
-    case Quality::f32: return 4;
-    case Quality::s24: return 3;
+    case Quality::s8: return 1u;
+    case Quality::s16: return 2u;
+    case Quality::f32: return 4u;
+    case Quality::s24: return 3u;
     }
-    return 4;
+    return 4u;
 }
 
 
@@ -348,7 +348,7 @@ struct LafStream {
     auto readChunk() -> u32;
 
     [[nodiscard]]
-    auto prepareTrack(usize trackidx, usize count) -> std::span<std::byte>;
+    auto prepareTrack(std::size_t trackidx, usize count) -> std::span<std::byte>;
 
     void convertSamples(std::span<std::byte> samples) const;
 
@@ -386,37 +386,37 @@ auto LafStream::readChunk() -> u32
      * enabled track. The last chunk may be shorter if there isn't enough time
      * remaining for a full second.
      */
-    auto const numsamples = gsl::narrow<usize>(std::min(mSampleRate.as<u64>(),
-        mSampleCount-mCurrentSample).c_val);
+    auto const numsamples = std::min(mSampleRate.as<u64>(), mSampleCount-mCurrentSample)
+        .cast_to<usize>();
 
     /* Choose the smaller of std::streamsize or isize, to ensure neither the
      * read size or range drop size get truncated.
      */
     using readsize_t = std::conditional_t<(sizeof(std::streamsize) > sizeof(isize)),isize::value_t,
         std::streamsize>;
-    const auto toread = gsl::narrow<readsize_t>(numsamples * BytesFromQuality(mQuality)
-        * mNumEnabled.c_val);
+    const auto toread = gsl::narrow<readsize_t>((numsamples * BytesFromQuality(mQuality)
+        * mNumEnabled).c_val);
     if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
-        const auto framesize = u64{BytesFromQuality(mQuality)} * mNumEnabled;
+        const auto framesize = BytesFromQuality(mQuality).as<u64>() * mNumEnabled;
         const auto samplesread = i64{infile.gcount()}.saturate_as<u64>() / framesize;
         mCurrentSample += samplesread;
         if(mSampleCount < ~0_u64)
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
                 mCurrentSample.c_val, mSampleCount.c_val);
         mSampleCount = mCurrentSample;
-        std::ranges::fill(mSampleChunk | std::views::drop(numsamples*framesize.c_val), char{});
+        std::ranges::fill(mSampleChunk | std::views::drop((numsamples*framesize).c_val), char{});
         return samplesread.cast_to<u32>();
     }
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});
 
-    mCurrentSample += u64{numsamples};
-    return u32::from(numsamples);
+    mCurrentSample += numsamples;
+    return numsamples.cast_to<u32>();
 }
 
-auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::span<std::byte>
+auto LafStream::prepareTrack(std::size_t const trackidx, usize const count) -> std::span<std::byte>
 {
-    auto const todo = std::min(usize{mSampleRate.c_val}, count);
+    auto const todo = std::min(mSampleRate.as<usize>(), count);
     if((mEnabledTracks[trackidx>>3] & (1_u8<<(trackidx&7))) != 0)
     {
         /* If the track is enabled, get the real index (skipping disabled
@@ -430,14 +430,14 @@ auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::sp
                 + (mEnabledTracks[trackidx>>3] & ((1_u8<<(trackidx&7))-1)).popcount();
         }).c_val;
 
-        auto const step = usize{mNumEnabled.c_val};
+        auto const step = mNumEnabled.as<usize>().c_val;
         Expects(idx < step);
         return std::visit([count,idx,step,src=std::span{mSampleChunk}]<typename T>(T &dst)
         {
             using sample_t = T::value_type;
             auto inptr = src.begin();
             std::advance(inptr, idx*SampleInfo<sample_t>::SrcSize);
-            auto output = std::span{dst}.first(count);
+            auto output = std::span{dst}.first(count.c_val);
             output.front() = SampleInfo<sample_t>::read(inptr);
             std::ranges::generate(output | std::views::drop(1), [&inptr,step]
             {
@@ -453,7 +453,7 @@ auto LafStream::prepareTrack(usize const trackidx, usize const count) -> std::sp
     {
         using sample_t = T::value_type;
         std::ranges::fill(dst, sample_t{});
-        return std::as_writable_bytes(std::span{dst}.first(todo));
+        return std::as_writable_bytes(std::span{dst}.first(todo.c_val));
     }, mSampleLine);
 }
 
@@ -597,7 +597,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         if(laf->mNumTracks < 2)
             throw std::runtime_error{"Not enough tracks"};
 
-        auto numchans = usize{laf->mNumTracks.c_val} - 1;
+        auto numchans = laf->mNumTracks.as<usize>().c_val - 1;
         auto numpostracks = 1_uz;
         while(numpostracks*16 < numchans)
         {
@@ -693,8 +693,8 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     std::ranges::generate(laf->mPosTracks, [length=laf->mSampleRate.c_val*2_uz]
     { return std::vector(length, 0.0_f32); });
 
-    laf->mSampleChunk.resize(laf->mSampleRate.c_val * BytesFromQuality(laf->mQuality)
-        * laf->mNumTracks.c_val);
+    laf->mSampleChunk.resize((laf->mSampleRate * BytesFromQuality(laf->mQuality)
+        * laf->mNumTracks).c_val);
     switch(laf->mQuality)
     {
     case Quality::s8: laf->mSampleLine.emplace<std::vector<i8>>(laf->mSampleRate.c_val); break;
@@ -840,7 +840,7 @@ try {
                     RenderSamples)};
             }
         });
-        auto const framesize = usize{chancount.c_val} * samplesize.c_val;
+        auto const framesize = (chancount.as<usize>() * samplesize).c_val;
         renderbuf.resize(framesize * FramesPerPos);
 
         if(i32{RenderSampleRate} != laf->mSampleRate)

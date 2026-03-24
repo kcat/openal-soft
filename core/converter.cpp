@@ -47,8 +47,8 @@ template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> floa
 
 
 template<DevFmtType T>
-void LoadSampleArray(std::span<float> const dst, void const *const src, usize const channel,
-    usize const srcstep) noexcept
+void LoadSampleArray(std::span<float> const dst, void const *const src, std::size_t const channel,
+    std::size_t const srcstep) noexcept
 {
     Expects(channel < srcstep);
     const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
@@ -62,8 +62,8 @@ void LoadSampleArray(std::span<float> const dst, void const *const src, usize co
     });
 }
 
-void LoadSamples(std::span<float> const dst, void const *const src, usize const channel,
-    usize const srcstep, DevFmtType const srctype) noexcept
+void LoadSamples(std::span<float> const dst, void const *const src, std::size_t const channel,
+    std::size_t const srcstep, DevFmtType const srctype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, channel, srcstep); break
@@ -102,8 +102,8 @@ template<> auto StoreSample<DevFmtUByte>(float const val) noexcept -> u8
 { return StoreSample<DevFmtByte>(val).reinterpret_as<u8>() + 128; }
 
 template<DevFmtType T>
-void StoreSampleArray(void *const dst, std::span<float const> const src, usize const channel,
-    usize const dststep) noexcept
+void StoreSampleArray(void *const dst, std::span<float const> const src, std::size_t const channel,
+    std::size_t const dststep) noexcept
 {
     Expects(channel < dststep);
     const auto dstspan = std::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
@@ -118,8 +118,8 @@ void StoreSampleArray(void *const dst, std::span<float const> const src, usize c
 }
 
 
-void StoreSamples(void *const dst, std::span<float const> const src, usize const channel,
-    usize const dststep, DevFmtType const dsttype) noexcept
+void StoreSamples(void *const dst, std::span<float const> const src, std::size_t const channel,
+    std::size_t const dststep, DevFmtType const dsttype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
     case T: StoreSampleArray<T>(dst, src, channel, dststep); break
@@ -147,7 +147,7 @@ void Mono2Stereo(std::span<float> const dst, void const *const src) noexcept
 }
 
 template<DevFmtType T>
-void Multi2Mono(unsigned chanmask, usize const step, std::span<float> const dst,
+void Multi2Mono(unsigned chanmask, std::size_t const step, std::span<float> const dst,
     void const *const src) noexcept
 {
     const auto scale = std::sqrt(1.0f / gsl::narrow_cast<float>(std::popcount(chanmask)));
@@ -174,7 +174,7 @@ void Multi2Mono(unsigned chanmask, usize const step, std::span<float> const dst,
 } // namespace
 
 auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
-    usize const numchans, unsigned const srcRate, unsigned const dstRate,
+    std::size_t const numchans, unsigned const srcRate, unsigned const dstRate,
     Resampler const resampler) -> SampleConverterPtr
 {
     auto converter = SampleConverterPtr{};
@@ -356,10 +356,10 @@ auto SampleConverter::convertPlanar(void const **const src, unsigned *const srcf
             for(const auto chan : std::views::iota(0_uz, mChan.size()))
             {
                 auto samples = std::span{static_cast<const std::byte*>(srcs[chan]),
-                    NumSrcSamples*usize{mSrcTypeSize}};
+                    NumSrcSamples*std::size_t{mSrcTypeSize}};
                 LoadSamples(std::span{mChan[chan].PrevSamples}.subspan(prepcount, readable),
                     samples.data(), 0, 1, mSrcType);
-                srcs[chan] = samples.subspan(usize{mSrcTypeSize}*readable).data();
+                srcs[chan] = samples.subspan(std::size_t{mSrcTypeSize}*readable).data();
             }
 
             mSrcPrepCount = prepcount + readable;
@@ -406,7 +406,7 @@ auto SampleConverter::convertPlanar(void const **const src, unsigned *const srcf
             mResample(&mState, SrcData, DataPosFrac, increment, DstData.first(DstSize));
 
             auto DstSamples = std::span{static_cast<std::byte*>(dsts[chan]),
-                usize{mDstTypeSize}*dstframes}.subspan(pos*usize{mDstTypeSize});
+                std::size_t{mDstTypeSize}*dstframes}.subspan(pos*std::size_t{mDstTypeSize});
             StoreSamples(DstSamples.data(), DstData.first(DstSize), 0, 1, mDstType);
         }
 
@@ -421,8 +421,8 @@ auto SampleConverter::convertPlanar(void const **const src, unsigned *const srcf
         std::ranges::for_each(srcs, [this,NumSrcSamples,srcread](void const *&srcref)
         {
             auto const srcspan = std::span{static_cast<std::byte const*>(srcref),
-                usize{mSrcTypeSize}*NumSrcSamples};
-            srcref = srcspan.subspan(usize{mSrcTypeSize}*srcread).data();
+                std::size_t{mSrcTypeSize}*NumSrcSamples};
+            srcref = srcspan.subspan(std::size_t{mSrcTypeSize}*srcread).data();
         });
         NumSrcSamples -= srcread;
 

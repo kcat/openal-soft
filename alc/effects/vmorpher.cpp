@@ -60,7 +60,7 @@ namespace {
 constexpr auto MaxUpdateSamples = 256_uz;
 constexpr auto NumFormants = 4_uz;
 constexpr auto RcpQFactor = 1.0f / 5.0f;
-enum : size_t {
+enum : std::size_t {
     VowelAIndex,
     VowelBIndex,
     NumFilters
@@ -268,7 +268,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, u8 const outchan, float const outgain)
     {
         mChans[idx].mTargetChannel = outchan.c_val;
         mChans[idx].mTargetGain = outgain;

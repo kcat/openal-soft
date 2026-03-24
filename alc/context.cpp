@@ -22,6 +22,7 @@
 #include "alc/alu.h"
 #include "alc/backends/base.h"
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/devformat.h"
@@ -151,9 +152,9 @@ Context::~Context()
     TRACE("Freeing context {}", voidp{this});
     deinit();
 
-    auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_uz,
-        [](usize const cur, SourceSubList const &sublist) noexcept -> size_t
-    { return cur + (~sublist.mFreeMask).popcount().c_val; });
+    auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_usize,
+        [](usize const cur, SourceSubList const &sublist) noexcept -> usize
+    { return cur + (~sublist.mFreeMask).popcount(); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -164,9 +165,9 @@ Context::~Context()
 #endif // ALSOFT_EAX
 
     mDefaultSlot = nullptr;
-    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_uz,
-        [](size_t cur, const EffectSlotSubList &sublist) noexcept -> size_t
-    { return cur + (~sublist.mFreeMask).popcount().c_val; });
+    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_usize,
+        [](usize const cur, const EffectSlotSubList &sublist) noexcept -> usize
+    { return cur + (~sublist.mFreeMask).popcount(); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();

@@ -309,7 +309,7 @@ struct PortCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     PaStream *mStream{nullptr};
     PaStreamParameters mParams{};
@@ -413,7 +413,7 @@ void PortCapture::stop()
 }
 
 
-auto PortCapture::availableSamples() -> usize
+auto PortCapture::availableSamples() -> std::size_t
 { return mRing->readSpace(); }
 
 void PortCapture::captureSamples(std::span<std::byte> const outbuffer)

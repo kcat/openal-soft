@@ -15,6 +15,7 @@
 #include "al/effect.h"
 #include "al/filter.h"
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "atomic.h"
 #include "backends/base.h"
 #include "core/devformat.h"
@@ -53,21 +54,21 @@ Device::~Device()
 
     Backend = nullptr;
 
-    auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_uz,
+    auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_usize,
         [](usize const cur, const BufferSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount().c_val; });
+        { return cur + (~sublist.mFreeMask).popcount(); });
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
-    count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_uz,
+    count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_usize,
         [](usize const cur, const EffectSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount().c_val; });
+        { return cur + (~sublist.mFreeMask).popcount(); });
     if(count > 0)
         WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
-    count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_uz,
+    count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_usize,
         [](usize const cur, const FilterSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount().c_val; });
+        { return cur + (~sublist.mFreeMask).popcount(); });
     if(count > 0)
         WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }

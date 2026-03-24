@@ -1,11 +1,12 @@
 #ifndef CORE_CONVERTER_H
 #define CORE_CONVERTER_H
 
+#include <cstddef>
+#include <cstdint>
 #include <chrono>
 #include <memory>
 
 #include "almalloc.h"
-#include "altypes.hpp"
 #include "devformat.h"
 #include "flexarray.h"
 #include "mixer/defs.h"
@@ -13,7 +14,7 @@
 
 
 class SampleConverter {
-    explicit SampleConverter(usize const numchans) : mChan{numchans} { }
+    explicit SampleConverter(std::size_t const numchans) : mChan{numchans} { }
 
 public:
     DevFmtType mSrcType{};
@@ -43,12 +44,13 @@ public:
     using SampleOffset = std::chrono::duration<std::int64_t, std::ratio<1,MixerFracOne>>;
     [[nodiscard]] auto currentInputDelay() const noexcept -> SampleOffset
     {
-        auto const prep = i64{mSrcPrepCount} - MaxResamplerEdge;
-        return SampleOffset{(prep<<MixerFracBits).c_val + mFracOffset};
+        auto const prep = std::int64_t{mSrcPrepCount} - MaxResamplerEdge;
+        return SampleOffset{(prep<<MixerFracBits) + mFracOffset};
     }
 
-    static auto Create(DevFmtType srcType, DevFmtType dstType, usize numchans, unsigned srcRate,
-        unsigned dstRate, Resampler resampler) -> std::unique_ptr<SampleConverter>;
+    static auto Create(DevFmtType srcType, DevFmtType dstType, std::size_t numchans,
+        unsigned srcRate, unsigned dstRate, Resampler resampler)
+        -> std::unique_ptr<SampleConverter>;
 
     DEF_FAM_NEWDEL(SampleConverter, mChan)
 };

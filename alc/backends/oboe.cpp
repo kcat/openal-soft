@@ -230,7 +230,7 @@ struct OboeCapture final : BackendBase, oboe::AudioStreamCallback {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 };
 
 auto OboeCapture::onAudioReady(oboe::AudioStream*, void *const audioData, int32_t const numFrames)
@@ -332,7 +332,7 @@ void OboeCapture::stop()
         ERR("Failed to stop stream: {}", oboe::convertToText(result));
 }
 
-auto OboeCapture::availableSamples() -> usize
+auto OboeCapture::availableSamples() -> std::size_t
 { return mRing->readSpace(); }
 
 void OboeCapture::captureSamples(std::span<std::byte> const outbuffer)

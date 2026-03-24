@@ -47,8 +47,8 @@ struct HrtfStore {
     void inc_ref() noexcept;
     void dec_ref() noexcept;
 
-    auto operator new(usize) -> void* = delete;
-    auto operator new[](usize) -> void* = delete;
+    auto operator new(std::size_t) -> void* = delete;
+    auto operator new[](std::size_t) -> void* = delete;
     void operator delete[](void*) noexcept = delete;
 
     void operator delete(gsl::owner<void*> block, void*) noexcept
@@ -82,7 +82,7 @@ struct AngularPoint {
 
 
 class DirectHrtfState {
-    explicit DirectHrtfState(usize const numchans) : mChannels{numchans} { }
+    explicit DirectHrtfState(std::size_t const numchans) : mChannels{numchans} { }
 
 public:
     std::array<float, BufferLineSize> mTemp{};
@@ -102,7 +102,7 @@ public:
         std::span<std::array<float, MaxAmbiChannels> const> AmbiMatrix, float XOverFreq,
         std::span<float const, MaxAmbiOrder+1> AmbiOrderHFGain);
 
-    static auto Create(usize num_chans) -> std::unique_ptr<DirectHrtfState>;
+    static auto Create(std::size_t num_chans) -> std::unique_ptr<DirectHrtfState>;
 
     DEF_FAM_NEWDEL(DirectHrtfState, mChannels)
 };

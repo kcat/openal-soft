@@ -183,7 +183,7 @@ std::string GetDeviceName(AudioDeviceID devId)
     {
         const CFIndex propSize{CFStringGetMaximumSizeForEncoding(CFStringGetLength(nameRef),
             kCFStringEncodingUTF8)};
-        devname.resize(gsl::narrow_cast<usize>(propSize)+1, '\0');
+        devname.resize(gsl::narrow_cast<std::size_t>(propSize)+1, '\0');
 
         CFStringGetCString(nameRef, &devname[0], propSize+1, kCFStringEncodingUTF8);
         CFRelease(nameRef);
@@ -239,7 +239,7 @@ auto GetDeviceChannelCount(AudioDeviceID devId, bool isCapture) -> UInt32
     }
 
     auto numChannels = UInt32{0};
-    for(usize i{0};i < buflist->mNumberBuffers;++i)
+    for(auto i=0_uz;i < buflist->mNumberBuffers;++i)
         numChannels += buflist->mBuffers[i].mNumberChannels;
     return numChannels;
 }
@@ -395,7 +395,7 @@ CoreAudioPlayback::~CoreAudioPlayback()
 OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32,
     UInt32, AudioBufferList *ioData) noexcept
 {
-    for(usize i{0};i < ioData->mNumberBuffers;++i)
+    for(auto i=0_uz;i < ioData->mNumberBuffers;++i)
     {
         auto &buffer = ioData->mBuffers[i];
         mDevice->renderSamples(buffer.mData, buffer.mDataByteSize/mFrameSize,
@@ -695,7 +695,7 @@ struct CoreAudioCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     AudioUnit mAudioUnit{0};
 
@@ -739,7 +739,8 @@ OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
         return err;
     }
 
-    std::ignore = mRing->write(std::span{mCaptureData}.first(inNumberFrames*usize{mFrameSize}));
+    std::ignore = mRing->write(std::span{mCaptureData}
+        .first(inNumberFrames*std::size_t{mFrameSize}));
     return noErr;
 }
 
@@ -1029,7 +1030,7 @@ void CoreAudioCapture::captureSamples(std::span<std::byte> outbuffer)
     mRing->readAdvance(total_read);
 }
 
-auto CoreAudioCapture::availableSamples() -> usize
+auto CoreAudioCapture::availableSamples() -> std::size_t
 {
     if(!mConverter) return mRing->readSpace();
     return mConverter->availableOut(gsl::narrow_cast<unsigned>(mRing->readSpace()));

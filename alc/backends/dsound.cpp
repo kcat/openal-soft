@@ -205,7 +205,7 @@ FORCE_ALIGN void DSoundPlayback::mixerProc() const
         return;
     }
 
-    auto const FrameStep = usize{mDevice->channelsFromFmt()};
+    auto const FrameStep = std::size_t{mDevice->channelsFromFmt()};
     auto const FrameSize = DWORD{mDevice->frameSizeFromFmt()};
     auto const FragSize = DWORD{mDevice->mUpdateSize} * FrameSize;
 
@@ -533,7 +533,7 @@ struct DSoundCapture final : BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     ComPtr<IDirectSoundCapture> mDSC;
     ComPtr<IDirectSoundCaptureBuffer> mDSCbuffer;
@@ -695,7 +695,7 @@ void DSoundCapture::stop()
 void DSoundCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto DSoundCapture::availableSamples() -> usize
+auto DSoundCapture::availableSamples() -> std::size_t
 {
     if(mDevice->Connected.load(std::memory_order_acquire))
     {

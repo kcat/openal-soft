@@ -702,7 +702,7 @@ struct PulsePlayback final : BackendBase {
 
     void bufferAttrCallback(pa_stream *stream) noexcept;
     void streamStateCallback(pa_stream *stream) const noexcept;
-    void streamWriteCallback(pa_stream *stream, usize nbytes) const noexcept;
+    void streamWriteCallback(pa_stream *stream, size_t nbytes) const noexcept;
     void sinkInfoCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void sinkNameCallback(pa_context *context, const pa_sink_info *info, int eol) noexcept;
     void streamMovedCallback(pa_stream *stream) noexcept;
@@ -751,7 +751,7 @@ void PulsePlayback::streamStateCallback(pa_stream *const stream) const noexcept
     mMainloop.signal();
 }
 
-void PulsePlayback::streamWriteCallback(pa_stream *const stream, usize nbytes) const noexcept
+void PulsePlayback::streamWriteCallback(pa_stream *const stream, size_t nbytes) const noexcept
 {
     do {
         auto free_func = pa_free_cb_t{nullptr};
@@ -1075,7 +1075,7 @@ void PulsePlayback::start()
         pa_stream_write(mStream, buf, todo, pa_xfree, 0, PA_SEEK_RELATIVE);
     }
 
-    static constexpr auto stream_write = [](pa_stream *const stream, usize const nbytes,
+    static constexpr auto stream_write = [](pa_stream *const stream, size_t const nbytes,
         void *const pdata) noexcept
     { return static_cast<PulsePlayback*>(pdata)->streamWriteCallback(stream, nbytes); };
     pa_stream_set_write_callback(mStream, stream_write, this);
@@ -1141,7 +1141,7 @@ struct PulseCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
     auto getClockLatency() -> ClockLatency override;
 
     PulseMainloop mMainloop;
@@ -1149,10 +1149,10 @@ struct PulseCapture final : public BackendBase {
     std::optional<std::string> mDeviceId{std::nullopt};
 
     std::span<const std::byte> mCapBuffer;
-    usize mHoleLength{0};
-    usize mPacketLength{0};
+    std::size_t mHoleLength{0};
+    std::size_t mPacketLength{0};
 
-    usize mLastReadable{0};
+    std::size_t mLastReadable{0};
     std::byte mSilentVal{};
 
     pa_buffer_attr mAttr{};
@@ -1363,7 +1363,7 @@ void PulseCapture::captureSamples(std::span<std::byte> outbuffer)
         }
 
         auto *capbuf = cvoidp{};
-        auto caplen = usize{};
+        auto caplen = size_t{};
         if(pa_stream_peek(mStream, &capbuf, &caplen) < 0) [[unlikely]]
         {
             mDevice->handleDisconnect("Failed retrieving capture samples: {}",
@@ -1383,7 +1383,7 @@ void PulseCapture::captureSamples(std::span<std::byte> outbuffer)
         std::ranges::fill(outbuffer, mSilentVal);
 }
 
-auto PulseCapture::availableSamples() -> usize
+auto PulseCapture::availableSamples() -> std::size_t
 {
     auto readable = std::max(mCapBuffer.size(), mHoleLength);
 

@@ -120,10 +120,10 @@ struct UhjDecoder {
 
     alignas(16) std::array<float, BufferLineSize + sFilterDelay*2> mTemp{};
 
-    void decode(std::span<float const> InSamples, usize InChannels,
-        std::span<FloatBufferLine> OutSamples, usize SamplesToDo);
+    void decode(std::span<float const> InSamples, std::size_t InChannels,
+        std::span<FloatBufferLine> OutSamples, std::size_t SamplesToDo);
     void decode2(std::span<float const> InSamples,
-        std::span<FloatBufferLine> OutSamples, usize SamplesToDo);
+        std::span<FloatBufferLine> OutSamples, std::size_t SamplesToDo);
 };
 
 auto const &PShift = gPShifter<UhjDecoder::sFilterDelay*2>;
@@ -202,8 +202,8 @@ auto const &PShift = gPShifter<UhjDecoder::sFilterDelay*2>;
  *
  * Not halving produces a result matching the original input.
  */
-void UhjDecoder::decode(std::span<float const> const InSamples, usize const InChannels,
-    std::span<FloatBufferLine> const OutSamples, usize const SamplesToDo)
+void UhjDecoder::decode(std::span<float const> const InSamples, std::size_t const InChannels,
+    std::span<FloatBufferLine> const OutSamples, std::size_t const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -300,7 +300,7 @@ void UhjDecoder::decode(std::span<float const> const InSamples, usize const InCh
  * halving here is merely a -6dB reduction in output, but it's still incorrect.
  */
 void UhjDecoder::decode2(std::span<float const> const InSamples,
-    std::span<FloatBufferLine> const OutSamples, usize const SamplesToDo)
+    std::span<FloatBufferLine> const OutSamples, std::size_t const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -457,17 +457,17 @@ auto main(std::span<std::string_view> args) -> int
         const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(usize{BufferLineSize} * inchannels.c_val);
+        auto inmem = std::vector<float>(std::size_t{BufferLineSize} * inchannels.c_val);
         auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans.c_val);
-        auto outmem = std::vector<char>(usize{BufferLineSize}*outchans.c_val*sizeof(float));
+        auto outmem = std::vector<char>(std::size_t{BufferLineSize}*outchans.c_val*sizeof(float));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
          * be fed through the decoder after reaching the end of the input file
          * to ensure none of the original input is lost.
          */
-        auto LeadIn = usize{UhjDecoder::sFilterDelay};
-        auto LeadOut = usize{UhjDecoder::sFilterDelay};
+        auto LeadIn = std::size_t{UhjDecoder::sFilterDelay};
+        auto LeadOut = std::size_t{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
             auto got = al::saturate_cast<std::size_t>(sf_readf_float(infile.get(), inmem.data(),

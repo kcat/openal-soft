@@ -88,7 +88,7 @@ SndioPlayback::~SndioPlayback()
 
 void SndioPlayback::mixerProc()
 {
-    auto const frameStep = usize{mFrameStep};
+    auto const frameStep = std::size_t{mFrameStep};
     auto const frameSize = frameStep * mDevice->bytesFromFmt();
 
     SetRTPriority();
@@ -236,7 +236,7 @@ auto SndioPlayback::reset() -> bool
     mDevice->mUpdateSize = par.round;
     mDevice->mBufferSize = par.bufsz + par.round;
 
-    mBuffer.resize(usize{mDevice->mUpdateSize} * par.pchan*par.bps);
+    mBuffer.resize(std::size_t{mDevice->mUpdateSize} * par.pchan*par.bps);
 
     return true;
 }
@@ -284,7 +284,7 @@ struct SndioCapture final : BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     sio_hdl *mSndHandle{nullptr};
 
@@ -453,7 +453,8 @@ void SndioCapture::open(std::string_view name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, usize{par.bps}*par.rchan, false);
+    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, std::size_t{par.bps}*par.rchan,
+        false);
     mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 
@@ -491,7 +492,7 @@ void SndioCapture::stop()
 void SndioCapture::captureSamples(std::span<std::byte> const outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto SndioCapture::availableSamples() -> usize
+auto SndioCapture::availableSamples() -> std::size_t
 { return mRing->readSpace(); }
 
 } // namespace

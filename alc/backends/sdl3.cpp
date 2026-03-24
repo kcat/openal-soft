@@ -22,6 +22,7 @@
 
 #include "sdl3.h"
 
+#include <cstddef>
 #include <cstring>
 #include <span>
 #include <string>
@@ -42,7 +43,7 @@ std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 namespace {
 constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
 } /* namespace */
-DIAGNOSTIC_POP
+DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
 import logging;
@@ -326,7 +327,7 @@ auto Sdl3Backend::reset() -> bool
         mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
         mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
 
-        mBuffer.resize(usize{mDevice->mUpdateSize} * mFrameSize);
+        mBuffer.resize(std::size_t{mDevice->mUpdateSize} * mFrameSize);
         std::ranges::fill(mBuffer, mDevice->FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});
     }
     else

@@ -281,7 +281,7 @@ constexpr auto Order4Enc2D = std::array{
 static_assert(Order4Dec2D.size() == Order4Enc2D.size(), "Fourth-order 2D mismatch");
 
 
-template<usize N, usize M>
+template<std::size_t N, std::size_t M>
 constexpr auto CalcAmbiUpsampler(const std::array<std::array<float, N>, M> &decoder,
     const std::array<AmbiChannelFloatArray, M> &encoder) noexcept
 {

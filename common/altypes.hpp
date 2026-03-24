@@ -24,6 +24,7 @@ struct u64;
 struct f32;
 struct f64;
 struct isize;
+struct usize;
 
 namespace al {
 
@@ -906,7 +907,7 @@ DECL_NUMBERTYPE(f32, float)
 DECL_NUMBERTYPE(f64, double)
 
 DECL_NUMBERTYPE(isize, std::make_signed_t<std::size_t>);
-using usize = std::size_t;
+DECL_NUMBERTYPE(usize, std::size_t);
 #undef DECL_NUMBERTYPE
 
 namespace al {
@@ -939,6 +940,8 @@ template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT
 template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
 template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
 template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
+template<typename CharT> struct al::formatter<isize, CharT> : isize::formatter<CharT> { };
+template<typename CharT> struct al::formatter<usize, CharT> : usize::formatter<CharT> { };
 
 [[nodiscard]] consteval
 auto operator ""_i8(unsigned long long const n) noexcept { return i8::from(n); }
@@ -967,6 +970,8 @@ auto operator ""_f64(long double const n) noexcept { return f64::from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_isize(unsigned long long const n) noexcept { return isize::from(n); }
+[[nodiscard]] consteval
+auto operator ""_usize(unsigned long long const n) noexcept { return usize::from(n); }
 
 [[nodiscard]] consteval
 auto operator ""_z(unsigned long long const n) noexcept
@@ -1023,13 +1028,18 @@ template<> struct common_type<f32, u32> { using type = f64; };
 template<> struct common_type<i32, f32> { using type = f64; };
 template<> struct common_type<u32, f32> { using type = f64; };
 
-/* Declare the common type between strong integer types where isize (and later
- * usize) is the appropriate result type.
+/* Declare the common type between strong integer types where isize or usize is
+ * the appropriate result type.
  */
 template<al::strong_integral T> requires(sizeof(T) < sizeof(isize) or std::same_as<T, isize>)
 struct common_type<isize, T> { using type = isize; };
 template<al::strong_integral T> requires(sizeof(T) < sizeof(isize))
 struct common_type<T, isize> { using type = isize; };
+
+template<al::strong_integral T> requires(sizeof(T) < sizeof(usize) or std::same_as<T, usize>)
+struct common_type<usize, T> { using type = usize; };
+template<al::strong_integral T> requires(sizeof(T) < sizeof(usize))
+struct common_type<T, usize> { using type = usize; };
 
 /* Declare the common type between a strong and weak number type, ensuring the
  * appropriate strong number type is provided.

@@ -797,7 +797,7 @@ void AlsaPlayback::start()
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         auto const datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
-        mBuffer.resize(gsl::narrow<usize>(datalen));
+        mBuffer.resize(gsl::narrow<std::size_t>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
@@ -854,7 +854,7 @@ struct AlsaCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
     auto getClockLatency() -> ClockLatency override;
 
     snd_pcm_t *mPcmHandle{nullptr};
@@ -989,7 +989,7 @@ void AlsaCapture::stop()
          */
         auto const savail = al::saturate_cast<snd_pcm_sframes_t>(avail);
         auto const numbytes = snd_pcm_frames_to_bytes(mPcmHandle, savail);
-        auto temp = std::vector<std::byte>(al::saturate_cast<usize>(numbytes));
+        auto temp = std::vector<std::byte>(al::saturate_cast<std::size_t>(numbytes));
         captureSamples(temp);
         mBuffer = std::move(temp);
     }
@@ -1060,7 +1060,7 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
         std::ranges::fill(outbuffer, (mDevice->FmtType==DevFmtUByte)?std::byte{0x80}:std::byte{0});
 }
 
-auto AlsaCapture::availableSamples() -> usize
+auto AlsaCapture::availableSamples() -> std::size_t
 {
     auto avail = snd_pcm_sframes_t{0};
     if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
@@ -1089,7 +1089,7 @@ auto AlsaCapture::availableSamples() -> usize
         avail = std::max<snd_pcm_sframes_t>(avail, 0);
         avail += snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         mLastAvail = std::max(mLastAvail, avail);
-        return gsl::narrow_cast<usize>(mLastAvail);
+        return gsl::narrow_cast<std::size_t>(mLastAvail);
     }
 
     while(avail > 0)

@@ -271,9 +271,9 @@ auto EnsureEffectSlots(gsl::not_null<al::Context*> const context, usize const ne
     -> bool
 try {
     auto count = std::accumulate(context->mEffectSlotList.cbegin(),
-        context->mEffectSlotList.cend(), 0_uz,
+        context->mEffectSlotList.cend(), 0_usize,
         [](usize const cur, const EffectSlotSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount().c_val; });
+        { return cur + sublist.mFreeMask.popcount(); });
 
     while(needed > count)
     {

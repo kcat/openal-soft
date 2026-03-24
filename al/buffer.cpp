@@ -184,9 +184,9 @@ constexpr auto INVALID_MAP_FLAGS = ~gsl::narrow<ALbitfieldSOFT>(AL_MAP_READ_BIT_
 [[nodiscard]]
 auto EnsureBuffers(gsl::not_null<al::Device*> const device, usize const needed) noexcept -> bool
 try {
-    auto count = std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_uz,
+    auto count = std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_usize,
         [](usize const cur, const BufferSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount().c_val; });
+        { return cur + sublist.mFreeMask.popcount(); });
 
     while(needed > count)
     {
@@ -350,7 +350,7 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
     if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
-    if(blocks > std::numeric_limits<usize>::max()/bytesPerBlock)
+    if(blocks > usize::max()/bytesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
@@ -364,7 +364,7 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
     }
 #endif
 
-    auto const newsize = usize{blocks} * bytesPerBlock;
+    auto const newsize = std::size_t{blocks} * bytesPerBlock;
     auto const needRealloc = std::visit([ALBuf,DstType,newsize,access]<typename T>(T &datavec)
         -> bool
     {
@@ -566,7 +566,7 @@ void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
     if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
-    if(blocks > std::numeric_limits<usize>::max()/bytesPerBlock)
+    if(blocks > usize::max()/bytesPerBlock)
         context->throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
@@ -926,15 +926,15 @@ try {
         (albuf->mType == FmtMSADPCM) ? ((align-2u)/2u + 7u) * num_chans :
         (align * albuf->bytesFromFmt() * num_chans);
 
-    if(offset < 0 || length < 0 || gsl::narrow_cast<usize>(offset) > albuf->mOriginalSize
-        || gsl::narrow_cast<usize>(length) > albuf->mOriginalSize - gsl::narrow_cast<usize>(offset))
+    if(offset < 0 || length < 0 || usize::from(offset) > albuf->mOriginalSize
+        || usize::from(length) > albuf->mOriginalSize - usize::from(offset))
         context->throw_error(AL_INVALID_VALUE, "Invalid data sub-range {}+{} on buffer {}", offset,
             length, buffer);
-    if((gsl::narrow_cast<usize>(offset)%byte_align) != 0)
+    if((usize::from(offset)%byte_align) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Sub-range offset {} is not a multiple of frame size {} ({} unpack alignment)",
             offset, byte_align, align);
-    if((gsl::narrow_cast<usize>(length)%byte_align) != 0)
+    if((usize::from(length)%byte_align) != 0)
         context->throw_error(AL_INVALID_VALUE,
             "Sub-range length {} is not a multiple of frame size {} ({} unpack alignment)",
             length, byte_align, align);
@@ -980,12 +980,12 @@ try {
     if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
         context->throw_error(AL_INVALID_VALUE,
             "Mapping buffer {} persistently without persistent access", buffer);
-    if(offset < 0 || length <= 0 || gsl::narrow_cast<usize>(offset) >= albuf->mOriginalSize
-        || gsl::narrow_cast<usize>(length) > albuf->mOriginalSize - gsl::narrow_cast<usize>(offset))
+    if(offset < 0 || length <= 0 || usize::from(offset) >= albuf->mOriginalSize
+        || usize::from(length) > albuf->mOriginalSize - usize::from(offset))
         context->throw_error(AL_INVALID_VALUE, "Mapping invalid range {}+{} for buffer {}", offset,
             length, buffer);
 
-    auto *const retval = std::visit([ptroff=gsl::narrow_cast<usize>(offset)](auto &datavec)
+    auto *const retval = std::visit([ptroff=gsl::narrow<std::size_t>(offset)](auto &datavec)
     { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf->mData);
     albuf->mMappedAccess = access;
     albuf->mMappedOffset = offset;
@@ -1602,7 +1602,7 @@ try {
         {
             if(!buffer->mEaxXRamIsHardware)
             {
-                if(std::numeric_limits<usize>::max() - buffer->mOriginalSize < total_needed)
+                if(usize::max() - buffer->mOriginalSize < total_needed)
                     context->throw_error(AL_OUT_OF_MEMORY, "Size overflow ({} + {})",
                         buffer->mOriginalSize, total_needed);
 

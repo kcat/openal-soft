@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <span>
 #include <variant>
 
@@ -191,7 +192,7 @@ void Resample_Cubic_SSE4(InterpState const *const state, std::span<float const> 
 
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment,filter]
         {
-            auto const pi = usize{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+            auto const pi = std::size_t{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
             auto const pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)
                 * (1.0f/CubicPhaseDiffOne);
             auto const pf4 = _mm_set1_ps(pf);

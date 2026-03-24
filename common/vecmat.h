@@ -3,10 +3,10 @@
 
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 #include <span>
 
-#include "altypes.hpp"
 #include "opthelpers.h"
 
 
@@ -27,9 +27,9 @@ public:
     constexpr auto operator=(Vector&&) & noexcept LIFETIMEBOUND -> Vector& = default;
 
     [[nodiscard]] constexpr
-    auto operator[](usize const idx) noexcept LIFETIMEBOUND -> float& { return mVals[idx]; }
+    auto operator[](std::size_t const idx) noexcept LIFETIMEBOUND -> float& { return mVals[idx]; }
     [[nodiscard]] constexpr
-    auto operator[](usize const idx) const noexcept LIFETIMEBOUND -> float const&
+    auto operator[](std::size_t const idx) const noexcept LIFETIMEBOUND -> float const&
     { return mVals[idx]; }
 
     constexpr auto operator+=(const Vector &rhs) & noexcept -> Vector&
@@ -95,9 +95,9 @@ public:
     constexpr auto operator=(const Matrix&) & noexcept LIFETIMEBOUND -> Matrix& = default;
     constexpr auto operator=(Matrix&&) & noexcept LIFETIMEBOUND -> Matrix& = default;
 
-    [[nodiscard]] constexpr auto operator[](usize const idx) noexcept LIFETIMEBOUND
+    [[nodiscard]] constexpr auto operator[](std::size_t const idx) noexcept LIFETIMEBOUND
     { return std::span<float, 4>{&mVals[idx*4], 4}; }
-    [[nodiscard]] constexpr auto operator[](usize const idx) const noexcept LIFETIMEBOUND
+    [[nodiscard]] constexpr auto operator[](std::size_t const idx) const noexcept LIFETIMEBOUND
     { return std::span<float const, 4>{&mVals[idx*4], 4}; }
 
     [[nodiscard]] static constexpr auto Identity() noexcept -> Matrix

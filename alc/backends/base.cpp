@@ -26,7 +26,7 @@ auto BackendBase::reset() -> bool
 void BackendBase::captureSamples(std::span<std::byte> outbuffer [[maybe_unused]])
 { }
 
-auto BackendBase::availableSamples() -> usize
+auto BackendBase::availableSamples() -> std::size_t
 { return 0_uz; }
 
 auto BackendBase::getClockLatency() -> ClockLatency

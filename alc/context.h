@@ -472,7 +472,7 @@ private:
      * value, and updates a dirty flag.
      */
     template<typename TValidator>
-    void eax_defer(const EaxCall &call, auto &state, usize const dirty_bit, auto member)
+    void eax_defer(const EaxCall &call, auto &state, std::size_t const dirty_bit, auto member)
     {
         static_assert(std::invocable<decltype(member), decltype(state.i)>);
         using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
@@ -487,7 +487,7 @@ private:
     }
 
     void eax_context_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
-        usize const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
+        std::size_t const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
         if(mEaxDf.test(dirty_bit))
         {

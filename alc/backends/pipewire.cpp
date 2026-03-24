@@ -115,9 +115,9 @@ constexpr auto get_pod_type(const spa_pod *pod) noexcept
 { return SPA_POD_TYPE(pod); }
 
 template<typename T>
-constexpr auto get_pod_body(spa_pod const *const pod, usize const count) noexcept
+constexpr auto get_pod_body(spa_pod const *const pod, std::size_t const count) noexcept
 { return std::span<T>{static_cast<T*>(SPA_POD_BODY(pod)), count}; }
-template<typename T, usize N>
+template<typename T, std::size_t N>
 constexpr auto get_pod_body(spa_pod const *const pod) noexcept
 { return std::span<T,N>{static_cast<T*>(SPA_POD_BODY(pod)), N}; }
 
@@ -382,7 +382,7 @@ auto pwire_load() -> bool
 #if PW_CHECK_VERSION(0,3,50)
 #define pw_stream_get_time_n ppw_stream_get_time_n
 #else
-inline auto pw_stream_get_time_n(pw_stream *stream, pw_time *ptime, usize /*size*/)
+inline auto pw_stream_get_time_n(pw_stream *stream, pw_time *ptime, size_t /*size*/)
 { return ppw_stream_get_time(stream, ptime); }
 #endif
 #endif
@@ -520,7 +520,7 @@ public:
 
     auto signal(bool const wait) const { return pw_thread_loop_signal(mLoop, wait); }
 
-    auto newContext(pw_properties *const props=nullptr, usize const user_data_size=0) const
+    auto newContext(pw_properties *const props=nullptr, std::size_t const user_data_size=0) const
     { return PwContextPtr{pw_context_new(getLoop(), props, user_data_size)}; }
 
     static auto Create(gsl::czstring const name, spa_dict *const props=nullptr)
@@ -1519,7 +1519,7 @@ void PipeWirePlayback::outputCallback() noexcept
     if(!pw_buf) [[unlikely]] return;
 
     auto const datas = std::span{pw_buf->buffer->datas,
-        std::min(mChannelPtrs.size(), usize{pw_buf->buffer->n_datas})};
+        std::min(mChannelPtrs.size(), std::size_t{pw_buf->buffer->n_datas})};
 #if PW_CHECK_VERSION(0,3,49)
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.
@@ -1970,7 +1970,7 @@ class PipeWireCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     u64 mTargetId{PwIdAny};
     ThreadMainloop mLoop;
@@ -2223,7 +2223,7 @@ void PipeWireCapture::stop()
     { return pw_stream_get_state(stream, nullptr) != PW_STREAM_STATE_STREAMING; });
 }
 
-auto PipeWireCapture::availableSamples() -> usize
+auto PipeWireCapture::availableSamples() -> std::size_t
 { return mRing->readSpace(); }
 
 void PipeWireCapture::captureSamples(std::span<std::byte> const outbuffer)

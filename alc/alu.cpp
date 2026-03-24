@@ -116,8 +116,8 @@ auto NfcScale = 1.0f;
 
 using HrtfDirectMixerFunc = void(*)(FloatBufferSpan LeftOut, FloatBufferSpan RightOut,
     std::span<FloatBufferLine const> InSamples, std::span<f32x2> AccumSamples,
-    std::span<float, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState, usize IrSize,
-    usize SamplesToDo);
+    std::span<float, BufferLineSize> TempBuf, std::span<HrtfChannelState> ChanState,
+    std::size_t IrSize, std::size_t SamplesToDo);
 
 constinit auto MixDirectHrtf = HrtfDirectMixerFunc{MixDirectHrtf_C};
 
@@ -139,7 +139,7 @@ auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 
 void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable const *const table)
 {
-    auto si = usize{BSincScaleCount - 1};
+    auto si = std::size_t{BSincScaleCount - 1};
     auto sf = 0.0_f32;
 
     if(increment > MixerFracOne)
@@ -279,12 +279,12 @@ auto PrepareResampler(Resampler const resampler, unsigned const increment,
 }
 
 
-void DeviceBase::Process(AmbiDecPostProcess const &proc, usize const SamplesToDo) const
+void DeviceBase::Process(AmbiDecPostProcess const &proc, std::size_t const SamplesToDo) const
 {
     proc.mAmbiDecoder->process(RealOut.Buffer, Dry.Buffer, SamplesToDo);
 }
 
-void DeviceBase::Process(HrtfPostProcess const &proc, usize const SamplesToDo)
+void DeviceBase::Process(HrtfPostProcess const &proc, std::size_t const SamplesToDo)
 {
     /* HRTF is stereo output only. */
     auto const lidx = RealOut.ChannelIndex[FrontLeft];
@@ -295,7 +295,7 @@ void DeviceBase::Process(HrtfPostProcess const &proc, usize const SamplesToDo)
         proc.mHrtfState->mIrSize, SamplesToDo);
 }
 
-void DeviceBase::Process(UhjPostProcess const &proc, usize const SamplesToDo)
+void DeviceBase::Process(UhjPostProcess const &proc, std::size_t const SamplesToDo)
 {
     /* UHJ is stereo output only. */
     auto const lidx = RealOut.ChannelIndex[FrontLeft];
@@ -309,7 +309,7 @@ void DeviceBase::Process(UhjPostProcess const &proc, usize const SamplesToDo)
             std::span{Dry.Buffer[2]}.first(SamplesToDo)}});
 }
 
-void DeviceBase::Process(TsmePostProcess const &proc, usize const SamplesToDo)
+void DeviceBase::Process(TsmePostProcess const &proc, std::size_t const SamplesToDo)
 {
     /* TSME is stereo output only. */
     auto const lidx = RealOut.ChannelIndex[FrontLeft];
@@ -324,12 +324,12 @@ void DeviceBase::Process(TsmePostProcess const &proc, usize const SamplesToDo)
             std::span{Dry.Buffer[3]}.first(SamplesToDo)}});
 }
 
-void DeviceBase::Process(StablizerPostProcess const &proc, usize const SamplesToDo)
+void DeviceBase::Process(StablizerPostProcess const &proc, std::size_t const SamplesToDo)
 {
     /* Decode with front image stabilization. */
-    auto const lidx = usize{RealOut.ChannelIndex[FrontLeft].c_val};
-    auto const ridx = usize{RealOut.ChannelIndex[FrontRight].c_val};
-    auto const cidx = usize{RealOut.ChannelIndex[FrontCenter].c_val};
+    auto const lidx = std::size_t{RealOut.ChannelIndex[FrontLeft].c_val};
+    auto const ridx = std::size_t{RealOut.ChannelIndex[FrontRight].c_val};
+    auto const cidx = std::size_t{RealOut.ChannelIndex[FrontCenter].c_val};
 
     /* Move the existing direct L/R signal out so it doesn't get processed by
      * the stabilizer.
@@ -402,7 +402,7 @@ void DeviceBase::Process(StablizerPostProcess const &proc, usize const SamplesTo
     }
 }
 
-void DeviceBase::Process(Bs2bPostProcess const &proc, usize const SamplesToDo)
+void DeviceBase::Process(Bs2bPostProcess const &proc, std::size_t const SamplesToDo)
 {
     /* BS2B is stereo output only. */
     auto const lidx = RealOut.ChannelIndex[FrontLeft];
@@ -456,7 +456,7 @@ void UpsampleBFormatTransform(
     std::span<std::array<float, MaxAmbiChannels>,MaxAmbiChannels> const output,
     std::span<std::array<float, MaxAmbiChannels> const> const upsampler,
     std::span<std::array<float, MaxAmbiChannels> const,MaxAmbiChannels> const rotator,
-    usize const ambi_order)
+    std::size_t const ambi_order)
 {
     auto const num_chans = AmbiChannelsFromOrder(ambi_order);
     std::ranges::fill(output | std::views::take(upsampler.size()) | std::views::join, 0.0f);
@@ -726,7 +726,7 @@ auto ScaleAzimuthFront3_2(std::array<float, 3> pos) -> std::array<float, 3>
  * followed by the third-order coefficients, etc.
  */
 [[nodiscard]]
-constexpr auto CalcRotatorSize(usize const l) noexcept -> usize
+constexpr auto CalcRotatorSize(std::size_t const l) noexcept -> std::size_t
 {
     if(l >= 2)
         return (l*2 + 1)*(l*2 + 1) + CalcRotatorSize(l-1);
@@ -802,18 +802,18 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
     static constexpr auto P = [](isize const i, isize const l, isize const a, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
-        auto const ip2 = gsl::narrow_cast<usize>((i+2_z).c_val);
+        auto const ip2 = (i+2_z).reinterpret_as<usize>().c_val;
         auto const ri1 =  R[ 1+2][ip2];
         auto const rim1 = R[-1+2][ip2];
         auto const ri0 =  R[ 0+2][ip2];
 
-        auto const lm1 = gsl::narrow_cast<usize>((l-1_z).c_val);
-        auto const x = last_base + lm1 + gsl::narrow_cast<usize>(a.c_val);
+        auto const lm1 = (l-1_z).reinterpret_as<usize>().c_val;
+        auto const x = (last_base + lm1 + a.reinterpret_as<usize>()).c_val;
         if(n == -l)
-            return ri1*R[last_base][x] + rim1*R[last_base + lm1*2][x];
+            return ri1*R[last_base.c_val][x] + rim1*R[last_base.c_val + lm1*2][x];
         if(n == l)
-            return ri1*R[last_base + lm1*2][x] - rim1*R[last_base][x];
-        return ri0*R[last_base + lm1 + gsl::narrow_cast<usize>(n.c_val)][x];
+            return ri1*R[last_base.c_val + lm1*2][x] - rim1*R[last_base.c_val][x];
+        return ri0*R[(last_base + lm1 + n.reinterpret_as<usize>()).c_val][x];
     };
 
     static constexpr auto U = [](isize const l, isize const m, isize const n,
@@ -881,7 +881,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
             ++y;
         }
         last_base = base_idx;
-        base_idx += gsl::narrow_cast<usize>(l.c_val)*2_uz + 1;
+        base_idx += (l*2 + 1).reinterpret_as<usize>().c_val;
     }
 }
 /* End ambisonic rotation helpers. */
@@ -1049,7 +1049,7 @@ void CalcAmbisonicPanning(Voice *const voice, float const xpos, float const ypos
 
     for(const auto c : std::views::iota(0_uz, index_map.size()))
     {
-        auto const acn = usize{index_map[c].c_val};
+        auto const acn = std::size_t{index_map[c].c_val};
         auto const scale = scales[acn] * coverage;
 
         /* For channel 0, combine the B-Format signal (scaled according to the
@@ -2256,7 +2256,7 @@ void ProcessContexts(DeviceBase const *const device, unsigned const SamplesToDo)
 }
 
 
-void ApplyDistanceComp(std::span<FloatBufferLine> const Samples, usize const SamplesToDo,
+void ApplyDistanceComp(std::span<FloatBufferLine> const Samples, std::size_t const SamplesToDo,
     std::span<DistanceComp::ChanData const, MaxOutputChannels> const chandata)
 {
     ASSUME(SamplesToDo > 0);
@@ -2290,7 +2290,7 @@ void ApplyDistanceComp(std::span<FloatBufferLine> const Samples, usize const Sam
 }
 
 void ApplyDither(std::span<FloatBufferLine> const Samples, unsigned *const dither_seed,
-    float const quant_scale, usize const SamplesToDo)
+    float const quant_scale, std::size_t const SamplesToDo)
 {
     static constexpr auto invRNGRange = 1.0 / std::numeric_limits<unsigned>::max();
     ASSUME(SamplesToDo > 0);
@@ -2344,7 +2344,7 @@ template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u8
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffer,
-    usize const Offset, usize const SamplesToDo, usize const FrameStep)
+    std::size_t const Offset, std::size_t const SamplesToDo, std::size_t const FrameStep)
 {
     ASSUME(FrameStep > 0);
     ASSUME(SamplesToDo > 0);
@@ -2375,7 +2375,7 @@ void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffe
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, std::span<void*const> const OutBuffers,
-    usize const Offset, usize const SamplesToDo)
+    std::size_t const Offset, std::size_t const SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -2462,7 +2462,7 @@ void DeviceBase::renderSamples(std::span<void*const> const outBuffers, unsigned 
 }
 
 void DeviceBase::renderSamples(void *const outBuffer, unsigned const numSamples,
-    usize const frameStep)
+    std::size_t const frameStep)
 {
     auto mixer_mode = FPUCtl{};
     auto total = 0u;

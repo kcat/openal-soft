@@ -27,6 +27,7 @@
 #include <bit>
 #include <cerrno>
 #include <chrono>
+#include <cstddef>
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -154,8 +155,8 @@ void WaveBackend::mixerProc()
 
     althrd_setname(GetMixerThreadName());
 
-    auto const frameStep = usize{mDevice->channelsFromFmt()};
-    auto const frameSize = usize{mDevice->frameSizeFromFmt()};
+    auto const frameStep = std::size_t{mDevice->channelsFromFmt()};
+    auto const frameSize = std::size_t{mDevice->frameSizeFromFmt()};
 
     auto done = 0_i64;
     auto start = std::chrono::steady_clock::now();
@@ -445,7 +446,7 @@ auto WaveBackend::reset() -> bool
 
     setDefaultWFXChannelOrder();
 
-    mBuffer.resize(usize{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
+    mBuffer.resize(std::size_t{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
 
     return true;
 }

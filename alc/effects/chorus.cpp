@@ -138,7 +138,8 @@ void ChorusState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
     static constexpr auto MaxDelay = std::max(ChorusMaxDelay, FlangerMaxDelay);
     const auto frequency = static_cast<float>(device->mSampleRate);
 
-    const auto maxlen = usize{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)} * NumLines;
+    const auto maxlen = std::size_t{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)}
+        * NumLines;
     if(maxlen != mDelayBuffers.size())
         decltype(mDelayBuffers)(maxlen).swap(mDelayBuffers);
     std::ranges::fill(mDelayBuffers, 0.0f);
@@ -223,7 +224,7 @@ void ChorusState::update(const ContextBase *context, const EffectSlotBase *slot,
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, u8 const outchan, float const outgain)
     {
         if(idx < mChans.size())
         {

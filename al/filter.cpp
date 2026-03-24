@@ -287,9 +287,9 @@ void InitFilterParams(gsl::not_null<al::Filter*> const filter, ALenum const type
 [[nodiscard]]
 auto EnsureFilters(gsl::not_null<al::Device*> const device, usize const needed) noexcept -> bool
 try {
-    auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_uz,
+    auto count = std::accumulate(device->FilterList.cbegin(), device->FilterList.cend(), 0_usize,
         [](usize const cur, const FilterSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount().c_val; });
+        { return cur + sublist.mFreeMask.popcount(); });
 
     while(needed > count)
     {

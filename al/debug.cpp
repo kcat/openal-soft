@@ -208,7 +208,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null message pointer");
 
     const auto msgview = (length < 0) ? std::string_view{message}
-        : std::string_view{message, gsl::narrow_cast<usize>(length)};
+        : std::string_view{message, gsl::narrow<std::size_t>(length)};
     if(msgview.size() >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", msgview.size(),
             MaxDebugMessageLength);
@@ -367,7 +367,7 @@ try {
         context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
 
     context->mDebugGroups.emplace_back(*dsource, id,
-        std::string_view{message, gsl::narrow_cast<usize>(length)});
+        std::string_view{message, gsl::narrow<std::size_t>(length)});
     auto &oldback = *(context->mDebugGroups.end()-2);
     auto &newback = context->mDebugGroups.back();
 
@@ -506,7 +506,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null label pointer");
 
     auto objname = (length < 0) ? std::string_view{label}
-        : std::string_view{label, gsl::narrow_cast<usize>(length)};
+        : std::string_view{label, gsl::narrow<std::size_t>(length)};
     if(objname.size() >= MaxObjectLabelLength)
         context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
             objname.size(), MaxObjectLabelLength);

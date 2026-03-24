@@ -17,12 +17,12 @@ DeviceBase::DeviceBase(DeviceType type)
 
 DeviceBase::~DeviceBase() = default;
 
-auto DeviceBase::removeContext(ContextBase *context) -> size_t
+auto DeviceBase::removeContext(ContextBase *context) -> usize
 {
     auto oldarray = std::span{*mContexts.load(std::memory_order_acquire)};
     if(const auto toremove = std::ranges::count(oldarray, context))
     {
-        const auto newsize = oldarray.size() - gsl::narrow_cast<size_t>(toremove);
+        const auto newsize = oldarray.size() - gsl::narrow_cast<std::size_t>(toremove);
         auto newarray = ContextArray::Create(newsize);
 
         /* Copy the current/old context handles to the new array, excluding the

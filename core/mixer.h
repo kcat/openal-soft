@@ -3,9 +3,9 @@
 
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <span>
 
-#include "alnumeric.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "opthelpers.h"
@@ -13,29 +13,29 @@
 struct MixParams;
 
 void Mix_C(std::span<float const> InSamples, std::span<FloatBufferLine> OutBuffer,
-    std::span<float> CurrentGains, std::span<float const> TargetGains, usize Counter,
-    usize OutPos);
+    std::span<float> CurrentGains, std::span<float const> TargetGains, std::size_t Counter,
+    std::size_t OutPos);
 void Mix_C(std::span<float const> InSamples, std::span<float> OutBuffer, float &CurrentGain,
-    float TargetGain, usize Counter);
+    float TargetGain, std::size_t Counter);
 
 /* Mixer functions that handle one input and multiple output channels. */
 using MixerOutFunc = void(*)(std::span<float const> InSamples,
     std::span<FloatBufferLine> OutBuffer, std::span<float> CurrentGains,
-    std::span<float const> TargetGains, usize Counter, usize OutPos);
+    std::span<float const> TargetGains, std::size_t Counter, std::size_t OutPos);
 
 inline constinit auto MixSamplesOut = MixerOutFunc{Mix_C};
 inline void MixSamples(std::span<float const> const InSamples,
     std::span<FloatBufferLine> const OutBuffer, std::span<float> const CurrentGains,
-    std::span<float const> const TargetGains, usize const Counter, usize const OutPos)
+    std::span<float const> const TargetGains, std::size_t const Counter, std::size_t const OutPos)
 { MixSamplesOut(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos); }
 
 /* Mixer functions that handle one input and one output channel. */
 using MixerOneFunc = void(*)(std::span<float const> InSamples, std::span<float> OutBuffer,
-    float &CurrentGain, float TargetGain, usize Counter);
+    float &CurrentGain, float TargetGain, std::size_t Counter);
 
 inline constinit auto MixSamplesOne = MixerOneFunc{Mix_C};
 inline void MixSamples(std::span<float const> const InSamples, std::span<float> const OutBuffer,
-    float &CurrentGain, float const TargetGain, usize const Counter)
+    float &CurrentGain, float const TargetGain, std::size_t const Counter)
 { MixSamplesOne(InSamples, OutBuffer, CurrentGain, TargetGain, Counter); }
 
 
@@ -108,7 +108,7 @@ inline auto CalcAngleCoeffs(const float azimuth, const float elevation, const fl
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
-    const float ingain, const std::span<float,MaxAmbiChannels> gains);
+void ComputePanGains(const MixParams *mix, std::span<float const, MaxAmbiChannels> coeffs,
+    float ingain, std::span<float, MaxAmbiChannels> gains);
 
 #endif /* CORE_MIXER_H */

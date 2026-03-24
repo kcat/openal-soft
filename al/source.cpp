@@ -730,9 +730,9 @@ auto GetSourceState(gsl::not_null<al::Source*> const source, Voice const *const 
 
 auto EnsureSources(gsl::not_null<al::Context*> const context, usize const needed) -> bool
 {
-    auto count = std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(), 0_uz,
-        [](usize const cur, const SourceSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount().c_val; });
+    auto count = std::accumulate(context->mSourceList.cbegin(), context->mSourceList.cend(),
+        0_usize, [](usize const cur, const SourceSubList &sublist) noexcept -> usize
+        { return cur + sublist.mFreeMask.popcount(); });
 
     try {
         while(needed > count)
@@ -783,7 +783,7 @@ void FreeSource(gsl::not_null<al::Context*> const context, gsl::not_null<al::Sou
     context->mSourceNames.erase(source->mId);
 
     auto const id = source->mId - 1;
-    auto const lidx = usize{id >> 6};
+    auto const lidx = std::size_t{id >> 6};
     auto const slidx = id & 0x3f;
 
     if(auto *const voice = GetSourceVoice(source, context))
@@ -838,7 +838,7 @@ auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device,
 
     if(lidx >= device->BufferList.size()) [[unlikely]]
         return nullptr;
-    auto &sublist = device->BufferList[gsl::narrow_cast<usize>(lidx)];
+    auto &sublist = device->BufferList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mBuffers->begin(),
@@ -863,7 +863,7 @@ auto LookupFilter(std::nothrow_t, gsl::not_null<al::Device*> const device,
 
     if(lidx >= device->FilterList.size()) [[unlikely]]
         return nullptr;
-    auto &sublist = device->FilterList[gsl::narrow_cast<usize>(lidx)];
+    auto &sublist = device->FilterList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mFilters->begin(),
@@ -888,7 +888,7 @@ auto LookupEffectSlot(std::nothrow_t, gsl::not_null<al::Context*> const context,
 
     if(lidx >= context->mEffectSlotList.size()) [[unlikely]]
         return nullptr;
-    auto &sublist = context->mEffectSlotList[gsl::narrow_cast<usize>(lidx)];
+    auto &sublist = context->mEffectSlotList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mEffectSlots->begin(),
@@ -1464,12 +1464,12 @@ struct PairStruct { T First; U Second; };
 template<typename T, typename U>
 PairStruct(T, U) -> PairStruct<T, U>;
 
-template<typename T, usize N>
+template<typename T, std::size_t N>
 auto GetCheckers(gsl::not_null<al::Context*> const context, SourceProp const prop,
     std::span<T,N> const values)
 {
     return PairStruct{
-        [=](usize const expect) -> void
+        [=](std::size_t const expect) -> void
         {
             if(values.size() == expect) return;
             context->throw_error(AL_INVALID_ENUM, "Property {:#04x} expects {} value{}, got {}",
@@ -1999,7 +1999,7 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
 
             if(sendidx >= device->NumAuxSends)
                 Context->throw_error(AL_INVALID_VALUE, "Invalid send {}", sendidx);
-            auto &send = Source->mSend[gsl::narrow_cast<usize>(sendidx)];
+            auto &send = Source->mSend[gsl::narrow_cast<std::size_t>(sendidx)];
 
             if(filterid)
             {
@@ -2048,11 +2048,11 @@ void SetProperty(const gsl::not_null<al::Source*> Source,
 }
 
 
-template<typename T, usize N>
+template<typename T, std::size_t N>
 auto GetSizeChecker(gsl::not_null<al::Context*> const context, SourceProp const prop,
     std::span<T,N> const values)
 {
-    return [=](usize const expect) -> void
+    return [=](std::size_t const expect) -> void
     {
         if(values.size() == expect) [[likely]] return;
         context->throw_error(AL_INVALID_ENUM, "Property {:#04x} expects {} value{}, got {}",
@@ -3518,7 +3518,7 @@ try {
         /* A buffer failed (invalid ID or format), or there was some other
          * unexpected error, so release the buffers we had.
          */
-        source->mQueue.resize(gsl::narrow_cast<usize>(NewListStart));
+        source->mQueue.resize(gsl::narrow_cast<std::size_t>(NewListStart));
         throw;
     }
     /* All buffers good. */
@@ -3556,7 +3556,7 @@ try {
 
     /* Make sure enough buffers have been processed to unqueue. */
     const auto bids = std::views::counted(buffers, nb);
-    auto processed = 0_uz;
+    auto processed = 0_usize;
     if(source->mState != AL_INITIAL) [[likely]]
     {
         const auto Current = std::invoke([source,context]() -> const VoiceBufferItem*
@@ -3567,7 +3567,7 @@ try {
         });
         const auto qiter = std::ranges::find(source->mQueue, Current,
             [](al::BufferQueueItem const &item) { return &item; });
-        processed = gsl::narrow_cast<usize>(std::distance(source->mQueue.begin(), qiter));
+        processed = isize{std::distance(source->mQueue.begin(), qiter)}.reinterpret_as<usize>();
     }
     if(processed < bids.size())
         context->throw_error(AL_INVALID_VALUE, "Unqueueing {} buffer{} (only {} processed)",
@@ -3576,7 +3576,7 @@ try {
     std::ranges::generate(bids, [source]() noexcept -> ALuint
     {
         auto bid = 0u;
-        if(auto *buffer = source->mQueue.front().mBuffer.get())
+        if(auto const *const buffer = source->mQueue.front().mBuffer.get())
             bid = buffer->mId;
         source->mQueue.pop_front();
         return bid;
@@ -3750,7 +3750,7 @@ void al::Source::eax_fail_unknown_receiving_fx_slot_id() {eax_fail("Unknown rece
 
 void al::Source::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) noexcept
 {
-    for(auto const i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
+    for(auto const i : std::views::iota(0_uz, std::size_t{EAX_MAX_FXSLOTS}))
     {
         auto& send = sends[i];
         send.guidReceivingFXSlotID = *(ids[i]);
@@ -3863,7 +3863,7 @@ void al::Source::eax5_set_active_fx_slots_defaults(EAX50ACTIVEFXSLOTS& slots) no
 
 void al::Source::eax5_set_speaker_levels_defaults(EaxSpeakerLevels& speaker_levels) noexcept
 {
-    for(auto const i : std::views::iota(0_uz, usize{eax_max_speakers}))
+    for(auto const i : std::views::iota(0_uz, std::size_t{eax_max_speakers}))
     {
         auto& speaker_level = speaker_levels[i];
         speaker_level.lSpeakerID = gsl::narrow_cast<eax_long>(EAXSPEAKER_FRONT_LEFT + i);
@@ -3968,7 +3968,7 @@ void al::Source::eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept
     //
     dst.sends = src.sends;
 
-    for(auto const i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
+    for(auto const i : std::views::iota(0_uz, std::size_t{EAX_MAX_FXSLOTS}))
         dst.sends[i].guidReceivingFXSlotID = *(eax5_fx_slot_ids[i]);
 
     // Active FX slots.
@@ -4018,7 +4018,7 @@ auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPass
         * source.mObstruction.flObstructionLFRatio;
     auto gainhf_mb = gsl::narrow_cast<float>(source.mObstruction.lObstruction);
 
-    for(const auto i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
+    for(const auto i : std::views::iota(0_uz, std::size_t{EAX_MAX_FXSLOTS}))
     {
         if(!mEaxActiveFxSlots.test(i))
             continue;
@@ -4123,7 +4123,7 @@ void al::Source::eax_update_direct_filter()
 
 void al::Source::eax_update_room_filters()
 {
-    for(const auto i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
+    for(const auto i : std::views::iota(0_uz, std::size_t{EAX_MAX_FXSLOTS}))
     {
         if(!mEaxActiveFxSlots.test(i))
             continue;
@@ -4444,7 +4444,7 @@ void al::Source::eax5_defer_speaker_levels(const EaxCall& call, EaxSpeakerLevels
 
     for(const auto &value : values)
     {
-        const auto index = gsl::narrow_cast<usize>(value.lSpeakerID - EAXSPEAKER_FRONT_LEFT);
+        const auto index = gsl::narrow_cast<std::size_t>(value.lSpeakerID-EAXSPEAKER_FRONT_LEFT);
         props[index].lLevel = value.lLevel;
     }
 }
@@ -4774,7 +4774,7 @@ void al::Source::eax_get(const EaxCall &call) const
 }
 
 void al::Source::eax_set_al_source_send(al::intrusive_ptr<al::EffectSlot> slot,
-    usize const sendidx, const EaxAlLowPassParam &filter)
+    std::size_t const sendidx, const EaxAlLowPassParam &filter)
 {
     if(sendidx >= EAX_MAX_FXSLOTS)
         return;
@@ -4819,7 +4819,7 @@ void al::Source::eax_commit_active_fx_slots()
 
     // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
     // will be updated with the room filters.
-    for(const auto i : std::views::iota(0_uz, usize{EAX_MAX_FXSLOTS}))
+    for(const auto i : std::views::iota(0_uz, std::size_t{EAX_MAX_FXSLOTS}))
     {
         if(!mEaxActiveFxSlots.test(i))
             eax_set_al_source_send({}, i, EaxAlLowPassParam{1.0f, 1.0f});

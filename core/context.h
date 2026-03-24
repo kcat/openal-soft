@@ -119,9 +119,9 @@ struct ContextBase {
 
     using VoiceArray = al::FlexArray<Voice*>;
     al::atomic_unique_ptr<VoiceArray> mVoices;
-    std::atomic<usize> mActiveVoiceCount;
+    std::atomic<std::size_t> mActiveVoiceCount;
 
-    void allocVoices(usize addcount);
+    void allocVoices(std::size_t addcount);
     [[nodiscard]] auto getVoicesSpan() const noexcept LIFETIMEBOUND -> std::span<Voice*>
     {
         return {mVoices.load(std::memory_order_relaxed)->data(),

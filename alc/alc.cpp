@@ -1677,7 +1677,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     case DevFmtAmbi3D: break;
     }
 
-    auto sample_delay = 0_uz;
+    auto sample_delay = 0_usize;
     if(auto *uhjenc = std::get_if<UhjPostProcess>(&device->mPostProcess))
         sample_delay += uhjenc->mUhjEncoder->getDelay();
 
@@ -1770,8 +1770,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     }
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
-    sample_delay = std::min(sample_delay, usize{std::numeric_limits<int>::max()});
-    device->FixedLatency += nanoseconds{seconds{sample_delay}} / device->mSampleRate;
+    sample_delay = std::min(sample_delay, i32::max().as<usize>());
+    device->FixedLatency += nanoseconds{seconds{sample_delay.c_val}} / device->mSampleRate;
     TRACE("Fixed device latency: {}ns", device->FixedLatency.count());
 
     auto mixer_mode = FPUCtl{};
@@ -2203,7 +2203,7 @@ DefineAlcAlias(alcGetString)
 
 namespace {
 auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint> const values)
-    -> usize
+    -> std::size_t
 {
     Expects(!values.empty());
 
@@ -3385,7 +3385,7 @@ try {
     }
 
     backend->captureSamples(std::span{static_cast<std::byte*>(buffer),
-        usize{usamples}*dev->frameSizeFromFmt()});
+        std::size_t{usamples}*dev->frameSizeFromFmt()});
 }
 catch(al::base_exception&) {
 }

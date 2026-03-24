@@ -145,9 +145,9 @@ void InitEffectParams(al::Effect *const effect, ALenum const type) noexcept
 [[nodiscard]]
 auto EnsureEffects(gsl::not_null<al::Device*> const device, usize const needed) noexcept -> bool
 try {
-    auto count = std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_uz,
+    auto count = std::accumulate(device->EffectList.cbegin(), device->EffectList.cend(), 0_usize,
         [](usize const cur, const EffectSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount().c_val; });
+        { return cur + sublist.mFreeMask.popcount(); });
 
     while(needed > count)
     {

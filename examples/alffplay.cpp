@@ -2134,6 +2134,83 @@ auto PrettyTime(seconds t) -> std::string
     return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
 }
 
+
+struct Application {
+    std::span<std::string_view> mArgs;
+
+    using ALMgrHandle = std::invoke_result_t<decltype(InitAL), std::span<std::string_view>&,
+        ALCint const*>;
+    std::optional<ALMgrHandle> mALManager;
+
+    SDL_Window *mWindow{};
+    SDL_Renderer *mRenderer{};
+
+    enum class EomAction : bool {
+        Next, Quit
+    };
+    EomAction mEomAction{EomAction::Next};
+
+    std::chrono::seconds mLastTime{std::chrono::seconds::min()};
+
+    std::unique_ptr<MovieState> mMovieState;
+
+    explicit Application(std::span<std::string_view> const args) noexcept : mArgs{args} { }
+    ~Application()
+    {
+        mMovieState = nullptr;
+
+        if(mRenderer)
+            SDL_DestroyRenderer(mRenderer);
+        if(mWindow)
+            SDL_DestroyWindow(mWindow);
+
+        if(SDL_WasInit(SDL_INIT_VIDEO))
+            SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+
+        if(AudioState::sPShiftSlot)
+            alDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+        AudioState::sPShiftSlot = 0;
+    }
+
+    Application(const Application&) = delete;
+    auto operator=(const Application&) -> Application& = delete;
+
+    auto init() -> bool
+    {
+        if(!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+        {
+            fmt::println(std::cerr, "Could not initialize SDL - {}", SDL_GetError());
+            return false;
+        }
+
+        /* Make a window to put our video */
+        mWindow = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
+        if(mWindow == nullptr)
+        {
+            fmt::println(std::cerr, "SDL: could not set video mode - exiting");
+            return false;
+        }
+        SDL_SetWindowSurfaceVSync(mWindow, 1);
+
+        /* Make a renderer to handle the texture image surface and rendering. */
+        mRenderer = SDL_CreateRenderer(mWindow, nullptr);
+        if(mRenderer == nullptr)
+        {
+            fmt::println(std::cerr, "SDL: could not create renderer - exiting");
+            return false;
+        }
+
+        SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(mRenderer, nullptr);
+        SDL_RenderPresent(mRenderer);
+
+        /* Open an audio device */
+        mALManager.emplace(InitAL(mArgs));
+
+        return true;
+    }
+};
+
 auto main(std::span<std::string_view> args) -> int
 {
     SDL_SetMainReady();
@@ -2152,41 +2229,15 @@ auto main(std::span<std::string_view> args) -> int
             "    -uhj          Decode as UHJ (stereo = UHJ2, 3.0 = UHJ3, quad = UHJ4)");
         return 1;
     }
-    args = args.subspan(1);
 
     /* Initialize networking protocols */
     avformat_network_init();
 
-    if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-    {
-        fmt::println(std::cerr, "Could not initialize SDL - {}", SDL_GetError());
-        return 1;
-    }
+    auto app = Application{args.subspan(1)};
+    if(not app.init())
+        return EXIT_FAILURE;
 
-    /* Make a window to put our video */
-    auto *screen = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
-    if(!screen)
-    {
-        fmt::println(std::cerr, "SDL: could not set video mode - exiting");
-        return 1;
-    }
-    SDL_SetWindowSurfaceVSync(screen, 1);
-
-    /* Make a renderer to handle the texture image surface and rendering. */
-    auto *renderer = SDL_CreateRenderer(screen, nullptr);
-    if(!renderer)
-    {
-        fmt::println(std::cerr, "SDL: could not create renderer - exiting");
-        return 1;
-    }
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderFillRect(renderer, nullptr);
-    SDL_RenderPresent(renderer);
-
-    /* Open an audio device */
-    auto almgr = InitAL(args);
-    almgr.printName();
+    app.mALManager->printName();
 
     LoadALExtensions();
 
@@ -2197,8 +2248,8 @@ auto main(std::span<std::string_view> args) -> int
     if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
         fmt::println("Found AL_SOFT_callback_buffer");
 
-    auto curarg = args.begin();
-    for(auto args_end=args.end();curarg != args_end;++curarg)
+    auto curarg = app.mArgs.begin();
+    for(auto args_end=app.mArgs.end();curarg != args_end;++curarg)
     {
         const auto argval = *curarg;
         if(argval == "-direct")
@@ -2310,7 +2361,7 @@ auto main(std::span<std::string_view> args) -> int
                 });
                 if(!(stretchval > 0.0f) || endpos != optarg.size())
                     fmt::println(std::cerr, "Invalid tstretch value: {}", optarg);
-                else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
+                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for time stretching");
                 else
                     TimeStretchFactor = stretchval;
@@ -2337,7 +2388,7 @@ auto main(std::span<std::string_view> args) -> int
                 auto const pitchtune = std::pow(2.0f, tuneval / 12.0f);
                 if(!std::isfinite(pitchtune) || endpos != optarg.size())
                     fmt::println(std::cerr, "Invalid tune value: {}", optarg);
-                else if(!alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX"))
+                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for pitch tuning");
                 else
                     PitchTuneFactor = pitchtune;
@@ -2409,40 +2460,34 @@ auto main(std::span<std::string_view> args) -> int
         alDeleteEffects(1, &effect);
     }
 
-    auto movState = std::unique_ptr<MovieState>{};
-    curarg = std::ranges::find_if(curarg, args.end(), [&movState](const std::string_view argval)
+    curarg = std::ranges::find_if(curarg, app.mArgs.end(), [&app](const std::string_view argval)
     {
         auto movie = std::make_unique<MovieState>(argval);
         if(!movie->prepare())
             return false;
-        movState = std::move(movie);
+        app.mMovieState = std::move(movie);
         return true;
     });
-    if(curarg == args.end())
+    if(curarg == app.mArgs.end())
     {
         fmt::println(std::cerr, "Could not start a video");
         return 1;
     }
     ++curarg;
-    movState->setTitle(screen);
+    app.mMovieState->setTitle(app.mWindow);
 
-    /* Default to going to the next movie at the end of one. */
-    enum class EomAction {
-        Next, Quit
-    } eom_action{EomAction::Next};
-    auto last_time = seconds::min();
     while(true)
     {
         auto event = SDL_Event{};
         auto have_event = SDL_WaitEventTimeout(&event, 10);
 
-        const auto cur_time = duration_cast<seconds>(movState->getMasterClock());
-        if(cur_time != last_time)
+        const auto cur_time = duration_cast<seconds>(app.mMovieState->getMasterClock());
+        if(cur_time != app.mLastTime)
         {
-            const auto end_time = duration_cast<seconds>(movState->getDuration());
+            const auto end_time = duration_cast<seconds>(app.mMovieState->getDuration());
             fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
             std::cout.flush();
-            last_time = cur_time;
+            app.mLastTime = cur_time;
         }
 
         auto force_redraw = false;
@@ -2454,13 +2499,13 @@ auto main(std::span<std::string_view> args) -> int
                 switch(event.key.key)
                 {
                 case SDLK_ESCAPE:
-                    movState->stop();
-                    eom_action = EomAction::Quit;
+                    app.mMovieState->stop();
+                    app.mEomAction = Application::EomAction::Quit;
                     break;
 
                 case SDLK_N:
-                    movState->stop();
-                    eom_action = EomAction::Next;
+                    app.mMovieState->stop();
+                    app.mEomAction = Application::EomAction::Next;
                     break;
 
                 default:
@@ -2474,48 +2519,40 @@ auto main(std::span<std::string_view> args) -> int
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
             case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
             case SDL_EVENT_RENDER_TARGETS_RESET:
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderFillRect(renderer, nullptr);
+                SDL_SetRenderDrawColor(app.mRenderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(app.mRenderer, nullptr);
                 force_redraw = true;
                 break;
 
             case SDL_EVENT_QUIT:
-                movState->stop();
-                eom_action = EomAction::Quit;
+                app.mMovieState->stop();
+                app.mEomAction = Application::EomAction::Quit;
                 break;
 
             case FF_MOVIE_DONE_EVENT:
                 fmt::println("");
-                last_time = seconds::min();
-                if(eom_action != EomAction::Quit)
+                app.mLastTime = seconds::min();
+                if(app.mEomAction != Application::EomAction::Quit)
                 {
-                    movState = nullptr;
-                    curarg = std::ranges::find_if(curarg, args.end(),
-                        [&movState](const std::string_view argval)
+                    app.mMovieState = nullptr;
+                    curarg = std::ranges::find_if(curarg, app.mArgs.end(),
+                        [&app](const std::string_view argval)
                     {
                         auto movie = std::make_unique<MovieState>(argval);
                         if(!movie->prepare())
                             return false;
-                        movState = std::move(movie);
+                        app.mMovieState = std::move(movie);
                         return true;
                     });
-                    if(curarg != args.end())
+                    if(curarg != app.mArgs.end())
                     {
                         ++curarg;
-                        movState->setTitle(screen);
+                        app.mMovieState->setTitle(app.mWindow);
                         break;
                     }
                 }
 
                 /* Nothing more to play. Shut everything down and quit. */
-                movState = nullptr;
-
-                SDL_DestroyRenderer(renderer);
-                renderer = nullptr;
-                SDL_DestroyWindow(screen);
-                screen = nullptr;
-
-                SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
                 return 0;
 
             default:
@@ -2524,7 +2561,7 @@ auto main(std::span<std::string_view> args) -> int
             have_event = SDL_PollEvent(&event);
         }
 
-        movState->mVideo.updateVideo(screen, renderer, force_redraw);
+        app.mMovieState->mVideo.updateVideo(app.mWindow, app.mRenderer, force_redraw);
     }
 
     fmt::println(std::cerr, "SDL_WaitEvent error - {}", SDL_GetError());

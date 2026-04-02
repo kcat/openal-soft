@@ -270,7 +270,7 @@ public:
 
     /* Implicit constructor from non-narrowing weak number types. */
     template<weak_number U> requires(not might_narrow<ValueType, U>) force_inline constexpr
-    explicit(false) number_base(U const &value) noexcept : c_val{convert_to<ValueType>(value)} { }
+    explicit(false) number_base(U const &value) noexcept : c_val{static_cast<ValueType>(value)} { }
 
     /* Implicit constructor from narrowing weak number types. Required to be
      * compile-time so the provided value can be checked for narrowing.
@@ -338,7 +338,7 @@ public:
      */
     template<strong_number U> requires(not might_narrow<typename U::value_t, ValueType>)
         force_inline constexpr explicit
-    operator U() noexcept { return U{convert_to<typename U::value_t>(c_val)}; }
+    operator U() noexcept { return U{static_cast<typename U::value_t>(c_val)}; }
 
     template<std::same_as<difference_type> U> [[nodiscard]] force_inline constexpr explicit
     operator U() noexcept { return static_cast<U>(c_val); }
@@ -349,7 +349,7 @@ public:
     /* Non-narrowing conversion method. */
     template<strong_number U> requires(not might_narrow<typename U::value_t, ValueType>)
     [[nodiscard]] force_inline constexpr
-    auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
+    auto as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
 
     template<strong_number U> [[nodiscard]] consteval
     auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }

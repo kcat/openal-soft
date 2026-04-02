@@ -417,7 +417,7 @@ public:
                     if(c_val > U::max().template as<SelfType>().c_val)
                         return U::max();
                 }
-                if constexpr(strong_signed_integral<U> and std::signed_integral<ValueType>)
+                if constexpr(strong_unsigned_integral<U> and std::signed_integral<ValueType>)
                 {
                     if(c_val < 0)
                         return U{0};

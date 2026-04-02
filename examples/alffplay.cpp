@@ -2398,12 +2398,6 @@ auto main(std::span<std::string_view> args) -> int
         break;
     }
 
-    auto _ = gsl::finally([]()
-    {
-        if(AudioState::sPShiftSlot)
-            alDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
-        AudioState::sPShiftSlot = 0;
-    });
     if(TimeStretchFactor != 1.0f || PitchTuneFactor != 1.0f)
     {
         /* AL_PITCH alone will speed up or slow down playback and alter the

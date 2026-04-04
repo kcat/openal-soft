@@ -857,7 +857,7 @@ auto operator==(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) n
 
 
 #define DECL_NUMBERTYPE(SelfType, ValueType)                                  \
-struct SelfType : al::number_base<ValueType, SelfType> {                      \
+struct [[nodiscard]] SelfType : al::number_base<ValueType, SelfType> {        \
     using number_base::number_base;                                           \
                                                                               \
     constexpr SelfType() noexcept = default;                                  \

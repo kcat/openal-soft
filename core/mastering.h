@@ -35,31 +35,31 @@ class Compressor {
 
     unsigned mLookAhead{0};
 
-    float mPreGain{0.0f};
-    float mPostGain{0.0f};
+    f32 mPreGain{0.0f};
+    f32 mPostGain{0.0f};
 
-    float mThreshold{0.0f};
-    float mSlope{0.0f};
-    float mKnee{0.0f};
+    f32 mThreshold{0.0f};
+    f32 mSlope{0.0f};
+    f32 mKnee{0.0f};
 
-    float mAttack{0.0f};
-    float mRelease{0.0f};
+    f32 mAttack{0.0f};
+    f32 mRelease{0.0f};
 
-    alignas(16) std::array<float, BufferLineSize*2_uz> mSideChain{};
-    alignas(16) std::array<float, BufferLineSize> mCrestFactor{};
+    alignas(16) std::array<f32, BufferLineSize*2_uz> mSideChain{};
+    alignas(16) std::array<f32, BufferLineSize> mCrestFactor{};
 
     std::unique_ptr<SlidingHold> mHold;
     al::vector<FloatBufferLine, 16> mDelay;
 
-    float mCrestCoeff{0.0f};
-    float mGainEstimate{0.0f};
-    float mAdaptCoeff{0.0f};
+    f32 mCrestCoeff{0.0f};
+    f32 mGainEstimate{0.0f};
+    f32 mAdaptCoeff{0.0f};
 
-    float mLastPeakSq{0.0f};
-    float mLastRmsSq{0.0f};
-    float mLastRelease{0.0f};
-    float mLastAttack{0.0f};
-    float mLastGainDev{0.0f};
+    f32 mLastPeakSq{0.0f};
+    f32 mLastRmsSq{0.0f};
+    f32 mLastRelease{0.0f};
+    f32 mLastAttack{0.0f};
+    f32 mLastGainDev{0.0f};
 
     void gainCompressor(unsigned SamplesToDo);
 

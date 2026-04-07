@@ -1108,4 +1108,9 @@ template<al::strong_floating_point T> [[nodiscard]] force_inline constexpr
 auto lerp(T const &a, T const &b, T const &t) noexcept -> T
 { return T{std::lerp(a.c_val, b.c_val, t.c_val)}; }
 
+[[nodiscard]] constexpr
+auto lerpf(f32 const val1, f32 const val2, f32 const mu) noexcept -> f32
+{ return val1 + (val2-val1)*mu; }
+
+
 #endif /* AL_TYPES_HPP */

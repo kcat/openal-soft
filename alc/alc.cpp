@@ -1063,25 +1063,18 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, float const threshold)
+auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 const threshold)
     -> std::unique_ptr<Compressor>
 {
-    static constexpr auto LookAheadTime = 0.001f;
-    static constexpr auto HoldTime = 0.002f;
-    static constexpr auto PreGainDb = 0.0f;
-    static constexpr auto PostGainDb = 0.0f;
-    static constexpr auto Ratio = std::numeric_limits<float>::infinity();
-    static constexpr auto KneeDb = 0.0f;
-    static constexpr auto AttackTime = 0.02f;
-    static constexpr auto ReleaseTime = 0.2f;
-
     auto const flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
         .set(Compressor::Flags::AutoAttack).set(Compressor::Flags::AutoRelease)
         .set(Compressor::Flags::AutoPostGain).set(Compressor::Flags::AutoDeclip);
 
-    return Compressor::Create(device->RealOut.Buffer.size(),
-        gsl::narrow_cast<float>(device->mSampleRate), flags, LookAheadTime, HoldTime, PreGainDb,
-        PostGainDb, threshold, Ratio, KneeDb, AttackTime, ReleaseTime);
+    return Compressor::Create({.NumChans = usize{device->RealOut.Buffer.size()}.cast_to<u32>(),
+        .SampleRate = sys_uint{device->mSampleRate}.reinterpret_as<f32>(), .AutoFlags = flags,
+        .LookAheadTime = 0.001_f32, .HoldTime = 0.002_f32, .PreGainDb = 0.0_f32,
+        .PostGainDb = 0.0_f32, .ThresholdDb = threshold, .Ratio = f32::infinity(),
+        .KneeDb = 0.0_f32, .AttackTime = 0.02_f32, .ReleaseTime = 0.2_f32});
 }
 
 /**
@@ -1742,7 +1735,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         TRACE("Output limiter disabled");
     else
     {
-        auto thrshld = 1.0f;
+        auto thrshld = 1.0_f32;
         switch(device->FmtType)
         {
         case DevFmtByte:
@@ -1761,7 +1754,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         if(device->DitherDepth > 0.0f)
             thrshld -= 1.0f / device->DitherDepth;
 
-        const auto thrshld_dB = std::log10(thrshld) * 20.0f;
+        const auto thrshld_dB = log10(thrshld) * 20.0f;
         auto limiter = CreateDeviceLimiter(device, thrshld_dB);
 
         sample_delay += limiter->getLookAhead();

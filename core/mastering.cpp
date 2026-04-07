@@ -104,36 +104,34 @@ void ShiftSlidingHold(SlidingHold *Hold, unsigned const n)
 
 } // namespace
 
-auto Compressor::Create(const size_t NumChans, const float SampleRate, const FlagBits AutoFlags,
-    const float LookAheadTime, const float HoldTime, const float PreGainDb, const float PostGainDb,
-    const float ThresholdDb, const float Ratio, const float KneeDb, const float AttackTime,
-    const float ReleaseTime) -> std::unique_ptr<Compressor>
+auto Compressor::Create(Params const params) -> std::unique_ptr<Compressor>
 {
-    const auto lookAhead = gsl::narrow_cast<unsigned>(std::clamp(
-        std::round(LookAheadTime*SampleRate), 0.0f, BufferLineSize-1.0f));
-    const auto hold = gsl::narrow_cast<unsigned>(std::clamp(std::round(HoldTime*SampleRate), 0.0f,
-        BufferLineSize-1.0f));
+    const auto lookAhead = std::clamp(round(params.LookAheadTime*params.SampleRate), 0.0_f32,
+        f32{BufferLineSize-1.0f}).reinterpret_as<sys_uint>().c_val;
+    const auto hold = std::clamp(round(params.HoldTime*params.SampleRate), 0.0_f32,
+        f32{BufferLineSize-1.0f}).reinterpret_as<sys_uint>().c_val;
 
     auto Comp = std::make_unique<Compressor>(PrivateToken{});
-    Comp->mAuto.Knee = AutoFlags.test(Flags::AutoKnee);
-    Comp->mAuto.Attack = AutoFlags.test(Flags::AutoAttack);
-    Comp->mAuto.Release = AutoFlags.test(Flags::AutoRelease);
-    Comp->mAuto.PostGain = AutoFlags.test(Flags::AutoPostGain);
-    Comp->mAuto.Declip = AutoFlags.test(Flags::AutoPostGain) && AutoFlags.test(Flags::AutoDeclip);
+    Comp->mAuto.Knee = params.AutoFlags.test(Flags::AutoKnee);
+    Comp->mAuto.Attack = params.AutoFlags.test(Flags::AutoAttack);
+    Comp->mAuto.Release = params.AutoFlags.test(Flags::AutoRelease);
+    Comp->mAuto.PostGain = params.AutoFlags.test(Flags::AutoPostGain);
+    Comp->mAuto.Declip = params.AutoFlags.test(Flags::AutoPostGain)
+        && params.AutoFlags.test(Flags::AutoDeclip);
     Comp->mLookAhead = lookAhead;
-    Comp->mPreGain = std::pow(10.0f, PreGainDb / 20.0f);
-    Comp->mPostGain = std::log(10.0f)/20.0f * PostGainDb;
-    Comp->mThreshold = std::log(10.0f)/20.0f * ThresholdDb;
-    Comp->mSlope = 1.0f / std::max(1.0f, Ratio) - 1.0f;
-    Comp->mKnee = std::max(0.0f, std::log(10.0f)/20.0f * KneeDb);
-    Comp->mAttack = std::max(1.0f, AttackTime * SampleRate);
-    Comp->mRelease = std::max(1.0f, ReleaseTime * SampleRate);
+    Comp->mPreGain = pow(10.0_f32, params.PreGainDb / 20.0_f32).c_val;
+    Comp->mPostGain = (log(10.0_f64)/20.0_f64 * params.PostGainDb).cast_to<f32>().c_val;
+    Comp->mThreshold = (log(10.0_f64)/20.0_f64 * params.ThresholdDb).cast_to<f32>().c_val;
+    Comp->mSlope = (1.0_f32/std::max(1.0_f32, params.Ratio) - 1.0_f32).c_val;
+    Comp->mKnee = std::max(0.0_f64, log(10.0_f64)/20.0_f64 * params.KneeDb).cast_to<f32>().c_val;
+    Comp->mAttack = std::max(1.0_f32, params.AttackTime * params.SampleRate).c_val;
+    Comp->mRelease = std::max(1.0_f32, params.ReleaseTime * params.SampleRate).c_val;
 
     /* Knee width automation actually treats the compressor as a limiter. By
      * varying the knee width, it can effectively be seen as applying
      * compression over a wide range of ratios.
      */
-    if(AutoFlags.test(Flags::AutoKnee))
+    if(params.AutoFlags.test(Flags::AutoKnee))
         Comp->mSlope = -1.0f;
 
     if(lookAhead > 0)
@@ -149,12 +147,12 @@ auto Compressor::Create(const size_t NumChans, const float SampleRate, const Fla
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
         }
-        Comp->mDelay.resize(NumChans, FloatBufferLine{});
+        Comp->mDelay.resize(params.NumChans.c_val, FloatBufferLine{});
     }
 
-    Comp->mCrestCoeff = std::exp(-1.0f / (0.200f * SampleRate)); // 200ms
+    Comp->mCrestCoeff = exp(-1.0_f32 / (0.200_f32 * params.SampleRate)).c_val; // 200ms
     Comp->mGainEstimate = Comp->mThreshold * -0.5f * Comp->mSlope;
-    Comp->mAdaptCoeff = std::exp(-1.0f / (2.0f * SampleRate)); // 2s
+    Comp->mAdaptCoeff = exp(-1.0_f32 / (2.0_f32 * params.SampleRate)).c_val; // 2s
 
     return Comp;
 }

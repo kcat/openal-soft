@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstddef>
+#include <stdexcept>
+#include <string_view>
 #include <type_traits>
 
 #include "opthelpers.h"

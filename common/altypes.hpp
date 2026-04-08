@@ -28,6 +28,61 @@ struct usize;
 
 namespace al {
 
+struct narrowing_error : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+template<typename>
+concept dependent_false = false;
+
+template<typename T> [[nodiscard]] consteval
+auto get_type_name() -> std::string_view
+{
+    using std::string_view_literals::operator ""sv;
+    if constexpr(std::same_as<T, int8_t>)
+        return "int8_t"sv;
+    else if constexpr(std::same_as<T, uint8_t>)
+        return "uint8_t"sv;
+    else if constexpr(std::same_as<T, int16_t>)
+        return "int16_t"sv;
+    else if constexpr(std::same_as<T, uint16_t>)
+        return "uint16_t"sv;
+    else if constexpr(std::same_as<T, int32_t>)
+        return "int32_t"sv;
+    else if constexpr(std::same_as<T, uint32_t>)
+        return "uint32_t"sv;
+    else if constexpr(std::same_as<T, int64_t>)
+        return "int64_t"sv;
+    else if constexpr(std::same_as<T, uint64_t>)
+        return "uint64_t"sv;
+    else if constexpr(std::same_as<T, float>)
+        return "float"sv;
+    else if constexpr(std::same_as<T, double>)
+        return "double"sv;
+    /* In case some built-in types aren't aliased to the above: */
+    else if constexpr(std::same_as<T, short>)
+        return "short"sv;
+    else if constexpr(std::same_as<T, unsigned short>)
+        return "unsigned short"sv;
+    else if constexpr(std::same_as<T, int>)
+        return "int"sv;
+    else if constexpr(std::same_as<T, unsigned int>)
+        return "unsigned int"sv;
+    else if constexpr(std::same_as<T, long>)
+        return "long"sv;
+    else if constexpr(std::same_as<T, unsigned long>)
+        return "unsigned long"sv;
+    else if constexpr(std::same_as<T, long long>)
+        return "long long"sv;
+    else if constexpr(std::same_as<T, unsigned long long>)
+        return "unsigned long long"sv;
+    else
+    {
+        static_assert(dependent_false<T>, "Unexpected type");
+        return ""sv;
+    }
+}
+
 template<typename>
 struct make_strong { };
 
@@ -85,17 +140,20 @@ auto convert_to(From const &value) noexcept(not might_narrow<To, From>) -> To
         if constexpr(std::signed_integral<To> and std::unsigned_integral<From>)
         {
             if(From{std::numeric_limits<To>::max()} < value)
-                throw std::out_of_range{"Too large unsigned to signed"};
+                throw narrowing_error{al::format("convert_to: {} out of range for type {}", value,
+                    get_type_name<To>())};
         }
         else if constexpr(std::unsigned_integral<To> and std::signed_integral<From>)
         {
             if(value < From{0})
-                throw std::out_of_range{"Negative signed to unsigned"};
+                throw narrowing_error{al::format("convert_to: {} out of range for type {}", value,
+                    get_type_name<To>())};
         }
 
         auto const ret = static_cast<To>(value);
         if(static_cast<From>(ret) != value)
-            throw std::out_of_range{"Conversion narrowed"};
+            throw narrowing_error{al::format("convert_to: {} narrowed converting to type {}",
+                value, get_type_name<To>())};
         return ret;
     }
 }
@@ -346,7 +404,12 @@ public:
     [[nodiscard]] force_inline constexpr explicit
     operator bool() noexcept requires(std::integral<ValueType>) { return c_val != ValueType{0}; }
 
-    /* Non-narrowing conversion method. */
+    /* .as<T>() is a non-narrowing conversion method. Non-narrowing type
+     * conversions are simply cast to the target type, while potentially
+     * narrowing conversions are checked at compile-time and will cause a
+     * compilation failure if the value is either not known at compile-time, or
+     * can't fit the target type.
+     */
     template<strong_number U> requires(not might_narrow<typename U::value_t, ValueType>)
     [[nodiscard]] force_inline constexpr
     auto as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
@@ -354,8 +417,8 @@ public:
     template<strong_number U> [[nodiscard]] consteval
     auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
 
-    /* Potentially narrowing conversion method. Throws if the converted value
-     * narrows.
+    /* Potentially narrowing conversion method. Throws a narrowing_error
+     * exception if the converted value narrows.
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
@@ -371,7 +434,7 @@ public:
     }
 
     /* "Raw" conversion method, essentially applying a static_cast to the
-     * underlying type.
+     * underlying type without checking for narrowing.
      */
     template<strong_number U> [[nodiscard]] force_inline constexpr
     auto reinterpret_as() const noexcept -> U

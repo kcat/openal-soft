@@ -134,9 +134,11 @@ constexpr auto PwIdAny = PW_ID_ANY;
 DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
+import format.types;
 import gsl;
 import logging;
 #else
+#include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

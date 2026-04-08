@@ -80,8 +80,10 @@
 #endif
 
 #if HAVE_CXXMODULES
+import format.types;
 import logging;
 #else
+#include "alformattypes.hpp"
 #include "core/logging.h"
 #endif
 

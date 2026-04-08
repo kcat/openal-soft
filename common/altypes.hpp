@@ -6,10 +6,8 @@
 #include <cmath>
 #include <cstdint>
 #include <cstddef>
-#include <stdexcept>
 #include <type_traits>
 
-#include "alformat.hpp"
 #include "opthelpers.h"
 
 
@@ -31,6 +29,17 @@ namespace al {
 struct narrowing_error : std::runtime_error {
     using std::runtime_error::runtime_error;
 };
+
+[[noreturn]]
+auto throw_narrowing_error(std::string_view prefix, long long value, std::string_view type)
+    -> void;
+[[noreturn]]
+auto throw_narrowing_error(std::string_view prefix, unsigned long long value,
+    std::string_view type) -> void;
+[[noreturn]]
+auto throw_narrowing_error(std::string_view prefix, long double value, std::string_view type)
+    -> void;
+
 
 template<typename>
 concept dependent_false = false;
@@ -137,23 +146,23 @@ auto convert_to(From const &value) noexcept(not might_narrow<To, From>) -> To
         return static_cast<To>(value);
     else
     {
+        using cast_type = std::conditional_t<std::floating_point<From>, long double,
+            std::conditional_t<std::unsigned_integral<From>, unsigned long long, long long>>;
+
         if constexpr(std::signed_integral<To> and std::unsigned_integral<From>)
         {
             if(From{std::numeric_limits<To>::max()} < value)
-                throw narrowing_error{al::format("convert_to: {} out of range for type {}", value,
-                    get_type_name<To>())};
+                throw_narrowing_error("convert_to", cast_type{value}, get_type_name<To>());
         }
         else if constexpr(std::unsigned_integral<To> and std::signed_integral<From>)
         {
             if(value < From{0})
-                throw narrowing_error{al::format("convert_to: {} out of range for type {}", value,
-                    get_type_name<To>())};
+                throw_narrowing_error("convert_to", cast_type{value}, get_type_name<To>());
         }
 
         auto const ret = static_cast<To>(value);
         if(static_cast<From>(ret) != value)
-            throw narrowing_error{al::format("convert_to: {} narrowed converting to type {}",
-                value, get_type_name<To>())};
+                throw_narrowing_error("convert_to", cast_type{value}, get_type_name<To>());
         return ret;
     }
 }
@@ -261,13 +270,6 @@ class number_base {
 
     friend SelfType;
 
-    /* Force printing smaller types as (unsigned) int. Always treat these as
-     * numeric values even when backed by character types.
-     */
-    using fmttype_t = std::conditional_t<not might_narrow<unsigned, ValueType>, unsigned,
-        std::conditional_t<not might_narrow<int, ValueType>, int,
-        ValueType>>;
-
     /* Defaulted constructor/destructor/copy assignment functions, which will be
      * inherited by the parent type. Allows the type to be trivial.
      */
@@ -323,6 +325,14 @@ public:
      * Which is perfectly fine, since standard fp types aren't either.
      */
     using difference_type = typename detail_::signed_difference<ValueType>::type;
+
+    /* Force printing smaller types as (unsigned) int. Always treat these as
+     * numeric values even when backed by character types.
+     */
+    using fmttype_t = std::conditional_t<not might_narrow<unsigned, ValueType>, unsigned,
+        std::conditional_t<not might_narrow<int, ValueType>, int,
+        ValueType>>;
+
 
     ValueType c_val;
 
@@ -618,15 +628,6 @@ public:
         static_assert(res < R::infinity().c_val);
         return R{res};
     }
-
-    template<typename CharT>
-    struct formatter : al::formatter<fmttype_t, CharT> {
-        auto format(SelfType const &obj, auto& ctx) const
-        {
-            return al::formatter<fmttype_t,CharT>::format(al::convert_to<fmttype_t>(obj.c_val),
-                ctx);
-        }
-    };
 };
 
 } /* namespace al */
@@ -993,18 +994,6 @@ constexpr auto number_base<ValueType, SelfType>::countr_zero() const noexcept ->
 
 } /* namespace al */
 
-template<typename CharT> struct al::formatter<i8, CharT> : i8::formatter<CharT> { };
-template<typename CharT> struct al::formatter<u8, CharT> : u8::formatter<CharT> { };
-template<typename CharT> struct al::formatter<i16, CharT> : i16::formatter<CharT> { };
-template<typename CharT> struct al::formatter<u16, CharT> : u16::formatter<CharT> { };
-template<typename CharT> struct al::formatter<i32, CharT> : i32::formatter<CharT> { };
-template<typename CharT> struct al::formatter<u32, CharT> : u32::formatter<CharT> { };
-template<typename CharT> struct al::formatter<i64, CharT> : i64::formatter<CharT> { };
-template<typename CharT> struct al::formatter<u64, CharT> : u64::formatter<CharT> { };
-template<typename CharT> struct al::formatter<f32, CharT> : f32::formatter<CharT> { };
-template<typename CharT> struct al::formatter<f64, CharT> : f64::formatter<CharT> { };
-template<typename CharT> struct al::formatter<isize, CharT> : isize::formatter<CharT> { };
-template<typename CharT> struct al::formatter<usize, CharT> : usize::formatter<CharT> { };
 
 [[nodiscard]] consteval
 auto operator ""_i8(unsigned long long const n) noexcept { return i8::from(n); }
@@ -1174,6 +1163,5 @@ auto lerp(T const &a, T const &b, T const &t) noexcept -> T
 [[nodiscard]] constexpr
 auto lerpf(f32 const val1, f32 const val2, f32 const mu) noexcept -> f32
 { return val1 + (val2-val1)*mu; }
-
 
 #endif /* AL_TYPES_HPP */

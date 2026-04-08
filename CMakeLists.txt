@@ -738,6 +738,7 @@ set(COMMON_SRCS
     common/almalloc.cpp
     common/alstring.cpp
     common/althrd_setname.cpp
+    common/altypes.cpp
     common/dynload.cpp
     common/filesystem.cpp
     common/pffft.cpp
@@ -787,9 +788,11 @@ if(HAVE_CXXMODULES)
         alsoft-modules/gsl.cppm
         alsoft-modules/hann_window.cppm
         alsoft-modules/phase_shifter.cppm
+        common/alformattypes.cppm
     )
 else()
     list(APPEND COMMON_HDRS
+        common/alformattypes.hpp
         common/hann_window.hpp
         common/phase_shifter.hpp
     )

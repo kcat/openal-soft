@@ -19,8 +19,10 @@
 #include "hrtf.h"
 
 #if HAVE_CXXMODULES
+import format.types;
 import logging;
 #else
+#include "alformattypes.hpp"
 #include "logging.h"
 #endif
 

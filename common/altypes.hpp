@@ -49,7 +49,7 @@ concept dependent_false = false;
 template<typename T> [[nodiscard]] consteval
 auto get_type_name() -> std::string_view
 {
-    using std::string_view_literals::operator ""sv;
+    using namespace std::string_view_literals;
     if constexpr(std::same_as<T, int8_t>)
         return "int8_t"sv;
     else if constexpr(std::same_as<T, uint8_t>)

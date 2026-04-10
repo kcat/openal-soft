@@ -1846,8 +1846,8 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
 void VideoState::handler()
 {
-    std::ranges::for_each(mPictQ, [](Picture &pict) -> void
-    { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
+    std::ranges::generate(mPictQ | std::views::transform(&Picture::mFrame),
+        [] { return AVFramePtr{av_frame_alloc()}; });
 
     /* Prefill the codec buffer. */
     auto sender [[maybe_unused]] = std::async(std::launch::async, [this]

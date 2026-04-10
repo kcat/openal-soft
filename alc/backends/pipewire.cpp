@@ -1044,11 +1044,11 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         {
             errno = 0;
             auto *serial_end = gsl::zstring{};
-            serial_id = u64{std::strtoull(serial_str, &serial_end, 0)};
+            serial_id = std::strtoull(serial_str, &serial_end, 0);
             if(*serial_end != '\0' || errno == ERANGE)
             {
                 ERR("Unexpected object serial: {}", serial_str);
-                serial_id = u64{info->id};
+                serial_id = info->id;
             }
         }
 #endif
@@ -1060,13 +1060,9 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
             return al::format("PipeWire node #{}", info->id);
         });
 
-        auto *form_factor = spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR);
-        TRACE("Got {} device \"{}\"{}{}{}", AsString(ntype), devName ? devName : "(nil)",
-            form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
-        TRACE("  \"{}\" = ID {}", name, serial_id);
-
         auto &node = EventManager::AddDevice(info->id);
         node.mSerial = serial_id;
+
         /* This method is called both to notify about a new sink/source node,
          * and update properties for the node. It's unclear what properties can
          * change for an existing node without being removed first, so err on
@@ -1080,6 +1076,27 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
          *
          * This is overkill if the node type, name, and devname can't change.
          */
+        if(node.mName != name)
+        {
+            /* First, check if this name already exists for another node in the
+             * device list and needs a count suffix. If this node is already
+             * using the name, keep it.
+             */
+            auto const&& devlist = EventManager::GetDeviceList();
+            auto count = 1u;
+            auto newname = name;
+            while(node.mName != newname
+                and std::ranges::find(devlist, newname, &DeviceNode::mName) != devlist.end())
+                newname = al::format("{} #{}", name, ++count);
+            name = std::move(newname);
+        }
+
+        auto *form_factor = spa_dict_lookup(info->props, PW_KEY_DEVICE_FORM_FACTOR);
+        TRACE("Got {} device \"{}\"{}{}{}", AsString(ntype), devName ? devName : "(nil)",
+            form_factor?" (":"", form_factor?form_factor:"", form_factor?")":"");
+        TRACE("  \"{}\" = ID {}", name, serial_id);
+
+        /* Now check if the name is being changed. */
         auto notifyAdd = false;
         if(node.mName != name)
         {
@@ -1098,6 +1115,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         node.mType = ntype;
         node.mIsHeadphones = form_factor && (al::case_compare(form_factor, "headphones"sv) == 0
             || al::case_compare(form_factor, "headset"sv) == 0);
+
         if(notifyAdd)
         {
             const auto msg = al::format("Device added: {}", node.mName);

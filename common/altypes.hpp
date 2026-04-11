@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>

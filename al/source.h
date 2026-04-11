@@ -58,6 +58,11 @@ public:
         : EaxException{"EAX_SOURCE", message}
     { }
 };
+
+struct EaxAlLowPassParam {
+    float gain;
+    float gain_hf;
+};
 #endif // ALSOFT_EAX
 
 namespace al {

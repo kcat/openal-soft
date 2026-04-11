@@ -518,6 +518,8 @@ public:
     [[nodiscard]] force_inline constexpr
     auto popcount() const noexcept -> sys_uint requires(std::integral<ValueType>);
     [[nodiscard]] force_inline constexpr
+    auto countl_zero() const noexcept -> sys_uint requires(std::integral<ValueType>);
+    [[nodiscard]] force_inline constexpr
     auto countr_zero() const noexcept -> sys_uint requires(std::integral<ValueType>);
 
     [[nodiscard]] force_inline constexpr
@@ -976,6 +978,14 @@ constexpr auto number_base<ValueType, SelfType>::popcount() const noexcept -> sy
 }
 
 template<weak_number ValueType, typename SelfType> [[nodiscard]] force_inline
+constexpr auto number_base<ValueType, SelfType>::countl_zero() const noexcept -> sys_uint
+    requires(std::integral<ValueType>)
+{
+    using unsigned_t = std::make_unsigned_t<ValueType>;
+    return sys_uint{static_cast<unsigned>(std::countl_zero(static_cast<unsigned_t>(c_val)))};
+}
+
+template<weak_number ValueType, typename SelfType> [[nodiscard]] force_inline
 constexpr auto number_base<ValueType, SelfType>::countr_zero() const noexcept -> sys_uint
     requires(std::integral<ValueType>)
 {
@@ -1078,6 +1088,15 @@ struct common_type<T, U> : common_type<al::make_strong_t<T>, U> { };
 
 } /* namespace std */
 
+
+template<al::strong_integral T> [[nodiscard]] force_inline constexpr
+auto popcount(T const &x) noexcept -> sys_uint { return x.popcount(); }
+
+template<al::strong_integral T> [[nodiscard]] force_inline constexpr
+auto countl_zero(T const &x) noexcept -> sys_uint { return x.countl_zero(); }
+
+template<al::strong_integral T> [[nodiscard]] force_inline constexpr
+auto countr_zero(T const &x) noexcept -> sys_uint { return x.countr_zero(); }
 
 template<al::strong_number T> [[nodiscard]] force_inline constexpr
 auto abs(T const &x) noexcept -> T { return x.abs(); }

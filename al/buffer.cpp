@@ -213,7 +213,7 @@ auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
     auto sublist = std::ranges::find_if(device->BufferList,
         [](BufferSubList const &slist) { return slist.mFreeMask != 0; });
     auto lidx = gsl::narrow_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
-    auto slidx = gsl::narrow_cast<ALuint>(sublist->mFreeMask.countr_zero().c_val);
+    auto slidx = sublist->mFreeMask.countr_zero().c_val;
     ASSUME(slidx < 64);
 
     auto const buffer = gsl::make_not_null(std::construct_at(

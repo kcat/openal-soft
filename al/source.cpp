@@ -865,7 +865,7 @@ auto AllocSource(gsl::not_null<al::Context*> const context) noexcept -> gsl::not
         [](SourceSubList const &slist) { return slist.mFreeMask != 0; });
     auto const lidx = gsl::narrow_cast<ALuint>(std::distance(context->mSourceList.begin(),
         sublist));
-    auto const slidx = gsl::narrow_cast<ALuint>(sublist->mFreeMask.countr_zero().c_val);
+    auto const slidx = sublist->mFreeMask.countr_zero().c_val;
     ASSUME(slidx < 64);
 
     auto const source = gsl::make_not_null(std::construct_at(

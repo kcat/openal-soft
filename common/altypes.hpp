@@ -127,26 +127,21 @@ namespace al {
 template<typename T>
 concept weak_number = std::integral<T> or std::floating_point<T>;
 
-/* Unlike standard C++, this considers integers to larger floating point types
- * to be non-narrowing, e.g. int16 -> float(32) and int32 -> double(64) are
- * fine since all platforms we currently care about won't lose precision.
- */
-template<typename To, typename From>
-concept might_narrow = sizeof(To) < sizeof(From)
-    or (std::unsigned_integral<To> and std::signed_integral<From>)
-    or (std::integral<To> and std::floating_point<From>)
-    or (sizeof(To) == sizeof(From)
-        and ((std::signed_integral<To> and std::unsigned_integral<From>)
-            or (std::floating_point<To> and std::integral<From>)));
+/* Determine if a number of type From can't narrow when converted to type To. */
+template<typename From, typename To>
+concept not_narrowing = std::same_as<From, To>
+    or (std::numeric_limits<From>::digits <= std::numeric_limits<To>::digits
+        and not (std::floating_point<From> and std::integral<To>)
+        and not (std::signed_integral<From> and std::unsigned_integral<To>));
 
 template<typename T, typename U>
-concept has_common = not might_narrow<T, U> or not might_narrow<U, T>;
+concept has_common = not_narrowing<T, U> or not_narrowing<U, T>;
 
 
 template<weak_number To, weak_number From> [[nodiscard]] constexpr
-auto convert_to(From const &value) noexcept(not might_narrow<To, From>) -> To
+auto convert_to(From const &value) noexcept(not_narrowing<From, To>) -> To
 {
-    if constexpr(not might_narrow<To, From>)
+    if constexpr(not_narrowing<From, To>)
         return static_cast<To>(value);
     else
     {
@@ -238,7 +233,7 @@ concept compatible_constant = (std::integral<ConstType> and std::integral<VarTyp
  */
 template<typename WeakType, typename StrictType>
 concept compatible_weak_number = weak_number<WeakType> and strict_number<StrictType>
-    and not might_narrow<typename StrictType::value_t, WeakType>;
+    and not_narrowing<WeakType, typename StrictType::value_t>;
 
 
 /* This ConstantNum class is a wrapper to handle various operations with
@@ -333,15 +328,15 @@ public:
     /* Force printing smaller types as (unsigned) int. Always treat these as
      * numeric values even when backed by character types.
      */
-    using fmttype_t = std::conditional_t<not might_narrow<unsigned, ValueType>, unsigned,
-        std::conditional_t<not might_narrow<int, ValueType>, int,
+    using fmttype_t = std::conditional_t<not_narrowing<ValueType, unsigned>, unsigned,
+        std::conditional_t<not_narrowing<ValueType, int>, int,
         ValueType>>;
 
 
     ValueType c_val;
 
     /* Implicit constructor from non-narrowing weak number types. */
-    template<weak_number U> requires(not might_narrow<ValueType, U>) force_inline constexpr
+    template<weak_number U> requires(not_narrowing<U, ValueType>) force_inline constexpr
     explicit(false) number_base(U const &value) noexcept : c_val{static_cast<ValueType>(value)} { }
 
     /* Implicit constructor from narrowing weak number types. Required to be
@@ -352,7 +347,7 @@ public:
 
     template<weak_number U> force_inline static constexpr
     auto from(U const &value)
-        noexcept(not might_narrow<ValueType, U> or std::floating_point<ValueType>)
+        noexcept(not_narrowing<U, ValueType> or std::floating_point<ValueType>)
         -> SelfType
     {
         /* Converting to a floating point type isn't checked here because it's
@@ -408,7 +403,7 @@ public:
     /* Conversion operator to other strict number types. Only valid for
      * non-narrowing conversions.
      */
-    template<strict_number U> requires(not might_narrow<typename U::value_t, ValueType>)
+    template<strict_number U> requires(not_narrowing<ValueType, typename U::value_t>)
         force_inline constexpr explicit
     operator U() noexcept { return U{static_cast<typename U::value_t>(c_val)}; }
 
@@ -424,7 +419,7 @@ public:
      * compilation failure if the value is either not known at compile-time, or
      * can't fit the target type.
      */
-    template<strict_number U> requires(not might_narrow<typename U::value_t, ValueType>)
+    template<strict_number U> requires(not_narrowing<ValueType, typename U::value_t>)
     [[nodiscard]] force_inline constexpr
     auto as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
 
@@ -436,7 +431,7 @@ public:
      */
     template<strict_number U> [[nodiscard]] force_inline constexpr
     auto cast_to() const
-        noexcept(not might_narrow<typename U::value_t, ValueType>
+        noexcept(not_narrowing<ValueType, typename U::value_t>
             or std::floating_point<typename U::value_t>)
         -> U
     {
@@ -692,9 +687,9 @@ constexpr auto operator op(T const &lhs, U const &rhs) noexcept               \
 {                                                                             \
     static_assert(al::has_common<typename T::value_t, typename U::value_t>,   \
         "Incompatible operands");                                             \
-    if constexpr(not al::might_narrow<typename T::value_t, typename U::value_t>) \
+    if constexpr(al::not_narrowing<typename U::value_t, typename T::value_t>) \
         return T{static_cast<typename T::value_t>(lhs.c_val op rhs.c_val)};   \
-    else if constexpr(not al::might_narrow<typename U::value_t, typename T::value_t>) \
+    else if constexpr(al::not_narrowing<typename T::value_t, typename U::value_t>) \
         return U{static_cast<typename U::value_t>(lhs.c_val op rhs.c_val)};   \
     else                                                                      \
         return T{};                                                           \
@@ -777,7 +772,7 @@ auto operator-(T const &lhs, std::same_as<typename T::difference_type> auto cons
 template<al::strict_number T, al::strict_number U> force_inline constexpr     \
 auto operator op(T &lhs LIFETIMEBOUND, U const &rhs) noexcept -> T&           \
 {                                                                             \
-    static_assert(not al::might_narrow<typename T::value_t, typename U::value_t>, \
+    static_assert(al::not_narrowing<typename U::value_t, typename T::value_t>,\
         "Incompatible right side operand");                                   \
     lhs.c_val op static_cast<typename T::value_t>(rhs.c_val);                 \
     return lhs;                                                               \
@@ -836,9 +831,9 @@ auto operator-=(T &lhs LIFETIMEBOUND, std::same_as<typename T::difference_type> 
 template<al::strict_number T, al::strict_number U> [[nodiscard]] force_inline constexpr
 auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
-    if constexpr(not al::might_narrow<typename T::value_t, typename U::value_t>)
+    if constexpr(al::not_narrowing<typename U::value_t, typename T::value_t>)
         return lhs.c_val <=> static_cast<typename T::value_t>(rhs.c_val);
-    else if constexpr(not al::might_narrow<typename U::value_t, typename T::value_t>)
+    else if constexpr(al::not_narrowing<typename T::value_t, typename U::value_t>)
         return static_cast<typename U::value_t>(lhs.c_val) <=> rhs.c_val;
     else if constexpr(std::signed_integral<typename T::value_t>
         and std::unsigned_integral<typename U::value_t>)
@@ -896,9 +891,9 @@ auto operator<=>(T const &lhs, U const &rhs) noexcept
 template<al::strict_number T, al::weak_number U> requires(al::has_common<typename T::value_t, U>)
 [[nodiscard]] force_inline constexpr auto operator<=>(T const &lhs, U const &rhs) noexcept
 {
-    if constexpr(not al::might_narrow<typename T::value_t, U>)
+    if constexpr(al::not_narrowing<U, typename T::value_t>)
         return lhs.c_val <=> static_cast<typename T::value_t>(rhs);
-    else if constexpr(not al::might_narrow<U, typename T::value_t>)
+    else if constexpr(al::not_narrowing<typename T::value_t, U>)
         return static_cast<U>(lhs.c_val) <=> rhs;
 }
 
@@ -940,7 +935,7 @@ struct [[nodiscard]] SelfType : al::number_base<ValueType, SelfType> {        \
                                                                               \
     template<al::strict_number U>                                             \
         requires(not std::is_base_of_v<SelfType, U>                           \
-            and not al::might_narrow<value_t, typename U::value_t>)           \
+            and al::not_narrowing<typename U::value_t, value_t>)              \
     force_inline constexpr                                                    \
     auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
     {                                                                         \
@@ -948,7 +943,7 @@ struct [[nodiscard]] SelfType : al::number_base<ValueType, SelfType> {        \
         return *this;                                                         \
     }                                                                         \
                                                                               \
-    template<al::weak_number U> requires(not al::might_narrow<value_t, U>)    \
+    template<al::weak_number U> requires(al::not_narrowing<U, value_t>)       \
     force_inline constexpr                                                    \
     auto operator=(U const &rhs) & noexcept LIFETIMEBOUND -> SelfType&        \
     {                                                                         \
@@ -1060,13 +1055,13 @@ namespace std {
  */
 template<al::strict_number T, al::strict_number U>
     requires(not std::derived_from<T, isize> and not std::derived_from<T, usize>
-        and not al::might_narrow<typename T::value_t, typename U::value_t>)
+        and al::not_narrowing<typename U::value_t, typename T::value_t>)
 struct common_type<T, U> { using type = T; };
 
 template<al::strict_number T, al::strict_number U>
     requires(not std::derived_from<U, isize> and not std::derived_from<U, usize>
-        and not al::might_narrow<typename U::value_t, typename T::value_t>
-        and al::might_narrow<typename T::value_t, typename U::value_t>)
+        and al::not_narrowing<typename T::value_t, typename U::value_t>
+        and not al::not_narrowing<typename U::value_t, typename T::value_t>)
 struct common_type<T, U> { using type = U; };
 
 /* Declare the common type between signed and unsigned strict number types,

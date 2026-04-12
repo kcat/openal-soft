@@ -1446,6 +1446,7 @@ set(BACKENDS  "${BACKENDS} Null")
 
 
 # Get the known version info to create version.h
+set(LIB_VERSION ${OpenAL_VERSION})
 set(LIB_VERSION_NUM ${OpenAL_VERSION_MAJOR},${OpenAL_VERSION_MINOR},${OpenAL_VERSION_PATCH},0)
 find_package(Git)
 if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
@@ -1464,7 +1465,7 @@ if(ALSOFT_UPDATE_BUILD_VERSION AND GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.g
     add_custom_command(OUTPUT "${OpenAL_BINARY_DIR}/version_witness.txt"
         BYPRODUCTS "${OpenAL_BINARY_DIR}/version.h"
         COMMAND ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
-            -D LIB_VERSION=${OpenAL_VERSION} -D LIB_VERSION_NUM=${LIB_VERSION_NUM}
+            -D LIB_VERSION=${LIB_VERSION} -D LIB_VERSION_NUM=${LIB_VERSION_NUM}
             -D SRC=${OpenAL_SOURCE_DIR}/version.h.in -D DST=${OpenAL_BINARY_DIR}/version.h
             -P ${OpenAL_SOURCE_DIR}/version.cmake
         COMMAND ${CMAKE_COMMAND} -E touch "${OpenAL_BINARY_DIR}/version_witness.txt"

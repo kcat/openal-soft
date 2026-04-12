@@ -25,6 +25,8 @@ struct i64;
 struct u64;
 struct f32;
 struct f64;
+struct isize;
+struct usize;
 
 namespace al {
 
@@ -115,15 +117,6 @@ using make_strong_t = typename make_strong<T>::type;
 
 using sys_int = al::make_strong_t<int>;
 using sys_uint = al::make_strong_t<unsigned>;
-
-using isize = std::conditional_t<sizeof(std::size_t) == sizeof(std::uint8_t), i8,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint16_t), i16,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint32_t), i32,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint64_t), i64, void>>>>;
-using usize = std::conditional_t<sizeof(std::size_t) == sizeof(std::uint8_t), u8,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint16_t), u16,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint32_t), u32,
-    std::conditional_t<sizeof(std::size_t) == sizeof(std::uint64_t), u64, void>>>>;
 
 namespace al {
 
@@ -982,6 +975,9 @@ DECL_NUMBERTYPE(i64, std::int64_t)
 DECL_NUMBERTYPE(u64, std::uint64_t)
 DECL_NUMBERTYPE(f32, float)
 DECL_NUMBERTYPE(f64, double)
+
+DECL_NUMBERTYPE(isize, std::make_signed_t<std::size_t>);
+DECL_NUMBERTYPE(usize, std::size_t);
 #undef DECL_NUMBERTYPE
 
 namespace al {
@@ -1045,7 +1041,7 @@ auto operator ""_usize(unsigned long long const n) noexcept { return usize::from
 
 [[nodiscard]] consteval
 auto operator ""_z(unsigned long long const n) noexcept
-{ return al::convert_to<std::make_signed_t<std::size_t>>(n); }
+{ return al::convert_to<isize::value_t>(n); }
 [[nodiscard]] consteval
 auto operator ""_uz(unsigned long long const n) noexcept { return al::convert_to<std::size_t>(n); }
 [[nodiscard]] consteval
@@ -1058,15 +1054,19 @@ namespace std {
  * other. Note that the result must be order invariant, that is, if
  * common_type_t<A, B> results in A, then common_type_t<B, A> must also result
  * in A. Similarly, if common_type_t<A, B> results in C, then
- * common_type_t<B, A> must also result in C.
+ * common_type_t<B, A> must also result in C. Consequently, since isize and
+ * usize may be interconvertible with other types, these base specializations
+ * will never result in isize or usize.
  */
 template<al::strong_number T, al::strong_number U>
-    requires(not al::might_narrow<typename T::value_t, typename U::value_t>)
+    requires(not std::derived_from<T, isize> and not std::derived_from<T, usize>
+        and not al::might_narrow<typename T::value_t, typename U::value_t>)
 struct common_type<T, U> { using type = T; };
 
 template<al::strong_number T, al::strong_number U>
-    requires(al::might_narrow<typename T::value_t, typename U::value_t>
-        and not al::might_narrow<typename U::value_t, typename T::value_t>)
+    requires(not std::derived_from<U, isize> and not std::derived_from<U, usize>
+        and not al::might_narrow<typename U::value_t, typename T::value_t>
+        and al::might_narrow<typename T::value_t, typename U::value_t>)
 struct common_type<T, U> { using type = U; };
 
 /* Declare the common type between signed and unsigned strong number types,
@@ -1093,6 +1093,19 @@ template<> struct common_type<f32, i32> { using type = f64; };
 template<> struct common_type<f32, u32> { using type = f64; };
 template<> struct common_type<i32, f32> { using type = f64; };
 template<> struct common_type<u32, f32> { using type = f64; };
+
+/* Declare the common type between strong integer types where isize or usize is
+ * the appropriate result type.
+ */
+template<al::strong_integral T> requires(sizeof(T) < sizeof(isize) or std::same_as<T, isize>)
+struct common_type<isize, T> { using type = isize; };
+template<al::strong_integral T> requires(sizeof(T) < sizeof(isize))
+struct common_type<T, isize> { using type = isize; };
+
+template<al::strong_integral T> requires(sizeof(T) < sizeof(usize) or std::same_as<T, usize>)
+struct common_type<usize, T> { using type = usize; };
+template<al::strong_integral T> requires(sizeof(T) < sizeof(usize))
+struct common_type<T, usize> { using type = usize; };
 
 /* Declare the common type between a strong and weak number type, ensuring the
  * appropriate strong number type is provided.

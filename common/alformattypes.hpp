@@ -26,5 +26,7 @@ template<typename CharT> struct al::formatter<i64, CharT> : al::strong_formatter
 template<typename CharT> struct al::formatter<u64, CharT> : al::strong_formatter<u64, CharT> { };
 template<typename CharT> struct al::formatter<f32, CharT> : al::strong_formatter<f32, CharT> { };
 template<typename CharT> struct al::formatter<f64, CharT> : al::strong_formatter<f64, CharT> { };
+template<typename CharT> struct al::formatter<isize, CharT> : al::strong_formatter<isize, CharT> { };
+template<typename CharT> struct al::formatter<usize, CharT> : al::strong_formatter<usize, CharT> { };
 
 #endif /* AL_FORMATTYPES_HPP */

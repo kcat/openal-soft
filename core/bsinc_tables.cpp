@@ -31,7 +31,7 @@ namespace {
  * starts with the largest value and accumulates successively smaller values,
  * compounding the rounding and precision error), but it's good enough.
  */
-template<al::weak_number T, al::strong_floating_point U>
+template<al::weak_number T, al::strict_floating_point U>
 constexpr auto cyl_bessel_i(T nu, U x) -> U
 {
     if(nu != T{0})

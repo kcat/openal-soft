@@ -495,14 +495,12 @@ if(NOT LIBTYPE STREQUAL "STATIC")
         # Yes GCC, really don't accept visibility modes you don't support
         list(APPEND CMAKE_REQUIRED_FLAGS -Wattributes -Werror)
 
-        check_c_source_compiles("int foo() __attribute__((visibility(\"protected\")));
-                                int main() {return 0;}" HAVE_GCC_PROTECTED_VISIBILITY)
         check_c_source_compiles("int foo() __attribute__((visibility(\"default\")));
                                 int main() {return 0;}" HAVE_GCC_DEFAULT_VISIBILITY)
         if(HAVE_GCC_DEFAULT_VISIBILITY)
             set(EXPORT_DECL "__attribute__((visibility(\"default\")))")
         endif()
-        if(HAVE_GCC_PROTECTED_VISIBILITY OR HAVE_GCC_DEFAULT_VISIBILITY)
+        if(HAVE_GCC_DEFAULT_VISIBILITY)
             set(CMAKE_C_VISIBILITY_PRESET hidden)
             set(CMAKE_CXX_VISIBILITY_PRESET hidden)
         endif()

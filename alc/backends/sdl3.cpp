@@ -32,9 +32,11 @@
 
 #include "alformat.hpp"
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/device.h"
 #include "gsl/gsl"
 #include "pragmadefs.h"
+#include "ringbuffer.h"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
@@ -44,6 +46,7 @@ std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 
 namespace {
 constexpr auto DefaultPlaybackDeviceID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+constexpr auto DefaultCaptureDeviceID = SDL_AUDIO_DEVICE_DEFAULT_RECORDING;
 } /* namespace */
 DIAGNOSTIC_POP;
 
@@ -67,18 +70,11 @@ struct DeviceEntry {
     SDL_AudioDeviceID mPhysDeviceID{};
 };
 
-template<std::ranges::range R>
-    requires(std::same_as<std::remove_cv_t<std::ranges::range_value_t<R>>, DeviceEntry>)
-[[nodiscard]] constexpr
-auto CheckName(std::string_view const name, R&& list) noexcept -> bool
-{ return std::ranges::find(list, name, &DeviceEntry::mName) != list.end(); }
-
-auto gPlaybackDevices = std::vector<DeviceEntry>{};
-
-void EnumeratePlaybackDevices()
+void EnumerateDevices(std::invocable<int*> auto&& get_devices, std::vector<DeviceEntry> &list)
+    requires(std::same_as<std::invoke_result_t<decltype(get_devices), int*>, SDL_AudioDeviceID*>)
 {
     auto numdevs = int{};
-    auto devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{SDL_GetAudioPlaybackDevices(&numdevs)};
+    auto const devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{get_devices(&numdevs)};
     if(!devicelist || numdevs < 0)
     {
         ERR("Failed to get playback devices: {}", SDL_GetError());
@@ -94,17 +90,16 @@ void EnumeratePlaybackDevices()
         auto *name = SDL_GetAudioDeviceName(id);
         if(!name) return DeviceEntry{};
 
-        auto count = 1u;
-        auto newname = std::string{name};
-        while(CheckName(newname, gPlaybackDevices))
-            newname = al::format("{} #{}", name, ++count);
-
-        TRACE("Got device \"{}\", ID {}", newname, id);
-        return DeviceEntry{.mName = std::move(newname), .mPhysDeviceID = id};
+        TRACE("Got device \"{}\", ID {}", name, id);
+        return DeviceEntry{.mName = name, .mPhysDeviceID = id};
     });
 
-    gPlaybackDevices.swap(newlist);
+    list.swap(newlist);
 }
+
+auto gPlaybackDevices = std::vector<DeviceEntry>{};
+auto gCaptureDevices = std::vector<DeviceEntry>{};
+
 
 [[nodiscard]] constexpr auto getDefaultDeviceName() noexcept -> std::string_view
 { return "Default Device"sv; }
@@ -166,11 +161,12 @@ void Sdl3Playback::open(std::string_view name)
     else
     {
         if(gPlaybackDevices.empty())
-            EnumeratePlaybackDevices();
+            EnumerateDevices(SDL_GetAudioPlaybackDevices, gPlaybackDevices);
 
         const auto iter = std::ranges::find(gPlaybackDevices, name, &DeviceEntry::mName);
         if(iter == gPlaybackDevices.end())
-            throw al::backend_exception{al::backend_error::NoDevice, "No device named {}", name};
+            throw al::backend_exception{al::backend_error::NoDevice, "No playback device named {}",
+                name};
 
         mDeviceID = iter->mPhysDeviceID;
     }
@@ -358,6 +354,127 @@ void Sdl3Playback::start()
 void Sdl3Playback::stop()
 { SDL_PauseAudioStreamDevice(mStream); }
 
+
+struct Sdl3Capture final : BackendBase {
+    explicit Sdl3Capture(gsl::not_null<DeviceBase*> const device) : BackendBase{device} { }
+    ~Sdl3Capture() final;
+
+    void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
+
+    void open(std::string_view name) override;
+    void start() override;
+    void stop() override;
+    void captureSamples(std::span<std::byte> outbuffer) override;
+    auto availableSamples() -> std::size_t override;
+
+    SDL_AudioDeviceID mDeviceID{0};
+    SDL_AudioStream *mStream{nullptr};
+    std::vector<std::byte> mBuffer;
+    RingBufferPtr<std::byte> mRing;
+};
+
+Sdl3Capture::~Sdl3Capture()
+{
+    if(mStream)
+        SDL_DestroyAudioStream(mStream);
+    mStream = nullptr;
+}
+
+
+auto Sdl3Capture::audioCallback(SDL_AudioStream *stream, int /*additional_amount*/,
+    int /*total_amount*/) noexcept -> void
+try {
+    auto const avail = sys_int{SDL_GetAudioStreamAvailable(stream)};
+    if(auto const uavail = avail.cast_to<sys_uint>(); uavail != mBuffer.size())
+        mBuffer.resize(uavail.c_val);
+
+    auto const got = sys_int{SDL_GetAudioStreamData(stream, mBuffer.data(), avail.c_val)};
+    if(got != avail)
+        mBuffer.resize(got.cast_to<sys_uint>().c_val);
+
+    std::ignore = mRing->write(mBuffer);
+}
+catch(std::exception &e) {
+    ERR("Caught exception in capture callback: {}", e.what());
+}
+
+
+auto Sdl3Capture::open(std::string_view name) -> void
+{
+    const auto defaultDeviceName = getDefaultDeviceName();
+    if(name.empty() || name == defaultDeviceName)
+    {
+        name = defaultDeviceName;
+        mDeviceID = DefaultCaptureDeviceID;
+    }
+    else
+    {
+        if(gCaptureDevices.empty())
+            EnumerateDevices(SDL_GetAudioRecordingDevices, gCaptureDevices);
+
+        const auto iter = std::ranges::find(gCaptureDevices, name, &DeviceEntry::mName);
+        if(iter == gCaptureDevices.end())
+            throw al::backend_exception{al::backend_error::NoDevice, "No capture device named {}",
+                name};
+
+        mDeviceID = iter->mPhysDeviceID;
+    }
+
+    auto want = SDL_AudioSpec{};
+    want.freq = gsl::narrow<int>(mDevice->mSampleRate);
+    switch(mDevice->FmtType)
+    {
+    case DevFmtUByte:  want.format = SDL_AUDIO_U8;  break;
+    case DevFmtByte:   want.format = SDL_AUDIO_S8;  break;
+    case DevFmtShort:  want.format = SDL_AUDIO_S16; break;
+    case DevFmtInt:    want.format = SDL_AUDIO_S32; break;
+    case DevFmtFloat:  want.format = SDL_AUDIO_F32; break;
+    case DevFmtUShort:
+    case DevFmtUInt:
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Format not supported for capture: {}", DevFmtTypeString(mDevice->FmtType)};
+    }
+    want.channels = gsl::narrow<int>(mDevice->channelsFromFmt());
+
+    static constexpr auto callback = [](void *ptr, SDL_AudioStream *stream, int additional_amount,
+        int total_amount) noexcept
+    {
+        return static_cast<Sdl3Capture*>(ptr)->audioCallback(stream, additional_amount,
+            total_amount);
+    };
+    mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
+    if(not mStream)
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to create capture stream: {}", SDL_GetError()};
+
+    setDefaultWFXChannelOrder();
+
+    /* Ensure a minimum ringbuffer size of 100ms. */
+    mRing = RingBuffer<std::byte>::Create(std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u),
+        mDevice->frameSizeFromFmt(), false);
+
+    mDeviceName = name;
+}
+
+void Sdl3Capture::start()
+{
+    if(not SDL_ResumeAudioStreamDevice(mStream))
+        throw al::backend_exception{al::backend_error::DeviceError,
+            "Failed to start capture device: {}", SDL_GetError()};
+}
+
+void Sdl3Capture::stop()
+{
+    if(not SDL_PauseAudioStreamDevice(mStream))
+        ERR("Failed to stop capture device: {}", SDL_GetError());
+}
+
+auto Sdl3Capture::availableSamples() -> std::size_t
+{ return mRing->readSpace(); }
+
+void Sdl3Capture::captureSamples(std::span<std::byte> const outbuffer)
+{ std::ignore = mRing->read(outbuffer); }
+
 } // namespace
 
 auto SDL3BackendFactory::getFactory() -> BackendFactory&
@@ -375,19 +492,28 @@ auto SDL3BackendFactory::init() -> bool
 }
 
 auto SDL3BackendFactory::querySupport(BackendType const type) -> bool
-{ return type == BackendType::Playback; }
+{ return type == BackendType::Playback or type == BackendType::Capture; }
 
 auto SDL3BackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {
     auto outnames = std::vector<std::string>{};
 
-    if(type != BackendType::Playback)
-        return outnames;
-
-    EnumeratePlaybackDevices();
-    outnames.reserve(gPlaybackDevices.size()+1);
-    outnames.emplace_back(getDefaultDeviceName());
-    std::ranges::transform(gPlaybackDevices, std::back_inserter(outnames), &DeviceEntry::mName);
+    if(type == BackendType::Playback)
+    {
+        EnumerateDevices(SDL_GetAudioPlaybackDevices, gPlaybackDevices);
+        outnames.reserve(gPlaybackDevices.size()+1);
+        outnames.emplace_back(getDefaultDeviceName());
+        std::ranges::transform(gPlaybackDevices, std::back_inserter(outnames),
+            &DeviceEntry::mName);
+    }
+    else if(type == BackendType::Capture)
+    {
+        EnumerateDevices(SDL_GetAudioRecordingDevices, gCaptureDevices);
+        outnames.reserve(gCaptureDevices.size()+1);
+        outnames.emplace_back(getDefaultDeviceName());
+        std::ranges::transform(gCaptureDevices, std::back_inserter(outnames),
+            &DeviceEntry::mName);
+    }
 
     return outnames;
 }
@@ -397,5 +523,7 @@ auto SDL3BackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl3Playback{device}};
+    if(type == BackendType::Capture)
+        return BackendPtr{new Sdl3Capture{device}};
     return nullptr;
 }

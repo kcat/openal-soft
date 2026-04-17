@@ -110,10 +110,10 @@ void EnumeratePlaybackDevices()
 { return "Default Device"sv; }
 
 
-struct Sdl3Backend final : BackendBase {
-    explicit Sdl3Backend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
+struct Sdl3Playback final : BackendBase {
+    explicit Sdl3Playback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
     { }
-    ~Sdl3Backend() final;
+    ~Sdl3Playback() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
 
@@ -129,14 +129,14 @@ struct Sdl3Backend final : BackendBase {
     std::vector<std::byte> mBuffer;
 };
 
-Sdl3Backend::~Sdl3Backend()
+Sdl3Playback::~Sdl3Playback()
 {
     if(mStream)
         SDL_DestroyAudioStream(mStream);
     mStream = nullptr;
 }
 
-void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount)
+void Sdl3Playback::audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount)
     noexcept
 {
     if(additional_amount < 0)
@@ -155,7 +155,7 @@ void Sdl3Backend::audioCallback(SDL_AudioStream *stream, int additional_amount, 
     SDL_PutAudioStreamData(stream, mBuffer.data(), additional_amount);
 }
 
-void Sdl3Backend::open(std::string_view name)
+void Sdl3Playback::open(std::string_view name)
 {
     const auto defaultDeviceName = getDefaultDeviceName();
     if(name.empty() || name == defaultDeviceName)
@@ -233,12 +233,12 @@ void Sdl3Backend::open(std::string_view name)
     mDeviceName = name;
 }
 
-auto Sdl3Backend::reset() -> bool
+auto Sdl3Playback::reset() -> bool
 {
     static constexpr auto callback = [](void *ptr, SDL_AudioStream *stream, int additional_amount,
         int total_amount) noexcept
     {
-        return static_cast<Sdl3Backend*>(ptr)->audioCallback(stream, additional_amount,
+        return static_cast<Sdl3Playback*>(ptr)->audioCallback(stream, additional_amount,
             total_amount);
     };
 
@@ -352,17 +352,17 @@ auto Sdl3Backend::reset() -> bool
     return true;
 }
 
-void Sdl3Backend::start()
+void Sdl3Playback::start()
 { SDL_ResumeAudioStreamDevice(mStream); }
 
-void Sdl3Backend::stop()
+void Sdl3Playback::stop()
 { SDL_PauseAudioStreamDevice(mStream); }
 
 } // namespace
 
 auto SDL3BackendFactory::getFactory() -> BackendFactory&
 {
-    static SDL3BackendFactory factory{};
+    static auto factory = SDL3BackendFactory{};
     return factory;
 }
 
@@ -396,6 +396,6 @@ auto SDL3BackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
     BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
-        return BackendPtr{new Sdl3Backend{device}};
+        return BackendPtr{new Sdl3Playback{device}};
     return nullptr;
 }

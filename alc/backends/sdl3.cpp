@@ -24,11 +24,13 @@
 
 #include <cstddef>
 #include <cstring>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/device.h"
 #include "gsl/gsl"
@@ -65,6 +67,12 @@ struct DeviceEntry {
     SDL_AudioDeviceID mPhysDeviceID{};
 };
 
+template<std::ranges::range R>
+    requires(std::same_as<std::remove_cv_t<std::ranges::range_value_t<R>>, DeviceEntry>)
+[[nodiscard]] constexpr
+auto CheckName(std::string_view const name, R&& list) noexcept -> bool
+{ return std::ranges::find(list, name, &DeviceEntry::mName) != list.end(); }
+
 auto gPlaybackDevices = std::vector<DeviceEntry>{};
 
 void EnumeratePlaybackDevices()
@@ -85,8 +93,14 @@ void EnumeratePlaybackDevices()
     {
         auto *name = SDL_GetAudioDeviceName(id);
         if(!name) return DeviceEntry{};
-        TRACE("Got device \"{}\", ID {}", name, id);
-        return DeviceEntry{name, id};
+
+        auto count = 1u;
+        auto newname = std::string{name};
+        while(CheckName(newname, gPlaybackDevices))
+            newname = al::format("{} #{}", name, ++count);
+
+        TRACE("Got device \"{}\", ID {}", newname, id);
+        return DeviceEntry{.mName = std::move(newname), .mPhysDeviceID = id};
     });
 
     gPlaybackDevices.swap(newlist);

@@ -109,9 +109,10 @@ void EnumerateDevices(std::invocable<int*> auto&& get_devices, std::vector<Devic
             if(name_exists(entry.mName))
             {
                 auto count = 1u;
-                auto newname = al::format("{} #{}", entry.mName, ++count);
-                while(name_exists(newname))
+                auto newname = std::string{};
+                do {
                     newname = al::format("{} #{}", entry.mName, ++count);
+                } while(name_exists(newname));
                 entry.mName = std::move(newname);
             }
         }

@@ -22,6 +22,7 @@
 
 #include "sdl3.h"
 
+#include <concepts>
 #include <cstddef>
 #include <cstring>
 #include <ranges>
@@ -73,15 +74,15 @@ struct DeviceEntry {
 void EnumerateDevices(std::invocable<int*> auto&& get_devices, std::vector<DeviceEntry> &list)
     requires(std::same_as<std::invoke_result_t<decltype(get_devices), int*>, SDL_AudioDeviceID*>)
 {
-    auto numdevs = int{};
-    auto const devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{get_devices(&numdevs)};
+    auto numdevs = sys_int{};
+    auto const devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{get_devices(&numdevs.c_val)};
     if(!devicelist || numdevs < 0)
     {
         ERR("Failed to get playback devices: {}", SDL_GetError());
         return;
     }
 
-    auto devids = std::span{devicelist.get(), gsl::narrow<unsigned>(numdevs)};
+    auto devids = std::span{devicelist.get(), numdevs.cast_to<usize>().c_val};
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());
@@ -93,6 +94,28 @@ void EnumerateDevices(std::invocable<int*> auto&& get_devices, std::vector<Devic
         TRACE("Got device \"{}\", ID {}", name, id);
         return DeviceEntry{.mName = name, .mPhysDeviceID = id};
     });
+
+    /* De-duplicate device names (append #2, #3, etc, as needed). */
+    if(newlist.size() > 1)
+    {
+        for(auto const idx : std::views::iota(1_uz, newlist.size()))
+        {
+            auto &entry = newlist[idx];
+            auto const namelist = newlist | std::views::take(idx)
+                | std::views::transform(&DeviceEntry::mName);
+            auto name_exists = [namelist](std::string_view const name) -> bool
+            { return std::ranges::find(namelist, name) != namelist.end(); };
+
+            if(name_exists(entry.mName))
+            {
+                auto count = 1u;
+                auto newname = al::format("{} #{}", entry.mName, ++count);
+                while(name_exists(newname))
+                    newname = al::format("{} #{}", entry.mName, ++count);
+                entry.mName = std::move(newname);
+            }
+        }
+    }
 
     list.swap(newlist);
 }

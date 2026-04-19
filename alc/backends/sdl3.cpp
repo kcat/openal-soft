@@ -66,6 +66,27 @@ template<typename T>
 using unique_sdl_ptr = std::unique_ptr<T, decltype([](gsl::owner<T*> ptr) { SDL_free(ptr); })>;
 
 
+auto SDLCALL EventHandler(void* /*userptr*/, SDL_Event *const event) noexcept -> bool
+{
+    if(event->type == SDL_EVENT_AUDIO_DEVICE_ADDED)
+    {
+        auto &evt = event->adevice;
+        auto const devtype = evt.recording ? alc::DeviceType::Capture : alc::DeviceType::Playback;
+
+        auto const msg = al::format("Device ID added: {}", evt.which);
+        alc::Event(alc::EventType::DeviceAdded, devtype, msg);
+    }
+    else if(event->type == SDL_EVENT_AUDIO_DEVICE_REMOVED)
+    {
+        auto &evt = event->adevice;
+        auto const devtype = evt.recording ? alc::DeviceType::Capture : alc::DeviceType::Playback;
+
+        auto const msg = al::format("Device ID removed: {}", evt.which);
+        alc::Event(alc::EventType::DeviceRemoved, devtype, msg);
+    }
+    return true;
+}
+
 struct DeviceEntry {
     std::string mName;
     SDL_AudioDeviceID mPhysDeviceID{};
@@ -512,11 +533,34 @@ auto SDL3BackendFactory::init() -> bool
     if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
         return false;
     TRACE("Current SDL3 audio driver: \"{}\"", SDL_GetCurrentAudioDriver());
+
+    if(not SDL_AddEventWatch(&EventHandler, nullptr))
+        ERR("Failed to register SDL event handler: {}", SDL_GetError());
+
     return true;
 }
 
 auto SDL3BackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback or type == BackendType::Capture; }
+
+auto SDL3BackendFactory::queryEventSupport(alc::EventType const event, BackendType /*backend*/)
+    -> alc::EventSupport
+{
+    switch(event)
+    {
+    case alc::EventType::DeviceAdded:
+    case alc::EventType::DeviceRemoved:
+        return alc::EventSupport::FullSupport;
+
+    /* SDL3 doesn't report when the default device changes. This isn't too big
+     * of a deal since we always report a separate "Default Device" as the
+     * default, and SDL will automatically move between devices when using it.
+     */
+    case alc::EventType::DefaultDeviceChanged:
+        break;
+    }
+    return alc::EventSupport::NoSupport;
+}
 
 auto SDL3BackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

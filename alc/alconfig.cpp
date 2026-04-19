@@ -328,17 +328,7 @@ void LoadConfigFromFile(std::istream &f)
 
         TRACE(" setting '{}' = '{}'", fullKey, valpart);
 
-        /* Check if we already have this option set */
-        const auto ent = std::ranges::find(ConfOpts, fullKey, &ConfigEntry::key);
-        if(ent != ConfOpts.end())
-        {
-            if(!valpart.empty())
-                ent->value = expdup(valpart);
-            else
-                ConfOpts.erase(ent);
-        }
-        else if(!valpart.empty())
-            ConfOpts.emplace_back(std::move(fullKey), expdup(valpart));
+        SetConfigValue (fullKey, valpart);
     }
     ConfOpts.shrink_to_fit();
 }
@@ -378,6 +368,20 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
 
 } // namespace
 
+void SetConfigValue(const std::string_view key, const std::string_view value)
+{
+    /* Check if we already have this option set */
+    const auto ent = std::ranges::find(ConfOpts, key, &ConfigEntry::key);
+    if(ent != ConfOpts.end())
+    {
+        if(!value.empty())
+            ent->value = expdup(value);
+        else
+            ConfOpts.erase(ent);
+    }
+    else if(!value.empty())
+        ConfOpts.emplace_back(std::move(key), expdup(value));
+}
 
 #ifdef _WIN32
 void ReadALConfig()

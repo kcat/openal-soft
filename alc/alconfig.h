@@ -8,6 +8,8 @@
 
 void ReadALConfig();
 
+void SetConfigValue(std::string_view key, std::string_view value);
+
 auto GetConfigValueBool(std::string_view devName, std::string_view blockName,
     std::string_view keyName, bool def) -> bool;
 

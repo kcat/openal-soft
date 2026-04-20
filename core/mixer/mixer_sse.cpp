@@ -38,7 +38,7 @@ force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
-    ConstHrirSpan const Coeffs, float const left, float const right)
+    ConstHrirSpan const Coeffs, float const left, float const right) noexcept NONBLOCKING
 {
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
@@ -331,11 +331,12 @@ void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> c
 
 void MixHrtf_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     unsigned const IrSize, MixHrtfFilter const *const hrtfparams, std::size_t const SamplesToDo)
+    noexcept NONBLOCKING
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 void MixHrtfBlend_SSE(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     unsigned const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
-    std::size_t const SamplesToDo)
+    std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         SamplesToDo);
@@ -344,7 +345,7 @@ void MixHrtfBlend_SSE(std::span<float const> const InSamples, std::span<f32x2> c
 void MixDirectHrtf_SSE(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
-    std::size_t const IrSize, std::size_t const SamplesToDo)
+    std::size_t const IrSize, std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
         IrSize, SamplesToDo);
@@ -353,7 +354,7 @@ void MixDirectHrtf_SSE(FloatBufferSpan const LeftOut, FloatBufferSpan const Righ
 
 void Mix_SSE(std::span<float const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
     std::span<float> const CurrentGains, std::span<float const> const TargetGains,
-    std::size_t const Counter, std::size_t const OutPos)
+    std::size_t const Counter, std::size_t const OutPos) noexcept NONBLOCKING
 {
     if((OutPos&3) != 0) [[unlikely]]
         return Mix_C(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
@@ -370,7 +371,7 @@ void Mix_SSE(std::span<float const> const InSamples, std::span<FloatBufferLine> 
 }
 
 void Mix_SSE(std::span<float const> const InSamples, std::span<float> const OutBuffer,
-    float &CurrentGain, float const TargetGain, std::size_t const Counter)
+    float &CurrentGain, float const TargetGain, std::size_t const Counter) noexcept NONBLOCKING
 {
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]

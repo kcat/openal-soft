@@ -12,11 +12,12 @@
 
 
 using ApplyCoeffsT = void(*)(std::span<f32x2> Values, std::size_t irSize, ConstHrirSpan Coeffs,
-    float left, float right);
+    float left, float right) noexcept NONBLOCKING;
 
 template<ApplyCoeffsT ApplyCoeffs>
 void MixHrtfBase(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     std::size_t const IrSize, MixHrtfFilter const *const hrtfparams, std::size_t const SamplesToDo)
+    noexcept NONBLOCKING
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
@@ -43,7 +44,7 @@ void MixHrtfBase(std::span<float const> const InSamples, std::span<f32x2> const 
 template<ApplyCoeffsT ApplyCoeffs>
 void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     std::size_t const IrSize, HrtfFilter const *const oldparams,
-    MixHrtfFilter const *const newparams, std::size_t const SamplesToDo)
+    MixHrtfFilter const *const newparams, std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
@@ -91,7 +92,7 @@ template<ApplyCoeffsT ApplyCoeffs>
 void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChannelState,
-    std::size_t const IrSize, std::size_t const SamplesToDo)
+    std::size_t const IrSize, std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);

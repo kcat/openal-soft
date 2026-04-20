@@ -47,7 +47,8 @@ void vtranspose4(float32x4_t &x0, float32x4_t &x1, float32x4_t &x2, float32x4_t 
     x3 = u1_.val[1];
 }
 
-inline auto set_f4(float const l0, float const l1, float const l2, float const l3) -> float32x4_t
+inline
+auto set_f4(float const l0, float const l1, float const l2, float const l3) noexcept -> float32x4_t
 {
     auto ret = vmovq_n_f32(l0);
     ret = vsetq_lane_f32(l1, ret, 1);
@@ -57,7 +58,7 @@ inline auto set_f4(float const l0, float const l1, float const l2, float const l
 }
 
 inline void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
-    ConstHrirSpan const Coeffs, float const left, float const right)
+    ConstHrirSpan const Coeffs, float const left, float const right) noexcept NONBLOCKING
 {
     ASSUME(IrSize >= MinIrLength);
     ASSUME(IrSize <= HrirLength);
@@ -78,7 +79,7 @@ inline void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
 
 force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t const realign_len, std::size_t Counter)
+    std::size_t const realign_len, std::size_t Counter) noexcept NONBLOCKING
 {
     auto const step = float{(TargetGain-CurrentGain) * delta};
 
@@ -428,11 +429,12 @@ void Resample_BSinc_NEON(InterpState const *const state, std::span<float const> 
 
 void MixHrtf_NEON(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     unsigned const IrSize, MixHrtfFilter const *const hrtfparams, std::size_t const SamplesToDo)
+    noexcept NONBLOCKING
 { MixHrtfBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, hrtfparams, SamplesToDo); }
 
 void MixHrtfBlend_NEON(std::span<float const> const InSamples, std::span<f32x2> const AccumSamples,
     unsigned const IrSize, HrtfFilter const *const oldparams, MixHrtfFilter const *const newparams,
-    std::size_t const SamplesToDo)
+    std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     MixHrtfBlendBase<ApplyCoeffs>(InSamples, AccumSamples, IrSize, oldparams, newparams,
         SamplesToDo);
@@ -441,7 +443,7 @@ void MixHrtfBlend_NEON(std::span<float const> const InSamples, std::span<f32x2> 
 void MixDirectHrtf_NEON(FloatBufferSpan const LeftOut, FloatBufferSpan const RightOut,
     std::span<FloatBufferLine const> const InSamples, std::span<f32x2> const AccumSamples,
     std::span<float, BufferLineSize> const TempBuf, std::span<HrtfChannelState> const ChanState,
-    std::size_t const IrSize, std::size_t const SamplesToDo)
+    std::size_t const IrSize, std::size_t const SamplesToDo) noexcept NONBLOCKING
 {
     MixDirectHrtfBase<ApplyCoeffs>(LeftOut, RightOut, InSamples, AccumSamples, TempBuf, ChanState,
         IrSize, SamplesToDo);
@@ -450,7 +452,7 @@ void MixDirectHrtf_NEON(FloatBufferSpan const LeftOut, FloatBufferSpan const Rig
 
 void Mix_NEON(std::span<float const> const InSamples, std::span<FloatBufferLine> const OutBuffer,
     std::span<float> const CurrentGains, std::span<float const> const TargetGains,
-    std::size_t const Counter, std::size_t const OutPos)
+    std::size_t const Counter, std::size_t const OutPos) noexcept NONBLOCKING
 {
     if((OutPos&3) != 0) [[unlikely]]
         return Mix_C(InSamples, OutBuffer, CurrentGains, TargetGains, Counter, OutPos);
@@ -467,7 +469,7 @@ void Mix_NEON(std::span<float const> const InSamples, std::span<FloatBufferLine>
 }
 
 void Mix_NEON(std::span<float const> const InSamples, std::span<float> const OutBuffer,
-    float &CurrentGain, float const TargetGain, std::size_t const Counter)
+    float &CurrentGain, float const TargetGain, std::size_t const Counter) noexcept NONBLOCKING
 {
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(OutBuffer.data())&15) != 0) [[unlikely]]

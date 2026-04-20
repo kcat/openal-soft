@@ -13,8 +13,8 @@
 #include "mixer/defs.h"
 
 
-auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread)
-    -> std::array<float,MaxAmbiChannels>
+auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread) noexcept
+    NONBLOCKING -> std::array<float,MaxAmbiChannels>
 {
     auto coeffs = CalcAmbiCoeffs(y, z, x);
 
@@ -91,7 +91,7 @@ auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
 }
 
 void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
-    const float ingain, const std::span<float,MaxAmbiChannels> gains)
+    const float ingain, const std::span<float,MaxAmbiChannels> gains) noexcept NONBLOCKING
 {
     auto ambimap = std::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 

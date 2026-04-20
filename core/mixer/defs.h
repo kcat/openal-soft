@@ -69,15 +69,16 @@ struct CubicState {
 using InterpState = std::variant<std::monostate, CubicState, BsincState>;
 
 using ResamplerFunc = void(*)(InterpState const *state, std::span<float const> src, unsigned frac,
-    unsigned increment, std::span<float> dst);
+    unsigned increment, std::span<float> dst) noexcept NONBLOCKING;
 
 [[nodiscard]]
-auto PrepareResampler(Resampler resampler, unsigned increment, InterpState *state)
-    -> ResamplerFunc;
+auto PrepareResampler(Resampler resampler, unsigned increment, InterpState *state) noexcept
+    NONBLOCKING -> ResamplerFunc;
 
 #define DECL_RESAMPLER(T, I)                                                  \
 void Resample_##T##_##I(InterpState const *state, std::span<float const> src, \
-    unsigned frac, unsigned increment, std::span<float> dst);
+    unsigned frac, unsigned increment, std::span<float> dst) noexcept         \
+    NONBLOCKING;
 
 #define DECL_MIXER(I)                                                         \
 void Mix_##I(std::span<float const> InSamples,                                \
@@ -146,7 +147,8 @@ DECL_RESAMPLER(Cubic, SSE4)
 /* Vectorized resampler helpers */
 template<std::size_t N> constexpr
 void InitPosArrays(unsigned const pos, unsigned const frac, unsigned const increment,
-    std::span<unsigned, N> const frac_arr, std::span<unsigned, N> const pos_arr)
+    std::span<unsigned, N> const frac_arr, std::span<unsigned, N> const pos_arr) noexcept
+    NONBLOCKING
 {
     static_assert(pos_arr.size() == frac_arr.size());
     pos_arr[0] = pos;

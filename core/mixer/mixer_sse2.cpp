@@ -52,7 +52,7 @@ force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept
 } // namespace
 
 void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, unsigned frac,
-    unsigned const increment, std::span<float> const dst)
+    unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
@@ -110,11 +110,11 @@ void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, 
 }
 
 void Resample_Cubic_SSE2(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
-    auto const filter = std::get<CubicState>(*state).filter;
+    auto const filter = gsl::not_null{std::get_if<CubicState>(state)}->filter;
 
     auto const increment4 = _mm_set1_epi32(as_signed(increment*4));
     auto const fracMask4 = _mm_set1_epi32(MixerFracMask);

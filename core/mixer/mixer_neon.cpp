@@ -184,7 +184,7 @@ force_inline void MixLine(std::span<float const> const InSamples, std::span<floa
 } // namespace
 
 void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, unsigned frac,
-    unsigned const increment, std::span<float> const dst)
+    unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
@@ -240,11 +240,11 @@ void Resample_Linear_NEON(InterpState const*, std::span<float const> const src, 
 }
 
 void Resample_Cubic_NEON(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
-    auto const filter = std::get<CubicState>(*state).filter;
+    auto const filter = gsl::not_null{std::get_if<CubicState>(state)}->filter;
 
     auto const increment4 = vdupq_n_u32(increment*4u);
     auto const fracMask4 = vdupq_n_u32(MixerFracMask);
@@ -330,9 +330,9 @@ void Resample_Cubic_NEON(InterpState const *const state, std::span<float const> 
 }
 
 void Resample_FastBSinc_NEON(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const &bsinc = std::get<BsincState>(*state);
+    auto const &bsinc = *gsl::not_null{std::get_if<BsincState>(state)};
     auto const m = std::size_t{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
@@ -376,9 +376,9 @@ void Resample_FastBSinc_NEON(InterpState const *const state, std::span<float con
 }
 
 void Resample_BSinc_NEON(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const &bsinc = std::get<BsincState>(*state);
+    auto const &bsinc = *gsl::not_null{std::get_if<BsincState>(state)};
     auto const sf4 = vdupq_n_f32(bsinc.sf);
     auto const m = std::size_t{bsinc.m.c_val};
     ASSUME(m > 0);

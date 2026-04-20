@@ -93,7 +93,7 @@ void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
 
 force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t const realign_len, std::size_t const Counter)
+    std::size_t const realign_len, std::size_t const Counter) noexcept NONBLOCKING
 {
     auto const step = float{(TargetGain-CurrentGain) * delta};
 
@@ -197,11 +197,11 @@ force_inline void MixLine(std::span<float const> const InSamples, std::span<floa
 } // namespace
 
 void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
-    auto const filter = std::get<CubicState>(*state).filter;
+    auto const filter = gsl::not_null{std::get_if<CubicState>(state)}->filter;
 
     auto pos = std::size_t{MaxResamplerEdge-1};
     std::ranges::generate(dst, [&pos,&frac,src,increment,filter]() -> float
@@ -230,9 +230,9 @@ void Resample_Cubic_SSE(InterpState const *const state, std::span<float const> c
 }
 
 void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const &bsinc = std::get<BsincState>(*state);
+    auto const &bsinc = *gsl::not_null{std::get_if<BsincState>(state)};
     auto const m = std::size_t{bsinc.m.c_val};
     ASSUME(m > 0);
     ASSUME(m <= MaxResamplerPadding);
@@ -277,9 +277,9 @@ void Resample_FastBSinc_SSE(InterpState const *const state, std::span<float cons
 }
 
 void Resample_BSinc_SSE(InterpState const *const state, std::span<float const> const src,
-    unsigned frac, unsigned const increment, std::span<float> const dst)
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const &bsinc = std::get<BsincState>(*state);
+    auto const &bsinc = *gsl::not_null{std::get_if<BsincState>(state)};
     auto const sf4 = _mm_set1_ps(bsinc.sf);
     auto const m = std::size_t{bsinc.m.c_val};
     ASSUME(m > 0);

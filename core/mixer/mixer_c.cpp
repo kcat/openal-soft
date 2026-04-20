@@ -149,7 +149,7 @@ void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
 
 force_inline void MixLine(std::span<float const> InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t Counter)
+    std::size_t Counter) noexcept NONBLOCKING
 {
     auto const step = (TargetGain-CurrentGain) * delta;
 
@@ -188,33 +188,33 @@ force_inline void MixLine(std::span<float const> InSamples, std::span<float> con
 } // namespace
 
 void Resample_Point_C(InterpState const*, std::span<float const> const src, unsigned const frac,
-    unsigned const increment, std::span<float> const dst)
+    unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 { DoResample<do_point>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
 void Resample_Linear_C(InterpState const*, std::span<float const> const src, unsigned const frac,
-    unsigned const increment, std::span<float> const dst)
+    unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 { DoResample<do_lerp>(src.subspan(MaxResamplerEdge), frac, increment, dst); }
 
 void Resample_Cubic_C(InterpState const *const state, std::span<float const> const src,
-    unsigned const frac, unsigned const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    DoResample<CubicState,do_cubic>(std::get<CubicState>(*state), src.subspan(MaxResamplerEdge-1),
-        frac, increment, dst);
+    DoResample<CubicState,do_cubic>(*gsl::not_null{std::get_if<CubicState>(state)},
+        src.subspan(MaxResamplerEdge-1), frac, increment, dst);
 }
 
 void Resample_FastBSinc_C(InterpState const *const state, std::span<float const> const src,
-    unsigned const frac, unsigned const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const istate = std::get<BsincState>(*state);
+    auto const istate = *gsl::not_null{std::get_if<BsincState>(state)};
     ASSUME(istate.l.c_val <= MaxResamplerEdge);
     DoResample<BsincState,do_fastbsinc>(istate, src.subspan(MaxResamplerEdge-istate.l.c_val), frac,
         increment, dst);
 }
 
 void Resample_BSinc_C(InterpState const *const state, std::span<float const> const src,
-    unsigned const frac, unsigned const increment, std::span<float> const dst)
+    unsigned const frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
-    auto const istate = std::get<BsincState>(*state);
+    auto const istate = *gsl::not_null{std::get_if<BsincState>(state)};
     ASSUME(istate.l.c_val <= MaxResamplerEdge);
     DoResample<BsincState,do_bsinc>(istate, src.subspan(MaxResamplerEdge-istate.l.c_val), frac,
         increment, dst);

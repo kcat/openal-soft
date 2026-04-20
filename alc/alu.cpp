@@ -138,14 +138,15 @@ auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 
 
 void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable const *const table)
+    noexcept NONBLOCKING
 {
     auto si = std::size_t{BSincScaleCount - 1};
     auto sf = 0.0_f32;
 
     if(increment > MixerFracOne)
     {
-        sf = MixerFracOne/f32::from(increment) - table->scaleBase;
-        sf = std::max(0.0_f32, BSincScaleCount*sf*table->scaleRange - 1.0f);
+        sf = float{MixerFracOne}/f32::from(increment) - table->scaleBase;
+        sf = std::max(0.0_f32, float{BSincScaleCount}*sf*table->scaleRange - 1.0f);
 
         si = float2uint(sf.c_val);
         sf -= f32::from(si);
@@ -158,12 +159,13 @@ void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable 
 
     state->sf = sf.c_val;
     state->m = table->m[si];
-    state->l = (state->m/2) - 1;
+    state->l = (state->m/2u) - 1u;
     state->filter = table->Tab.subspan(table->filterOffset[si].c_val);
 }
 
 [[nodiscard]]
-auto SelectResampler(Resampler const resampler, unsigned const increment) -> ResamplerFunc
+auto SelectResampler(Resampler const resampler, unsigned const increment) noexcept NONBLOCKING
+    -> ResamplerFunc
 {
     switch(resampler)
     {
@@ -249,7 +251,7 @@ void aluInit(CompatFlagBitset const flags, float const nfcscale)
 
 
 auto PrepareResampler(Resampler const resampler, unsigned const increment,
-    InterpState *const state) -> ResamplerFunc
+    InterpState *const state) noexcept NONBLOCKING -> ResamplerFunc
 {
     switch(resampler)
     {

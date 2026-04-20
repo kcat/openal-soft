@@ -200,7 +200,7 @@ auto SampleConverter::Create(DevFmtType const srcType, DevFmtType const dstType,
     if(converter->mIncrement == MixerFracOne)
     {
         converter->mResample = [](InterpState const*, std::span<float const> const src, unsigned,
-            unsigned const, std::span<float> const dst)
+            unsigned const, std::span<float> const dst) noexcept NONBLOCKING
         {
             std::ranges::copy(src | std::views::drop(MaxResamplerEdge)
                 | std::views::take(dst.size()), dst.begin());

@@ -2,10 +2,9 @@
 #define AL_ATOMIC_H
 
 #include <atomic>
-#include <cstddef>
 #include <memory>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "gsl/gsl"
 
 #ifdef __APPLE__
@@ -108,7 +107,7 @@ auto atomic_wait(std::atomic<T> &aval, T const value,
 
 #else
 
-        static_assert(false, "No atomic wait function available");
+        static_assert(dependent_false<T>, "No atomic wait function available");
 #endif
     }
 }
@@ -147,7 +146,7 @@ auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
 
 #else
 
-        static_assert(false, "No atomic notify_one function available");
+        static_assert(dependent_false<T>, "No atomic notify_one function available");
 #endif
     }
 }
@@ -179,7 +178,7 @@ auto atomic_notify_all(std::atomic<T> &aval) noexcept -> void
 
 #else
 
-        static_assert(false, "No atomic notify_all function available");
+        static_assert(dependent_false<T>, "No atomic notify_all function available");
 #endif
     }
 }

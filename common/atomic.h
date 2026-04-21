@@ -78,95 +78,110 @@ template<typename T>
 auto atomic_wait(std::atomic<T> &aval, T const value,
     std::memory_order const order = std::memory_order_seq_cst) noexcept -> void
 {
-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
-    static_assert(sizeof(aval) == sizeof(T));
-
-    if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wait != nullptr)
-    {
-        while(aval.load(order) == value)
-            __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
-    }
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
-    else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wait != nullptr)
-    {
-        while(aval.load(order) == value)
-            __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
-    }
-#endif
+    if constexpr(requires { aval.wait(value, order); })
+        aval.wait(value, order);
     else
     {
-        auto lock = std::unique_lock{gAtomicWaitMutex};
-        ++gAtomicWaitCounter;
-        while(aval.load(order) == value)
-            gAtomicWaitCondVar.wait(lock);
-        --gAtomicWaitCounter;
-    }
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+        static_assert(sizeof(aval) == sizeof(T));
+
+        if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wait != nullptr)
+        {
+            while(aval.load(order) == value)
+                __ulock_wait(UL_COMPARE_AND_WAIT, &aval, value, 0);
+        }
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+        else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wait != nullptr)
+        {
+            while(aval.load(order) == value)
+                __ulock_wait(UL_COMPARE_AND_WAIT64, &aval, value, 0);
+        }
+#endif
+        else
+        {
+            auto lock = std::unique_lock{gAtomicWaitMutex};
+            ++gAtomicWaitCounter;
+            while(aval.load(order) == value)
+                gAtomicWaitCondVar.wait(lock);
+            --gAtomicWaitCounter;
+        }
 
 #else
 
-    aval.wait(value, order);
+        static_assert(false, "No atomic wait function available");
 #endif
+    }
 }
 
 template<typename T>
 auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
 {
-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
-    static_assert(sizeof(aval) == sizeof(T));
-
-    if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wake != nullptr)
-        __ulock_wake(UL_COMPARE_AND_WAIT, &aval, 0);
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
-    else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wake != nullptr)
-        __ulock_wake(UL_COMPARE_AND_WAIT64, &aval, 0);
-#endif
+    if constexpr(requires { aval.notify_one(); })
+        aval.notify_one();
     else
     {
-        auto lock = std::unique_lock{gAtomicWaitMutex};
-        auto const numwaits = gAtomicWaitCounter;
-        lock.unlock();
-        if(numwaits > 0)
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+        static_assert(sizeof(aval) == sizeof(T));
+
+        if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wake != nullptr)
+            __ulock_wake(UL_COMPARE_AND_WAIT, &aval, 0);
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+        else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wake != nullptr)
+            __ulock_wake(UL_COMPARE_AND_WAIT64, &aval, 0);
+#endif
+        else
         {
-            /* notify_all since we can't guarantee notify_one will wake a
-             * waiter waiting on this particular object. With notify_all, we
-             * just act as if all waiters were spuriously woken up and they'll
-             * recheck.
-             */
-            gAtomicWaitCondVar.notify_all();
+            auto lock = std::unique_lock{gAtomicWaitMutex};
+            auto const numwaits = gAtomicWaitCounter;
+            lock.unlock();
+            if(numwaits > 0)
+            {
+                /* notify_all since we can't guarantee notify_one will wake a
+                 * waiter waiting on this particular object. With notify_all,
+                 * we just act as if all waiters were spuriously woken up and
+                 * they'll recheck.
+                 */
+                gAtomicWaitCondVar.notify_all();
+            }
         }
-    }
 
 #else
 
-    aval.notify_one();
+        static_assert(false, "No atomic notify_one function available");
 #endif
+    }
 }
 
 template<typename T>
 auto atomic_notify_all(std::atomic<T> &aval) noexcept -> void
 {
-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
-    static_assert(sizeof(aval) == sizeof(T));
-
-    if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wake != nullptr)
-        __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, &aval, 0);
-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
-    else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wake != nullptr)
-        __ulock_wake(UL_COMPARE_AND_WAIT64 | ULF_WAKE_ALL, &aval, 0);
-#endif
+    if constexpr(requires { aval.notify_all(); })
+        aval.notify_all();
     else
     {
-        auto lock = std::unique_lock{gAtomicWaitMutex};
-        auto const numwaits = gAtomicWaitCounter;
-        lock.unlock();
-        if(numwaits > 0)
-            gAtomicWaitCondVar.notify_all();
-    }
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 110000
+        static_assert(sizeof(aval) == sizeof(T));
+
+        if(sizeof(T) == sizeof(std::uint32_t) && __ulock_wake != nullptr)
+            __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, &aval, 0);
+#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
+        else if(sizeof(T) == sizeof(std::uint64_t) && __ulock_wake != nullptr)
+            __ulock_wake(UL_COMPARE_AND_WAIT64 | ULF_WAKE_ALL, &aval, 0);
+#endif
+        else
+        {
+            auto lock = std::unique_lock{gAtomicWaitMutex};
+            auto const numwaits = gAtomicWaitCounter;
+            lock.unlock();
+            if(numwaits > 0)
+                gAtomicWaitCondVar.notify_all();
+        }
 
 #else
 
-    aval.notify_all();
+        static_assert(false, "No atomic notify_all function available");
 #endif
+    }
 }
 
 template<typename T, typename D=std::default_delete<T>>

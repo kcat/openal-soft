@@ -13,7 +13,7 @@
 #include "inprogext.h"
 #include "opthelpers.h"
 #if ALSOFT_EAX
-#include "context.h"
+#include "al/eax/api.h"
 #include "al/eax/x_ram.h"
 #endif
 

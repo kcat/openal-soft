@@ -558,16 +558,20 @@ auto GetContextRef() noexcept -> ContextRef;
 
 void UpdateContextProps(al::Context *context);
 
+namespace al {
+
+inline auto verify_context(ALCcontext *context) -> gsl::not_null<al::Context*>
+{
+    /* TODO: A debug/non-optimized build should essentially do
+     * al::get_not_null(VerifyContext(context)) to ensure the ALCcontext handle
+     * is valid, not just non-null.
+     */
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
+    return gsl::make_not_null(static_cast<al::Context*>(context));
+}
+
+}
 
 inline constinit auto TrapALError = false;
-
-
-#if ALSOFT_EAX
-extern "C" auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
-    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
-
-extern "C" auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
-    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
-#endif // ALSOFT_EAX
 
 #endif /* ALC_CONTEXT_H */

@@ -1525,19 +1525,12 @@ constexpr auto EAXRINGMODULATOR_MINWAVEFORM = 0_eax_ulong;
 constexpr auto EAXRINGMODULATOR_MAXWAVEFORM = 2_eax_ulong;
 constexpr auto EAXRINGMODULATOR_DEFAULTWAVEFORM = EAXRINGMODULATOR_MINWAVEFORM;
 
+extern "C" auto AL_APIENTRY EAXSet(const GUID *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
+extern "C" auto AL_APIENTRY EAXGet(const GUID *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
 
-using LPEAXSET = ALenum(AL_APIENTRY*)(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_buffer,
-    ALuint property_size);
-
-using LPEAXGET = ALenum(AL_APIENTRY*)(
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_buffer,
-    ALuint property_size);
+using LPEAXSET = decltype(EAXSet)*;
+using LPEAXGET = decltype(EAXGet)*;
 
 #endif // !EAX_API_INCLUDED

@@ -1651,10 +1651,13 @@ set_target_properties(alsoft.common PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
     POSITION_INDEPENDENT_CODE TRUE)
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
     AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
-    # Targeting versions prior to macOS 10.13 requires specifying custom
-    # alignment-aware operators, which we do. This lets the compiler know they
-    # exist and it can use them.
-    target_compile_options(alsoft.common PUBLIC "-faligned-allocation")
+    check_cxx_compiler_flag("-faligned-allocation" HAVE_FALIGNED_ALLOCATION)
+    if(HAVE_FALIGNED_ALLOCATION)
+        # Targeting versions prior to macOS 10.13 requires specifying custom
+        # alignment-aware operators, which we do. This lets the compiler know
+        # they exist and it can use them.
+        target_compile_options(alsoft.common PUBLIC "-faligned-allocation")
+    endif()
 endif()
 add_library(alsoft::common ALIAS alsoft.common)
 

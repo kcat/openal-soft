@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "context.h"
-
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -33,7 +31,6 @@
 #include "flexarray.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
-#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "vecmat.h"
 
@@ -43,11 +40,15 @@
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

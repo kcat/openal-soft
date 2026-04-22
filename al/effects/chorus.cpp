@@ -7,10 +7,9 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
-#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -19,9 +18,13 @@
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import alc.context;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

@@ -24,10 +24,16 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alstring.h"
 #include "direct_defs.h"
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {

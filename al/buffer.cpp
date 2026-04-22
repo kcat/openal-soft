@@ -44,7 +44,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
@@ -54,7 +53,6 @@
 #include "core/resampler_limits.h"
 #include "core/voice.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -66,11 +64,15 @@
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
 import logging;
+import gsl;
 #else
+#include "alc/context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

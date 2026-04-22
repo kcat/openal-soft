@@ -1,5 +1,5 @@
-#ifndef ALC_CONTEXT_H
-#define ALC_CONTEXT_H
+#ifndef ALC_CONTEXT_HPP
+#define ALC_CONTEXT_HPP
 
 #include "config.h"
 
@@ -574,4 +574,4 @@ inline auto verify_context(ALCcontext *context) -> gsl::not_null<al::Context*>
 
 inline constinit auto TrapALError = false;
 
-#endif /* ALC_CONTEXT_H */
+#endif /* ALC_CONTEXT_HPP */

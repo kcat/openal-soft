@@ -40,7 +40,6 @@
 #include "AL/efx.h"
 
 #include "alc/alu.h"
-#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
@@ -54,7 +53,6 @@
 #include "direct_defs.h"
 #include "effect.h"
 #include "flexarray.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 
 #if ALSOFT_EAX
@@ -65,11 +63,15 @@
 #endif
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

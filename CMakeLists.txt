@@ -981,12 +981,15 @@ set(ALC_SRCS
 set(ALC_HDRS
     alc/alu.h
     alc/alconfig.h
-    alc/context.h
+    alc/context.hpp
     alc/device.h
     alc/effects/base.h
     alc/events.h
     alc/export_list.h
     alc/inprogext.h)
+if(HAVE_CXXMODULES)
+    list(APPEND CORE_MODS alc/context.cppm)
+endif()
 
 if(ALSOFT_EAX)
     list(APPEND OPENAL_SRCS

@@ -29,18 +29,21 @@
 #include <span>
 
 #include "AL/al.h"
-#include "AL/efx.h"
+#include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 
 #if HAVE_CXXMODULES
+import alc.context;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

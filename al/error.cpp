@@ -33,20 +33,24 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "al/debug.h"
 #include "alc/alconfig.h"
-#include "alc/context.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 #include "strutils.hpp"
 
 #if HAVE_CXXMODULES
+import alc.context;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

@@ -7,7 +7,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
@@ -17,6 +16,12 @@
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {

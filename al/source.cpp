@@ -53,7 +53,6 @@
 #include "AL/efx.h"
 
 #include "alc/backends/base.h"
-#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
@@ -68,7 +67,6 @@
 #include "direct_defs.h"
 #include "filter.h"
 #include "flexarray.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
@@ -80,11 +78,15 @@
 #endif
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

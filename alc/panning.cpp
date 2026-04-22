@@ -39,7 +39,6 @@
 
 #include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "altypes.hpp"
@@ -61,16 +60,19 @@
 #include "core/uhjfilter.h"
 #include "device.h"
 #include "flexarray.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

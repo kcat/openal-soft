@@ -35,19 +35,21 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alc/device.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 
 #if HAVE_CXXMODULES
+import alc.context;
+import gsl;
 import logging;
 #else
+#include "alc/context.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

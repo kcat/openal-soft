@@ -3,10 +3,16 @@
 
 #include "AL/al.h"
 
-#include "alc/context.h"
 #include "direct_defs.h"
 #include "eax/utils.h"
+
+#if HAVE_CXXMODULES
+import alc.context;
+import gsl;
+#else
+#include "alc/context.hpp"
 #include "gsl/gsl"
+#endif
 
 
 namespace {

@@ -79,11 +79,9 @@
 #include "alstring.h"
 #include "alu.h"
 #include "atomic.h"
-#include "context.h"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
-#include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/devformat.h"
 #include "core/device.h"
@@ -172,9 +170,11 @@
 #endif
 
 #if HAVE_CXXMODULES
+import alc.context;
 import format.types;
 import logging;
 #else
+#include "context.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #endif

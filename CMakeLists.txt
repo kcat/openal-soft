@@ -1668,7 +1668,8 @@ if(HAVE_CXXMODULES)
     add_library(alsoft.core-modules OBJECT EXCLUDE_FROM_ALL)
     target_sources(alsoft.core-modules PUBLIC FILE_SET CXX_MODULES FILES ${CORE_MODS})
     target_include_directories(alsoft.core-modules PRIVATE
-        ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/common
+        ${INC_PATHS} ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR} ${OpenAL_SOURCE_DIR}/include
+        ${OpenAL_SOURCE_DIR}/common
     )
     target_link_libraries(alsoft.core-modules PRIVATE alsoft::common ${EXTRA_LIBS} ${MATH_LIB})
     set_target_properties(alsoft.core-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}

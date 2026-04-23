@@ -1,6 +1,5 @@
 module;
 
-#include "device.h"
 #include "context.hpp"
 
 export module alc.context;

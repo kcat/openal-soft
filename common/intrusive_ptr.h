@@ -2,9 +2,9 @@
 #define INTRUSIVE_PTR_H
 
 #include <atomic>
-#include <concepts>
 #include <cstddef>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 #include "gsl/gsl"
@@ -24,7 +24,7 @@ public:
     unsigned int inc_ref() noexcept { return mRef.fetch_add(1, std::memory_order_acq_rel)+1; }
     unsigned int dec_ref() noexcept
     {
-        auto ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
+        auto const ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
         if(ref == 0) [[unlikely]]
             D::operator()(static_cast<gsl::owner<T*>>(this));
         return ref;
@@ -106,47 +106,26 @@ public:
     constexpr auto release() noexcept -> T* { return std::exchange(mPtr, nullptr); }
 
     constexpr void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
+
+    [[nodiscard]] constexpr auto operator<=>(std::nullptr_t) const noexcept { return mPtr <=> nullptr; }
+    [[nodiscard]] constexpr auto operator==(std::nullptr_t) const noexcept { return mPtr == nullptr; }
+    [[nodiscard]] constexpr auto operator!=(std::nullptr_t) const noexcept { return mPtr != nullptr; }
+
+    template<typename U> requires requires(T *t, U *u) { t <=> u; } [[nodiscard]] constexpr
+    auto operator<=>(const intrusive_ptr<U> &rhs) const noexcept
+    { return mPtr <=> rhs.get(); }
+
+    template<typename U> requires requires(T *t, U *u) { t <=> u; } [[nodiscard]] constexpr
+    auto operator==(const intrusive_ptr<U> &rhs) const noexcept -> bool
+    { return mPtr == rhs.get(); }
+
+    template<typename U> requires requires(T *t, U *u) { t <=> u; } [[nodiscard]] constexpr
+    auto operator!=(const intrusive_ptr<U> &rhs) const noexcept -> bool
+    { return mPtr != rhs.get(); }
 };
 
 template<typename T>
 void swap(intrusive_ptr<T> &lhs, intrusive_ptr<T> &rhs) noexcept { lhs.swap(rhs); }
-
-template<typename T> requires std::three_way_comparable_with<T*,std::nullptr_t> [[nodiscard]]
-constexpr auto operator<=>(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
-{ return std::compare_three_way{}(lhs.get(), nullptr); }
-
-template<typename T> [[nodiscard]]
-constexpr auto operator==(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
-{ return !lhs; }
-
-template<typename T> [[nodiscard]]
-constexpr auto operator!=(const intrusive_ptr<T> &lhs, std::nullptr_t) noexcept
-{ return !(lhs == nullptr); }
-
-template<typename T> requires std::three_way_comparable_with<std::nullptr_t,T*> [[nodiscard]]
-constexpr auto operator<=>(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
-{ return std::compare_three_way{}(nullptr, rhs.get()); }
-
-template<typename T> [[nodiscard]]
-constexpr auto operator==(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
-{ return !rhs; }
-
-template<typename T> [[nodiscard]]
-constexpr auto operator!=(std::nullptr_t, const intrusive_ptr<T> &rhs) noexcept
-{ return !(rhs == nullptr); }
-
-
-template<typename T, typename U> requires std::three_way_comparable_with<T*,U*> [[nodiscard]]
-constexpr auto operator<=>(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
-{ return std::compare_three_way{}(lhs.get(), rhs.get()); }
-
-template<typename T, typename U> requires std::equality_comparable_with<T*,U*> [[nodiscard]]
-constexpr auto operator==(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
-{ return lhs.get() == rhs.get(); }
-
-template<typename T, typename U> requires std::equality_comparable_with<T*,U*> [[nodiscard]]
-constexpr auto operator!=(const intrusive_ptr<T> &lhs, const intrusive_ptr<U>& rhs) noexcept
-{ return !(lhs == rhs); }
 
 } // namespace al
 

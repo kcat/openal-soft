@@ -1,9 +1,13 @@
 
 #include "config.h"
 
+#include <mutex>
+
 #include "AL/al.h"
+#include "AL/alc.h"
 
 #include "direct_defs.h"
+#include "eax/api.h"
 #include "eax/utils.h"
 
 #if HAVE_CXXMODULES

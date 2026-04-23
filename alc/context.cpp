@@ -35,6 +35,7 @@
 #include "vecmat.h"
 
 #if ALSOFT_EAX
+#include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/globals.h"
 #endif // ALSOFT_EAX

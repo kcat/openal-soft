@@ -313,7 +313,7 @@ void Context::applyAllUpdates()
 #if ALSOFT_EAX
 namespace {
 
-[[nodiscard]] constexpr
+[[nodiscard]] inline
 auto CompareGUID(GUID const &lhs, GUID const &rhs) noexcept -> std::strong_ordering
 {
     auto const res = std::memcmp(&lhs, &rhs, sizeof(GUID));

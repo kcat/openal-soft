@@ -16,7 +16,7 @@ namespace al {
 /* Storage for flexible array data. This is trivially destructible if type T is
  * trivially destructible.
  */
-template<typename T, size_t alignment, bool = std::is_trivially_destructible_v<T>>
+template<typename T, size_t alignment>
 struct alignas(alignment) FlexArrayStorage : std::span<T> {
     /* NOLINTBEGIN(bugprone-sizeof-expression) clang-tidy warns about the
      * sizeof(T) being suspicious when T is a pointer type, which it will be
@@ -34,26 +34,9 @@ struct alignas(alignment) FlexArrayStorage : std::span<T> {
         : std::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-    ~FlexArrayStorage() = default;
-
-    FlexArrayStorage(const FlexArrayStorage&) = delete;
-    FlexArrayStorage& operator=(const FlexArrayStorage&) = delete;
-};
-
-template<typename T, size_t alignment>
-struct alignas(alignment) FlexArrayStorage<T,alignment,false> : std::span<T> {
-    static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
-    { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
-
-    /* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-    explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
-        : std::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
-    { }
-    /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-    ~FlexArrayStorage() { std::destroy(this->begin(), this->end()); }
-
-    FlexArrayStorage(const FlexArrayStorage&) = delete;
-    FlexArrayStorage& operator=(const FlexArrayStorage&) = delete;
+    ~FlexArrayStorage() requires(std::is_trivially_destructible_v<T>) = default;
+    ~FlexArrayStorage() requires(not std::is_trivially_destructible_v<T>)
+    { std::destroy(this->begin(), this->end()); }
 };
 
 /* A flexible array type. Used either standalone or at the end of a parent
@@ -91,6 +74,9 @@ struct FlexArray {
         : mStore{size}
     { }
     ~FlexArray() = default;
+
+    FlexArray(const FlexArray&) = delete;
+    auto operator=(const FlexArray&) -> FlexArray& = delete;
 
     [[nodiscard]] auto size() const noexcept -> index_type { return mStore.size(); }
     [[nodiscard]] auto empty() const noexcept -> bool { return mStore.empty(); }

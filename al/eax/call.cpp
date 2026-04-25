@@ -19,7 +19,7 @@ public:
 
 } // namespace
 
-EaxCall::EaxCall(EaxCallType type, const GUID &property_set_guid, ALuint property_id,
+EaxCall::EaxCall(EaxCallType type, AL_GUID const& property_set_guid, ALuint property_id,
     ALuint property_source_id, ALvoid *property_buffer, ALuint property_size)
     : mCallType{type}, mIsDeferred{(property_id & deferred_flag) != 0}
     , mPropertyId{property_id & ~deferred_flag}, mPropertySourceId{property_source_id}
@@ -203,7 +203,7 @@ EaxCall::EaxCall(EaxCallType type, const GUID &property_set_guid, ALuint propert
 
 EaxCall create_eax_call(
     EaxCallType type,
-    const GUID* property_set_id,
+    AL_GUID const* property_set_id,
     ALuint property_id,
     ALuint property_source_id,
     ALvoid* property_buffer,

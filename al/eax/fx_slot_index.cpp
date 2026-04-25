@@ -27,7 +27,7 @@ void EaxFxSlotIndex::set(EaxFxSlotIndexValue index)
     emplace(index);
 }
 
-void EaxFxSlotIndex::set(const GUID &guid)
+void EaxFxSlotIndex::set(AL_GUID const& guid)
 {
     if(guid == EAX_NULL_GUID)
         reset();

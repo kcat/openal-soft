@@ -138,7 +138,7 @@ private:
     };
 
     struct Eax4GuidLoadEffectValidator {
-        void operator()(const GUID& guidLoadEffect) const
+        void operator()(AL_GUID const& guidLoadEffect) const
         {
             if (guidLoadEffect != EAX_NULL_GUID &&
                 guidLoadEffect != EAX_REVERB_EFFECT &&
@@ -294,8 +294,8 @@ private:
 
     void eax4_fx_slot_ensure_unlocked() const;
 
-    [[nodiscard]] static auto eax_get_efx_effect_type(const GUID& guid) -> ALenum;
-    [[nodiscard]] auto eax_get_eax_default_effect_guid() const noexcept -> const GUID&;
+    [[nodiscard]] static auto eax_get_efx_effect_type(AL_GUID const& guid) -> ALenum;
+    [[nodiscard]] auto eax_get_eax_default_effect_guid() const noexcept -> AL_GUID const&;
     [[nodiscard]] auto eax_get_eax_default_lock() const noexcept -> eax_long;
 
     void eax4_fx_slot_set_defaults(EAX40FXSLOTPROPERTIES& props) const noexcept;

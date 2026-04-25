@@ -102,7 +102,7 @@ public:
 };
 
 
-constexpr auto InvalidChannelIndex = ~0_u8;
+inline constexpr auto InvalidChannelIndex = ~0_u8;
 
 struct BFChannelConfig {
     float Scale;

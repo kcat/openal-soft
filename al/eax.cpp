@@ -5,6 +5,7 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
 
 #include "direct_defs.h"
 #include "eax/api.h"
@@ -21,11 +22,12 @@ import gsl;
 
 namespace {
 
-auto EAXSet_(gsl::not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXSet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_set(property_set_id, property_id, source_id, value, value_size);
+    return context->eax_eax_set(std::launder(reinterpret_cast<AL_GUID const*>(property_set_id)),
+        property_id, source_id, value, value_size);
 }
 catch(...) {
     context->eaxSetLastError();
@@ -33,11 +35,12 @@ catch(...) {
     return AL_INVALID_OPERATION;
 }
 
-auto EAXGet_(gsl::not_null<al::Context*> context, const GUID *property_set_id,
+auto EAXGet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_get(property_set_id, property_id, source_id, value, value_size);
+    return context->eax_eax_get(std::launder(reinterpret_cast<AL_GUID const*>(property_set_id)),
+        property_id, source_id, value, value_size);
 }
 catch(...) {
     context->eaxSetLastError();
@@ -47,7 +50,7 @@ catch(...) {
 
 } // namespace
 
-DECL_FUNC(FORCE_ALIGN, ALenum, EAXSet, const GUID*,property_set_id, ALuint,property_id,
+DECL_FUNC(FORCE_ALIGN, ALenum, EAXSet, _GUID const*,property_set_id, ALuint,property_id,
     ALuint,source_id, ALvoid*,value, ALuint,value_size)
-DECL_FUNC(FORCE_ALIGN, ALenum, EAXGet, const GUID*,property_set_id, ALuint,property_id,
+DECL_FUNC(FORCE_ALIGN, ALenum, EAXGet, _GUID const*,property_set_id, ALuint,property_id,
     ALuint,source_id, ALvoid*,value, ALuint,value_size)

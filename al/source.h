@@ -192,7 +192,7 @@ private:
 
     static constexpr auto eax_max_speakers = 9u;
 
-    using EaxFxSlotIds = std::array<const GUID*, EAX_MAX_FXSLOTS>;
+    using EaxFxSlotIds = std::array<AL_GUID const*, EAX_MAX_FXSLOTS>;
 
     static constexpr auto eax4_fx_slot_ids = EaxFxSlotIds{
         &EAXPROPERTYID_EAX40_FXSlot0,
@@ -616,7 +616,7 @@ private:
     // Send validators
 
     struct Eax4SendReceivingFxSlotIdValidator {
-        void operator()(const GUID& guidReceivingFXSlotID) const
+        void operator()(AL_GUID const& guidReceivingFXSlotID) const
         {
             if (guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
                 guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
@@ -629,7 +629,7 @@ private:
     };
 
     struct Eax5SendReceivingFxSlotIdValidator {
-        void operator()(const GUID& guidReceivingFXSlotID) const
+        void operator()(AL_GUID const& guidReceivingFXSlotID) const
         {
             if (guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
                 guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
@@ -728,7 +728,7 @@ private:
     // Active FX slot ID validators
 
     struct Eax4ActiveFxSlotIdValidator {
-        void operator()(const GUID &guid) const
+        void operator()(AL_GUID const& guid) const
         {
             if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
                 && guid != EAXPROPERTYID_EAX40_FXSlot0 && guid != EAXPROPERTYID_EAX40_FXSlot1
@@ -740,7 +740,7 @@ private:
     };
 
     struct Eax5ActiveFxSlotIdValidator {
-        void operator()(const GUID &guid) const
+        void operator()(AL_GUID const& guid) const
         {
             if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
                 && guid != EAXPROPERTYID_EAX50_FXSlot0 && guid != EAXPROPERTYID_EAX50_FXSlot1
@@ -797,7 +797,7 @@ private:
     // ----------------------------------------------------------------------
 
     struct Eax4SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID &guid) const
+        EaxFxSlotIndexValue operator()(AL_GUID const &guid) const
         {
             if(guid == EAXPROPERTYID_EAX40_FXSlot0)
                 return 0;
@@ -812,7 +812,7 @@ private:
     };
 
     struct Eax5SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID &guid) const
+        EaxFxSlotIndexValue operator()(AL_GUID const& guid) const
         {
             if(guid == EAXPROPERTYID_EAX50_FXSlot0)
                 return 0;
@@ -906,7 +906,7 @@ private:
         }
     }
 
-    static void eax_get_active_fx_slot_id(const EaxCall &call, const std::span<const GUID> srcids);
+    static void eax_get_active_fx_slot_id(const EaxCall &call, std::span<AL_GUID const> srcids);
     static void eax1_get(const EaxCall &call, const EAXBUFFER_REVERBPROPERTIES &props);
     static void eax2_get(const EaxCall &call, const EAX20BUFFERPROPERTIES &props);
     static void eax3_get(const EaxCall &call, const EAX30SOURCEPROPERTIES &props);
@@ -942,7 +942,7 @@ private:
         dst.mExclusion = src.mExclusion;
     }
 
-    template<std::invocable<const GUID&> TIndexGetter, typename TSrcSend>
+    template<std::invocable<AL_GUID const&> TIndexGetter, typename TSrcSend>
     static void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends,
         std::invocable<TSrcSend> auto&& validator)
     {
@@ -966,20 +966,20 @@ private:
         std::invocable<TSrcSend> auto validator)
     { eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
-    template<std::invocable<const GUID&> TValidator>
-    static void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    template<std::invocable<AL_GUID const&> TValidator>
+    static void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<AL_GUID> dst_ids)
     {
-        const auto src_ids = call.as_span<const GUID>(dst_ids.size());
+        const auto src_ids = call.as_span<AL_GUID const>(dst_ids.size());
         std::ranges::for_each(src_ids, TValidator{});
         std::ranges::uninitialized_copy(src_ids, dst_ids);
     }
 
-    static void eax4_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax4_defer_active_fx_slot_id(EaxCall const& call, std::span<AL_GUID> const dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
-    static void eax5_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax5_defer_active_fx_slot_id(EaxCall const& call, std::span<AL_GUID> const dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }

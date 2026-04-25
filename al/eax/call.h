@@ -27,7 +27,7 @@ class EaxCall {
 public:
     EaxCall(
         EaxCallType type,
-        const GUID& property_set_guid,
+        AL_GUID const& property_set_guid,
         ALuint property_id,
         ALuint property_source_id,
         ALvoid* property_buffer,
@@ -85,7 +85,7 @@ private:
 
 EaxCall create_eax_call(
     EaxCallType type,
-    const GUID* property_set_id,
+    AL_GUID const *property_set_id,
     ALuint property_id,
     ALuint property_source_id,
     ALvoid* property_buffer,

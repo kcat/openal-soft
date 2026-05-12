@@ -1,3 +1,35 @@
+openal-soft-1.25.2:
+
+    Fixed the library version string for builds made without Git repo info.
+
+    Fixed an STL hardening assertion in the reverb effect.
+
+    Fixed a potential crash for builds made with older PipeWire headers.
+
+    Fixed capturing mono from a stereo or greater WASAPI input device.
+
+    Fixed building on macOS without std::format.
+
+    Fixed height encoding for TSME output.
+
+    Fixed the Super Stereo decoder's stereo separation with TSME output.
+
+    Implemented 3D processing for the Distortion, Chorus, Flanger, Pitch
+    Shifter, and Frequency Shifter effects.
+
+    Improved handling duplicate device names from PipeWire.
+
+    Added support for 7.1.4 output autodetection with CoreAudio.
+
+    Added capture support to the SDL3 backend.
+
+    Added support for device added and removed events to the SDL3 backend.
+
+    Removed use of "protected" visibility for exported symbols, now using the
+    normal "default" visibility.
+
+    Actually changed the default Super Stereo width to 0.46.
+
 openal-soft-1.25.1:
 
     Fixed the OpenSL and JACK backends.

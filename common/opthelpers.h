@@ -62,7 +62,7 @@
 #define LIFETIMEBOUND
 #endif
 
-#if HAS_ATTRIBUTE(clang::nonblocking)
+#if HAS_ATTRIBUTE(clang::nonblocking) && !defined(_WIN32)
 #define NONBLOCKING [[clang::nonblocking]]
 #else
 #define NONBLOCKING

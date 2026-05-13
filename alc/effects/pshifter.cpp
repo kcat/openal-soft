@@ -159,7 +159,8 @@ void PshifterState::deviceUpdate(DeviceBase const *device, BufferStorage const*)
         auto const splitter = BandSplitter{device->mXOverFreq
             / static_cast<float>(device->mSampleRate)};
 
-        auto &upsampler = mUpsampler.emplace();
+        using upsampler_t = decltype(mUpsampler)::value_type;
+        auto &upsampler = mUpsampler.emplace(upsampler_t{});
         for(auto &chandata : upsampler)
         {
             chandata.mHfScale = hfscales[idx];

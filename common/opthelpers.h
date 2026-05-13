@@ -62,7 +62,7 @@
 #define LIFETIMEBOUND
 #endif
 
-#if HAS_ATTRIBUTE(clang::nonblocking)
+#if HAS_ATTRIBUTE(clang::nonblocking) && !defined(_MSVC_STL_UPDATE)
 #define NONBLOCKING [[clang::nonblocking]]
 #else
 #define NONBLOCKING

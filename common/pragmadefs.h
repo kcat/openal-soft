@@ -18,4 +18,12 @@
 #define msc_pragma(...)
 #endif
 
+#if defined(__clang__) && (__clang_major__ >= (defined(__APPLE__) ? 17 : 20))
+#define IGNORE_FUNCTION_EFFECTS DIAGNOSTIC_PUSH \
+    std_pragma("clang diagnostic ignored \"-Wfunction-effects\"")
+#else
+#define IGNORE_FUNCTION_EFFECTS DIAGNOSTIC_PUSH
+#endif
+#define UNIGNORE_FUNCTION_EFFECTS DIAGNOSTIC_POP
+
 #endif /* PRAGMADEFS_H */

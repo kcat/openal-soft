@@ -13,6 +13,7 @@
 #include <type_traits>
 
 #include "opthelpers.h"
+#include "pragmadefs.h"
 
 
 struct i8;
@@ -245,10 +246,10 @@ template<weak_number T>
 struct ConstantNum {
     T const c_val;
 
-    /* NOLINTBEGIN(*-explicit-constructor) */
-    template<compatible_constant<T> U>
-    consteval ConstantNum(U const &value) noexcept : c_val{convert_to<T>(value)} { }
-    /* NOLINTEND(*-explicit-constructor) */
+IGNORE_FUNCTION_EFFECTS
+    template<compatible_constant<T> U> consteval /* NOLINTNEXTLINE(*-explicit-constructor) */
+    ConstantNum(U const &value) noexcept NONBLOCKING : c_val{convert_to<T>(value)} { }
+UNIGNORE_FUNCTION_EFFECTS
 };
 
 
@@ -423,8 +424,10 @@ public:
     [[nodiscard]] force_inline constexpr
     auto as() const noexcept -> U { return U{static_cast<typename U::value_t>(c_val)}; }
 
+IGNORE_FUNCTION_EFFECTS
     template<strict_number U> [[nodiscard]] consteval
     auto as() const noexcept -> U { return U{convert_to<typename U::value_t>(c_val)}; }
+UNIGNORE_FUNCTION_EFFECTS
 
     /* Potentially narrowing conversion method. Throws a narrowing_error
      * exception if the converted value narrows.
@@ -1003,44 +1006,47 @@ constexpr auto number_base<ValueType, SelfType>::countr_zero() const noexcept ->
 
 } /* namespace al */
 
+IGNORE_FUNCTION_EFFECTS
+[[nodiscard]] consteval
+auto operator ""_i8(unsigned long long const n) noexcept NONBLOCKING { return i8::from(n); }
+[[nodiscard]] consteval
+auto operator ""_u8(unsigned long long const n) noexcept NONBLOCKING { return u8::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i8(unsigned long long const n) noexcept { return i8::from(n); }
+auto operator ""_i16(unsigned long long const n) noexcept NONBLOCKING { return i16::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u8(unsigned long long const n) noexcept { return u8::from(n); }
+auto operator ""_u16(unsigned long long const n) noexcept NONBLOCKING { return u16::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i16(unsigned long long const n) noexcept { return i16::from(n); }
+auto operator ""_i32(unsigned long long const n) noexcept NONBLOCKING { return i32::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u16(unsigned long long const n) noexcept { return u16::from(n); }
+auto operator ""_u32(unsigned long long const n) noexcept NONBLOCKING { return u32::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i32(unsigned long long const n) noexcept { return i32::from(n); }
+auto operator ""_i64(unsigned long long const n) noexcept NONBLOCKING { return i64::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u32(unsigned long long const n) noexcept { return u32::from(n); }
+auto operator ""_u64(unsigned long long const n) noexcept NONBLOCKING { return u64::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_i64(unsigned long long const n) noexcept { return i64::from(n); }
+auto operator ""_f32(long double const n) noexcept NONBLOCKING { return f32::from(n); }
 [[nodiscard]] consteval
-auto operator ""_u64(unsigned long long const n) noexcept { return u64::from(n); }
+auto operator ""_f64(long double const n) noexcept NONBLOCKING { return f64::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_f32(long double const n) noexcept { return f32::from(n); }
+auto operator ""_isize(unsigned long long const n) noexcept NONBLOCKING { return isize::from(n); }
 [[nodiscard]] consteval
-auto operator ""_f64(long double const n) noexcept { return f64::from(n); }
+auto operator ""_usize(unsigned long long const n) noexcept NONBLOCKING { return usize::from(n); }
 
 [[nodiscard]] consteval
-auto operator ""_isize(unsigned long long const n) noexcept { return isize::from(n); }
-[[nodiscard]] consteval
-auto operator ""_usize(unsigned long long const n) noexcept { return usize::from(n); }
-
-[[nodiscard]] consteval
-auto operator ""_z(unsigned long long const n) noexcept
+auto operator ""_z(unsigned long long const n) noexcept NONBLOCKING
 { return al::convert_to<isize::value_t>(n); }
 [[nodiscard]] consteval
-auto operator ""_uz(unsigned long long const n) noexcept { return al::convert_to<std::size_t>(n); }
+auto operator ""_uz(unsigned long long const n) noexcept NONBLOCKING
+{ return al::convert_to<std::size_t>(n); }
 [[nodiscard]] consteval
-auto operator ""_zu(unsigned long long const n) noexcept { return al::convert_to<std::size_t>(n); }
+auto operator ""_zu(unsigned long long const n) noexcept NONBLOCKING
+{ return al::convert_to<std::size_t>(n); }
+UNIGNORE_FUNCTION_EFFECTS
 
 
 namespace std {

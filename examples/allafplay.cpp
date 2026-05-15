@@ -1369,26 +1369,26 @@ auto main(std::span<std::string_view> args) -> int
     {
         if(LfeSlotID)
         {
-            alDeleteAuxiliaryEffectSlots(1, &LfeSlotID);
-            alDeleteEffects(1, &LowFrequencyEffectID);
-            alDeleteFilters(1, &MuteFilterID);
+            palDeleteAuxiliaryEffectSlots(1, &LfeSlotID);
+            palDeleteEffects(1, &LowFrequencyEffectID);
+            palDeleteFilters(1, &MuteFilterID);
         }
     });
 
     if(alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX")
         && alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_DEDICATED"))
     {
-        alGenFilters(1, &MuteFilterID);
-        alFilteri(MuteFilterID, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-        alFilterf(MuteFilterID, AL_LOWPASS_GAIN, 0.0f);
+        palGenFilters(1, &MuteFilterID);
+        palFilteri(MuteFilterID, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        palFilterf(MuteFilterID, AL_LOWPASS_GAIN, 0.0f);
         MyAssert(alGetError() == AL_NO_ERROR);
 
-        alGenEffects(1, &LowFrequencyEffectID);
-        alEffecti(LowFrequencyEffectID, AL_EFFECT_TYPE, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT);
+        palGenEffects(1, &LowFrequencyEffectID);
+        palEffecti(LowFrequencyEffectID, AL_EFFECT_TYPE, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT);
         MyAssert(alGetError() == AL_NO_ERROR);
 
-        alGenAuxiliaryEffectSlots(1, &LfeSlotID);
-        alAuxiliaryEffectSloti(LfeSlotID, AL_EFFECTSLOT_EFFECT, as_signed(LowFrequencyEffectID));
+        palGenAuxiliaryEffectSlots(1, &LfeSlotID);
+        palAuxiliaryEffectSloti(LfeSlotID, AL_EFFECTSLOT_EFFECT, as_signed(LowFrequencyEffectID));
         MyAssert(alGetError() == AL_NO_ERROR);
     }
 

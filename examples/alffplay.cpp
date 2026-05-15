@@ -588,8 +588,8 @@ auto AudioState::getClockNoLock() const -> nanoseconds
          * source offset.
          */
         auto offset = std::array<ALint64SOFT,2>{};
-        if(alGetSourcei64vSOFT)
-            alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
+        if(palGetSourcei64vSOFT)
+            palGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
         else
         {
             auto ioffset = ALint{};
@@ -646,8 +646,8 @@ auto AudioState::getClockNoLock() const -> nanoseconds
     if(mSource)
     {
         auto offset = std::array<ALint64SOFT,2>{};
-        if(alGetSourcei64vSOFT)
-            alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
+        if(palGetSourcei64vSOFT)
+            palGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
         else
         {
             auto ioffset = ALint{};
@@ -968,7 +968,7 @@ void AudioState::handler()
     auto srclock = std::unique_lock{mSrcMutex, std::defer_lock};
     auto sleep_time = milliseconds{AudioBufferTime / 2};
 
-    if(alEventControlSOFT)
+    if(palEventControlSOFT)
     {
         static constexpr auto callback = [](ALenum eventType, ALuint object, ALuint param,
             ALsizei length, const ALchar *message, void *userParam) noexcept -> void
@@ -977,16 +977,16 @@ void AudioState::handler()
                 std::string_view{message, gsl::narrow_cast<ALuint>(length)});
         };
 
-        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
-        alEventCallbackSOFT(callback, this);
+        palEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
+        palEventCallbackSOFT(callback, this);
         sleep_time = AudioBufferTotalTime;
     }
     const auto _ = gsl::finally([]
     {
-        if(alEventControlSOFT)
+        if(palEventControlSOFT)
         {
-            alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
-            alEventCallbackSOFT(nullptr, nullptr);
+            palEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
+            palEventCallbackSOFT(nullptr, nullptr);
         }
     });
 
@@ -1338,16 +1338,16 @@ void AudioState::handler()
     {
         /* Filter to mute the dry (un-corrected) path. */
         auto mutefilter = ALuint{};
-        alGenFilters(1, &mutefilter);
-        alFilteri(mutefilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-        alFilterf(mutefilter, AL_LOWPASS_GAIN, 0.0f);
+        palGenFilters(1, &mutefilter);
+        palFilteri(mutefilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        palFilterf(mutefilter, AL_LOWPASS_GAIN, 0.0f);
 
         alSourcef(mSource, AL_PITCH, TimeStretchFactor);
         alSourcei(mSource, AL_DIRECT_FILTER, static_cast<ALint>(mutefilter));
         alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(sPShiftSlot), 0,
             AL_FILTER_NULL);
 
-        alDeleteFilters(1, &mutefilter);
+        palDeleteFilters(1, &mutefilter);
     }
 
     if(alGetError() != AL_NO_ERROR)
@@ -1355,7 +1355,7 @@ void AudioState::handler()
 
     auto samples = std::vector<uint8_t>{};
     auto callback_ok = false;
-    if(alBufferCallbackSOFT)
+    if(palBufferCallbackSOFT)
     {
         static constexpr auto callback = [](void *userptr, void *data, ALsizei size) noexcept
             -> ALsizei
@@ -1363,7 +1363,7 @@ void AudioState::handler()
             return static_cast<AudioState*>(userptr)->bufferCallback(
                 std::views::counted(static_cast<ALubyte*>(data), size));
         };
-        alBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, callback, this);
+        palBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, callback, this);
 
         alSourcei(mSource, AL_BUFFER, as_signed(mBuffers[0]));
         if(alGetError() != AL_NO_ERROR)
@@ -2168,7 +2168,7 @@ struct Application {
             SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
         if(AudioState::sPShiftSlot)
-            alDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+            palDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
         AudioState::sPShiftSlot = 0;
     }
 
@@ -2406,8 +2406,8 @@ auto main(std::span<std::string_view> args) -> int
          * original pitch while maintaining the speed change.
          */
         auto effect = ALuint{};
-        alGenEffects(1, &effect);
-        alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
+        palGenEffects(1, &effect);
+        palEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
         if(auto const err = alGetError(); err != AL_NO_ERROR)
         {
             fmt::print(std::cerr, "Could not create the Pitch Shifter effect: {:#06x}\n", err);
@@ -2443,15 +2443,15 @@ auto main(std::span<std::string_view> args) -> int
                 fmt::println("Speed factor: {} (pitch adj: {}; course tuning: {}, fine tuning: {})",
                     TimeStretchFactor, pitch, course_tune, fine_tune);
 
-                alEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, std::clamp(course_tune, -12, +12));
-                alEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
+                palEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, std::clamp(course_tune, -12, +12));
+                palEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
 
-                alGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
-                alAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
+                palGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+                palAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
                     static_cast<ALint>(effect));
             }
         }
-        alDeleteEffects(1, &effect);
+        palDeleteEffects(1, &effect);
     }
 
     curarg = std::ranges::find_if(curarg, app.mArgs.end(), [&app](const std::string_view argval)

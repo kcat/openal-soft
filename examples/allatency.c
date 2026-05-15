@@ -179,7 +179,7 @@ int main(int argc, char **argv)
         /* Get the source offset and latency. AL_SEC_OFFSET_LATENCY_SOFT will
          * place the offset (in seconds) in offsets[0], and the time until that
          * offset will be heard (in seconds) in offsets[1]. */
-        alGetSourcedvSOFT(source, AL_SEC_OFFSET_LATENCY_SOFT, offsets);
+        palGetSourcedvSOFT(source, AL_SEC_OFFSET_LATENCY_SOFT, offsets);
         printf("\rOffset: %f - Latency:%3u ms  ", offsets[0], (ALuint)(offsets[1]*1000));
         fflush(stdout);
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);

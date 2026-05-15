@@ -252,16 +252,16 @@ static ALuint CreateEffect(void)
     printf("Using Convolution\n");
 
     /* Create the effect object and set the convolution effect type. */
-    alGenEffects(1, &effect);
-    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_SOFT);
+    palGenEffects(1, &effect);
+    palEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_SOFT);
 
     /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL error: %s\n", alGetString(err));
-        if(alIsEffect(effect))
-            alDeleteEffects(1, &effect);
+        if(palIsEffect(effect))
+            palDeleteEffects(1, &effect);
         return 0;
     }
 
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
     ir_buffer = LoadSound(argv[0]);
     if(!ir_buffer)
     {
-        alDeleteEffects(1, &effect);
+        palDeleteEffects(1, &effect);
         CloseAL();
         return 1;
     }
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
      * that connect to it.
      */
     slot = 0;
-    alGenAuxiliaryEffectSlots(1, &slot);
+    palGenAuxiliaryEffectSlots(1, &slot);
 
     /* Set the impulse response sound buffer on the effect slot. This allows
      * effects to access it as needed. In this case, convolution uses it as the
@@ -445,16 +445,16 @@ int main(int argc, char **argv)
      * listener. You can use a send filter to alter a given source's
      * contribution to reverb.
      */
-    alAuxiliaryEffectSloti(slot, AL_BUFFER, (ALint)ir_buffer);
-    alAuxiliaryEffectSlotf(slot, AL_EFFECTSLOT_GAIN, 1.0f / 16.0f);
-    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+    palAuxiliaryEffectSloti(slot, AL_BUFFER, (ALint)ir_buffer);
+    palAuxiliaryEffectSlotf(slot, AL_EFFECTSLOT_GAIN, 1.0f / 16.0f);
+    palAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
     /* Create a filter that can silence the dry path. */
     filter = 0;
-    alGenFilters(1, &filter);
-    alFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-    alFilterf(filter, AL_LOWPASS_GAIN, 0.0f);
+    palGenFilters(1, &filter);
+    palFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+    palFilterf(filter, AL_LOWPASS_GAIN, 0.0f);
 
     player = NewPlayer();
     /* Connect the player's source to the effect slot. */
@@ -511,9 +511,9 @@ int main(int argc, char **argv)
     DeletePlayer(player);
     player = NULL;
 
-    alDeleteAuxiliaryEffectSlots(1, &slot);
-    alDeleteEffects(1, &effect);
-    alDeleteFilters(1, &filter);
+    palDeleteAuxiliaryEffectSlots(1, &slot);
+    palDeleteEffects(1, &effect);
+    palDeleteFilters(1, &filter);
     alDeleteBuffers(1, &ir_buffer);
 
     CloseAL();

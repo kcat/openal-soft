@@ -388,7 +388,7 @@ auto StreamPlayer::prepare() -> bool
         auto output = std::views::counted(static_cast<std::byte*>(data), size);
         return static_cast<StreamPlayer*>(userptr)->bufferCallback(output);
     };
-    alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, callback, this);
+    palBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, callback, this);
 
     alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
     if(const auto err = alGetError())

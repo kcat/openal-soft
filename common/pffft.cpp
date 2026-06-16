@@ -72,7 +72,7 @@
 
 #include "almalloc.h"
 #include "altypes.hpp"
-#include "fmt/core.h"
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "opthelpers.h"

@@ -101,7 +101,7 @@
 #include "effects/base.h"
 #include "export_list.h"
 #include "flexarray.h"
-#include "fmt/core.h"
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "inprogext.h"

@@ -52,7 +52,7 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "dynload.h"
-#include "fmt/core.h"
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"

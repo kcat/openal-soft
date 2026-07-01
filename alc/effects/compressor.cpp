@@ -169,7 +169,7 @@ void CompressorState::process(const size_t samplesToDo,
         {
             const auto dst = std::span{samplesOut[outidx]};
             const auto gain = chan->mGain;
-            if(!(std::fabs(gain) > GainSilenceThreshold))
+            if((std::fabs(gain) > GainSilenceThreshold))
             {
                 for(auto i = 0_uz;i < samplesToDo;++i)
                     dst[i] += input[i] * mGains[i] * gain;

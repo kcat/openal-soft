@@ -1226,7 +1226,7 @@ void Voice::prepare(DeviceBase *device)
         -> std::pair<std::unique_ptr<DecoderBase>, unsigned>
     {
         using decoder_t = T::decoder_t;
-        return {std::make_unique<decoder_t>(), decoder_t::sInputPadding};
+        return {std::make_unique<decoder_t>(), static_cast<unsigned>(decoder_t::sInputPadding)};
     };
     if(mFmtChannels == FmtSuperStereo)
     {

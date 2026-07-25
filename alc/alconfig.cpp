@@ -235,7 +235,7 @@ void LoadConfigFromFile(std::istream &f)
             auto section = std::string_view{buffer}.substr(1, endpos-1);
 
             curSection.clear();
-            if(al::case_compare(section, "general"sv) == 0)
+            if(is_eq(al::case_compare(section, "general"sv)))
                 continue;
 
             while(!section.empty())
@@ -350,7 +350,7 @@ auto GetConfigValue(const std::string_view devName, const std::string_view block
         return EmptyString;
 
     auto key = std::string{};
-    if(!blockName.empty() && al::case_compare(blockName, "general"sv) != 0)
+    if(!blockName.empty() && is_neq(al::case_compare(blockName, "general"sv)))
     {
         key = blockName;
         key += '/';
@@ -594,8 +594,8 @@ auto ConfigValueBool(std::string_view const devName, std::string_view const bloc
     std::string_view const keyName) -> std::optional<bool>
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0
-            || al::case_compare(val, "true"sv) == 0 || std::stoll(val) != 0;
+        return is_eq(al::case_compare(val, "on"sv)) or is_eq(al::case_compare(val, "yes"sv))
+            or is_eq(al::case_compare(val, "true"sv)) or std::stoll(val) != 0;
     }
     catch(std::out_of_range&) {
         /* If out of range, the value is some non-0 (true) value and it doesn't
@@ -616,8 +616,8 @@ auto GetConfigValueBool(const std::string_view devName, const std::string_view b
     const std::string_view keyName, bool def) -> bool
 {
     if(auto&& val = GetConfigValue(devName, blockName, keyName); !val.empty()) try {
-        return al::case_compare(val, "on"sv) == 0 || al::case_compare(val, "yes"sv) == 0
-            || al::case_compare(val, "true"sv) == 0 || std::stoll(val) != 0;
+        return is_eq(al::case_compare(val, "on"sv)) or is_eq(al::case_compare(val, "yes"sv))
+            or is_eq(al::case_compare(val, "true"sv)) or std::stoll(val) != 0;
     }
     catch(std::out_of_range&) {
         return true;

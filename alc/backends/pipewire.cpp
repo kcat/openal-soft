@@ -1019,12 +1019,12 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         const auto className = std::string_view{media_class};
 
         auto ntype = NodeType{};
-        if(al::case_compare(className, GetAudioSinkClassName()) == 0)
+        if(is_eq(al::case_compare(className, GetAudioSinkClassName())))
             ntype = NodeType::Sink;
-        else if(al::case_compare(className, GetAudioSourceClassName()) == 0
-            || al::case_compare(className, GetAudioSourceVirtualClassName()) == 0)
+        else if(is_eq(al::case_compare(className, GetAudioSourceClassName()))
+            or is_eq(al::case_compare(className, GetAudioSourceVirtualClassName())))
             ntype = NodeType::Source;
-        else if(al::case_compare(className, GetAudioDuplexClassName()) == 0)
+        else if(is_eq(al::case_compare(className, GetAudioDuplexClassName())))
             ntype = NodeType::Duplex;
         else
         {
@@ -1113,8 +1113,8 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         }
         node.mDevName = devName ? devName : "";
         node.mType = ntype;
-        node.mIsHeadphones = form_factor && (al::case_compare(form_factor, "headphones"sv) == 0
-            || al::case_compare(form_factor, "headset"sv) == 0);
+        node.mIsHeadphones = form_factor and (is_eq(al::case_compare(form_factor, "headphones"sv))
+            or is_eq(al::case_compare(form_factor, "headset"sv)));
 
         if(notifyAdd)
         {
@@ -1341,10 +1341,10 @@ void EventManager::addCallback(uint32_t const id, uint32_t, gsl::czstring const 
         const auto className = std::string_view{media_class};
 
         /* Specifically, audio sinks and sources (and duplexes). */
-        const auto isGood = al::case_compare(className, GetAudioSinkClassName()) == 0
-            || al::case_compare(className, GetAudioSourceClassName()) == 0
-            || al::case_compare(className, GetAudioSourceVirtualClassName()) == 0
-            || al::case_compare(className, GetAudioDuplexClassName()) == 0;
+        const auto isGood = is_eq(al::case_compare(className, GetAudioSinkClassName()))
+            or is_eq(al::case_compare(className, GetAudioSourceClassName()))
+            or is_eq(al::case_compare(className, GetAudioSourceVirtualClassName()))
+            or is_eq(al::case_compare(className, GetAudioDuplexClassName()));
         if(!isGood)
         {
             if(!al::contains(className, "/Video"sv) && !className.starts_with("Stream/"sv))

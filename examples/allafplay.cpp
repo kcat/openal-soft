@@ -1236,47 +1236,47 @@ auto main(std::span<std::string_view> args) -> int
 
         RenderOutMode = ALC_ANY_SOFT;
         RenderAmbiOrder = 0;
-        if(al::case_compare(params[0], "mono") == 0)
+        if(is_eq(al::case_compare(params[0], "mono")))
             RenderChannels = ALC_MONO_SOFT;
-        else if(al::case_compare(params[0], "stereo") == 0)
+        else if(is_eq(al::case_compare(params[0], "stereo")))
         {
             RenderChannels = ALC_STEREO_SOFT;
             RenderOutMode = ALC_STEREO_BASIC_SOFT;
         }
-        else if(al::case_compare(params[0], "hrtf") == 0)
+        else if(is_eq(al::case_compare(params[0], "hrtf")))
         {
             RenderChannels = ALC_STEREO_SOFT;
             RenderOutMode = ALC_STEREO_HRTF_SOFT;
         }
-        else if(al::case_compare(params[0], "uhj") == 0)
+        else if(is_eq(al::case_compare(params[0], "uhj")))
         {
             RenderChannels = ALC_STEREO_SOFT;
             RenderOutMode = ALC_STEREO_UHJ_SOFT;
         }
-        else if(al::case_compare(params[0], "quad") == 0)
+        else if(is_eq(al::case_compare(params[0], "quad")))
             RenderChannels = ALC_QUAD_SOFT;
-        else if(al::case_compare(params[0], "surround51") == 0)
+        else if(is_eq(al::case_compare(params[0], "surround51")))
             RenderChannels = ALC_SURROUND_5_1_SOFT;
-        else if(al::case_compare(params[0], "surround61") == 0)
+        else if(is_eq(al::case_compare(params[0], "surround61")))
             RenderChannels = ALC_SURROUND_6_1_SOFT;
-        else if(al::case_compare(params[0], "surround71") == 0)
+        else if(is_eq(al::case_compare(params[0], "surround71")))
             RenderChannels = ALC_SURROUND_7_1_SOFT;
-        else if(al::case_compare(params[0], "ambi1") == 0)
+        else if(is_eq(al::case_compare(params[0], "ambi1")))
         {
             RenderChannels = ALC_BFORMAT3D_SOFT;
             RenderAmbiOrder = 1;
         }
-        else if(al::case_compare(params[0], "ambi2") == 0)
+        else if(is_eq(al::case_compare(params[0], "ambi2")))
         {
             RenderChannels = ALC_BFORMAT3D_SOFT;
             RenderAmbiOrder = 2;
         }
-        else if(al::case_compare(params[0], "ambi3") == 0)
+        else if(is_eq(al::case_compare(params[0], "ambi3")))
         {
             RenderChannels = ALC_BFORMAT3D_SOFT;
             RenderAmbiOrder = 3;
         }
-        else if(al::case_compare(params[0], "ambi4") == 0)
+        else if(is_eq(al::case_compare(params[0], "ambi4")))
         {
             RenderChannels = ALC_BFORMAT3D_SOFT;
             RenderAmbiOrder = 4;
@@ -1287,9 +1287,9 @@ auto main(std::span<std::string_view> args) -> int
             return 1;
         }
 
-        if(al::case_compare(params[1], "f32") == 0)
+        if(is_eq(al::case_compare(params[1], "f32")))
             RenderSamples = ALC_FLOAT_SOFT;
-        else if(al::case_compare(params[1], "s16") == 0)
+        else if(is_eq(al::case_compare(params[1], "s16")))
             RenderSamples = ALC_SHORT_SOFT;
         else
         {

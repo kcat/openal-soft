@@ -59,7 +59,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
             if(fs::status(entrypath).type() != fs::file_type::regular)
                 continue;
             const auto u8ext = entrypath.extension().u8string();
-            if(al::case_compare(al::u8_as_char(u8ext), ext) == 0)
+            if(is_eq(al::case_compare(al::u8_as_char(u8ext), ext)))
                 results->emplace_back(al::u8_as_char(entrypath.u8string()));
         }
     }

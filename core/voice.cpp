@@ -150,18 +150,18 @@ void Voice::InitMixer(std::optional<std::string> const &resopt)
 
         auto resampler = std::string_view{*resopt};
 		
-        if (al::case_compare(resampler, "cubic"sv) == 0)
+        if(is_eq(al::case_compare(resampler, "cubic"sv)))
         {
             WARN("Resampler option \"{}\" is deprecated, using spline", *resopt);
             resampler = "spline"sv;
         }
-        else if(al::case_compare(resampler, "sinc4"sv) == 0
-            || al::case_compare(resampler, "sinc8"sv) == 0)
+        else if(is_eq(al::case_compare(resampler, "sinc4"sv))
+            or is_eq(al::case_compare(resampler, "sinc8"sv)))
         {
             WARN("Resampler option \"{}\" is deprecated, using gaussian", *resopt);
             resampler = "gaussian"sv;
         }
-        else if(al::case_compare(resampler, "bsinc"sv) == 0)
+        else if(is_eq(al::case_compare(resampler, "bsinc"sv)))
         {
             WARN("Resampler option \"{}\" is deprecated, using bsinc12", *resopt);
             resampler = "bsinc12"sv;
@@ -169,7 +169,7 @@ void Voice::InitMixer(std::optional<std::string> const &resopt)
 
         auto const iter = std::ranges::find_if(ResamplerList,
             [resampler](ResamplerEntry const &entry)
-        { return al::case_compare(resampler, entry.name) == 0; });
+        { return is_eq(al::case_compare(resampler, entry.name)); });
         if(iter == ResamplerList.end())
             ERR("Invalid resampler: {}", *resopt);
         else

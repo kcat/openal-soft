@@ -13,20 +13,34 @@ namespace al {
 namespace detail_ {
     void test_int_conversion(...);
     void test_int_conversion(int) = delete;
+
+    template<typename T> requires(std::is_enum_v<T> and requires { test_int_conversion(T{}); })
+    [[nodiscard]] consteval auto get_count() noexcept
+    {
+        using UnderlyingType = std::make_unsigned_t<std::underlying_type_t<T>>;
+        /* The given enum type's "MaxValue" enumeration specifies the largest
+         * index that will be used for the bitset. Or the "Count" enumeration
+         * specifies the number if indices (it's undefined to access the
+         * "Count" index itself).
+         */
+        if constexpr(requires { T::MaxValue; })
+        {
+            static_assert(not requires { T::Count; }); /* Avoid ambiguity. */
+            return static_cast<UnderlyingType>(static_cast<UnderlyingType>(T::MaxValue) + 1);
+        }
+        else if constexpr(requires { T::Count; })
+            return static_cast<UnderlyingType>(T::Count);
+    }
 }
 
 template<typename T>
 concept scoped_enum = std::is_enum_v<T> and requires { detail_::test_int_conversion(T{}); };
 
-/* The given enum type's "MaxValue" enumeration specifies the largest index
- * that will be used for the bitset.
- */
 template<scoped_enum EnumType>
 class bitset {
     using UnderlyingType = std::make_unsigned_t<std::underlying_type_t<EnumType>>;
-    static constexpr auto Count = static_cast<UnderlyingType>(EnumType::MaxValue) + 1u;
 
-    using BitsetType = std::bitset<Count>;
+    using BitsetType = std::bitset<detail_::get_count<EnumType>()>;
     BitsetType mBits;
 
     force_inline explicit constexpr
@@ -111,15 +125,15 @@ public:
     auto operator~() const noexcept -> bitset { return bitset{~mBits}; }
 
     force_inline constexpr
-    auto operator|=(bitset const &rhs LIFETIMEBOUND) noexcept -> bitset&
+    auto operator|=(bitset const &rhs) noexcept LIFETIMEBOUND -> bitset&
     { mBits |= rhs.mBits; return *this; }
 
     force_inline constexpr
-    auto operator&=(bitset const &rhs LIFETIMEBOUND) noexcept -> bitset&
+    auto operator&=(bitset const &rhs) noexcept LIFETIMEBOUND -> bitset&
     { mBits &= rhs.mBits; return *this; }
 
     force_inline constexpr
-    auto operator^=(bitset const &rhs LIFETIMEBOUND) noexcept -> bitset&
+    auto operator^=(bitset const &rhs) noexcept LIFETIMEBOUND -> bitset&
     { mBits ^= rhs.mBits; return *this; }
 
     [[nodiscard]] force_inline friend constexpr

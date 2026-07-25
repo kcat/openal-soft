@@ -74,11 +74,11 @@ constinit auto MixHrtfBlendSamples = HrtfMixerBlendFunc{MixHrtfBlend_C};
 auto SelectMixer() -> MixerOutFunc
 {
 #if HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
+    if(CPUCapFlags.test(CPUCap::NEON))
         return Mix_NEON;
 #endif
 #if HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         return Mix_SSE;
 #endif
     return Mix_C;
@@ -88,11 +88,11 @@ auto SelectMixer() -> MixerOutFunc
 auto SelectMixerOne() -> MixerOneFunc
 {
 #if HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
+    if(CPUCapFlags.test(CPUCap::NEON))
         return Mix_NEON;
 #endif
 #if HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         return Mix_SSE;
 #endif
     return Mix_C;
@@ -101,11 +101,11 @@ auto SelectMixerOne() -> MixerOneFunc
 auto SelectHrtfMixer() -> HrtfMixerFunc
 {
 #if HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
+    if(CPUCapFlags.test(CPUCap::NEON))
         return MixHrtf_NEON;
 #endif
 #if HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         return MixHrtf_SSE;
 #endif
     return MixHrtf_C;
@@ -114,11 +114,11 @@ auto SelectHrtfMixer() -> HrtfMixerFunc
 auto SelectHrtfBlendMixer() -> HrtfMixerBlendFunc
 {
 #if HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
+    if(CPUCapFlags.test(CPUCap::NEON))
         return MixHrtfBlend_NEON;
 #endif
 #if HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         return MixHrtfBlend_SSE;
 #endif
     return MixHrtfBlend_C;

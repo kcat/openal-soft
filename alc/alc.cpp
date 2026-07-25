@@ -450,24 +450,24 @@ void alc_initconfig()
             ERR("Unhandled context suspend behavior setting: \"{}\"", *suspendmode);
     }
 
-    auto capfilter = 0;
+    auto capfilter = CPUCapBitset{};
 #if HAVE_NEON
-    capfilter |= CPU_CAP_NEON;
+    capfilter.set(CPUCap::NEON);
 #endif
 #if HAVE_SSE4_1
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
+    capfilter.set(CPUCap::SSE).set(CPUCap::SSE2).set(CPUCap::SSE3).set(CPUCap::SSE4_1);
 #elif HAVE_SSE3
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
+    capfilter.set(CPUCap::SSE).set(CPUCap::SSE2).set(CPUCap::SSE3);
 #elif HAVE_SSE2
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2;
+    capfilter.set(CPUCap::SSE).set(CPUCap::SSE2);
 #elif HAVE_SSE
-    capfilter |= CPU_CAP_SSE;
+    capfilter.set(CPUCap::SSE);
 #endif
     if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"sv))
     {
         if(auto const cpulist = std::string_view{*cpuopt};
             is_eq(al::case_compare(cpulist, "all"sv)))
-            capfilter = 0;
+            capfilter.reset();
         else
         {
             std::ranges::for_each(cpulist | std::views::split(','),
@@ -482,15 +482,15 @@ void alc_initconfig()
                     return;
 
                 if(is_eq(al::case_compare(entry, "sse"sv)))
-                    capfilter &= ~CPU_CAP_SSE;
+                    capfilter.reset(CPUCap::SSE);
                 else if(is_eq(al::case_compare(entry, "sse2"sv)))
-                    capfilter &= ~CPU_CAP_SSE2;
+                    capfilter.reset(CPUCap::SSE2);
                 else if(is_eq(al::case_compare(entry, "sse3"sv)))
-                    capfilter &= ~CPU_CAP_SSE3;
+                    capfilter.reset(CPUCap::SSE3);
                 else if(is_eq(al::case_compare(entry, "sse4.1"sv)))
-                    capfilter &= ~CPU_CAP_SSE4_1;
+                    capfilter.reset(CPUCap::SSE4_1);
                 else if(is_eq(al::case_compare(entry, "neon"sv)))
-                    capfilter &= ~CPU_CAP_NEON;
+                    capfilter.reset(CPUCap::NEON);
                 else
                     WARN("Invalid CPU extension \"{}\"", entry);
             });
@@ -504,13 +504,18 @@ void alc_initconfig()
             TRACE("Name: \"{}\"", cpuopt->mName);
         }
         auto const caps = cpuopt->mCaps;
+        auto do_test = [capfilter, caps](CPUCap const cap, std::string_view const on,
+            std::string_view const off) -> std::string_view
+        {
+            return capfilter.test(cap) ? caps.test(cap) ? on : off : ""sv;
+        };
         TRACE("Extensions:{}{}{}{}{}{}",
-            ((capfilter&CPU_CAP_SSE)   ?(caps&CPU_CAP_SSE)   ?" +SSE"sv    : " -SSE"sv    : ""sv),
-            ((capfilter&CPU_CAP_SSE2)  ?(caps&CPU_CAP_SSE2)  ?" +SSE2"sv   : " -SSE2"sv   : ""sv),
-            ((capfilter&CPU_CAP_SSE3)  ?(caps&CPU_CAP_SSE3)  ?" +SSE3"sv   : " -SSE3"sv   : ""sv),
-            ((capfilter&CPU_CAP_SSE4_1)?(caps&CPU_CAP_SSE4_1)?" +SSE4.1"sv : " -SSE4.1"sv : ""sv),
-            ((capfilter&CPU_CAP_NEON)  ?(caps&CPU_CAP_NEON)  ?" +NEON"sv   : " -NEON"sv   : ""sv),
-            (!capfilter) ? " -none-"sv : ""sv);
+            do_test(CPUCap::SSE,    " +SSE"sv,    " -SSE"sv),
+            do_test(CPUCap::SSE2,   " +SSE2"sv,   " -SSE2"sv),
+            do_test(CPUCap::SSE3,   " +SSE3"sv,   " -SSE3"sv),
+            do_test(CPUCap::SSE4_1, " +SSE4_1"sv, " -SSE4_1"sv),
+            do_test(CPUCap::NEON,   " +NEON"sv,   " -NEON"sv),
+            capfilter.none() ? " -none-"sv : ""sv);
         CPUCapFlags = caps & capfilter;
     }
 

@@ -1103,9 +1103,10 @@ struct common_type<isize, T> { using type = isize; };
 template<al::strict_integral T> requires(sizeof(T) < sizeof(isize))
 struct common_type<T, isize> { using type = isize; };
 
-template<al::strict_integral T> requires(sizeof(T) < sizeof(usize) or std::same_as<T, usize>)
+template<al::strict_unsigned_integral T>
+    requires(sizeof(T) < sizeof(usize) or std::same_as<T, usize>)
 struct common_type<usize, T> { using type = usize; };
-template<al::strict_integral T> requires(sizeof(T) < sizeof(usize))
+template<al::strict_unsigned_integral T> requires(sizeof(T) < sizeof(usize))
 struct common_type<T, usize> { using type = usize; };
 
 /* Declare the common type between a strict and weak number type, ensuring the

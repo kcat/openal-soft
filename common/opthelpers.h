@@ -64,8 +64,10 @@
 
 #if HAS_ATTRIBUTE(clang::nonblocking) && !defined(_MSVC_STL_UPDATE)
 #define NONBLOCKING [[clang::nonblocking]]
+#define BLOCKING [[clang::blocking]]
 #else
 #define NONBLOCKING
+#define BLOCKING
 #endif
 
 #if defined(__clang__) && (__clang_major__ >= (defined(__APPLE__) ? 17 : 20))

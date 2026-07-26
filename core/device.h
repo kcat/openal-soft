@@ -360,7 +360,7 @@ struct DeviceBase {
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */
-    [[nodiscard]] auto waitForMix() const noexcept -> unsigned
+    [[nodiscard]] auto waitForMix() const noexcept BLOCKING -> unsigned
     {
         auto refcount = mMixCount.load(std::memory_order_acquire);
         while((refcount&1)) refcount = mMixCount.load(std::memory_order_acquire);

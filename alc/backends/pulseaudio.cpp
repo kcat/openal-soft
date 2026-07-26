@@ -28,6 +28,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <concepts>
 #include <cstring>
 #include <limits>
 #include <mutex>
@@ -503,7 +504,7 @@ struct MainloopUniqueLock : public std::unique_lock<PulseMainloop> {
     auto wait() const -> void
     { pa_threaded_mainloop_wait(mutex()->mLoop); }
 
-    template<typename Predicate>
+    template<std::predicate Predicate>
     auto wait(Predicate done_waiting) const -> void
     { while(!done_waiting()) wait(); }
 

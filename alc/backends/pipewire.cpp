@@ -27,6 +27,7 @@
 #include <atomic>
 #include <cinttypes>
 #include <cmath>
+#include <concepts>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -537,7 +538,7 @@ struct MainloopUniqueLock : std::unique_lock<ThreadMainloop> {
     auto wait() const -> void
     { pw_thread_loop_wait(mutex()->mLoop); }
 
-    template<typename Predicate>
+    template<std::predicate Predicate>
     auto wait(Predicate done_waiting) const -> void
     { while(!done_waiting()) wait(); }
 };

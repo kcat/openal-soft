@@ -140,7 +140,7 @@ std::vector<DeviceEntry> CaptureList;
 OSStatus GetHwProperty(AudioHardwarePropertyID propId, UInt32 dataSize, void *propData)
 {
     const AudioObjectPropertyAddress addr{propId, kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster};
+        kAudioObjectPropertyElementMain};
     return AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, nullptr, &dataSize,
         propData);
 }
@@ -148,7 +148,7 @@ OSStatus GetHwProperty(AudioHardwarePropertyID propId, UInt32 dataSize, void *pr
 OSStatus GetHwPropertySize(AudioHardwarePropertyID propId, UInt32 *outSize)
 {
     const AudioObjectPropertyAddress addr{propId, kAudioObjectPropertyScopeGlobal,
-        kAudioObjectPropertyElementMaster};
+        kAudioObjectPropertyElementMain};
     return AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr, 0, nullptr, outSize);
 }
 
@@ -321,7 +321,7 @@ struct DeviceHelper {
     DeviceHelper()
     {
         AudioObjectPropertyAddress addr{kAudioHardwarePropertyDefaultOutputDevice,
-            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster};
+            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         OSStatus status = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
             ERR("AudioObjectAddPropertyListener fail: {}", status);
@@ -329,7 +329,7 @@ struct DeviceHelper {
     ~DeviceHelper()
     {
         AudioObjectPropertyAddress addr{kAudioHardwarePropertyDefaultOutputDevice,
-            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster};
+            kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         OSStatus status = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &addr, DeviceListenerProc, nil);
         if (status != noErr)
             ERR("AudioObjectRemovePropertyListener fail: {}", status);
@@ -495,7 +495,7 @@ void CoreAudioPlayback::open(std::string_view name)
     {
         UInt32 type{};
         err = GetDevProperty(audioDevice, kAudioDevicePropertyDataSource, false,
-            kAudioObjectPropertyElementMaster, sizeof(type), &type);
+            kAudioObjectPropertyElementMain, sizeof(type), &type);
         if(err != noErr)
             WARN("Failed to get audio device type: '{}' ({})", FourCCPrinter{err}.c_str(), err);
         else

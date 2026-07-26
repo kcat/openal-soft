@@ -68,6 +68,15 @@
 #define NONBLOCKING
 #endif
 
+#if defined(__clang__) && (__clang_major__ >= (defined(__APPLE__) ? 17 : 20))
+#define IGNORE_FUNCTION_EFFECTS(...) _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wfunction-effects\"") \
+    __VA_ARGS__ \
+    _Pragma("clang diagnostic pop")
+#else
+#define IGNORE_FUNCTION_EFFECTS(...) __VA_ARGS__
+#endif
+
 namespace al {
 
 template<typename T>

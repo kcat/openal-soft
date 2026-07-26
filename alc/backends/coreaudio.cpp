@@ -299,8 +299,6 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
         for(auto curitem = newdevs.begin()+1;curitem != newdevs.end();++curitem)
         {
             const auto subrange = std::span{newdevs.begin(), curitem};
-            auto check_match = [curitem](const DeviceEntry &entry) -> bool
-            { return entry.mName == curitem->mName; };
             if(std::ranges::find(subrange, curitem->mName, &DeviceEntry::mName) != subrange.end())
             {
                 auto name = std::string{};

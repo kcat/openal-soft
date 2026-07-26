@@ -594,35 +594,35 @@ bool CoreAudioPlayback::reset()
     streamFormat.mChannelsPerFrame = mDevice->channelsFromFmt();
 
     streamFormat.mFramesPerPacket = 1;
-    streamFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kLinearPCMFormatFlagIsPacked;
+    streamFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
     streamFormat.mFormatID = kAudioFormatLinearPCM;
     switch(mDevice->FmtType)
     {
-        case DevFmtUByte:
-            mDevice->FmtType = DevFmtByte;
-            [[fallthrough]];
-        case DevFmtByte:
-            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
-            streamFormat.mBitsPerChannel = 8;
-            break;
-        case DevFmtUShort:
-            mDevice->FmtType = DevFmtShort;
-            [[fallthrough]];
-        case DevFmtShort:
-            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
-            streamFormat.mBitsPerChannel = 16;
-            break;
-        case DevFmtUInt:
-            mDevice->FmtType = DevFmtInt;
-            [[fallthrough]];
-        case DevFmtInt:
-            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
-            streamFormat.mBitsPerChannel = 32;
-            break;
-        case DevFmtFloat:
-            streamFormat.mFormatFlags |= kLinearPCMFormatFlagIsFloat;
-            streamFormat.mBitsPerChannel = 32;
-            break;
+    case DevFmtUByte:
+        mDevice->FmtType = DevFmtByte;
+        [[fallthrough]];
+    case DevFmtByte:
+        streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        streamFormat.mBitsPerChannel = 8;
+        break;
+    case DevFmtUShort:
+        mDevice->FmtType = DevFmtShort;
+        [[fallthrough]];
+    case DevFmtShort:
+        streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        streamFormat.mBitsPerChannel = 16;
+        break;
+    case DevFmtUInt:
+        mDevice->FmtType = DevFmtInt;
+        [[fallthrough]];
+    case DevFmtInt:
+        streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        streamFormat.mBitsPerChannel = 32;
+        break;
+    case DevFmtFloat:
+        streamFormat.mFormatFlags |= kAudioFormatFlagIsFloat;
+        streamFormat.mBitsPerChannel = 32;
+        break;
     }
     streamFormat.mBytesPerFrame = streamFormat.mChannelsPerFrame*streamFormat.mBitsPerChannel/8;
     streamFormat.mBytesPerPacket = streamFormat.mBytesPerFrame*streamFormat.mFramesPerPacket;
@@ -854,39 +854,31 @@ void CoreAudioCapture::open(std::string_view name)
             "Could not get input format: '{}' ({})", FourCCPrinter{err}.c_str(), err};
 
     // Set up the requested format description
-    AudioStreamBasicDescription requestedFormat{};
+    auto requestedFormat = AudioStreamBasicDescription{};
+    requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
     switch(mDevice->FmtType)
     {
     case DevFmtByte:
-        requestedFormat.mBitsPerChannel = 8;
-        requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-        break;
+        requestedFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        [[fallthrough]];
     case DevFmtUByte:
         requestedFormat.mBitsPerChannel = 8;
-        requestedFormat.mFormatFlags = kAudioFormatFlagIsPacked;
         break;
     case DevFmtShort:
-        requestedFormat.mBitsPerChannel = 16;
-        requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger
-            | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
-        break;
+        requestedFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        [[fallthrough]];
     case DevFmtUShort:
         requestedFormat.mBitsPerChannel = 16;
-        requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
         break;
     case DevFmtInt:
-        requestedFormat.mBitsPerChannel = 32;
-        requestedFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger
-            | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
-        break;
+        requestedFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+        [[fallthrough]];
     case DevFmtUInt:
         requestedFormat.mBitsPerChannel = 32;
-        requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
         break;
     case DevFmtFloat:
+        requestedFormat.mFormatFlags |= kAudioFormatFlagIsFloat;
         requestedFormat.mBitsPerChannel = 32;
-        requestedFormat.mFormatFlags = kLinearPCMFormatFlagIsFloat | kAudioFormatFlagsNativeEndian
-            | kAudioFormatFlagIsPacked;
         break;
     }
 

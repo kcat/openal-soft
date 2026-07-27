@@ -11,5 +11,5 @@ string(REGEX REPLACE "(..)" "    static_cast<char>\(0x\\1\),\n" output "${indata
 # Write the list of hex chars to the output file
 file(WRITE "${OUTPUT_FILE}" "#pragma once
 
-char ${VARNAME}[] = {
+constexpr char ${VARNAME}[] = {
 ${output}};")

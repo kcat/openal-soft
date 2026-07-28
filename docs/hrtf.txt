@@ -12,8 +12,10 @@ placement of sounds, making it seem as though they are coming from all around,
 including above and below the listener, instead of just to the front, back, and
 sides.
 
-The default data set is based on the KEMAR HRTF data provided by MIT, which can
-be found at <http://sound.media.mit.edu/resources/KEMAR.html>.
+The default HRTF is based on the SADIE II data set, subject D1, developed by
+Cal Armstrong, Lewis Thresh, and Gavin Kearney at The Audio Lab, Department of
+Electronic Engineering, University of York, UK, which can be found at
+<https://www.york.ac.uk/sadie-project/database.html>.
 
 
 Custom HRTF Data Sets

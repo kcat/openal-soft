@@ -1474,21 +1474,19 @@ auto PulseBackendFactory::init() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
+        static constexpr auto load_sym = []<typename T>(T *&func, gsl::czstring const name) -> bool
         {
-            using func_t = std::remove_reference_t<decltype(func)>;
-            auto const funcresult = GetSymbol(pulse_handle, name);
+            auto const funcresult = GetSymbolAddress<T>(pulse_handle, name);
             if(!funcresult)
             {
-                WARN("Failed to load function {}: {}", name, funcresult.error());
+                WARN("Failed to load symbol {}: {}", name, funcresult.error());
                 return false;
             }
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<func_t>(funcresult.value());
+            func = funcresult.value();
             return true;
         };
         auto ok = true;
-#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+#define LOAD_FUNC(f) ok &= load_sym(p##f, #f)
         PULSE_FUNCS(LOAD_FUNC)
 #undef LOAD_FUNC
         if(!ok)

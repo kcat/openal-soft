@@ -143,21 +143,19 @@ auto jack_load() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_sym = []<typename T>(T *&func, gsl::czstring const name) -> bool
         {
-            using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(jack_handle, name);
+            auto funcresult = GetSymbolAddress<T>(jack_handle, name);
             if(!funcresult)
             {
-                WARN("Failed to load function {}: {}", name, funcresult.error());
+                WARN("Failed to load symbol {}: {}", name, funcresult.error());
                 return false;
             }
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<func_t>(funcresult.value());
+            func = funcresult.value();
             return true;
         };
         auto ok = true;
-#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+#define LOAD_FUNC(f) ok &= load_sym(p##f, #f)
         JACK_FUNCS(LOAD_FUNC)
 #undef LOAD_FUNC
         if(!ok)
@@ -168,7 +166,7 @@ auto jack_load() -> bool
         }
 
         /* Optional symbols. These don't exist in all versions of JACK. */
-#define LOAD_SYM(f) std::ignore = load_func(p##f, #f)
+#define LOAD_SYM(f) std::ignore = load_sym(p##f, #f)
         LOAD_SYM(jack_error_callback);
 #undef LOAD_SYM
     }

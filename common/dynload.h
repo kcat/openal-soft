@@ -3,10 +3,9 @@
 
 #include "config.h"
 
-#if HAVE_DYNLOAD
+#if HAVE_DYNLOAD && (defined(_WIN32) || defined(HAVE_DLFCN_H))
 
-#if defined(_WIN32) || defined(HAVE_DLFCN_H)
-
+#include <new>
 #include <string>
 
 #include "expected.hpp"
@@ -18,9 +17,17 @@
 auto LoadLib(gsl::czstring name) -> al::expected<void*, std::string>;
 void CloseLib(void *handle);
 [[nodiscard]]
-auto GetSymbol(void *handle, gsl::czstring name) -> al::expected<void*, std::string>;
+auto GetSymbol_(void *handle, gsl::czstring name) -> al::expected<void*, std::string>;
 
-#endif
+template<typename T> [[nodiscard]]
+auto GetSymbolAddress(void *const handle, gsl::czstring const name)
+    -> al::expected<T*, std::string>
+{
+    auto result = GetSymbol_(handle, name);
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+    if(result) [[likely]] return reinterpret_cast<T*>(std::move(result).value());
+    return al::unexpected(std::move(result).error());
+}
 
 #endif
 

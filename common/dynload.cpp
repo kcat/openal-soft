@@ -33,7 +33,7 @@ auto LoadLib(gsl::czstring const name) -> al::expected<void*, std::string>
 void CloseLib(void *const handle)
 { FreeLibrary(static_cast<HMODULE>(handle)); }
 
-auto GetSymbol(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
+auto GetSymbol_(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
 {
     if(auto const sym = GetProcAddress(static_cast<HMODULE>(handle), name)) [[likely]]
     {
@@ -70,7 +70,7 @@ auto LoadLib(gsl::czstring const name) -> al::expected<void*, std::string>
 void CloseLib(void *const handle)
 { dlclose(handle); }
 
-auto GetSymbol(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
+auto GetSymbol_(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
 {
     dlerror();
     auto *const sym = dlsym(handle, name);

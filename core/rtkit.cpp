@@ -126,20 +126,19 @@ auto HasDBus() -> bool
             return;
         }
 
-        static constexpr auto load_func = []<typename T>(T &func, gsl::czstring const name) -> bool
+        static constexpr auto load_sym = []<typename T>(T *&func, gsl::czstring const name) -> bool
         {
-            auto const funcresult = GetSymbol(dbus_handle, name);
+            auto const funcresult = GetSymbolAddress<T>(dbus_handle, name);
             if(!funcresult)
             {
                 WARN("Failed to load function {}: {}", name, funcresult.error());
                 return false;
             }
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<T>(funcresult.value());
+            func = funcresult.value();
             return true;
         };
         auto ok = true;
-#define LOAD_FUNC(f) ok &= load_func(p##f, #f);
+#define LOAD_FUNC(f) ok &= load_sym(p##f, #f);
         DBUS_FUNCTIONS(LOAD_FUNC)
 #undef LOAD_FUNC
         if(!ok)

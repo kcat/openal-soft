@@ -39,22 +39,15 @@
     [[gnu::aligned(4), gnu::used, gnu::section(".note.dlopen")]]    \
     const struct {                                                  \
         struct {                                                    \
-            std::uint32_t n_namesz;                                 \
-            std::uint32_t n_descsz;                                 \
-            std::uint32_t n_type;                                   \
+            std::uint32_t n_namesz{                                 \
+                sizeof(OAL_ELF_NOTE_DLOPEN_VENDOR)};                \
+            std::uint32_t n_descsz{sizeof(json)};                   \
+            std::uint32_t n_type{OAL_ELF_NOTE_DLOPEN_TYPE};         \
         } nhdr;                                                     \
-        std::array<char, 4> name;                                   \
+        std::array<char, 4> name{OAL_ELF_NOTE_DLOPEN_VENDOR};       \
         [[gnu::aligned(4)]]                                         \
-        std::array<char, sizeof(json)> dlopen_json;                 \
-    } variable_name = {                                             \
-        {                                                           \
-             sizeof(OAL_ELF_NOTE_DLOPEN_VENDOR),                    \
-             sizeof(json),                                          \
-             OAL_ELF_NOTE_DLOPEN_TYPE                               \
-        },                                                          \
-        std::to_array<const char>(OAL_ELF_NOTE_DLOPEN_VENDOR),      \
-        std::to_array<const char>(json)                             \
-    }
+        std::array<char, sizeof(json)> dlopen_json{json};           \
+    } variable_name
 
 #define OAL_ELF_NOTE_INTERNAL(json, variable_name) \
     OAL_ELF_NOTE_INTERNAL2(json, variable_name)

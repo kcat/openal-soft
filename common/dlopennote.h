@@ -30,77 +30,135 @@
 
 /* Modified here to avoid unsafe C arrays and use proper C++ types. */
 #include <array>
+#include <cassert>
 #include <cstdint>
+#include <cstdlib>
+#include <ranges>
+#include <string_view>
+#include <type_traits>
 
-#define OAL_ELF_NOTE_DLOPEN_VENDOR "FDO"
-#define OAL_ELF_NOTE_DLOPEN_TYPE 0x407c0c0aU
+namespace NoteDlOpen {
 
-#define OAL_ELF_NOTE_INTERNAL2(json, variable_name)                 \
-    [[gnu::aligned(4), gnu::used, gnu::section(".note.dlopen")]]    \
-    const struct {                                                  \
-        struct {                                                    \
-            std::uint32_t n_namesz{                                 \
-                sizeof(OAL_ELF_NOTE_DLOPEN_VENDOR)};                \
-            std::uint32_t n_descsz{sizeof(json)};                   \
-            std::uint32_t n_type{OAL_ELF_NOTE_DLOPEN_TYPE};         \
-        } nhdr;                                                     \
-        std::array<char, 4> name{OAL_ELF_NOTE_DLOPEN_VENDOR};       \
-        [[gnu::aligned(4)]]                                         \
-        std::array<char, sizeof(json)> dlopen_json{json};           \
-    } variable_name
+inline constexpr auto Vendor = std::to_array("FDO");
+inline constexpr auto Type = 0x407C0C0Au;
 
-#define OAL_ELF_NOTE_INTERNAL(json, variable_name) \
-    OAL_ELF_NOTE_INTERNAL2(json, variable_name)
+template<std::size_t json_len> [[nodiscard]] consteval
+auto CreateNote(std::array<char, json_len> const &json) noexcept
+{
+    struct [[gnu::aligned(4)]] NoteStruct {
+        struct { std::uint32_t n_namesz, n_descsz, n_type; } nhdr;
+        std::array<char, 4> name;
+        std::array<char, json_len> dlopen_json;
+    };
+    return NoteStruct{
+        .nhdr{
+            .n_namesz{sizeof(NoteStruct::name)},
+            .n_descsz{sizeof(NoteStruct::dlopen_json)},
+            .n_type{Type}
+        },
+        .name{Vendor},
+        .dlopen_json{json}
+    };
+}
 
-/* TODO: A constexpr function should be able to concatenate a variable number
- * of char arrays, instead of a set of macros like this.
+namespace detail_ {
+
+    /* Gets the size of a C-style array type (e.g. char[N]) or the size of a
+     * tuple-like type (e.g. std::array<char, N>). None of .size(), std::size,
+     * or std::ranges::size support getting the size of a std::array in a
+     * constexpr context, despite all calls being constexpr, and no type trait
+     * supports getting the size of both C-style array and std::array types.
+     */
+    template<typename T> [[nodiscard]] consteval
+    auto get_size() noexcept -> std::size_t
+    {
+        if constexpr(std::is_bounded_array_v<std::remove_reference_t<T>>)
+            return std::extent_v<std::remove_reference_t<T>>;
+        else
+            return std::tuple_size_v<std::remove_reference_t<T>>;
+    }
+
+    /* Gets a string_view for the given range, excluding the final nul char. */
+    [[nodiscard]] consteval
+    auto get_strview(std::ranges::contiguous_range auto&& str) noexcept
+    {
+        if(std::ranges::size(str) == 0) std::abort();
+        if(*(std::ranges::end(str)-1) != '\0') std::abort();
+        return std::string_view{std::ranges::begin(str), std::ranges::size(str)-1};
+    }
+
+} // namespace detail_
+
+/* Concatenates a set of char arrays (excluding their final nul chars) into a
+ * single nul-terminated char array.
  */
-#define OAL_SONAME_ARRAY1(N1) "[\"" N1 "\"]"
-#define OAL_SONAME_ARRAY2(N1,N2) "[\"" N1 "\",\"" N2 "\"]"
-#define OAL_SONAME_ARRAY3(N1,N2,N3) "[\"" N1 "\",\"" N2 "\",\"" N3 "\"]"
-#define OAL_SONAME_ARRAY4(N1,N2,N3,N4) "[\"" N1 "\",\"" N2 "\",\"" N3 "\",\"" N4 "\"]"
-#define OAL_SONAME_ARRAY5(N1,N2,N3,N4,N5) "[\"" N1 "\",\"" N2 "\",\"" N3 "\",\"" N4 "\",\"" N5 "\"]"
-#define OAL_SONAME_ARRAY6(N1,N2,N3,N4,N5,N6) "[\"" N1 "\",\"" N2 "\",\"" N3 "\",\"" N4 "\",\"" N5 "\",\"" N6 "\"]"
-#define OAL_SONAME_ARRAY7(N1,N2,N3,N4,N5,N6,N7) "[\"" N1 "\",\"" N2 "\",\"" N3 "\",\"" N4 "\",\"" N5 "\",\"" N6 "\",\"" N7 "\"]"
-#define OAL_SONAME_ARRAY8(N1,N2,N3,N4,N5,N6,N7,N8) "[\"" N1 "\",\"" N2 "\",\"" N3 "\",\"" N4 "\",\"" N5 "\",\"" N6 "\",\"" N7 "\",\"" N8 "\"]"
-#define OAL_SONAME_ARRAY_GET(N1,N2,N3,N4,N5,N6,N7,N8,NAME,...) NAME
-#define OAL_SONAME_ARRAY(...) \
-    OAL_SONAME_ARRAY_GET(__VA_ARGS__, \
-         OAL_SONAME_ARRAY8, \
-         OAL_SONAME_ARRAY7, \
-         OAL_SONAME_ARRAY6, \
-         OAL_SONAME_ARRAY5, \
-         OAL_SONAME_ARRAY4, \
-         OAL_SONAME_ARRAY3, \
-         OAL_SONAME_ARRAY2, \
-         OAL_SONAME_ARRAY1 \
-    )(__VA_ARGS__)
+template<std::ranges::contiguous_range ...Args> requires(sizeof...(Args) > 0)
+[[nodiscard]] consteval auto Concat(Args&& ...args) noexcept
+{
+    constexpr auto tmplen = (... + (detail_::get_size<Args>()-1)) + 1;
+    auto arr = std::array<char, tmplen>{};
+    auto oiter = arr.begin();
+    auto do_concat = [&oiter](std::string_view const str)
+    {
+        oiter = std::ranges::copy(str, oiter).out;
+    };
+    (..., do_concat(detail_::get_strview(std::forward<Args>(args))));
+    return arr;
+}
 
-// Create "unique" variable name using __LINE__,
-// so creating elf notes on the same line is not supported
+/* Combines a set of char arrays (excluding their final nul chars) into a
+ * single nul-terminated char array, with each element quoted and separated by
+ * commas. e.g. calling QuotedList("foo", "bar") will return an array
+ * containing the string "[\"foo\",\"bar\"]".
+ */
+template<std::ranges::contiguous_range S1, std::ranges::contiguous_range ...Args>
+[[nodiscard]] consteval auto QuotedList(S1&& s1, Args&& ...more) noexcept
+{
+    constexpr auto tmplen = ((detail_::get_size<S1>()-1) + ... + (detail_::get_size<Args>()-1))
+        + 3*sizeof...(Args) + 5;
+    auto arr = std::array<char, tmplen>{};
+    auto oiter = std::ranges::copy(detail_::get_strview("[\""), arr.begin()).out;
+    oiter = std::ranges::copy(detail_::get_strview(std::forward<S1>(s1)), oiter).out;
+    auto do_concat = [sep=detail_::get_strview("\",\""), &oiter](std::string_view const str)
+    {
+        oiter = std::ranges::copy(std::array{sep, str} | std::views::join, oiter).out;
+    };
+    (..., do_concat(detail_::get_strview(std::forward<Args>(more))));
+    std::ranges::copy(detail_::get_strview("\"]"), oiter);
+    return arr;
+}
+
+
+template<typename FT, typename DT, typename PT, typename ...Args> [[nodiscard]] consteval
+auto MakeNote(FT&& feature, DT&& description, PT&& priority, Args&& ...sonames) noexcept
+{
+    auto const json = Concat(
+        "[{\"feature\":\"", std::forward<FT>(feature),
+        "\",\"description\":\"", std::forward<DT>(description),
+        "\",\"priority\":\"", std::forward<PT>(priority),
+        "\",\"soname\":", QuotedList(std::forward<Args>(sonames)...), "}]");
+    return CreateNote(json);
+}
+
+} // namespace DlOpen
+
+/* Create "unique" variable name using __LINE__,
+ * so creating elf notes on the same line is not supported
+ * C++26 would allow using _ as an anonymous variable without needing to
+ * generate a unique name, since it's not accessed after being defined.
+ */
 #define OAL_ELF_NOTE_JOIN2(A,B) A##B
 #define OAL_ELF_NOTE_JOIN(A,B) OAL_ELF_NOTE_JOIN2(A,B)
 #define OAL_ELF_NOTE_UNIQUE_NAME OAL_ELF_NOTE_JOIN(s_dlopen_note_, __LINE__)
 
-#define OAL_ELF_NOTE_DLOPEN(feature, description, priority, ...) \
-    OAL_ELF_NOTE_INTERNAL(                                       \
-        "[{\"feature\":\"" feature                               \
-        "\",\"description\":\"" description                      \
-        "\",\"priority\":\"" priority                            \
-        "\",\"soname\":" OAL_SONAME_ARRAY(__VA_ARGS__) "}]",     \
-        OAL_ELF_NOTE_UNIQUE_NAME)
-
-#else
-
-#if defined (__GNUC__) && __GNUC__ < 3
-
-#define OAL_ELF_NOTE_DLOPEN
+#define OAL_ELF_NOTE_DLOPEN(feature, description, priority, ...)    \
+    [[gnu::used, gnu::section(".note.dlopen")]]                     \
+    constexpr auto OAL_ELF_NOTE_UNIQUE_NAME = NoteDlOpen::MakeNote( \
+        feature, description, priority, __VA_ARGS__)
 
 #else
 
 #define OAL_ELF_NOTE_DLOPEN(...)
-
-#endif
 
 #endif
 

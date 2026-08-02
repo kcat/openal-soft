@@ -60,11 +60,12 @@ auto GetSymbol_(void *const handle, gsl::czstring const name) -> al::expected<vo
 
 auto LoadLib(gsl::czstring const name) -> al::expected<void*, std::string>
 {
-    dlerror();
-    auto *const handle = dlopen(name, RTLD_NOW);
+    if(auto *const handle = dlopen(name, RTLD_NOW))
+        return handle;
+
     if(auto *const err = dlerror())
         return al::unexpected(err);
-    return handle;
+    return al::unexpected("dlerror() == NULL");
 }
 
 void CloseLib(void *const handle)
@@ -72,11 +73,12 @@ void CloseLib(void *const handle)
 
 auto GetSymbol_(void *const handle, gsl::czstring const name) -> al::expected<void*, std::string>
 {
-    dlerror();
-    auto *const sym = dlsym(handle, name);
+    if(auto *const sym = dlsym(handle, name))
+        return sym;
+
     if(auto *const err = dlerror())
         return al::unexpected(err);
-    return sym;
+    return al::unexpected("dlerror() == NULL");
 }
 #endif
 

@@ -42,24 +42,22 @@ namespace NoteDlOpen {
 inline constexpr auto Vendor = std::to_array("FDO");
 inline constexpr auto Type = 0x407C0C0Au;
 
-template<std::size_t json_len> [[nodiscard]] consteval
-auto CreateNote(std::array<char, json_len> const &json) noexcept
-{
-    struct [[gnu::aligned(4)]] NoteStruct {
-        struct { std::uint32_t n_namesz, n_descsz, n_type; } nhdr;
-        std::array<char, 4> name;
-        std::array<char, json_len> dlopen_json;
-    };
-    return NoteStruct{
-        .nhdr{
-            .n_namesz{sizeof(NoteStruct::name)},
-            .n_descsz{sizeof(NoteStruct::dlopen_json)},
-            .n_type{Type}
-        },
-        .name{Vendor},
-        .dlopen_json{json}
-    };
-}
+template<std::size_t json_len>
+struct [[gnu::aligned(4)]] Structure {
+    struct {
+        std::uint32_t n_namesz{sizeof(Structure::name)};
+        std::uint32_t n_descsz{sizeof(Structure::dlopen_json)};
+        std::uint32_t n_type{Type};
+    } nhdr;
+    std::array<char, 4> name{Vendor};
+    std::array<char, json_len> dlopen_json;
+
+    explicit constexpr
+    Structure(std::array<char, json_len> const &json) : dlopen_json{json} { }
+};
+
+template<std::size_t N>
+Structure(std::array<char, N> const&) -> Structure<N>;
 
 namespace detail_ {
 
@@ -137,7 +135,7 @@ auto MakeNote(FT&& feature, DT&& description, PT&& priority, Args&& ...sonames) 
         "\",\"description\":\"", std::forward<DT>(description),
         "\",\"priority\":\"", std::forward<PT>(priority),
         "\",\"soname\":", QuotedList(std::forward<Args>(sonames)...), "}]");
-    return CreateNote(json);
+    return Structure{json};
 }
 
 } // namespace DlOpen

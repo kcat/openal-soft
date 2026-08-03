@@ -92,8 +92,8 @@ namespace detail_ {
 /* Concatenates a set of char arrays (excluding their final nul chars) into a
  * single nul-terminated char array.
  */
-template<std::ranges::contiguous_range ...Args> requires(sizeof...(Args) > 0)
-[[nodiscard]] consteval auto Concat(Args&& ...args) noexcept
+template<std::ranges::contiguous_range ...Args> [[nodiscard]] consteval
+auto Concat(Args&& ...args) noexcept
 {
     constexpr auto tmplen = (... + (detail_::get_size<Args>()-1)) + 1;
     auto arr = std::array<char, tmplen>{};

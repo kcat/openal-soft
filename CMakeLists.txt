@@ -131,7 +131,7 @@ endif()
 if(MSVC)
     option(FORCE_STATIC_VCRT "Force /MT for static VC runtimes" OFF)
     if(FORCE_STATIC_VCRT)
-        if(CMAKE_VERSION VERSION_GREATER_EQUAL 15.0)
+        if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.15)
             set(ALSOFT_STD_VERSION_PROPS ${ALSOFT_STD_VERSION_PROPS}
                 MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
         else()

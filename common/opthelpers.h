@@ -12,10 +12,8 @@
 #define HAS_BUILTIN(x) (0)
 #endif
 
-#ifdef __has_cpp_attribute
-#define HAS_ATTRIBUTE __has_cpp_attribute
-#else
-#define HAS_ATTRIBUTE(x) (0)
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) (0)
 #endif
 
 #ifdef __GNUC__
@@ -38,7 +36,7 @@
 #define ASSUME __builtin_assume
 #elif defined(_MSC_VER)
 #define ASSUME __assume
-#elif __has_attribute(assume)
+#elif __has_cpp_attribute(assume)
 #define ASSUME(x) [[assume(x)]]
 #elif HAS_BUILTIN(__builtin_unreachable)
 #define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(false)
@@ -46,23 +44,23 @@
 #define ASSUME(x) (static_cast<void>(0))
 #endif
 
-#if !defined(_WIN32) && HAS_ATTRIBUTE(gnu::visibility)
+#if !defined(_WIN32) && __has_cpp_attribute(gnu::visibility)
 #define DECL_HIDDEN [[gnu::visibility("hidden")]]
 #else
 #define DECL_HIDDEN
 #endif
 
-#if HAS_ATTRIBUTE(clang::lifetimebound)
+#if __has_cpp_attribute(clang::lifetimebound)
 #define LIFETIMEBOUND [[clang::lifetimebound]]
-#elif HAS_ATTRIBUTE(msvc::lifetimebound)
+#elif __has_cpp_attribute(msvc::lifetimebound)
 #define LIFETIMEBOUND [[msvc::lifetimebound]]
-#elif HAS_ATTRIBUTE(lifetimebound)
+#elif __has_cpp_attribute(lifetimebound)
 #define LIFETIMEBOUND [[lifetimebound]]
 #else
 #define LIFETIMEBOUND
 #endif
 
-#if HAS_ATTRIBUTE(clang::nonblocking) && !defined(_MSVC_STL_UPDATE)
+#if __has_cpp_attribute(clang::nonblocking) && !defined(_MSVC_STL_UPDATE)
 #define NONBLOCKING [[clang::nonblocking]]
 #define BLOCKING [[clang::blocking]]
 #else

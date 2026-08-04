@@ -17,7 +17,7 @@
 #include "al/eax/x_ram.h"
 #endif
 
-#if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && HAS_ATTRIBUTE(gnu::alias)
+#if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && __has_cpp_attribute(gnu::alias)
 #define GetFuncPtr(x) reinterpret_cast<void*>(&x##_)
 #define DeclareFuncAlias(x) extern "C" DECL_HIDDEN decltype(x) x##_
 

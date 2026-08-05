@@ -530,11 +530,12 @@ if(NOT MSVC)
     endif()
 endif()
 
-check_include_file(xmmintrin.h HAVE_XMMINTRIN_H)
-check_include_file(emmintrin.h HAVE_EMMINTRIN_H)
-check_include_file(pmmintrin.h HAVE_PMMINTRIN_H)
-check_include_file(smmintrin.h HAVE_SMMINTRIN_H)
-check_include_file(arm_neon.h HAVE_ARM_NEON_H)
+macro(alsoft_check_cxx_source_compiles VAR SOURCE)
+    set(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    check_cxx_source_compiles("${SOURCE}" ${VAR})
+    set(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
+    unset(OLD_REQUIRED_FLAGS)
+endmacro()
 
 set(HAVE_SSE        0)
 set(HAVE_SSE2       0)
@@ -545,8 +546,20 @@ set(HAVE_NEON       0)
 # Check for SSE support
 option(ALSOFT_CPUEXT_SSE "Enable SSE support" ON)
 option(ALSOFT_REQUIRE_SSE "Require SSE support" OFF)
-if(ALSOFT_CPUEXT_SSE AND HAVE_XMMINTRIN_H)
-    set(HAVE_SSE 1)
+if(ALSOFT_CPUEXT_SSE)
+    alsoft_check_cxx_source_compiles(HAVE_SSE_COMPILES [[
+        #include <xmmintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE__) && !defined(__powerpc64__)
+        #pragma GCC target("sse")
+        #endif
+        int main()
+        {
+            __m128 ret = _mm_setzero_ps();
+            return _mm_cvtss_f32(ret) != 0.0f;
+        }]])
+    if(HAVE_SSE_COMPILES)
+        set(HAVE_SSE 1)
+    endif()
 endif()
 if(ALSOFT_REQUIRE_SSE AND NOT HAVE_SSE)
     message(FATAL_ERROR "Failed to enable required SSE CPU extensions")
@@ -554,8 +567,20 @@ endif()
 
 option(ALSOFT_CPUEXT_SSE2 "Enable SSE2 support" ON)
 option(ALSOFT_REQUIRE_SSE2 "Require SSE2 support" OFF)
-if(ALSOFT_CPUEXT_SSE2 AND HAVE_SSE AND HAVE_EMMINTRIN_H)
-    set(HAVE_SSE2 1)
+if(ALSOFT_CPUEXT_SSE2 AND HAVE_SSE)
+    alsoft_check_cxx_source_compiles(HAVE_SSE2_COMPILES [[
+        #include <emmintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__) && !defined(__powerpc64__)
+        #pragma GCC target("sse2")
+        #endif
+        int main()
+        {
+            __m128i ret = _mm_setzero_si128();
+            return _mm_cvtsi128_si32(ret);
+        }]])
+    if(HAVE_SSE2_COMPILES)
+        set(HAVE_SSE2 1)
+    endif()
 endif()
 if(ALSOFT_REQUIRE_SSE2 AND NOT HAVE_SSE2)
     message(FATAL_ERROR "Failed to enable required SSE2 CPU extensions")
@@ -563,8 +588,20 @@ endif()
 
 option(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)
 option(ALSOFT_REQUIRE_SSE3 "Require SSE3 support" OFF)
-if(ALSOFT_CPUEXT_SSE3 AND HAVE_SSE2 AND HAVE_PMMINTRIN_H)
-    set(HAVE_SSE3 1)
+if(ALSOFT_CPUEXT_SSE3 AND HAVE_SSE2)
+    alsoft_check_cxx_source_compiles(HAVE_SSE3_COMPILES [[
+        #include <pmmintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE3__) && !defined(__powerpc64__)
+        #pragma GCC target("sse3")
+        #endif
+        int main()
+        {
+            __m128 ret = _mm_addsub_ps(_mm_setzero_ps(), _mm_setzero_ps());
+            return _mm_cvtss_f32(ret) != 0.0f;
+        }]])
+    if(HAVE_SSE3_COMPILES)
+        set(HAVE_SSE3 1)
+    endif()
 endif()
 if(ALSOFT_REQUIRE_SSE3 AND NOT HAVE_SSE3)
     message(FATAL_ERROR "Failed to enable required SSE3 CPU extensions")
@@ -572,8 +609,20 @@ endif()
 
 option(ALSOFT_CPUEXT_SSE4_1 "Enable SSE4.1 support" ON)
 option(ALSOFT_REQUIRE_SSE4_1 "Require SSE4.1 support" OFF)
-if(ALSOFT_CPUEXT_SSE4_1 AND HAVE_SSE3 AND HAVE_SMMINTRIN_H)
-    set(HAVE_SSE4_1 1)
+if(ALSOFT_CPUEXT_SSE4_1 AND HAVE_SSE3)
+    alsoft_check_cxx_source_compiles(HAVE_SSE4_1_COMPILES [[
+        #include <smmintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE4_1__) && !defined(__powerpc64__)
+        #pragma GCC target("sse4.1")
+        #endif
+        int main()
+        {
+            __m128 ret = _mm_blendv_ps(_mm_setzero_ps(), _mm_set1_ps(1.0f), _mm_setzero_ps());
+            return _mm_cvtss_f32(ret) != 0.0f;
+        }]])
+    if(HAVE_SSE4_1_COMPILES)
+        set(HAVE_SSE4_1 1)
+    endif()
 endif()
 if(ALSOFT_REQUIRE_SSE4_1 AND NOT HAVE_SSE4_1)
     message(FATAL_ERROR "Failed to enable required SSE4.1 CPU extensions")
@@ -582,13 +631,17 @@ endif()
 # Check for ARM Neon support
 option(ALSOFT_CPUEXT_NEON "Enable ARM NEON support" ON)
 option(ALSOFT_REQUIRE_NEON "Require ARM NEON support" OFF)
-if(ALSOFT_CPUEXT_NEON AND HAVE_ARM_NEON_H)
-    check_c_source_compiles("#include <arm_neon.h>
+if(ALSOFT_CPUEXT_NEON)
+    alsoft_check_cxx_source_compiles(HAVE_NEON_INTRINSICS [[
+        #include <arm_neon.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__ARM_NEON)
+        #pragma GCC target("fpu=neon")
+        #endif
         int main()
         {
             int32x4_t ret4 = vdupq_n_s32(0);
             return vgetq_lane_s32(ret4, 0);
-        }" HAVE_NEON_INTRINSICS)
+        }]])
     if(HAVE_NEON_INTRINSICS)
         set(HAVE_NEON 1)
     endif()

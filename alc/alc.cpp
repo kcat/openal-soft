@@ -433,8 +433,7 @@ void alc_initconfig()
         std::string_view{ALSOFT_GIT_COMMIT_HASH}.empty() ? "unknown" : ALSOFT_GIT_COMMIT_HASH,
         std::string_view{ALSOFT_GIT_BRANCH}.empty() ? "unknown" : ALSOFT_GIT_BRANCH);
     {
-        auto names = std::array<std::string_view, BackendList.size()>{};
-        std::ranges::transform(BackendList, names.begin(), &BackendInfo::name);
+        auto const names = BackendList | std::views::transform(&BackendInfo::name);
         TRACE("{}", fmt::format("Supported backends: {}", fmt::join(names, ", ")));
     }
     ReadALConfig();

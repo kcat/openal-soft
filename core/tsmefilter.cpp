@@ -136,7 +136,7 @@ auto assume_aligned_span(std::span<T, N> const s) noexcept -> std::span<T, N>
 
 template<std::size_t N>
 void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
     static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
@@ -278,7 +278,7 @@ void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<floa
  * details.
  */
 void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);
@@ -349,7 +349,7 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
  */
 template<std::size_t N>
 void TsmeStereoDecoder<N>::decode(std::span<std::span<float>> const samples,
-    bool const updateState)
+    bool const updateState) noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
@@ -427,7 +427,7 @@ void TsmeStereoDecoder<N>::decode(std::span<std::span<float>> const samples,
 }
 
 void TsmeStereoDecoderIIR::decode(std::span<std::span<float>> const samples,
-    bool const updateState)
+    bool const updateState) noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 

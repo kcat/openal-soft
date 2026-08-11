@@ -65,7 +65,7 @@ struct UhjEncoder final : EncoderBase {
      * signal. The input must use FuMa channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING -> void final;
 };
 using UhjEncoder256 = UhjEncoder<256>;
 using UhjEncoder512 = UhjEncoder<512>;
@@ -99,7 +99,7 @@ struct UhjEncoderIIR final : EncoderBase {
      * signal. The input must use FuMa channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING -> void final;
 };
 
 
@@ -127,7 +127,7 @@ struct UhjDecoder final : DecoderBase {
      * reconstructed from 2-channel UHJ should not be run through a normal
      * B-Format decoder, as it needs different shelf filters.
      */
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 using UhjDecoder256 = UhjDecoder<256>;
 using UhjDecoder512 = UhjDecoder<512>;
@@ -154,7 +154,7 @@ struct UhjDecoderIIR final : DecoderBase {
     AllPassFilter mFilter2S;
     AllPassFilter mFilter1Q;
 
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 
 template<std::size_t N>
@@ -179,7 +179,7 @@ struct UhjStereoDecoder final : DecoderBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 using UhjStereoDecoder256 = UhjStereoDecoder<256>;
 using UhjStereoDecoder512 = UhjStereoDecoder<512>;
@@ -201,7 +201,7 @@ struct UhjStereoDecoderIIR final : DecoderBase {
     AllPassFilter mFilter1D;
     AllPassFilter mFilter2S;
 
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 
 #endif /* CORE_UHJFILTER_H */

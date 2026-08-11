@@ -66,7 +66,7 @@ struct TsmeEncoder final : EncoderBase {
      * channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING -> void final;
 };
 using TsmeEncoder256 = TsmeEncoder<256>;
 using TsmeEncoder512 = TsmeEncoder<512>;
@@ -101,7 +101,7 @@ struct TsmeEncoderIIR final : EncoderBase {
      * channel ordering and N3D scaling.
      */
     auto encode(std::span<float> LeftOut, std::span<float> RightOut,
-        std::span<const std::span<const float>> InSamples) -> void final;
+        std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING -> void final;
 };
 
 template<std::size_t N>
@@ -126,7 +126,7 @@ struct TsmeStereoDecoder final : DecoderBase {
      * should contain 3 channels, the first two being the left and right stereo
      * channels, and the third left empty.
      */
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 using TsmeStereoDecoder256 = TsmeStereoDecoder<256>;
 using TsmeStereoDecoder512 = TsmeStereoDecoder<512>;
@@ -148,7 +148,7 @@ struct TsmeStereoDecoderIIR final : DecoderBase {
     AllPassFilter mFilter1D;
     AllPassFilter mFilter2S;
 
-    void decode(std::span<std::span<float>> samples, bool updateState) final;
+    void decode(std::span<std::span<float>> samples, bool updateState) noexcept NONBLOCKING final;
 };
 
 #endif /* CORE_TSMEFILTER_HPP */

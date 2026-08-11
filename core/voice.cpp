@@ -673,13 +673,13 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                     std::ranges::fill(srcBuffer.first(bufferSize.src), 0.0f);
 
                     samplesLoaded += bufferSize.dst;
-                    if(samplesLoaded >= samplesToLoad)
-                        return;
-
-                    fracPos += bufferSize.dst*increment;
-                    auto const srcOffset = fracPos >> MixerFracBits;
-                    fracPos &= MixerFracMask;
-                    intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
+                    if(samplesLoaded < samplesToLoad)
+                    {
+                        fracPos += bufferSize.dst*increment;
+                        auto const srcOffset = fracPos >> MixerFracBits;
+                        fracPos &= MixerFracMask;
+                        intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
+                    }
                     continue;
                 }
 

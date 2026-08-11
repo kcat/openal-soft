@@ -112,17 +112,18 @@ auto Concat(Args&& ...args) noexcept
 template<std::ranges::contiguous_range S1, std::ranges::contiguous_range ...Args>
 [[nodiscard]] consteval auto QuotedList(S1&& s1, Args&& ...more) noexcept
 {
+    using namespace std::string_view_literals;
     constexpr auto tmplen = ((detail_::get_size<S1>()-1) + ... + (detail_::get_size<Args>()-1))
         + 3*sizeof...(Args) + 5;
     auto arr = std::array<char, tmplen>{};
-    auto oiter = std::ranges::copy(detail_::get_strview("[\""), arr.begin()).out;
+    auto oiter = std::ranges::copy("[\""sv, arr.begin()).out;
     oiter = std::ranges::copy(detail_::get_strview(std::forward<S1>(s1)), oiter).out;
-    auto do_concat = [sep=detail_::get_strview("\",\""), &oiter](std::string_view const str)
+    auto do_concat = [sep="\",\""sv, &oiter](std::string_view const str)
     {
         oiter = std::ranges::copy(std::array{sep, str} | std::views::join, oiter).out;
     };
     (..., do_concat(detail_::get_strview(std::forward<Args>(more))));
-    std::ranges::copy(detail_::get_strview("\"]"), oiter);
+    std::ranges::copy("\"]"sv, oiter);
     return arr;
 }
 

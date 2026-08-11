@@ -680,7 +680,6 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                     auto const srcOffset = fracPos >> MixerFracBits;
                     fracPos &= MixerFracMask;
                     intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
-                    cbOffset += srcOffset;
                     continue;
                 }
 
@@ -777,8 +776,16 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                 fracPos += bufferSize.dst*increment;
                 auto const srcOffset = fracPos >> MixerFracBits;
                 fracPos &= MixerFracMask;
-                intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
-                cbOffset += srcOffset;
+                if(intPos < 0)
+                {
+                    intPos += gsl::narrow_cast<int>(srcOffset);
+                    cbOffset += al::saturate_cast<unsigned>(intPos);
+                }
+                else
+                {
+                    intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
+                    cbOffset += srcOffset;
+                }
 
                 /* If more samples need to be loaded, copy the back of the
                  * resampleBuffer to the front to reuse it. prevSamples isn't

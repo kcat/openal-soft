@@ -173,34 +173,34 @@ auto SelectResampler(Resampler const resampler, unsigned const increment) noexce
         return Resample_Point_C;
     case Resampler::Linear:
 #if HAVE_NEON
-        if(CPUCapFlags[CPUCap::NEON])
+        if(CPUCapFlags.test(CPUCap::NEON))
             return Resample_Linear_NEON;
 #endif
 #if HAVE_SSE4_1
-        if(CPUCapFlags[CPUCap::SSE4_1])
+        if(CPUCapFlags.test(CPUCap::SSE4_1))
             return Resample_Linear_SSE4;
 #endif
 #if HAVE_SSE2
-        if(CPUCapFlags[CPUCap::SSE2])
+        if(CPUCapFlags.test(CPUCap::SSE2))
             return Resample_Linear_SSE2;
 #endif
         return Resample_Linear_C;
     case Resampler::Spline:
     case Resampler::Gaussian:
 #if HAVE_NEON
-        if(CPUCapFlags[CPUCap::NEON])
+        if(CPUCapFlags.test(CPUCap::NEON))
             return Resample_Cubic_NEON;
 #endif
 #if HAVE_SSE4_1
-        if(CPUCapFlags[CPUCap::SSE4_1])
+        if(CPUCapFlags.test(CPUCap::SSE4_1))
             return Resample_Cubic_SSE4;
 #endif
 #if HAVE_SSE2
-        if(CPUCapFlags[CPUCap::SSE2])
+        if(CPUCapFlags.test(CPUCap::SSE2))
             return Resample_Cubic_SSE2;
 #endif
 #if HAVE_SSE
-        if(CPUCapFlags[CPUCap::SSE])
+        if(CPUCapFlags.test(CPUCap::SSE))
             return Resample_Cubic_SSE;
 #endif
         return Resample_Cubic_C;
@@ -210,11 +210,11 @@ auto SelectResampler(Resampler const resampler, unsigned const increment) noexce
         if(increment > MixerFracOne)
         {
 #if HAVE_NEON
-            if(CPUCapFlags[CPUCap::NEON])
+            if(CPUCapFlags.test(CPUCap::NEON))
                 return Resample_BSinc_NEON;
 #endif
 #if HAVE_SSE
-            if(CPUCapFlags[CPUCap::SSE])
+            if(CPUCapFlags.test(CPUCap::SSE))
                 return Resample_BSinc_SSE;
 #endif
             return Resample_BSinc_C;
@@ -224,11 +224,11 @@ auto SelectResampler(Resampler const resampler, unsigned const increment) noexce
     case Resampler::FastBSinc24:
     case Resampler::FastBSinc48:
 #if HAVE_NEON
-        if(CPUCapFlags[CPUCap::NEON])
+        if(CPUCapFlags.test(CPUCap::NEON))
             return Resample_FastBSinc_NEON;
 #endif
 #if HAVE_SSE
-        if(CPUCapFlags[CPUCap::SSE])
+        if(CPUCapFlags.test(CPUCap::SSE))
             return Resample_FastBSinc_SSE;
 #endif
         return Resample_FastBSinc_C;

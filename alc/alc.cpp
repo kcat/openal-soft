@@ -1073,7 +1073,7 @@ constexpr auto X71Downmix = std::array{
 auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 const threshold)
     -> std::unique_ptr<Compressor>
 {
-    auto const flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
+    constexpr auto flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
         .set(Compressor::Flags::AutoAttack).set(Compressor::Flags::AutoRelease)
         .set(Compressor::Flags::AutoPostGain).set(Compressor::Flags::AutoDeclip);
 

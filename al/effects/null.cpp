@@ -72,18 +72,16 @@ void NullEffectHandler::GetParamfv(al::Context *context, const std::monostate &p
 #if ALSOFT_EAX
 namespace {
 
-using NullCommitter = EaxCommitter<EaxNullCommitter>;
-
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct NullCommitter::Exception final : EaxException {
+struct EaxNullCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_NULL_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void NullCommitter::fail(const std::string_view message)
+void EaxNullCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxNullCommitter::commit(const std::monostate &props) const -> bool

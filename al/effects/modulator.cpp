@@ -143,12 +143,10 @@ void ModulatorEffectHandler::GetParamfv(al::Context *context, const ModulatorPro
 #if ALSOFT_EAX
 namespace {
 
-using ModulatorCommitter = EaxCommitter<EaxModulatorCommitter>;
-
 struct FrequencyValidator {
     void operator()(float const flFrequency) const
     {
-        eax_validate_range<ModulatorCommitter::Exception>(
+        eax_validate_range<EaxModulatorCommitter::Exception>(
             "Frequency",
             flFrequency,
             EAXRINGMODULATOR_MINFREQUENCY,
@@ -159,7 +157,7 @@ struct FrequencyValidator {
 struct HighPassCutOffValidator {
     void operator()(float const flHighPassCutOff) const
     {
-        eax_validate_range<ModulatorCommitter::Exception>(
+        eax_validate_range<EaxModulatorCommitter::Exception>(
             "High-Pass Cutoff",
             flHighPassCutOff,
             EAXRINGMODULATOR_MINHIGHPASSCUTOFF,
@@ -170,7 +168,7 @@ struct HighPassCutOffValidator {
 struct WaveformValidator {
     void operator()(eax_ulong const ulWaveform) const
     {
-        eax_validate_range<ModulatorCommitter::Exception>(
+        eax_validate_range<EaxModulatorCommitter::Exception>(
             "Waveform",
             ulWaveform,
             EAXRINGMODULATOR_MINWAVEFORM,
@@ -190,14 +188,14 @@ struct AllValidator {
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct ModulatorCommitter::Exception final : EaxException {
+struct EaxModulatorCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_RING_MODULATOR_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void ModulatorCommitter::fail(const std::string_view message)
+void EaxModulatorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) const -> bool

@@ -86,12 +86,10 @@ void PshifterEffectHandler::GetParamfv(al::Context *context, const PshifterProps
 #if ALSOFT_EAX
 namespace {
 
-using PitchShifterCommitter = EaxCommitter<EaxPitchShifterCommitter>;
-
 struct CoarseTuneValidator {
     void operator()(eax_long const lCoarseTune) const
     {
-        eax_validate_range<PitchShifterCommitter::Exception>(
+        eax_validate_range<EaxPitchShifterCommitter::Exception>(
             "Coarse Tune",
             lCoarseTune,
             EAXPITCHSHIFTER_MINCOARSETUNE,
@@ -102,7 +100,7 @@ struct CoarseTuneValidator {
 struct FineTuneValidator {
     void operator()(eax_long const lFineTune) const
     {
-        eax_validate_range<PitchShifterCommitter::Exception>(
+        eax_validate_range<EaxPitchShifterCommitter::Exception>(
             "Fine Tune",
             lFineTune,
             EAXPITCHSHIFTER_MINFINETUNE,
@@ -121,14 +119,14 @@ struct AllValidator {
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct PitchShifterCommitter::Exception final : EaxException {
+struct EaxPitchShifterCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_PITCH_SHIFTER_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void PitchShifterCommitter::fail(const std::string_view message)
+void EaxPitchShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props) const -> bool

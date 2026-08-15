@@ -103,12 +103,10 @@ void AutowahEffectHandler::GetParamfv(al::Context *context, const AutowahProps &
 #if ALSOFT_EAX
 namespace {
 
-using AutowahCommitter = EaxCommitter<EaxAutowahCommitter>;
-
 struct AttackTimeValidator {
     void operator()(float flAttackTime) const
     {
-        eax_validate_range<AutowahCommitter::Exception>(
+        eax_validate_range<EaxAutowahCommitter::Exception>(
             "Attack Time",
             flAttackTime,
             EAXAUTOWAH_MINATTACKTIME,
@@ -119,7 +117,7 @@ struct AttackTimeValidator {
 struct ReleaseTimeValidator {
     void operator()(float flReleaseTime) const
     {
-        eax_validate_range<AutowahCommitter::Exception>(
+        eax_validate_range<EaxAutowahCommitter::Exception>(
             "Release Time",
             flReleaseTime,
             EAXAUTOWAH_MINRELEASETIME,
@@ -130,7 +128,7 @@ struct ReleaseTimeValidator {
 struct ResonanceValidator {
     void operator()(eax_long const lResonance) const
     {
-        eax_validate_range<AutowahCommitter::Exception>(
+        eax_validate_range<EaxAutowahCommitter::Exception>(
             "Resonance",
             lResonance,
             EAXAUTOWAH_MINRESONANCE,
@@ -141,7 +139,7 @@ struct ResonanceValidator {
 struct PeakLevelValidator {
     void operator()(eax_long const lPeakLevel) const
     {
-        eax_validate_range<AutowahCommitter::Exception>(
+        eax_validate_range<EaxAutowahCommitter::Exception>(
             "Peak Level",
             lPeakLevel,
             EAXAUTOWAH_MINPEAKLEVEL,
@@ -162,13 +160,13 @@ struct AllValidator {
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct AutowahCommitter::Exception final : EaxException {
+struct EaxAutowahCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_AUTOWAH_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void AutowahCommitter::fail(const std::string_view message) { throw Exception{message}; }
+void EaxAutowahCommitter::fail(const std::string_view message) { throw Exception{message}; }
 
 auto EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props) const -> bool
 {

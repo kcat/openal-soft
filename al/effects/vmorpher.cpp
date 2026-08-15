@@ -245,12 +245,10 @@ void VmorpherEffectHandler::GetParamfv(al::Context *context, const VmorpherProps
 #if ALSOFT_EAX
 namespace {
 
-using VocalMorpherCommitter = EaxCommitter<EaxVocalMorpherCommitter>;
-
 struct PhonemeAValidator {
     void operator()(eax_ulong const ulPhonemeA) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Phoneme A",
             ulPhonemeA,
             EAXVOCALMORPHER_MINPHONEMEA,
@@ -261,7 +259,7 @@ struct PhonemeAValidator {
 struct PhonemeACoarseTuningValidator {
     void operator()(eax_long const lPhonemeACoarseTuning) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Phoneme A Coarse Tuning",
             lPhonemeACoarseTuning,
             EAXVOCALMORPHER_MINPHONEMEACOARSETUNING,
@@ -272,7 +270,7 @@ struct PhonemeACoarseTuningValidator {
 struct PhonemeBValidator {
     void operator()(eax_ulong const ulPhonemeB) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Phoneme B",
             ulPhonemeB,
             EAXVOCALMORPHER_MINPHONEMEB,
@@ -283,7 +281,7 @@ struct PhonemeBValidator {
 struct PhonemeBCoarseTuningValidator {
     void operator()(eax_long const lPhonemeBCoarseTuning) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Phoneme B Coarse Tuning",
             lPhonemeBCoarseTuning,
             EAXVOCALMORPHER_MINPHONEMEBCOARSETUNING,
@@ -294,7 +292,7 @@ struct PhonemeBCoarseTuningValidator {
 struct WaveformValidator {
     void operator()(eax_ulong const ulWaveform) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Waveform",
             ulWaveform,
             EAXVOCALMORPHER_MINWAVEFORM,
@@ -305,7 +303,7 @@ struct WaveformValidator {
 struct RateValidator {
     void operator()(float const flRate) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherCommitter::Exception>(
             "Rate",
             flRate,
             EAXVOCALMORPHER_MINRATE,
@@ -328,14 +326,14 @@ struct AllValidator {
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct VocalMorpherCommitter::Exception final : EaxException {
+struct EaxVocalMorpherCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message)
         : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void VocalMorpherCommitter::fail(const std::string_view message)
+void EaxVocalMorpherCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool

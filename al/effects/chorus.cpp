@@ -525,20 +525,16 @@ struct ChorusFlangerEffect {
     }
 }; // EaxChorusFlangerEffect
 
-
-using ChorusCommitter = EaxCommitter<EaxChorusCommitter>;
-using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
-
 } // namespace
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct ChorusCommitter::Exception final : EaxException {
+struct EaxChorusCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
     { }
 };
 
 template<> [[noreturn]]
-void ChorusCommitter::fail(const std::string_view message)
+void EaxChorusCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props) const -> bool
@@ -566,13 +562,13 @@ void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
 }
 
 template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct FlangerCommitter::Exception final : EaxException {
+struct EaxFlangerCommitter::Exception final : EaxException {
     explicit Exception(const std::string_view message) : EaxException{"EAX_FLANGER_EFFECT",message}
     { }
 };
 
 template<> [[noreturn]]
-void FlangerCommitter::fail(const std::string_view message)
+void EaxFlangerCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
 auto EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props) const -> bool

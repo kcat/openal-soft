@@ -318,7 +318,7 @@ void DeviceBase::Process(TsmePostProcess const &proc, std::size_t const SamplesT
     auto const ridx = RealOut.ChannelIndex[FrontRight];
 
     /* Encode to stereo-compatible 2-channel output. */
-    proc.mUhjEncoder->encode(std::span{RealOut.Buffer[lidx.c_val]}.first(SamplesToDo),
+    proc.mTsmeEncoder->encode(std::span{RealOut.Buffer[lidx.c_val]}.first(SamplesToDo),
         std::span{RealOut.Buffer[ridx.c_val]}.first(SamplesToDo),
         {{std::span{Dry.Buffer[0]}.first(SamplesToDo),
             std::span{Dry.Buffer[1]}.first(SamplesToDo),

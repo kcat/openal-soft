@@ -170,7 +170,7 @@ struct UhjPostProcess {
 };
 
 struct TsmePostProcess {
-    std::unique_ptr<EncoderBase> mUhjEncoder;
+    std::unique_ptr<EncoderBase> mTsmeEncoder;
 };
 
 struct StablizerPostProcess {

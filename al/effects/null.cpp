@@ -92,6 +92,7 @@ auto EaxNullCommitter::commit(const std::monostate &props) const -> bool
     return ret;
 }
 
+template<>
 void EaxNullCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = std::monostate{};

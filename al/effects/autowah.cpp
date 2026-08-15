@@ -183,6 +183,7 @@ auto EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props) const -> boo
     return true;
 }
 
+template<>
 void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXAUTOWAHPROPERTIES{

@@ -307,6 +307,7 @@ auto EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props) const ->
     return true;
 }
 
+template<>
 void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXEQUALIZERPROPERTIES{

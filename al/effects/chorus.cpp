@@ -543,6 +543,7 @@ auto EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props) const -> bool
     return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
 }
 
+template<>
 void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
@@ -577,6 +578,7 @@ auto EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props) const -> boo
     return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
 }
 
+template<>
 void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;

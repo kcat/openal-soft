@@ -114,6 +114,7 @@ auto EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props) con
     return true;
 }
 
+template<>
 void EaxCompressorCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXAGCCOMPRESSORPROPERTIES{.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF};

@@ -221,6 +221,7 @@ auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &p
     return true;
 }
 
+template<>
 void EaxFrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXFREQUENCYSHIFTERPROPERTIES{

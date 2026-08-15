@@ -142,6 +142,7 @@ auto EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props) co
     return true;
 }
 
+template<>
 void EaxPitchShifterCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXPITCHSHIFTERPROPERTIES{

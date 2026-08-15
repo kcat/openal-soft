@@ -203,6 +203,7 @@ auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
     return true;
 }
 
+template<>
 void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXECHOPROPERTIES{

@@ -204,6 +204,7 @@ auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const 
     return true;
 }
 
+template<>
 void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXDISTORTIONPROPERTIES{

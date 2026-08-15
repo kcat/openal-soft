@@ -224,6 +224,7 @@ auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) cons
     return true;
 }
 
+template<>
 void EaxModulatorCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXRINGMODULATORPROPERTIES{

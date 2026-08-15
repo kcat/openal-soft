@@ -405,6 +405,7 @@ auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) co
     return true;
 }
 
+template<>
 void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXVOCALMORPHERPROPERTIES{

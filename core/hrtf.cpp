@@ -93,6 +93,7 @@ auto EnumeratedHrtfs = std::vector<HrtfEntry>{};
  * for seeking. With C++23, we may be able to use std::spanstream instead.
  */
 class databuf final : public std::streambuf {
+protected:
     auto underflow() -> int_type final { return traits_type::eof(); }
 
     auto seekoff(off_type const offset, std::ios_base::seekdir const whence,

@@ -399,6 +399,12 @@ constexpr auto alcEFXMinorVersion = 0;
 using DeviceRef = al::intrusive_ptr<al::Device>;
 
 
+template<typename ...Ts>
+struct overloaded : Ts... { using Ts::operator()...; };
+
+template<typename ...Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 /************************************************
  * Device lists
  ************************************************/
@@ -1669,9 +1675,17 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     case DevFmtAmbi3D: break;
     }
 
-    auto sample_delay = 0_usize;
-    if(auto *uhjenc = std::get_if<UhjPostProcess>(&device->mPostProcess))
-        sample_delay += uhjenc->mUhjEncoder->getDelay();
+    auto sample_delay = usize{
+        std::visit(overloaded {
+            [](std::monostate const&) { return 0_uz; },
+            [](AmbiDecPostProcess const&) { return 0_uz; },
+            [](HrtfPostProcess const&) { return 0_uz; },
+            [](UhjPostProcess const &pp) { return pp.mUhjEncoder->getDelay(); },
+            [](TsmePostProcess const &pp) { return pp.mTsmeEncoder->getDelay(); },
+            [](StablizerPostProcess const&) { return 0_uz; },
+            [](Bs2bPostProcess const&) { return 0_uz; },
+        }, device->mPostProcess)
+    };
 
     if(device->getConfigValueBool({}, "dither"sv, true))
     {

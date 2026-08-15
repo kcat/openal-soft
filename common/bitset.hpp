@@ -1,6 +1,7 @@
 #ifndef COMMON_BITSET_HPP
 #define COMMON_BITSET_HPP
 
+#include <bit>
 #include <type_traits>
 
 #include "opthelpers.h"

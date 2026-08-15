@@ -129,6 +129,7 @@ template<> [[noreturn]]
 void EaxPitchShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxPitchShifterCommitter::commit(const EAXPITCHSHIFTERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXPITCHSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -150,6 +151,7 @@ void EaxPitchShifterCommitter::SetDefaults(EaxEffectProps &props)
         .lFineTune = EAXPITCHSHIFTER_DEFAULTFINETUNE};
 }
 
+template<>
 void EaxPitchShifterCommitter::Get(const EaxCall &call, const EAXPITCHSHIFTERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -162,6 +164,7 @@ void EaxPitchShifterCommitter::Get(const EaxCall &call, const EAXPITCHSHIFTERPRO
     }
 }
 
+template<>
 void EaxPitchShifterCommitter::Set(const EaxCall &call, EAXPITCHSHIFTERPROPERTIES &props)
 {
     switch(call.get_property_id())

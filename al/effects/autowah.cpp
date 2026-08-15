@@ -168,6 +168,7 @@ struct EaxAutowahCommitter::Exception final : EaxException {
 template<> [[noreturn]]
 void EaxAutowahCommitter::fail(const std::string_view message) { throw Exception{message}; }
 
+template<>
 auto EaxAutowahCommitter::commit(const EAXAUTOWAHPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXAUTOWAHPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -193,6 +194,7 @@ void EaxAutowahCommitter::SetDefaults(EaxEffectProps &props)
         .lPeakLevel = EAXAUTOWAH_DEFAULTPEAKLEVEL};
 }
 
+template<>
 void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -207,6 +209,7 @@ void EaxAutowahCommitter::Get(const EaxCall &call, const EAXAUTOWAHPROPERTIES &p
     }
 }
 
+template<>
 void EaxAutowahCommitter::Set(const EaxCall &call, EAXAUTOWAHPROPERTIES &props)
 {
     switch(call.get_property_id())

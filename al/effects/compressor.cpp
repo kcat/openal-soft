@@ -103,6 +103,7 @@ template<> [[noreturn]]
 void EaxCompressorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXAGCCOMPRESSORPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -120,6 +121,7 @@ void EaxCompressorCommitter::SetDefaults(EaxEffectProps &props)
     props = EAXAGCCOMPRESSORPROPERTIES{.ulOnOff = EAXAGCCOMPRESSOR_DEFAULTONOFF};
 }
 
+template<>
 void EaxCompressorCommitter::Get(const EaxCall &call, const EAXAGCCOMPRESSORPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -131,6 +133,7 @@ void EaxCompressorCommitter::Get(const EaxCall &call, const EAXAGCCOMPRESSORPROP
     }
 }
 
+template<>
 void EaxCompressorCommitter::Set(const EaxCall &call, EAXAGCCOMPRESSORPROPERTIES &props)
 {
     switch(call.get_property_id())

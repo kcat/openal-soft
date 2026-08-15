@@ -196,6 +196,7 @@ template<> [[noreturn]]
 void EaxFrequencyShifterCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXFREQUENCYSHIFTERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -230,6 +231,7 @@ void EaxFrequencyShifterCommitter::SetDefaults(EaxEffectProps &props)
         .ulRightDirection = EAXFREQUENCYSHIFTER_DEFAULTRIGHTDIRECTION};
 }
 
+template<>
 void EaxFrequencyShifterCommitter::Get(const EaxCall &call, const EAXFREQUENCYSHIFTERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -243,6 +245,7 @@ void EaxFrequencyShifterCommitter::Get(const EaxCall &call, const EAXFREQUENCYSH
     }
 }
 
+template<>
 void EaxFrequencyShifterCommitter::Set(const EaxCall &call, EAXFREQUENCYSHIFTERPROPERTIES &props)
 {
     switch(call.get_property_id())

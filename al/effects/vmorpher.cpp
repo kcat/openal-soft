@@ -336,6 +336,7 @@ template<> [[noreturn]]
 void EaxVocalMorpherCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -417,6 +418,7 @@ void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
         .flRate = EAXVOCALMORPHER_DEFAULTRATE};
 }
 
+template<>
 void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -433,6 +435,7 @@ void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPRO
     }
 }
 
+template<>
 void EaxVocalMorpherCommitter::Set(const EaxCall &call, EAXVOCALMORPHERPROPERTIES &props)
 {
     switch(call.get_property_id())

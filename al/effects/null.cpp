@@ -84,6 +84,7 @@ template<> [[noreturn]]
 void EaxNullCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxNullCommitter::commit(const std::monostate &props) const -> bool
 {
     const bool ret{std::holds_alternative<std::monostate>(mEaxProps)};
@@ -98,12 +99,14 @@ void EaxNullCommitter::SetDefaults(EaxEffectProps &props)
     props = std::monostate{};
 }
 
+template<>
 void EaxNullCommitter::Get(const EaxCall &call, const std::monostate&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();
 }
 
+template<>
 void EaxNullCommitter::Set(const EaxCall &call, std::monostate&)
 {
     if(call.get_property_id() != 0)

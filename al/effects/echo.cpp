@@ -187,6 +187,7 @@ template<> [[noreturn]]
 void EaxEchoCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXECHOPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -214,6 +215,7 @@ void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
         .flSpread = EAXECHO_DEFAULTSPREAD};
 }
 
+template<>
 void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -229,6 +231,7 @@ void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
     }
 }
 
+template<>
 void EaxEchoCommitter::Set(const EaxCall &call, EAXECHOPROPERTIES &props)
 {
     switch(call.get_property_id())

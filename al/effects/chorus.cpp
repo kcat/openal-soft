@@ -537,6 +537,7 @@ template<> [[noreturn]]
 void EaxChorusCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props) const -> bool
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
@@ -550,12 +551,14 @@ void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
     Committer::SetDefaults(props);
 }
 
+template<>
 void EaxChorusCommitter::Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
     Committer::Get(call, props);
 }
 
+template<>
 void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxChorusTraits>;
@@ -572,6 +575,7 @@ template<> [[noreturn]]
 void EaxFlangerCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props) const -> bool
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
@@ -585,12 +589,14 @@ void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)
     Committer::SetDefaults(props);
 }
 
+template<>
 void EaxFlangerCommitter::Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
     Committer::Get(call, props);
 }
 
+template<>
 void EaxFlangerCommitter::Set(const EaxCall &call, EAXFLANGERPROPERTIES &props)
 {
     using Committer = ChorusFlangerEffect<EaxFlangerTraits>;

@@ -198,6 +198,7 @@ template<> [[noreturn]]
 void EaxModulatorCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxModulatorCommitter::commit(const EAXRINGMODULATORPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXRINGMODULATORPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -233,6 +234,7 @@ void EaxModulatorCommitter::SetDefaults(EaxEffectProps &props)
         .ulWaveform = EAXRINGMODULATOR_DEFAULTWAVEFORM};
 }
 
+template<>
 void EaxModulatorCommitter::Get(const EaxCall &call, const EAXRINGMODULATORPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -246,6 +248,7 @@ void EaxModulatorCommitter::Get(const EaxCall &call, const EAXRINGMODULATORPROPE
     }
 }
 
+template<>
 void EaxModulatorCommitter::Set(const EaxCall &call, EAXRINGMODULATORPROPERTIES &props)
 {
     switch(call.get_property_id())

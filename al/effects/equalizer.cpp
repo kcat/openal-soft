@@ -286,6 +286,7 @@ template<> [[noreturn]]
 void EaxEqualizerCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXEQUALIZERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -323,6 +324,7 @@ void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
         .flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF};
 }
 
+template<>
 void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -343,6 +345,7 @@ void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIE
     }
 }
 
+template<>
 void EaxEqualizerCommitter::Set(const EaxCall &call, EAXEQUALIZERPROPERTIES &props)
 {
     switch(call.get_property_id())

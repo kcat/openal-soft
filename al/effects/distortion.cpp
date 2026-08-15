@@ -188,6 +188,7 @@ template<> [[noreturn]]
 void EaxDistortionCommitter::fail(const std::string_view message)
 { throw Exception{message}; }
 
+template<>
 auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXDISTORTIONPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -215,6 +216,7 @@ void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
         .flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH};
 }
 
+template<>
 void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -230,6 +232,7 @@ void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERT
     }
 }
 
+template<>
 void EaxDistortionCommitter::Set(const EaxCall &call, EAXDISTORTIONPROPERTIES &props)
 {
     switch(call.get_property_id())

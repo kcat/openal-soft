@@ -9,6 +9,7 @@
 #include "AL/alext.h"
 #include "core/effects/base.h"
 #include "call.h"
+#include "opthelpers.h"
 
 inline bool EaxTraceCommits{false};
 
@@ -54,14 +55,14 @@ constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
 }
 
 struct EaxReverbCommitter {
-    EaxReverbCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
+    EaxReverbCommitter(EaxEffectProps &eaxprops LIFETIMEBOUND, EffectProps &alprops LIFETIMEBOUND)
         : mEaxProps{eaxprops}, mAlProps{alprops}
     { }
 
     EaxEffectProps &mEaxProps;
     EffectProps &mAlProps;
 
-    [[noreturn]] static void fail(const std::string_view message);
+    [[noreturn]] static void fail(std::string_view message);
     [[noreturn]] static void fail_unknown_property_id()
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 
@@ -131,7 +132,7 @@ struct EaxCommitter {
     [[noreturn]] static auto fail_unknown_property_id() -> void
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 
-    EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
+    EaxCommitter(EaxEffectProps &eaxprops LIFETIMEBOUND, EffectProps &alprops LIFETIMEBOUND)
         : mEaxProps{eaxprops}, mAlProps{alprops}
     { }
 

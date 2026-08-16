@@ -124,15 +124,15 @@ struct EaxCommitter {
     EffectProps &mAlProps;
 
     template<typename TValidator, typename TProperty>
-    static void defer(const EaxCall &call, TProperty &property)
+    static auto defer(const EaxCall &call, TProperty &property) -> void
     {
         const auto &value = call.load<const TProperty>();
         TValidator{}(value);
         property = value;
     }
 
-    [[noreturn]] static void fail(std::string_view message);
-    [[noreturn]] static void fail_unknown_property_id()
+    [[noreturn]] static auto fail(std::string_view message) -> void;
+    [[noreturn]] static auto fail_unknown_property_id() -> void
     { fail(EaxEffectErrorMessages::unknown_property_id()); }
 
     EaxCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
@@ -141,23 +141,32 @@ struct EaxCommitter {
 
     [[nodiscard]] auto commit(const P &props) const -> bool;
 
-    static void SetDefaults(EaxEffectProps &props);
-    static void Get(const EaxCall &call, const P &props);
-    static void Set(const EaxCall &call, P &props);
+    static auto SetDefaults(EaxEffectProps &props) -> void;
+    static auto Get(const EaxCall &call, const P &props) -> void;
+    static auto Set(const EaxCall &call, P &props) -> void;
 };
 
-using EaxAutowahCommitter = EaxCommitter<EAXAUTOWAHPROPERTIES>;
-using EaxChorusCommitter = EaxCommitter<EAXCHORUSPROPERTIES>;
-using EaxCompressorCommitter = EaxCommitter<EAXAGCCOMPRESSORPROPERTIES>;
-using EaxDistortionCommitter = EaxCommitter<EAXDISTORTIONPROPERTIES>;
-using EaxEchoCommitter = EaxCommitter<EAXECHOPROPERTIES>;
-using EaxEqualizerCommitter = EaxCommitter<EAXEQUALIZERPROPERTIES>;
-using EaxFlangerCommitter = EaxCommitter<EAXFLANGERPROPERTIES>;
-using EaxFrequencyShifterCommitter = EaxCommitter<EAXFREQUENCYSHIFTERPROPERTIES>;
-using EaxModulatorCommitter = EaxCommitter<EAXRINGMODULATORPROPERTIES>;
-using EaxPitchShifterCommitter = EaxCommitter<EAXPITCHSHIFTERPROPERTIES>;
-using EaxVocalMorpherCommitter = EaxCommitter<EAXVOCALMORPHERPROPERTIES>;
-using EaxNullCommitter = EaxCommitter<std::monostate>;
+#define DECL_COMMITTER(T, P) \
+template<> [[noreturn]] auto EaxCommitter<P>::fail(std::string_view message) -> void; \
+template<> [[nodiscard]] auto EaxCommitter<P>::commit(P const &props) const -> bool; \
+template<> auto EaxCommitter<P>::SetDefaults(EaxEffectProps &props) -> void; \
+template<> auto EaxCommitter<P>::Get(const EaxCall &call, P const &props) -> void; \
+template<> auto EaxCommitter<P>::Set(const EaxCall &call, P &props) -> void; \
+using T = EaxCommitter<P>;
+
+DECL_COMMITTER(EaxAutowahCommitter, EAXAUTOWAHPROPERTIES)
+DECL_COMMITTER(EaxChorusCommitter, EAXCHORUSPROPERTIES)
+DECL_COMMITTER(EaxCompressorCommitter, EAXAGCCOMPRESSORPROPERTIES)
+DECL_COMMITTER(EaxDistortionCommitter, EAXDISTORTIONPROPERTIES)
+DECL_COMMITTER(EaxEchoCommitter, EAXECHOPROPERTIES)
+DECL_COMMITTER(EaxEqualizerCommitter, EAXEQUALIZERPROPERTIES)
+DECL_COMMITTER(EaxFlangerCommitter, EAXFLANGERPROPERTIES)
+DECL_COMMITTER(EaxFrequencyShifterCommitter, EAXFREQUENCYSHIFTERPROPERTIES)
+DECL_COMMITTER(EaxModulatorCommitter, EAXRINGMODULATORPROPERTIES)
+DECL_COMMITTER(EaxPitchShifterCommitter, EAXPITCHSHIFTERPROPERTIES)
+DECL_COMMITTER(EaxVocalMorpherCommitter, EAXVOCALMORPHERPROPERTIES)
+DECL_COMMITTER(EaxNullCommitter, std::monostate)
+#undef DECL_COMMITTER
 
 template<typename> struct CommitterFromProps { };
 template<> struct CommitterFromProps<std::monostate> { using type = EaxNullCommitter; };

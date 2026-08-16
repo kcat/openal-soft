@@ -54,8 +54,6 @@ constexpr ALenum EnumFromEaxEffectType(const EaxEffectProps &props)
 }
 
 struct EaxReverbCommitter {
-    struct Exception;
-
     EaxReverbCommitter(EaxEffectProps &eaxprops, EffectProps &alprops)
         : mEaxProps{eaxprops}, mAlProps{alprops}
     { }
@@ -118,8 +116,6 @@ struct EaxReverbCommitter {
 
 template<typename P>
 struct EaxCommitter {
-    struct Exception;
-
     EaxEffectProps &mEaxProps;
     EffectProps &mAlProps;
 

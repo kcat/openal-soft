@@ -141,10 +141,17 @@ void FshifterEffectHandler::GetParamfv(al::Context *context, const FshifterProps
 #if ALSOFT_EAX
 namespace {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxFrequencyShifterException final : EaxException {
+    explicit EaxFrequencyShifterException(std::string_view const message)
+        : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
+    { }
+};
+
 struct FrequencyValidator {
     void operator()(float const flFrequency) const
     {
-        eax_validate_range<EaxFrequencyShifterCommitter::Exception>(
+        eax_validate_range<EaxFrequencyShifterException>(
             "Frequency",
             flFrequency,
             EAXFREQUENCYSHIFTER_MINFREQUENCY,
@@ -155,7 +162,7 @@ struct FrequencyValidator {
 struct LeftDirectionValidator {
     void operator()(eax_ulong const ulLeftDirection) const
     {
-        eax_validate_range<EaxFrequencyShifterCommitter::Exception>(
+        eax_validate_range<EaxFrequencyShifterException>(
             "Left Direction",
             ulLeftDirection,
             EAXFREQUENCYSHIFTER_MINLEFTDIRECTION,
@@ -166,7 +173,7 @@ struct LeftDirectionValidator {
 struct RightDirectionValidator {
     void operator()(eax_ulong const ulRightDirection) const
     {
-        eax_validate_range<EaxFrequencyShifterCommitter::Exception>(
+        eax_validate_range<EaxFrequencyShifterException>(
             "Right Direction",
             ulRightDirection,
             EAXFREQUENCYSHIFTER_MINRIGHTDIRECTION,
@@ -185,16 +192,9 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxFrequencyShifterCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message)
-        : EaxException{"EAX_FREQUENCY_SHIFTER_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EaxFrequencyShifterCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxFrequencyShifterCommitter::fail(std::string_view const message)
+{ throw EaxFrequencyShifterException{message}; }
 
 template<>
 auto EaxFrequencyShifterCommitter::commit(const EAXFREQUENCYSHIFTERPROPERTIES &props) const -> bool

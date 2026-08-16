@@ -73,10 +73,17 @@ void CompressorEffectHandler::GetParamfv(al::Context *context, const CompressorP
 #if ALSOFT_EAX
 namespace {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxCompressorException final : EaxException {
+    explicit EaxCompressorException(std::string_view const message)
+        : EaxException{"EAX_COMPRESSOR_EFFECT", message}
+    { }
+};
+
 struct OnOffValidator {
     void operator()(eax_ulong const ulOnOff) const
     {
-        eax_validate_range<EaxCompressorCommitter::Exception>(
+        eax_validate_range<EaxCompressorException>(
             "On-Off",
             ulOnOff,
             EAXAGCCOMPRESSOR_MINONOFF,
@@ -93,15 +100,9 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxCompressorCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EaxCompressorCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxCompressorCommitter::fail(std::string_view const message)
+{ throw EaxCompressorException{message}; }
 
 template<>
 auto EaxCompressorCommitter::commit(const EAXAGCCOMPRESSORPROPERTIES &props) const -> bool

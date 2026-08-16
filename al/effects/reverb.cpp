@@ -969,15 +969,9 @@ struct EnvironmentSizeDeferrer3 {
 
 } // namespace
 
-
-/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxReverbCommitter::Exception final : EaxReverbEffectException {
-    using EaxReverbEffectException::EaxReverbEffectException;
-};
-
 [[noreturn]]
 void EaxReverbCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+{ throw EaxReverbEffectException{message}; }
 
 void EaxReverbCommitter::translate(const EAX_REVERBPROPERTIES& src, EAXREVERBPROPERTIES& dst) noexcept
 {

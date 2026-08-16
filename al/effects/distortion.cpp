@@ -109,10 +109,17 @@ void DistortionEffectHandler::GetParamfv(al::Context *context, const DistortionP
 #if ALSOFT_EAX
 namespace {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxDistortionException final : EaxException {
+    explicit EaxDistortionException(std::string_view const message)
+        : EaxException{"EAX_DISTORTION_EFFECT", message}
+    { }
+};
+
 struct EdgeValidator {
     void operator()(float const flEdge) const
     {
-        eax_validate_range<EaxDistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Edge",
             flEdge,
             EAXDISTORTION_MINEDGE,
@@ -123,7 +130,7 @@ struct EdgeValidator {
 struct GainValidator {
     void operator()(eax_long const lGain) const
     {
-        eax_validate_range<EaxDistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Gain",
             lGain,
             EAXDISTORTION_MINGAIN,
@@ -134,7 +141,7 @@ struct GainValidator {
 struct LowPassCutOffValidator {
     void operator()(float const flLowPassCutOff) const
     {
-        eax_validate_range<EaxDistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Low-pass Cut-off",
             flLowPassCutOff,
             EAXDISTORTION_MINLOWPASSCUTOFF,
@@ -145,7 +152,7 @@ struct LowPassCutOffValidator {
 struct EqCenterValidator {
     void operator()(float const flEQCenter) const
     {
-        eax_validate_range<EaxDistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "EQ Center",
             flEQCenter,
             EAXDISTORTION_MINEQCENTER,
@@ -156,7 +163,7 @@ struct EqCenterValidator {
 struct EqBandwidthValidator {
     void operator()(float const flEQBandwidth) const
     {
-        eax_validate_range<EaxDistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "EQ Bandwidth",
             flEQBandwidth,
             EAXDISTORTION_MINEQBANDWIDTH,
@@ -177,16 +184,9 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxDistortionCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message)
-        : EaxException{"EAX_DISTORTION_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EaxDistortionCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxDistortionCommitter::fail(std::string_view const message)
+{ throw EaxDistortionException{message}; }
 
 template<>
 auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const -> bool

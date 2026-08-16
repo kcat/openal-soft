@@ -267,9 +267,24 @@ void FlangerEffectHandler::GetParamfv(al::Context *context, const ChorusProps &p
 #if ALSOFT_EAX
 namespace {
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxChorusException final : EaxException {
+    explicit EaxChorusException(std::string_view const message)
+        : EaxException{"EAX_CHORUS_EFFECT", message}
+    { }
+};
+
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxFlangerException final : EaxException {
+    explicit EaxFlangerException(std::string_view const message)
+        : EaxException{"EAX_FLANGER_EFFECT",message}
+    { }
+};
+
 struct EaxChorusTraits {
     using EaxProps = EAXCHORUSPROPERTIES;
     using Committer = EaxChorusCommitter;
+    using Exception = EaxChorusException;
 
     static constexpr auto eax_none_param_id() { return EAXCHORUS_NONE; }
     static constexpr auto eax_allparameters_param_id() { return EAXCHORUS_ALLPARAMETERS; }
@@ -312,6 +327,7 @@ struct EaxChorusTraits {
 struct EaxFlangerTraits {
     using EaxProps = EAXFLANGERPROPERTIES;
     using Committer = EaxFlangerCommitter;
+    using Exception = EaxFlangerException;
 
     static constexpr auto eax_none_param_id() { return EAXFLANGER_NONE; }
     static constexpr auto eax_allparameters_param_id() { return EAXFLANGER_ALLPARAMETERS; }
@@ -351,12 +367,13 @@ struct EaxFlangerTraits {
     }
 }; // EaxFlangerTraits
 
+
 template<typename TTraits>
 struct ChorusFlangerEffect {
     using Traits = TTraits;
     using EaxProps = Traits::EaxProps;
     using Committer = Traits::Committer;
-    using Exception = Committer::Exception;
+    using Exception = Traits::Exception;
 
     struct WaveformValidator {
         void operator()(eax_ulong const ulWaveform) const
@@ -527,15 +544,9 @@ struct ChorusFlangerEffect {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxChorusCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_CHORUS_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EaxChorusCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxChorusCommitter::fail(std::string_view const message)
+{ throw EaxChorusException{message}; }
 
 template<>
 auto EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props) const -> bool
@@ -565,15 +576,10 @@ void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
     Committer::Set(call, props);
 }
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EaxFlangerCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_FLANGER_EFFECT",message}
-    { }
-};
 
 template<> [[noreturn]]
-void EaxFlangerCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxFlangerCommitter::fail(std::string_view const message)
+{ throw EaxFlangerException{message}; }
 
 template<>
 auto EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props) const -> bool

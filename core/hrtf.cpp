@@ -190,7 +190,8 @@ auto CalcAzIndex(unsigned azcount, float az) -> IdxBlend
  * and azimuth in radians. The coefficients are normalized.
  */
 void HrtfStore::getCoeffs(float const elevation, float const azimuth, float const distance,
-    float const spread, HrirSpan const coeffs, std::span<unsigned, 2> const delays) const
+    float const spread, HrirSpan const coeffs, std::span<unsigned, 2> const delays) const noexcept
+    NONBLOCKING
 {
     auto const dirfact = 1.0f - (std::numbers::inv_pi_v<float>/2.0f * spread);
 

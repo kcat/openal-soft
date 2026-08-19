@@ -556,7 +556,7 @@ auto CalcContextParams(ContextBase *const ctx) noexcept NONBLOCKING -> bool
 
 [[nodiscard]]
 auto CalcEffectSlotParams(EffectSlotBase *const slot, EffectSlotBase **const sorted_slots,
-    ContextBase *const context) ->bool
+    ContextBase *const context) noexcept NONBLOCKING -> bool
 {
     auto *const props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
@@ -596,7 +596,7 @@ auto CalcEffectSlotParams(EffectSlotBase *const slot, EffectSlotBase **const sor
 
     auto *const state = props->State.release();
     auto *const oldstate = slot->mEffectState.release();
-    slot->mEffectState.reset(state);
+    IGNORE_FUNCTION_EFFECTS(slot->mEffectState.reset(state));
 
     /* Only release the old state if it won't get deleted, since we can't be
      * deleting/freeing anything in the mixer.
@@ -618,7 +618,7 @@ auto CalcEffectSlotParams(EffectSlotBase *const slot, EffectSlotBase **const sor
              * cleaned up sometime later (not ideal, but better than blocking
              * or leaking).
              */
-            props->State.reset(oldstate);
+            IGNORE_FUNCTION_EFFECTS(props->State.reset(oldstate));
         }
     }
 
@@ -2146,7 +2146,8 @@ void ProcessVoiceChanges(ContextBase *const ctx)
 }
 
 void ProcessParamUpdates(ContextBase *const ctx, std::span<EffectSlotBase*const> const slots,
-    std::span<EffectSlotBase*> const sorted_slots, std::span<Voice*const> const voices)
+    std::span<EffectSlotBase*> const sorted_slots, std::span<Voice*const> const voices) noexcept
+    NONBLOCKING
 {
     ProcessVoiceChanges(ctx);
 

@@ -86,9 +86,9 @@ struct AutowahState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -107,9 +107,9 @@ void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<AutowahProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<AutowahProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
     auto const frequency = static_cast<float>(device->mSampleRate);
 
@@ -134,6 +134,7 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
 
 void AutowahState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     auto env_delay = mEnvDelay;
     std::ranges::transform(samplesIn[0] | std::views::take(samplesToDo), mEnv.begin(),

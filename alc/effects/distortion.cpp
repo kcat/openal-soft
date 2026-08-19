@@ -69,7 +69,7 @@ alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> A2B{{
 }};
 
 
-struct DistortionState final : public EffectState {
+struct DistortionState final : EffectState {
     struct OutParams {
         unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
@@ -104,9 +104,9 @@ struct DistortionState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        EffectTarget target) override;
+        EffectTarget target) noexcept NONBLOCKING override;
     void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
-        std::span<FloatBufferLine> samplesOut) override;
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void DistortionState::deviceUpdate(DeviceBase const *const device, const BufferStorage*)
@@ -136,9 +136,9 @@ void DistortionState::deviceUpdate(DeviceBase const *const device, const BufferS
 }
 
 void DistortionState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<DistortionProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<DistortionProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
 
     /* Store waveshaper edge settings. */
@@ -180,7 +180,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
 
     if(mUpsampler.has_value())
     {
-        auto &upsampler = mUpsampler.value();
+        auto &upsampler = *mUpsampler;
         const auto upmatrix = std::span{AmbiScale::FirstOrderUp};
 
         auto const outgain = slot->Gain * props.Gain;
@@ -194,6 +194,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
 
 void DistortionState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     /* Convert B-Format to A-Format for processing. */
     const auto numInput = std::min(samplesIn.size(), NumLines);

@@ -16,15 +16,15 @@ struct EffectSlotBase;
 
 namespace {
 
-struct NullState final : public EffectState {
+struct NullState final : EffectState {
     NullState();
     ~NullState() override;
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 /* This constructs the effect state. It's called when the object is first
@@ -50,7 +50,7 @@ void NullState::deviceUpdate(const DeviceBase* /*device*/, const BufferStorage* 
  * the effect is (re)loaded into a slot.
  */
 void NullState::update(const ContextBase* /*context*/, const EffectSlotBase* /*slot*/,
-    const EffectProps* /*props*/, const EffectTarget /*target*/)
+    const EffectProps* /*props*/, const EffectTarget /*target*/) noexcept NONBLOCKING
 {
 }
 
@@ -60,7 +60,7 @@ void NullState::update(const ContextBase* /*context*/, const EffectSlotBase* /*s
  */
 void NullState::process(const size_t/*samplesToDo*/,
     const std::span<const FloatBufferLine> /*samplesIn*/,
-    const std::span<FloatBufferLine> /*samplesOut*/)
+    const std::span<FloatBufferLine> /*samplesOut*/) noexcept
 {
 }
 

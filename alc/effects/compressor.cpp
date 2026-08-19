@@ -62,7 +62,7 @@ constexpr auto AttackTime = 0.1f; /* 100ms to rise from min to max */
 constexpr auto ReleaseTime = 0.2f; /* 200ms to drop from max to min */
 
 
-struct CompressorState final : public EffectState {
+struct CompressorState final : EffectState {
     /* Effect gains for each channel */
     struct TargetGain {
         unsigned mTarget{InvalidChannelIndex.c_val};
@@ -80,9 +80,9 @@ struct CompressorState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
@@ -102,9 +102,9 @@ void CompressorState::deviceUpdate(const DeviceBase *device, const BufferStorage
 }
 
 void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
-    const EffectProps *props, const EffectTarget target)
+    const EffectProps *props, const EffectTarget target) noexcept NONBLOCKING
 {
-    mEnabled = std::get<CompressorProps>(*props).OnOff;
+    mEnabled = IGNORE_FUNCTION_EFFECTS(std::get<CompressorProps>(*props).OnOff);
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
@@ -117,6 +117,7 @@ void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
 
 void CompressorState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     /* Generate the per-sample gains from the signal envelope. */
     auto env = mEnvFollower;

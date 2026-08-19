@@ -137,7 +137,7 @@ namespace AmbiScale {
 
     /* Retrieves per-order HF scaling factors for "upsampling" ambisonic data. */
     auto GetHFOrderScales(unsigned src_order, unsigned dev_order, bool horizontalOnly) noexcept
-        -> std::array<float, MaxAmbiOrder+1>;
+        NONBLOCKING -> std::array<float, MaxAmbiOrder+1>;
 } /* namespace AmbiScale */
 
 namespace AmbiIndex {

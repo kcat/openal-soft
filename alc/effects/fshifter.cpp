@@ -90,7 +90,7 @@ constexpr auto HilStep = HilSize / OversampleFactor;
 auto &gWindow = gHannWindow<HilSize>;
 
 
-struct FshifterState final : public EffectState {
+struct FshifterState final : EffectState {
     /* Effect parameters */
     size_t mCount{};
     size_t mPos{};
@@ -133,9 +133,9 @@ struct FshifterState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void FshifterState::deviceUpdate(DeviceBase const *device, BufferStorage const*)
@@ -169,9 +169,9 @@ void FshifterState::deviceUpdate(DeviceBase const *device, BufferStorage const*)
 }
 
 void FshifterState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<FshifterProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<FshifterProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
 
     const auto step = props.Frequency / static_cast<float>(device->mSampleRate);
@@ -221,7 +221,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlotBase *slo
 
     if(mUpsampler.has_value())
     {
-        auto &upsampler = mUpsampler.value();
+        auto &upsampler = *mUpsampler;
         const auto upmatrix = std::span{AmbiScale::FirstOrderUp};
 
         auto const outgain = slot->Gain;
@@ -235,6 +235,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlotBase *slo
 
 void FshifterState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     /* Clear the B-Format buffer that accumulates the result. */
     for(auto &outbuf : mBBuffer)

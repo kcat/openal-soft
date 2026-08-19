@@ -69,7 +69,7 @@ struct OneFunc {
 };
 
 
-struct ModulatorState final : public EffectState {
+struct ModulatorState final : EffectState {
     std::variant<OneFunc,SinFunc,SawFunc,SquareFunc> mSampleGen;
 
     unsigned mIndex{0};
@@ -92,9 +92,9 @@ struct ModulatorState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -103,9 +103,9 @@ void ModulatorState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void ModulatorState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<ModulatorProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<ModulatorProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
     auto const samplerate = static_cast<float>(device->mSampleRate);
 
@@ -166,6 +166,7 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
 
 void ModulatorState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     ASSUME(samplesToDo > 0);
 

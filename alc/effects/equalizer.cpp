@@ -86,7 +86,7 @@ namespace {
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
 
-struct EqualizerState final : public EffectState {
+struct EqualizerState final : EffectState {
     struct OutParams {
         unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
@@ -104,9 +104,9 @@ struct EqualizerState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -115,9 +115,9 @@ void EqualizerState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void EqualizerState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<EqualizerProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<EqualizerProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
     auto const frequency = static_cast<float>(device->mSampleRate);
 
@@ -166,6 +166,7 @@ void EqualizerState::update(const ContextBase *context, const EffectSlotBase *sl
 
 void EqualizerState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     const auto buffer = std::span{mSampleBuffer}.first(samplesToDo);
     auto chan = mChans.begin();

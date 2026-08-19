@@ -46,7 +46,7 @@ namespace {
 
 constexpr auto LowpassFreqRef = 5000.0f;
 
-struct EchoState final : public EffectState {
+struct EchoState final : EffectState {
     std::vector<float> mSampleBuffer;
 
     // The echo is two tap. The delay is the number of samples from before the
@@ -68,9 +68,9 @@ struct EchoState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
@@ -89,9 +89,9 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 }
 
 void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<EchoProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<EchoProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
     auto const frequency = static_cast<float>(device->mSampleRate);
 
@@ -116,7 +116,7 @@ void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
 }
 
 void EchoState::process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-    const std::span<FloatBufferLine> samplesOut)
+    const std::span<FloatBufferLine> samplesOut) noexcept
 {
     const auto delaybuf = std::span{mSampleBuffer};
     const auto mask = delaybuf.size()-1;

@@ -145,7 +145,7 @@ struct FormantFilter {
 };
 
 
-struct VmorpherState final : public EffectState {
+struct VmorpherState final : EffectState {
     struct OutParams {
         unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
@@ -170,9 +170,9 @@ struct VmorpherState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        EffectTarget target) override;
+        EffectTarget target) noexcept NONBLOCKING override;
     void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
-        std::span<FloatBufferLine> samplesOut) override;
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 
     static std::array<FormantFilter,NumFormants> getFiltersByPhoneme(VMorpherPhenome phoneme,
         float frequency, float pitch) noexcept;
@@ -236,9 +236,9 @@ void VmorpherState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<VmorpherProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<VmorpherProps>(*props_));
     const auto device = al::get_not_null(context->mDevice);
     const auto frequency = static_cast<float>(device->mSampleRate);
     const auto step = props.Rate / frequency;
@@ -277,6 +277,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
 void VmorpherState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept
 {
     alignas(16) auto blended = std::array<float,MaxUpdateSamples>{};
 

@@ -505,7 +505,7 @@ constexpr auto GetAmbi2DLayout(AmbiLayout const layouttype) noexcept
 
 
 [[nodiscard]]
-auto CalcContextParams(ContextBase *const ctx) -> bool
+auto CalcContextParams(ContextBase *const ctx) noexcept NONBLOCKING -> bool
 {
     auto *const props = ctx->mParams.ContextUpdate.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
@@ -801,7 +801,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
     /* Don't do anything for < 2nd order. */
     if(order < 2) return;
 
-    static constexpr auto P = [](isize const i, isize const l, isize const a, isize const n,
+    constexpr auto P = [](isize const i, isize const l, isize const a, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
         auto const ip2 = (i+2_z).reinterpret_as<usize>().c_val;
@@ -818,12 +818,12 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
         return ri0*R[(last_base + lm1 + n.reinterpret_as<usize>()).c_val][x];
     };
 
-    static constexpr auto U = [](isize const l, isize const m, isize const n,
+    constexpr auto U = [P](isize const l, isize const m, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
         return P(0, l, m, n, last_base, R);
     };
-    static constexpr auto V = [](isize const l, isize const m, isize const n,
+    constexpr auto V = [P](isize const l, isize const m, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
         using namespace std::numbers;
@@ -839,7 +839,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order)
         auto const p1 = P(-1, l, -m-1, n, last_base, R);
         return d ? p1*sqrt2_v<float> : (p0 + p1);
     };
-    static constexpr auto W = [](isize const l, isize const m, isize const n,
+    constexpr auto W = [P](isize const l, isize const m, isize const n,
         usize const last_base, AmbiRotateMatrix const &R)
     {
         Expects(m != 0);
@@ -1464,53 +1464,53 @@ void CalcNormalPanning(Voice *const voice, float const xpos, float const ypos, f
         MergePannedMono(voice, sendslots, device);
 }
 
+constexpr auto MonoMap = std::array{
+    ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
+};
+constexpr auto RearMap = std::array{
+    ChanPosMap{BackLeft,  std::array{-sin30, 0.0f, cos30}},
+    ChanPosMap{BackRight, std::array{ sin30, 0.0f, cos30}},
+};
+constexpr auto QuadMap = std::array{
+    ChanPosMap{FrontLeft,  std::array{-sin45, 0.0f, -cos45}},
+    ChanPosMap{FrontRight, std::array{ sin45, 0.0f, -cos45}},
+    ChanPosMap{BackLeft,   std::array{-sin45, 0.0f,  cos45}},
+    ChanPosMap{BackRight,  std::array{ sin45, 0.0f,  cos45}},
+};
+constexpr auto X51Map = std::array{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{SideLeft,    std::array{-sin110, 0.0f, -cos110}},
+    ChanPosMap{SideRight,   std::array{ sin110, 0.0f, -cos110}},
+};
+constexpr auto X61Map = std::array{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{BackCenter,  std::array{ 0.0f, 0.0f, 1.0f}},
+    ChanPosMap{SideLeft,    std::array{-1.0f, 0.0f, 0.0f}},
+    ChanPosMap{SideRight,   std::array{ 1.0f, 0.0f, 0.0f}},
+};
+constexpr auto X71Map = std::array{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{BackLeft,    std::array{-sin30, 0.0f, cos30}},
+    ChanPosMap{BackRight,   std::array{ sin30, 0.0f, cos30}},
+    ChanPosMap{SideLeft,    std::array{ -1.0f, 0.0f, 0.0f}},
+    ChanPosMap{SideRight,   std::array{  1.0f, 0.0f, 0.0f}},
+};
+
 void CalcPanningAndFilters(Voice *const voice, float const xpos, float const ypos,
     float const zpos, float const distance, float const spread, GainTriplet const &drygain,
     std::span<GainTriplet const, MaxSendCount> const wetgain,
     std::span<EffectSlotBase*const, MaxSendCount> const sendslots, ContextParams const &ctxparams,
     DeviceBase *const device)
 {
-    static constexpr auto MonoMap = std::array{
-        ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
-    };
-    static constexpr auto RearMap = std::array{
-        ChanPosMap{BackLeft,  std::array{-sin30, 0.0f, cos30}},
-        ChanPosMap{BackRight, std::array{ sin30, 0.0f, cos30}},
-    };
-    static constexpr auto QuadMap = std::array{
-        ChanPosMap{FrontLeft,  std::array{-sin45, 0.0f, -cos45}},
-        ChanPosMap{FrontRight, std::array{ sin45, 0.0f, -cos45}},
-        ChanPosMap{BackLeft,   std::array{-sin45, 0.0f,  cos45}},
-        ChanPosMap{BackRight,  std::array{ sin45, 0.0f,  cos45}},
-    };
-    static constexpr auto X51Map = std::array{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{SideLeft,    std::array{-sin110, 0.0f, -cos110}},
-        ChanPosMap{SideRight,   std::array{ sin110, 0.0f, -cos110}},
-    };
-    static constexpr auto X61Map = std::array{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{BackCenter,  std::array{ 0.0f, 0.0f, 1.0f}},
-        ChanPosMap{SideLeft,    std::array{-1.0f, 0.0f, 0.0f}},
-        ChanPosMap{SideRight,   std::array{ 1.0f, 0.0f, 0.0f}},
-    };
-    static constexpr auto X71Map = std::array{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f, -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{BackLeft,    std::array{-sin30, 0.0f, cos30}},
-        ChanPosMap{BackRight,   std::array{ sin30, 0.0f, cos30}},
-        ChanPosMap{SideLeft,    std::array{ -1.0f, 0.0f, 0.0f}},
-        ChanPosMap{SideRight,   std::array{  1.0f, 0.0f, 0.0f}},
-    };
-
     auto StereoMap = std::array{
         ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
         ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
@@ -1850,7 +1850,7 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context)
     auto wetconehf = 1.0f;
     if(directional && props.InnerAngle < 360.0f)
     {
-        static constexpr auto Rad2Deg = gsl::narrow_cast<float>(180.0 / std::numbers::pi);
+        constexpr auto Rad2Deg = gsl::narrow_cast<float>(180.0 / std::numbers::pi);
         auto const angle = Rad2Deg*2.0f * std::acos(-direction.dot_product(tosource)) * ConeScale;
 
         auto conegain = 1.0f;
@@ -2004,7 +2004,8 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context)
         distance, spread, drygain, wetgain, sendslots, context->mParams, device);
 }
 
-void CalcVoiceParams(Voice *const voice, ContextBase *const context, bool const force)
+void CalcVoiceParams(Voice *const voice, ContextBase *const context, bool const force) noexcept
+    NONBLOCKING
 {
     if(auto *const props = voice->mUpdate.exchange(nullptr, std::memory_order_acq_rel))
     {

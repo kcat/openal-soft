@@ -61,11 +61,12 @@ static_assert(BufferLineSize > MaxPitch, "MaxPitch must be less then BufferLineS
 using namespace std::chrono;
 using namespace std::string_view_literals;
 
-using HrtfMixerFunc = void(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
-    unsigned IrSize, MixHrtfFilter const *hrtfparams, std::size_t SamplesToDo);
-using HrtfMixerBlendFunc = void(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
+using HrtfMixerFunc = auto(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
+    unsigned IrSize, MixHrtfFilter const *hrtfparams, std::size_t SamplesToDo) noexcept NONBLOCKING
+    -> void;
+using HrtfMixerBlendFunc = auto(*)(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
     unsigned IrSize, HrtfFilter const *oldparams, MixHrtfFilter const *newparams,
-    std::size_t SamplesToDo);
+    std::size_t SamplesToDo) noexcept NONBLOCKING -> void;
 
 constinit auto MixHrtfSamples = HrtfMixerFunc{MixHrtf_C};
 constinit auto MixHrtfBlendSamples = HrtfMixerBlendFunc{MixHrtfBlend_C};

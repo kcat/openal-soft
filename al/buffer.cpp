@@ -497,7 +497,12 @@ void PrepareCallback(gsl::not_null<al::Context*> const context,
     eax_x_ram_clear(*context->mALDevice, *ALBuf);
 #endif
 
-    ALBuf->mCallback = callback;
+    /* The user-supplied callback should be non-blocking, but it could be a
+     * problem to annotate the type with the attribute.
+     */
+    IGNORE_FUNCTION_EFFECTS(
+        ALBuf->mCallback = callback;
+    )
     ALBuf->mUserData = userptr;
 
     ALBuf->mOriginalSize = 0;

@@ -391,8 +391,9 @@ struct DeviceBase {
     void Process(StablizerPostProcess const &proc, std::size_t SamplesToDo);
     void Process(Bs2bPostProcess const &proc, std::size_t SamplesToDo);
 
-    void renderSamples(std::span<void*const> outBuffers, unsigned numSamples);
-    void renderSamples(void *outBuffer, unsigned numSamples, std::size_t frameStep);
+    void renderSamples(std::span<void*const> outBuffers, unsigned numSamples) noexcept NONBLOCKING;
+    void renderSamples(void *outBuffer, unsigned numSamples, std::size_t frameStep) noexcept
+        NONBLOCKING;
 
     /* Caller must lock the device state, and the mixer must not be running. */
     void doDisconnect(std::string&& msg);
@@ -403,7 +404,7 @@ struct DeviceBase {
 
 private:
     [[nodiscard]]
-    auto renderSamples(unsigned numSamples) -> unsigned;
+    auto renderSamples(unsigned numSamples) noexcept NONBLOCKING -> unsigned;
 
 protected:
     explicit DeviceBase(DeviceType type);

@@ -325,7 +325,7 @@ void ChorusState::calcSinusoidDelays(const size_t todo)
 
 void ChorusState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     /* Convert B-Format to A-Format for processing. */
     const auto numInput = std::min(samplesIn.size(), NumLines);
@@ -396,7 +396,7 @@ void ChorusState::process(const size_t samplesToDo,
 
     if(mUpsampler.has_value())
     {
-        auto &upsampler = mUpsampler.value();
+        auto &upsampler = *mUpsampler;
         auto chandata = mChans.begin();
         for(const auto c : std::views::iota(0_uz, NumLines))
         {

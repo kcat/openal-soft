@@ -394,10 +394,10 @@ struct T60Filter {
         float lf0norm, float hf0norm);
 
     /* Applies the two T60 damping filter sections. */
-    void process(std::span<float> const samples)
+    void process(std::span<float> const samples) noexcept NONBLOCKING
     { DualBiquad{mHFFilter, mLFFilter}.process(samples, samples); }
 
-    void clear() noexcept { mHFFilter.clear(); mLFFilter.clear(); }
+    void clear() noexcept NONBLOCKING { mHFFilter.clear(); mLFFilter.clear(); }
 };
 
 struct EarlyReflections {
@@ -415,17 +415,19 @@ struct EarlyReflections {
         std::array<float, MaxAmbiChannels> Current{};
         std::array<float, MaxAmbiChannels> Target{};
 
-        void clear() { Current.fill(0.0f); Target.fill(0.0); }
+        void clear() noexcept NONBLOCKING { Current.fill(0.0f); Target.fill(0.0); }
     };
     std::array<OutGains,NUM_LINES> Gains{};
 
     void updateLines(float density_mult, float diffusion, float decayTime, float frequency);
 
-    void clear()
+    void clear() noexcept NONBLOCKING
     {
         std::ranges::fill(Allpass.Delay.mLine, 0.0f);
         std::ranges::fill(Delay.mLine, 0.0f);
-        std::ranges::for_each(Gains, &OutGains::clear);
+        IGNORE_FUNCTION_EFFECTS( /* OutGains::clear is non-blocking. */
+            std::ranges::for_each(Gains, &OutGains::clear);
+        )
     }
 };
 
@@ -476,20 +478,24 @@ struct LateReverb {
         std::array<float, MaxAmbiChannels> Current{};
         std::array<float, MaxAmbiChannels> Target{};
 
-        void clear() { Current.fill(0.0f); Target.fill(0.0); }
+        void clear() noexcept NONBLOCKING { Current.fill(0.0f); Target.fill(0.0); }
     };
     std::array<OutGains,NUM_LINES> Gains{};
 
     void updateLines(float density_mult, float diffusion, float lfDecayTime, float mfDecayTime,
         float hfDecayTime, float lf0norm, float hf0norm, float frequency);
 
-    void clear()
+    void clear() noexcept NONBLOCKING
     {
         std::ranges::fill(VecAp.Delay.mLine, 0.0f);
         std::ranges::fill(Delay.mLine, 0.0f);
-        std::ranges::for_each(T60, &T60Filter::clear);
+        IGNORE_FUNCTION_EFFECTS(
+            std::ranges::for_each(T60, &T60Filter::clear);
+        )
         Mod.clear();
-        std::ranges::for_each(Gains, &OutGains::clear);
+        IGNORE_FUNCTION_EFFECTS(
+            std::ranges::for_each(Gains, &OutGains::clear);
+        )
     }
 };
 
@@ -498,7 +504,7 @@ struct ReverbPipeline {
     struct FilterPair {
         BiquadFilter Lp;
         BiquadFilter Hp;
-        void clear() noexcept { Lp.clear(); Hp.clear(); }
+        void clear() noexcept NONBLOCKING { Lp.clear(); Hp.clear(); }
         void process(std::span<float const> const src, std::span<float> const dst)
         { DualBiquad{Lp, Hp}.process(src, dst); }
     };
@@ -541,16 +547,20 @@ struct ReverbPipeline {
         std::span<ReverbUpdateLine, NUM_LINES> tempSamples,
         std::span<FloatBufferLine, NUM_LINES> outSamples);
 
-    void clear() noexcept
+    void clear() noexcept NONBLOCKING
     {
         std::ranges::fill(mLateDelayIn.mLine, 0.0f);
-        std::ranges::for_each(mFilter, &FilterPair::clear);
+        IGNORE_FUNCTION_EFFECTS( /* FilterPair::clear is non-blocking. */
+            std::ranges::for_each(mFilter, &FilterPair::clear);
+        )
         mEarlyDelayTap = {};
         mEarlyDelayCoeff = {};
         mLateDelayTap = {};
         mEarly.clear();
         mLate.clear();
-        std::ranges::for_each(mAmbiSplitter | std::views::join, &BandSplitter::clear);
+        IGNORE_FUNCTION_EFFECTS( /* BandSplitter::clear is non-blocking. */
+            std::ranges::for_each(mAmbiSplitter | std::views::join, &BandSplitter::clear);
+        )
     }
 };
 
@@ -606,6 +616,24 @@ struct ReverbState final : EffectState {
     bool mUpmixOutput{false};
 
 
+    static constexpr auto DoMixRow(std::span<float> const OutBuffer,
+        const std::span<float const, 4> Gains,
+        const std::span<FloatBufferLine const, 4> InSamples) noexcept NONBLOCKING
+    {
+        std::ranges::fill(OutBuffer, 0.0f);
+        std::ignore = std::ranges::mismatch(Gains, InSamples,
+            [OutBuffer](float const gain, FloatConstBufferSpan const inBuffer)
+        {
+            if(std::fabs(gain) > GainSilenceThreshold)
+            {
+                std::ranges::transform(OutBuffer, inBuffer, OutBuffer.begin(),
+                    [gain](float const sample, float const in) noexcept
+                { return sample + in*gain; });
+            }
+            return true;
+        });
+    }
+
     void MixOutPlain(ReverbPipeline &pipeline, std::span<FloatBufferLine> const samplesOut,
         std::size_t const todo) const
     {
@@ -630,24 +658,6 @@ struct ReverbState final : EffectState {
     void MixOutAmbiUp(ReverbPipeline &pipeline, std::span<FloatBufferLine> const samplesOut,
         std::size_t const todo)
     {
-        static constexpr auto DoMixRow = [](std::span<float> const OutBuffer,
-            const std::span<float const, 4> Gains,
-            const std::span<FloatBufferLine const, 4> InSamples)
-        {
-            std::ranges::fill(OutBuffer, 0.0f);
-            std::ignore = std::ranges::mismatch(Gains, InSamples,
-                [OutBuffer](float const gain, FloatConstBufferSpan const inBuffer)
-            {
-                if(std::fabs(gain) > GainSilenceThreshold)
-                {
-                    std::ranges::transform(OutBuffer, inBuffer, OutBuffer.begin(),
-                        [gain](float const sample, float const in) noexcept
-                    { return sample + in*gain; });
-                }
-                return true;
-            });
-        };
-
         /* When upsampling, the B-Format conversion needs to be done separately
          * so the proper HF scaling can be applied to each B-Format channel.
          * The panning gains then pan and upsample the B-Format channels.
@@ -1802,7 +1812,7 @@ void ReverbPipeline::processLate(std::size_t offset, std::size_t const samplesTo
 
 void ReverbState::process(std::size_t const samplesToDo,
     std::span<FloatBufferLine const> const samplesIn, std::span<FloatBufferLine> const samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     const auto offset = mOffset;
 

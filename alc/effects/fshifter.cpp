@@ -235,7 +235,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlotBase *slo
 
 void FshifterState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     /* Clear the B-Format buffer that accumulates the result. */
     for(auto &outbuf : mBBuffer)
@@ -334,7 +334,7 @@ void FshifterState::process(const size_t samplesToDo,
     /* Now, mix the processed sound data to the output. */
     if(mUpsampler.has_value())
     {
-        auto &upsampler = mUpsampler.value();
+        auto &upsampler = *mUpsampler;
         auto chandata = mChans.begin();
         for(const auto c : std::views::iota(0_uz, NumLines))
         {

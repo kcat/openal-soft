@@ -60,7 +60,7 @@ void NullState::update(const ContextBase* /*context*/, const EffectSlotBase* /*s
  */
 void NullState::process(const size_t/*samplesToDo*/,
     const std::span<const FloatBufferLine> /*samplesIn*/,
-    const std::span<FloatBufferLine> /*samplesOut*/) noexcept
+    const std::span<FloatBufferLine> /*samplesOut*/) noexcept NONBLOCKING
 {
 }
 

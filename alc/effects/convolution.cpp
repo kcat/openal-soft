@@ -282,9 +282,10 @@ struct ConvolutionState final : public EffectState {
     ConvolutionState() = default;
     ~ConvolutionState() override = default;
 
-    void NormalMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo);
-    void UpsampleMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo);
-    void (ConvolutionState::*mMix)(std::span<FloatBufferLine>, size_t)
+    void NormalMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo) noexcept NONBLOCKING;
+    void UpsampleMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo) noexcept
+        NONBLOCKING;
+    void (ConvolutionState::*mMix)(std::span<FloatBufferLine>, size_t) noexcept NONBLOCKING
         {&ConvolutionState::NormalMix};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
@@ -295,7 +296,7 @@ struct ConvolutionState final : public EffectState {
 };
 
 void ConvolutionState::NormalMix(const std::span<FloatBufferLine> samplesOut,
-    const size_t samplesToDo)
+    const size_t samplesToDo) noexcept NONBLOCKING
 {
     for(auto &chan : mChans)
         MixSamples(std::span{chan.mBuffer}.first(samplesToDo), samplesOut, chan.Current,
@@ -303,7 +304,7 @@ void ConvolutionState::NormalMix(const std::span<FloatBufferLine> samplesOut,
 }
 
 void ConvolutionState::UpsampleMix(const std::span<FloatBufferLine> samplesOut,
-    const size_t samplesToDo)
+    const size_t samplesToDo) noexcept NONBLOCKING
 {
     for(auto &chan : mChans)
     {
@@ -621,7 +622,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
 
 void ConvolutionState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     if(mNumConvolveSegs < 1) [[unlikely]]
         return;

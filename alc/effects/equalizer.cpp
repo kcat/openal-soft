@@ -166,7 +166,7 @@ void EqualizerState::update(const ContextBase *context, const EffectSlotBase *sl
 
 void EqualizerState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     const auto buffer = std::span{mSampleBuffer}.first(samplesToDo);
     auto chan = mChans.begin();

@@ -134,7 +134,7 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
 
 void AutowahState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     auto env_delay = mEnvDelay;
     std::ranges::transform(samplesIn[0] | std::views::take(samplesToDo), mEnv.begin(),

@@ -117,7 +117,7 @@ void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
 
 void CompressorState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     /* Generate the per-sample gains from the signal envelope. */
     auto env = mEnvFollower;
@@ -149,7 +149,7 @@ void CompressorState::process(const size_t samplesToDo,
         std::ranges::generate(mGains | std::views::take(samplesToDo),
             [attackmult=mAttackMult,releasemult=mReleaseMult,&env]() -> float
         {
-            static constexpr auto amplitude = 1.0f;
+            constexpr auto amplitude = 1.0f;
             if(amplitude > env)
                 env = std::min(env*attackmult, amplitude);
             else if(amplitude < env)

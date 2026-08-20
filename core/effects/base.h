@@ -205,7 +205,7 @@ struct EffectState : al::intrusive_ref<EffectState> {
         const EffectProps *props, EffectTarget target) noexcept NONBLOCKING = 0;
     virtual void process(size_t samplesToDo,
         std::span<const FloatBufferLine> samplesIn,
-        std::span<FloatBufferLine> samplesOut) noexcept = 0;
+        std::span<FloatBufferLine> samplesOut) noexcept NONBLOCKING = 0;
 };
 
 

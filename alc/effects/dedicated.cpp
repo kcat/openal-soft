@@ -103,7 +103,7 @@ void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
 
 void DedicatedState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     MixSamples(std::span{samplesIn[0]}.first(samplesToDo), samplesOut, mCurrentGains, mTargetGains,
         samplesToDo, 0);

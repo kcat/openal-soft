@@ -116,7 +116,7 @@ void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
 }
 
 void EchoState::process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-    const std::span<FloatBufferLine> samplesOut) noexcept
+    const std::span<FloatBufferLine> samplesOut) noexcept NONBLOCKING
 {
     const auto delaybuf = std::span{mSampleBuffer};
     const auto mask = delaybuf.size()-1;

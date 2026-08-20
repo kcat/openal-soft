@@ -70,22 +70,23 @@ constexpr auto WaveformFracBits = 24_uz;
 constexpr auto WaveformFracOne = 1_uz << WaveformFracBits;
 constexpr auto WaveformFracMask = WaveformFracOne - 1;
 
-inline auto Sin(unsigned const index) -> float
+inline auto Sin(unsigned const index) noexcept NONBLOCKING -> float
 {
-    static constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
+    constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
-inline auto Saw(unsigned const index) -> float
+inline auto Saw(unsigned const index) noexcept NONBLOCKING -> float
 { return static_cast<float>(index) / float{WaveformFracOne}; }
 
-inline auto Triangle(unsigned const index) -> float
+inline auto Triangle(unsigned const index) noexcept NONBLOCKING -> float
 { return std::fabs(static_cast<float>(index)*(2.0f/WaveformFracOne) - 1.0f); }
 
-inline auto Half(unsigned) -> float { return 0.5f; }
+inline auto Half(unsigned) noexcept NONBLOCKING -> float { return 0.5f; }
 
-template<float(&func)(unsigned)>
-void Oscillate(std::span<float> const dst, unsigned index, unsigned const step)
+template<float(&func)(unsigned) noexcept NONBLOCKING>
+void Oscillate(std::span<float> const dst, unsigned index, unsigned const step) noexcept
+    NONBLOCKING
 {
     std::ranges::generate(dst, [&index,step]
     {
@@ -158,7 +159,7 @@ struct VmorpherState final : EffectState {
     };
     std::array<OutParams,MaxAmbiChannels> mChans;
 
-    void (*mGetSamples)(std::span<float> dst, unsigned index, unsigned step){};
+    void (*mGetSamples)(std::span<float> dst, unsigned index, unsigned step) noexcept NONBLOCKING{};
 
     unsigned mIndex{0};
     unsigned mStep{1};
@@ -277,7 +278,7 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
 void VmorpherState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     alignas(16) auto blended = std::array<float,MaxUpdateSamples>{};
 

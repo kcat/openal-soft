@@ -194,7 +194,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
 
 void DistortionState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     /* Convert B-Format to A-Format for processing. */
     const auto numInput = std::min(samplesIn.size(), NumLines);
@@ -278,7 +278,7 @@ void DistortionState::process(const size_t samplesToDo,
     /* Now, mix the processed sound data to the output. */
     if(mUpsampler.has_value())
     {
-        auto &upsampler = mUpsampler.value();
+        auto &upsampler = *mUpsampler;
         auto chandata = mChans.begin();
         for(const auto c : std::views::iota(0_uz, NumLines))
         {

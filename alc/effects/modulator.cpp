@@ -166,11 +166,11 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
 
 void ModulatorState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
-    noexcept
+    noexcept NONBLOCKING
 {
     ASSUME(samplesToDo > 0);
 
-    std::visit([this,samplesToDo]<typename T>(T&& type [[maybe_unused]])
+    IGNORE_FUNCTION_EFFECTS(std::visit([this,samplesToDo]<typename T>(T&& type [[maybe_unused]])
     {
         using Modulator = std::remove_cvref_t<T>;
         const auto range = mRange;
@@ -192,7 +192,7 @@ void ModulatorState::process(const size_t samplesToDo,
                 index = 0;
         }
         mIndex = index;
-    }, mSampleGen);
+    }, mSampleGen));
 
     auto chandata = mChans.begin();
     std::ranges::for_each(samplesIn, [&,this](const FloatConstBufferSpan input)

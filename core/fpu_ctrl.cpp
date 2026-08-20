@@ -73,7 +73,7 @@ void reset_fpu(unsigned int state [[maybe_unused]])
 } // namespace
 
 
-auto FPUCtl::Set() noexcept -> unsigned int
+auto FPUCtl::Set() noexcept NONBLOCKING -> unsigned int
 {
 #if HAVE_SSE_INTRINSICS
     return disable_denormals();
@@ -88,7 +88,7 @@ auto FPUCtl::Set() noexcept -> unsigned int
 #endif
 }
 
-void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept
+void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept NONBLOCKING
 {
 #if HAVE_SSE_INTRINSICS
     reset_fpu(state);

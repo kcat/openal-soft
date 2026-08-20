@@ -45,7 +45,7 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  */
 auto UpdateSlidingHold(SlidingHold *Hold, unsigned const i, f32 const in) -> f32
 {
-    static constexpr auto mask = unsigned{BufferLineSize - 1};
+    constexpr auto mask = unsigned{BufferLineSize - 1};
     const auto length = Hold->mLength;
     const auto values = std::span{Hold->mValues};
     const auto expiries = std::span{Hold->mExpiries};
@@ -259,6 +259,7 @@ void Compressor::gainCompressor(unsigned const SamplesToDo)
 }
 
 void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> const InOut)
+    noexcept NONBLOCKING
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(SamplesToDo <= BufferLineSize);
@@ -370,8 +371,7 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
     std::ranges::for_each(InOut, [gains](const FloatBufferSpan inout) -> void
     {
         const auto buffer = assume_aligned_span<16>(std::span{inout});
-        std::ranges::transform(gains | std::views::transform(&f32::c_val), buffer, buffer.begin(),
-            std::multiplies{});
+        std::ranges::transform(gains, buffer, buffer.begin(), std::multiplies{}, &f32::c_val);
     });
 
     std::ranges::copy(mSideChain | std::views::drop(SamplesToDo) | std::views::take(mLookAhead),

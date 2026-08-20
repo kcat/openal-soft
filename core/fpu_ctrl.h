@@ -1,12 +1,14 @@
 #ifndef CORE_FPU_CTRL_H
 #define CORE_FPU_CTRL_H
 
+#include "opthelpers.h"
+
 class FPUCtl {
     unsigned int sse_state{};
     bool in_mode{};
 
-    static unsigned int Set() noexcept;
-    static void Reset(unsigned int state) noexcept;
+    static unsigned int Set() noexcept NONBLOCKING;
+    static void Reset(unsigned int state) noexcept NONBLOCKING;
 
 public:
     FPUCtl() noexcept : sse_state{Set()}, in_mode{true} { }

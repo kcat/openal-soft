@@ -78,7 +78,7 @@ public:
     Compressor(const Compressor&) = delete;
     auto operator=(const Compressor&) -> Compressor& = delete;
 
-    void process(unsigned SamplesToDo, std::span<FloatBufferLine> InOut);
+    void process(unsigned SamplesToDo, std::span<FloatBufferLine> InOut) noexcept NONBLOCKING;
     [[nodiscard]] auto getLookAhead() const noexcept -> unsigned { return mLookAhead; }
 
     /** Parameters for initializing the compressor. */

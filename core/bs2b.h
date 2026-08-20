@@ -28,6 +28,7 @@
 #include <span>
 
 #include "bufferline.h"
+#include "opthelpers.h"
 
 
 namespace Bs2b {
@@ -84,10 +85,10 @@ struct bs2b_processor {
     /* Clear buffer */
     void clear();
 
-    void cross_feed(const std::span<float> Left, const std::span<float> Right);
+    void cross_feed(std::span<float> Left, std::span<float> Right) noexcept NONBLOCKING;
 };
 
-struct bs2b : public bs2b_processor {
+struct bs2b : bs2b_processor {
     std::array<FloatBufferLine,2> mStorage{};
 };
 

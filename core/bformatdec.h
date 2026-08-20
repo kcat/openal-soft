@@ -11,6 +11,7 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
+#include "opthelpers.h"
 
 
 using ChannelDec = std::array<float,MaxAmbiChannels>;
@@ -36,12 +37,12 @@ class BFormatDec {
     std::variant<SBandDecoderVector,DBandDecoderVector> mChannelDec;
 
 public:
-    BFormatDec(const size_t inchans, const std::span<const ChannelDec> coeffs,
-        const std::span<const ChannelDec> coeffslf, const float xover_f0norm);
+    BFormatDec(size_t inchans, std::span<const ChannelDec> coeffs,
+        std::span<const ChannelDec> coeffslf, float xover_f0norm);
 
     /* Decodes the ambisonic input to the given output channels. */
-    void process(const std::span<FloatBufferLine> OutBuffer,
-        const std::span<const FloatBufferLine> InSamples, const size_t SamplesToDo);
+    void process(std::span<FloatBufferLine> OutBuffer,
+        std::span<const FloatBufferLine> InSamples, size_t SamplesToDo) noexcept NONBLOCKING;
 };
 
 #endif /* CORE_BFORMATDEC_H */

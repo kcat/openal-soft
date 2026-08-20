@@ -239,6 +239,17 @@ auto float2uint(float const f) noexcept -> unsigned
     return (mant << shift) & mask;
 }
 
+
+namespace detail_ {
+
+/* Integral limit, where sub-integral precision is not available for floats. */
+inline constexpr auto ilim = std::array{
+    8388608.0f /*  0x1.0p+23 */,
+   -8388608.0f /* -0x1.0p+23 */
+};
+
+}
+
 /**
  * Rounds a float to the nearest integral value, according to the current
  * rounding mode. This is essentially an inlined version of rintf, although
@@ -262,15 +273,7 @@ auto fast_roundf(float f) noexcept -> float
 
 #else
 
-    /* Integral limit, where sub-integral precision is not available for
-     * floats.
-     */
-    static constexpr auto ilim = std::array{
-         8388608.0f /*  0x1.0p+23 */,
-        -8388608.0f /* -0x1.0p+23 */
-    };
     const auto conv_u = std::bit_cast<unsigned>(f);
-
     const auto sign = (conv_u>>31u)&0x01u;
     const auto expo = (conv_u>>23u)&0xffu;
 
@@ -292,10 +295,10 @@ auto fast_roundf(float f) noexcept -> float
      * may break without __builtin_assoc_barrier support).
      */
 #if HAS_BUILTIN(__builtin_assoc_barrier)
-    return __builtin_assoc_barrier(f + ilim[sign]) - ilim[sign];
+    return __builtin_assoc_barrier(f + detail_::ilim[sign]) - detail_::ilim[sign];
 #else
-    f += ilim[sign];
-    return f - ilim[sign];
+    f += detail_::ilim[sign];
+    return f - detail_::ilim[sign];
 #endif
 #endif
 }

@@ -57,6 +57,15 @@ constexpr auto PitchLimit = (std::numeric_limits<int>::max()-MixerFracMask) / Mi
 static_assert(MaxPitch <= PitchLimit, "MaxPitch, BufferLineSize, or MixerFracBits is too large");
 static_assert(BufferLineSize > MaxPitch, "MaxPitch must be less then BufferLineSize");
 
+constexpr auto SilentCoeffs = std::array<float, MaxOutputChannels>{};
+
+using NfcFilterProc = auto(NfcFilter::*)(std::span<float const> src, std::span<float> dst)
+    noexcept NONBLOCKING -> void;
+
+constexpr auto NfcProcess = std::to_array<NfcFilterProc>({nullptr, &NfcFilter::process1,
+    &NfcFilter::process2, &NfcFilter::process3, &NfcFilter::process4});
+static_assert(NfcProcess.size() == MaxAmbiOrder+1);
+
 
 using namespace std::chrono;
 using namespace std::string_view_literals;
@@ -476,13 +485,16 @@ void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData
 
 void LoadSamples(std::span<float> const dstSamples, SampleVariant const &src,
     std::size_t const srcChan, std::size_t const srcOffset, std::size_t const srcStep,
-    std::size_t const samplesPerBlock) noexcept
+    std::size_t const samplesPerBlock) noexcept NONBLOCKING
 {
-    std::visit([&]<typename T>(T&& splvec)
-    {
-        using sample_t = std::remove_cvref_t<T>::value_type;
-        LoadSamples<sample_t>(dstSamples, splvec, srcChan, srcOffset, srcStep, samplesPerBlock);
-    }, src);
+    IGNORE_FUNCTION_EFFECTS(
+        std::visit([&]<typename T>(T&& splvec)
+        {
+            using sample_t = std::remove_cvref_t<T>::value_type;
+            LoadSamples<sample_t>(dstSamples, splvec, srcChan, srcOffset, srcStep,
+                samplesPerBlock);
+        }, src);
+    )
 }
 
 void LoadBufferStatic(VoiceBufferItem const *const buffer,
@@ -631,7 +643,8 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
     int const intBufferPos, unsigned const fracBufferPos, unsigned const increment,
     unsigned const samplesToLoad, unsigned const samplesToMix,
     VoiceBufferItem const *const bufferListItem, VoiceBufferItem const *const bufferLoopItem,
-    std::span<std::span<float>> const mixingSamples, DeviceBase &device) -> void
+    std::span<std::span<float>> const mixingSamples, DeviceBase &device) noexcept NONBLOCKING
+    -> void
 {
     /* UHJ2 and SuperStereo only have 2 buffer channels, but 3 mixing channels
      * (3rd channel is generated from decoding).
@@ -723,8 +736,8 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                     auto const needBytes = (needBlocks-voice.mNumCallbackBlocks)
                         * voice.mBytesPerBlock;
 
-                    auto const samples = std::visit([](auto &splspan)
-                    { return std::as_writable_bytes(splspan); }, bufferListItem->mSamples);
+                    auto const samples = IGNORE_FUNCTION_EFFECTS(std::visit([](auto &splspan)
+                    { return std::as_writable_bytes(splspan); }, bufferListItem->mSamples));
 
                     auto const gotBytes = al::saturate_cast<unsigned>(bufferListItem->mCallback(
                         bufferListItem->mUserData, &samples[byteOffset],
@@ -890,15 +903,8 @@ void DoHrtfMix(std::span<float const> const samples, DirectParams &parms, float 
 
 void DoNfcMix(std::span<float const> const samples, std::span<FloatBufferLine> outBuffer,
     DirectParams &parms, std::span<float const, MaxOutputChannels> const outGains,
-    unsigned const counter, unsigned const outPos, DeviceBase &device)
+    unsigned const counter, unsigned const outPos, DeviceBase &device) noexcept NONBLOCKING
 {
-    using FilterProc = void(NfcFilter::*)(std::span<float const> src, std::span<float> dst)
-        noexcept NONBLOCKING;
-
-    static constexpr auto NfcProcess = std::array{FilterProc{nullptr}, &NfcFilter::process1,
-        &NfcFilter::process2, &NfcFilter::process3, &NfcFilter::process4};
-    static_assert(NfcProcess.size() == MaxAmbiOrder+1);
-
     MixSamples(samples, std::span{outBuffer[0]}.subspan(outPos), parms.Gains.Current[0],
         outGains[0], counter);
     outBuffer = outBuffer.subspan(1);
@@ -909,7 +915,12 @@ void DoNfcMix(std::span<float const> const samples, std::span<FloatBufferLine> o
     auto order = 1_uz;
     while(auto const chancount = std::size_t{device.NumChannelsPerOrder[order]})
     {
-        (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
+        /* TODO: Don't know why it thinks this is not nonblocking when the
+         * member function pointer type is marked nonblocking.
+         */
+        IGNORE_FUNCTION_EFFECTS(
+            (parms.NFCtrlFilter.*NfcProcess[order])(samples, nfcsamples);
+        )
         MixSamples(nfcsamples, outBuffer.first(chancount), CurrentGains, TargetGains, counter,
             outPos);
         if(++order == MaxAmbiOrder+1)
@@ -924,8 +935,6 @@ auto DoMix(Voice &voice, Voice::State const vstate, unsigned const numSends, uns
     unsigned const counter, std::span<std::span<float> const> const mixingSamples,
     DeviceBase &device) -> void
 {
-    static constexpr auto SilentTarget = std::array<float, MaxOutputChannels>{};
-
     auto chandata = voice.mChans.begin();
     for(auto const samplespan : mixingSamples)
     {
@@ -946,7 +955,7 @@ auto DoMix(Voice &voice, Voice::State const vstate, unsigned const numSends, uns
             else
             {
                 auto const targetGains = (vstate == Voice::Playing) ? std::span{parms.Gains.Target}
-                    : std::span{SilentTarget};
+                    : std::span{SilentCoeffs};
                 if(voice.mFlags.test(VoiceFlag::HasNfc))
                     DoNfcMix(samples, voice.mDirect.Buffer, parms, targetGains, counter, outPos, device);
                 else
@@ -965,7 +974,7 @@ auto DoMix(Voice &voice, Voice::State const vstate, unsigned const numSends, uns
                 voice.mSend[send].FilterActive);
 
             auto const targetGains = (vstate == Voice::Playing) ? std::span{parms.Gains.Target}
-                : std::span{SilentTarget}.first<MaxAmbiChannels>();
+                : std::span{SilentCoeffs}.first<MaxAmbiChannels>();
             MixSamples(samples, voice.mSend[send].Buffer, parms.Gains.Current, targetGains, counter,
                 outPos);
         }
@@ -977,7 +986,7 @@ auto DoMix(Voice &voice, Voice::State const vstate, unsigned const numSends, uns
 } // namespace
 
 void Voice::mix(State const vstate, ContextBase *const context, nanoseconds const deviceTime,
-    unsigned const samplesToDo)
+    unsigned const samplesToDo) noexcept NONBLOCKING
 {
     ASSUME(samplesToDo > 0);
 
@@ -1155,8 +1164,8 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
             {
                 auto const byteOffset = blocksDone * std::size_t{mBytesPerBlock};
                 auto const byteEnd = mNumCallbackBlocks * std::size_t{mBytesPerBlock};
-                auto const data = std::visit([](auto &splspan)
-                { return std::as_writable_bytes(splspan); }, bufferListItem->mSamples);
+                auto const data = IGNORE_FUNCTION_EFFECTS(std::visit([](auto &splspan)
+                { return std::as_writable_bytes(splspan); }, bufferListItem->mSamples));
                 std::ranges::copy(data | std::views::take(byteEnd) | std::views::drop(byteOffset),
                     data.begin());
                 mNumCallbackBlocks -= blocksDone;

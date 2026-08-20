@@ -262,7 +262,7 @@ struct Voice {
     Voice& operator=(Voice const&) = delete;
 
     void mix(State vstate, ContextBase *context, std::chrono::nanoseconds deviceTime,
-        unsigned samplesToDo);
+        unsigned samplesToDo) noexcept NONBLOCKING;
 
     void prepare(DeviceBase *device);
 

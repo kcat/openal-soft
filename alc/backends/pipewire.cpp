@@ -1495,7 +1495,7 @@ class PipeWirePlayback final : public BackendBase {
     auto stateChangedCallback(pw_stream_state old, pw_stream_state state, gsl::czstring error)
         const noexcept -> void;
     auto ioChangedCallback(uint32_t id, void *area, uint32_t size) noexcept -> void;
-    auto outputCallback() noexcept -> void;
+    auto outputCallback() noexcept NONBLOCKING -> void;
 
 public:
     explicit PipeWirePlayback(gsl::not_null<DeviceBase*> const device) noexcept
@@ -1533,9 +1533,9 @@ void PipeWirePlayback::ioChangedCallback(uint32_t const id, void *const area, ui
     }
 }
 
-void PipeWirePlayback::outputCallback() noexcept
+void PipeWirePlayback::outputCallback() noexcept NONBLOCKING
 {
-    auto *const pw_buf = pw_stream_dequeue_buffer(mStream.get());
+    auto *const pw_buf = IGNORE_FUNCTION_EFFECTS( pw_stream_dequeue_buffer(mStream.get()); )
     if(!pw_buf) [[unlikely]] return;
 
     auto const datas = std::span{pw_buf->buffer->datas,
@@ -1574,7 +1574,7 @@ void PipeWirePlayback::outputCallback() noexcept
     mDevice->renderSamples(mChannelPtrs, length);
 
     pw_buf->size = length;
-    pw_stream_queue_buffer(mStream.get(), pw_buf);
+    IGNORE_FUNCTION_EFFECTS( pw_stream_queue_buffer(mStream.get(), pw_buf); )
 }
 
 
@@ -1764,7 +1764,7 @@ auto PipeWirePlayback::reset() -> bool
         ret.io_changed = [](void *const data, uint32_t const id, void *const area,
             uint32_t const size) noexcept -> void
         { static_cast<PipeWirePlayback*>(data)->ioChangedCallback(id, area, size); };
-        ret.process = [](void *const data) noexcept -> void
+        ret.process = [](void *const data) noexcept NONBLOCKING -> void
         { static_cast<PipeWirePlayback*>(data)->outputCallback(); };
         return ret;
     });

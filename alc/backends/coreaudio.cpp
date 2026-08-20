@@ -391,7 +391,7 @@ CoreAudioPlayback::~CoreAudioPlayback()
 
 
 OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTimeStamp*, UInt32,
-    UInt32, AudioBufferList *ioData) noexcept
+    UInt32, AudioBufferList *ioData) noexcept NONBLOCKING
 {
     for(auto i=0_uz;i < ioData->mNumberBuffers;++i)
     {
@@ -640,9 +640,14 @@ bool CoreAudioPlayback::reset()
 
     /* setup callback */
     mFrameSize = mDevice->frameSizeFromFmt();
-    AURenderCallbackStruct input{};
-    input.inputProc = [](void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) noexcept
-    { return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ioData); };
+    auto input = AURenderCallbackStruct{};
+    input.inputProc = [](void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
+        const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
+        AudioBufferList *ioData) noexcept NONBLOCKING
+    {
+        return static_cast<CoreAudioPlayback*>(inRefCon)->MixerProc(ioActionFlags, inTimeStamp,
+            inBusNumber, inNumberFrames, ioData);
+    };
     input.inputProcRefCon = this;
 
     err = AudioUnitSetProperty(mAudioUnit, kAudioUnitProperty_SetRenderCallback,

@@ -458,6 +458,34 @@ auto as(pw_metadata *mdata) noexcept -> pw_proxy* { return reinterpret_cast<pw_p
 /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 
+[[nodiscard]] constexpr
+auto get_json_string(spa_json *const iter)
+{
+    auto str = std::optional<std::string>{};
+
+    auto val = gsl::czstring{};
+    auto const len = spa_json_next(iter, &val);
+    if(len <= 0) return str;
+
+    try {
+        str.emplace(gsl::narrow<std::size_t>(len)+1, '\0');
+        auto const err = spa_json_parse_stringn(val, len, str->data(),
+            al::saturate_cast<int>(str->size()));
+        if(err <= 0)
+        {
+            ERR("Error parsing JSON string: {} ({})", std::generic_category().message(-err), err);
+            str.reset();
+        }
+        else if(auto const epos = str->find('\0'); epos < str->size())
+            str->resize(epos);
+    }
+    catch(std::exception& e) {
+        ERR("Exception parsing JSON string: {}", e.what());
+        str.reset();
+    }
+    return str;
+}
+
 using PwContextPtr = std::unique_ptr<pw_context, decltype([](pw_context *context)
     { pw_context_destroy(context); })>;
 
@@ -1150,8 +1178,8 @@ void NodeProxy::paramCallback(int, uint32_t const id, uint32_t, uint32_t,
 }
 
 
-auto MetadataProxy::propertyCallback(void*, uint32_t id, gsl::czstring key, gsl::czstring type,
-    gsl::czstring value) noexcept -> int
+auto MetadataProxy::propertyCallback(void*, uint32_t const id, gsl::czstring const key,
+    gsl::czstring const type, gsl::czstring const value) noexcept -> int
 {
     if(id != PW_ID_CORE)
         return 0;
@@ -1177,31 +1205,17 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, gsl::czstring key, gsl:
         return 0;
     }
 
-    auto it = std::array<spa_json, 2>{};
-    spa_json_init(it.data(), value, strlen(value));
-    if(spa_json_enter_object(&std::get<0>(it), &std::get<1>(it)) <= 0)
+    auto jsonroot = spa_json{};
+    auto jsonit = spa_json{};
+    spa_json_init(&jsonroot, value, strlen(value));
+    if(spa_json_enter_object(&jsonroot, &jsonit) <= 0)
         return 0;
 
-    static constexpr auto get_json_string = [](spa_json *const iter)
-    {
-        auto str = std::optional<std::string>{};
-
-        const char *val{};
-        const auto len = spa_json_next(iter, &val);
-        if(len <= 0) return str;
-
-        str.emplace(gsl::narrow_cast<unsigned>(len), '\0');
-        if(spa_json_parse_string(val, len, str->data()) <= 0)
-            str.reset();
-        else while(!str->empty() && str->back() == '\0')
-            str->pop_back();
-        return str;
-    };
-    while(auto propKey = get_json_string(&std::get<1>(it)))
+    while(auto propKey = get_json_string(&jsonit))
     {
         if("name"sv == *propKey)
         {
-            auto propValue = get_json_string(&std::get<1>(it));
+            auto propValue = get_json_string(&jsonit);
             if(!propValue) break;
 
             TRACE("Got default {} device \"{}\"", isCapture ? "capture" : "playback",
@@ -1233,8 +1247,8 @@ auto MetadataProxy::propertyCallback(void*, uint32_t id, gsl::czstring key, gsl:
         }
         else
         {
-            const char *v{};
-            if(spa_json_next(&std::get<1>(it), &v) <= 0)
+            auto v = gsl::czstring{};
+            if(spa_json_next(&jsonit, &v) <= 0)
                 break;
         }
     }

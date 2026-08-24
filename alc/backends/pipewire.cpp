@@ -1224,9 +1224,9 @@ auto MetadataProxy::propertyCallback(void*, uint32_t const id, gsl::czstring con
             {
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    auto *entry = EventManager::FindDevice(*propValue);
+                    auto const *const entry = EventManager::FindDevice(*propValue);
                     const auto message = al::format("Default playback device changed: {}",
-                        entry ? entry->mName : std::string{});
+                        entry ? std::string_view{entry->mName} : std::string_view{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Playback,
                         message);
                 }
@@ -1236,9 +1236,9 @@ auto MetadataProxy::propertyCallback(void*, uint32_t const id, gsl::czstring con
             {
                 if(gEventHandler.mInitDone.load(std::memory_order_relaxed))
                 {
-                    auto *entry = EventManager::FindDevice(*propValue);
+                    auto const *const entry = EventManager::FindDevice(*propValue);
                     const auto message = al::format("Default capture device changed: {}",
-                        entry ? entry->mName : std::string{});
+                        entry ? std::string_view{entry->mName} : std::string_view{});
                     alc::Event(alc::EventType::DefaultDeviceChanged, alc::DeviceType::Capture,
                         message);
                 }

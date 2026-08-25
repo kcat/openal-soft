@@ -458,7 +458,7 @@ auto as(pw_metadata *mdata) noexcept -> pw_proxy* { return reinterpret_cast<pw_p
 /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
 
-[[nodiscard]] constexpr
+[[nodiscard]]
 auto get_json_string(spa_json *const iter)
 {
     auto str = std::optional<std::string>{};

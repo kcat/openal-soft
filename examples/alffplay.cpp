@@ -108,11 +108,11 @@ namespace {
 
 using voidp = void*;
 using fixed32 = std::chrono::duration<int64_t, std::ratio<1, (int64_t{1}<<32)>>;
-using nanoseconds = std::chrono::nanoseconds;
-using microseconds = std::chrono::microseconds;
-using milliseconds = std::chrono::milliseconds;
-using seconds = std::chrono::seconds;
 using seconds_d64 = std::chrono::duration<double>;
+using std::chrono::nanoseconds;
+using std::chrono::microseconds;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
 using std::chrono::duration_cast;
 
 
@@ -2121,8 +2121,8 @@ void MovieState::stop()
 // Helper method to print the time with human-readable formatting.
 auto PrettyTime(seconds t) -> std::string
 {
-    using minutes = std::chrono::minutes;
-    using hours = std::chrono::hours;
+    using std::chrono::minutes;
+    using std::chrono::hours;
 
     if(t.count() < 0)
         return "0s";
@@ -2150,7 +2150,7 @@ struct Application {
     };
     EomAction mEomAction{EomAction::Next};
 
-    std::chrono::seconds mLastTime{std::chrono::seconds::min()};
+    seconds mLastTime{seconds::min()};
 
     std::unique_ptr<MovieState> mMovieState;
 
@@ -2323,7 +2323,7 @@ auto main(std::span<std::string_view> args) -> int
                     }
                     return std::numeric_limits<float>::quiet_NaN();
                 });
-                if(optarg.starts_with("+") || optarg.starts_with("-")
+                if(optarg.starts_with('+') || optarg.starts_with('-')
                     || is_eq(al::case_compare(optarg.substr(endpos), "db")))
                 {
                     if(!std::isfinite(gainval) || (endpos != optarg.size()

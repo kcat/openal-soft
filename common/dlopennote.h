@@ -118,7 +118,7 @@ template<std::ranges::contiguous_range S1, std::ranges::contiguous_range ...Args
     auto arr = std::array<char, tmplen>{};
     auto oiter = std::ranges::copy("[\""sv, arr.begin()).out;
     oiter = std::ranges::copy(detail_::get_strview(std::forward<S1>(s1)), oiter).out;
-    auto do_concat = [sep="\",\""sv, &oiter](std::string_view const str)
+    auto do_concat = [sep=R"(",")"sv, &oiter](std::string_view const str)
     {
         oiter = std::ranges::copy(std::array{sep, str} | std::views::join, oiter).out;
     };
@@ -132,10 +132,10 @@ template<typename FT, typename DT, typename PT, typename ...Args> [[nodiscard]] 
 auto MakeNote(FT&& feature, DT&& description, PT&& priority, Args&& ...sonames) noexcept
 {
     auto const json = Concat(
-        "[{\"feature\":\"", std::forward<FT>(feature),
-        "\",\"description\":\"", std::forward<DT>(description),
-        "\",\"priority\":\"", std::forward<PT>(priority),
-        "\",\"soname\":", QuotedList(std::forward<Args>(sonames)...), "}]");
+        R"([{"feature":")", std::forward<FT>(feature),
+        R"(","description":")", std::forward<DT>(description),
+        R"(","priority":")", std::forward<PT>(priority),
+        R"(","soname":)", QuotedList(std::forward<Args>(sonames)...), "}]");
     return Structure{json};
 }
 

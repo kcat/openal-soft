@@ -2136,11 +2136,11 @@ auto PrettyTime(seconds t) -> std::string
 
 
 struct Application {
-    std::span<std::string_view> mArgs;
+    std::span<std::string_view> mArgs{};
 
     using ALMgrHandle = std::invoke_result_t<decltype(InitAL), std::span<std::string_view>&,
         ALCint const*>;
-    std::optional<ALMgrHandle> mALManager;
+    std::optional<ALMgrHandle> mALManager{};
 
     SDL_Window *mWindow{};
     SDL_Renderer *mRenderer{};
@@ -2152,7 +2152,7 @@ struct Application {
 
     seconds mLastTime{seconds::min()};
 
-    std::unique_ptr<MovieState> mMovieState;
+    std::unique_ptr<MovieState> mMovieState{};
 
     explicit Application(std::span<std::string_view> const args) noexcept : mArgs{args} { }
     ~Application()

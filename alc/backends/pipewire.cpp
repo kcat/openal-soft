@@ -719,6 +719,7 @@ struct EventManager {
     static void RemoveDevice(uint32_t id);
     static auto GetDeviceList() noexcept { return std::span{sList}; }
 
+    EventManager() noexcept = default;
     ~EventManager() { if(mLoop) mLoop.stop(); }
 
     auto init() -> bool;
@@ -783,7 +784,7 @@ private:
 };
 using EventWatcherLockGuard = std::lock_guard<EventManager>;
 
-auto gEventHandler = EventManager{}; /* NOLINT(cert-err58-cpp) */
+auto gEventHandler = EventManager{};
 
 
 auto EventManager::AddDevice(uint32_t const id) -> DeviceNode&

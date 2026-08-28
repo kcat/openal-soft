@@ -157,9 +157,9 @@ constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
-    alignas(16) std::array<float, hdr.total_size.c_val> mTable;
+    alignas(16) std::array<float, hdr.total_size.c_val> mTable{};
 
-    BSincFilterArray() noexcept : mTable{}
+    BSincFilterArray() noexcept
     {
         static constexpr auto BSincPointsMax = (hdr.m[0]+3u).c_val & ~3u;
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");

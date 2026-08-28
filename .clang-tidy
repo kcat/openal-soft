@@ -130,7 +130,6 @@
                     google-explicit-constructor,
                     hicpp-exception-baseclass,
                     misc-confusable-identifiers,
-                    misc-const-correctness,
                     misc-coroutine-hostile-raii,
                     misc-misleading-*,
                     misc-non-copyable-objects,
@@ -189,4 +188,7 @@
                     readability-static-definition-in-anonymous-namespace,
                     readability-string-compare,
                     readability-uniqueptr-delete-release,
-                    readability-use-*'
+                    readability-use-*,
+                    -readability-redundant-access-specifiers,
+                    -readability-redundant-parentheses,
+                    -readability-use-concise-preprocessor-directives'

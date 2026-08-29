@@ -1,7 +1,11 @@
 
 #include "config.h"
 
+#include <cstring>
 #include <mutex>
+#if defined(_WIN32)
+#include <guiddef.h>
+#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"

@@ -222,10 +222,10 @@ public:
 
     void eaxUninitialize() noexcept;
 
-    ALenum eax_eax_set(AL_GUID const *property_set_id, ALuint property_id,
+    ALenum eax_eax_set(AL_GUID const &property_set_id, ALuint property_id,
         ALuint property_source_id, ALvoid *property_value, ALuint property_value_size);
 
-    ALenum eax_eax_get(AL_GUID const *property_set_id, ALuint property_id,
+    ALenum eax_eax_get(AL_GUID const &property_set_id, ALuint property_id,
         ALuint property_source_id, ALvoid *property_value, ALuint property_value_size);
 
     void eaxSetLastError() noexcept;

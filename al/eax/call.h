@@ -83,12 +83,4 @@ private:
     [[noreturn]] static void fail_too_small();
 }; // EaxCall
 
-EaxCall create_eax_call(
-    EaxCallType type,
-    AL_GUID const *property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_buffer,
-    ALuint property_size);
-
 #endif // !EAX_EAX_CALL_INCLUDED

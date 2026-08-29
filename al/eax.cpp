@@ -9,6 +9,7 @@
 
 #include "direct_defs.h"
 #include "eax/api.h"
+#include "eax/exception.h"
 #include "eax/utils.h"
 
 #if HAVE_CXXMODULES
@@ -22,12 +23,25 @@ import gsl;
 
 namespace {
 
+#if defined(_WIN32)
+static_assert(sizeof(_GUID) == sizeof(AL_GUID));
+#endif
+
+auto get_alguid(_GUID const *const guid, AL_GUID *store) -> AL_GUID&
+{
+    if(!guid)
+        throw EaxException{"EAX_CALL", "Null property set ID."};
+    std::memcpy(store, guid, sizeof(AL_GUID));
+    return *store;
+}
+
 auto EAXSet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_set(std::launder(reinterpret_cast<AL_GUID const*>(property_set_id)),
-        property_id, source_id, value, value_size);
+    auto guid = AL_GUID{};
+    return context->eax_eax_set(get_alguid(property_set_id, &guid), property_id, source_id, value,
+        value_size);
 }
 catch(...) {
     context->eaxSetLastError();
@@ -39,8 +53,9 @@ auto EAXGet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
     ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_get(std::launder(reinterpret_cast<AL_GUID const*>(property_set_id)),
-        property_id, source_id, value, value_size);
+    auto guid = AL_GUID{};
+    return context->eax_eax_get(get_alguid(property_set_id, &guid), property_id, source_id, value,
+        value_size);
 }
 catch(...) {
     context->eaxSetLastError();

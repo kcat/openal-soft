@@ -377,11 +377,11 @@ void Context::eaxUninitialize() noexcept
     mEaxFxSlots.uninitialize();
 }
 
-auto Context::eax_eax_set(AL_GUID const *property_set_id, ALuint property_id,
+auto Context::eax_eax_set(AL_GUID const &property_set_id, ALuint property_id,
     ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) -> ALenum
 {
-    const auto call = create_eax_call(EaxCallType::set, property_set_id, property_id,
-        property_source_id, property_value, property_value_size);
+    const auto call = EaxCall{EaxCallType::set, property_set_id, property_id,
+        property_source_id, property_value, property_value_size};
 
     eax_initialize();
 
@@ -412,11 +412,11 @@ auto Context::eax_eax_set(AL_GUID const *property_set_id, ALuint property_id,
     return AL_NO_ERROR;
 }
 
-auto Context::eax_eax_get(AL_GUID const *property_set_id, ALuint property_id,
+auto Context::eax_eax_get(AL_GUID const &property_set_id, ALuint property_id,
     ALuint property_source_id, ALvoid *property_value, ALuint property_value_size) -> ALenum
 {
-    const auto call = create_eax_call(EaxCallType::get, property_set_id, property_id,
-        property_source_id, property_value, property_value_size);
+    const auto call = EaxCall{EaxCallType::get, property_set_id, property_id,
+        property_source_id, property_value, property_value_size};
 
     eax_initialize();
 

@@ -14,7 +14,6 @@
 #include <cfloat>
 #include <compare>
 #include <cstdint>
-#include <cstring>
 #include <type_traits>
 
 #include "AL/al.h"
@@ -35,14 +34,11 @@ struct AL_GUID {
     std::uint32_t Data1;
     std::uint16_t Data2;
     std::uint16_t Data3;
-    std::array<std::uint8_t,8> Data4;
+    std::array<std::uint8_t, 8> Data4;
+
+    [[nodiscard]] friend
+    auto operator<=>(AL_GUID const&, AL_GUID const&) noexcept -> std::strong_ordering = default;
 };
-
-inline bool operator==(AL_GUID const& lhs, AL_GUID const& rhs) noexcept
-{ return std::memcmp(&lhs, &rhs, sizeof(AL_GUID)) == 0; }
-
-inline bool operator!=(AL_GUID const& lhs, AL_GUID const& rhs) noexcept
-{ return !(lhs == rhs); }
 
 
 DECL_HIDDEN extern const AL_GUID DSPROPSETID_EAX_ReverbProperties;

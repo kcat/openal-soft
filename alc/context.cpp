@@ -334,15 +334,6 @@ void Context::setThreadContext(Context *context) noexcept
 #if ALSOFT_EAX
 namespace {
 
-[[nodiscard]] inline
-auto CompareGUID(AL_GUID const &lhs, AL_GUID const &rhs) noexcept -> std::strong_ordering
-{
-    auto const res = std::memcmp(&lhs, &rhs, sizeof(AL_GUID));
-    if(res > 0) return std::strong_ordering::greater;
-    if(res < 0) return std::strong_ordering::less;
-    return std::strong_ordering::equal;
-}
-
 void ForEachSource(al::Context *context, std::invocable<al::Source&> auto&& func)
 {
     std::ranges::for_each(context->mSourceList, [&func](SourceSubList &sublist)
@@ -771,7 +762,7 @@ void Context::eax4_defer_all(const EaxCall& call, Eax4State& state)
     auto &dst_d = state.d;
     dst_d = src;
 
-    if(std::is_neq(CompareGUID(dst_i.guidPrimaryFXSlotID, dst_d.guidPrimaryFXSlotID)))
+    if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)
         mEaxDf.set(eax_primary_fx_slot_id_dirty_bit);
 
     if(dst_i.flDistanceFactor != dst_d.flDistanceFactor)
@@ -821,7 +812,7 @@ void Context::eax5_defer_all(const EaxCall& call, Eax5State& state)
     auto &dst_d = state.d;
     dst_d = src;
 
-    if(std::is_neq(CompareGUID(dst_i.guidPrimaryFXSlotID, dst_d.guidPrimaryFXSlotID)))
+    if(dst_i.guidPrimaryFXSlotID != dst_d.guidPrimaryFXSlotID)
         mEaxDf.set(eax_primary_fx_slot_id_dirty_bit);
 
     if(dst_i.flDistanceFactor != dst_d.flDistanceFactor)

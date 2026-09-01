@@ -39,12 +39,12 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
+#include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/ranges.h"
 #include "fmt/std.h"
-#include "phase_shifter.h"
 #include "vector.h"
 
 #include "sndfile.h"
@@ -53,8 +53,10 @@
 
 #if HAVE_CXXMODULES
 import gsl;
+import phase_shifter;
 #else
 #include "gsl/gsl"
+#include "phase_shifter.hpp"
 #endif
 
 namespace {
@@ -93,7 +95,7 @@ struct UhjEncoder {
         const std::span<const FloatBufferLine,4> InSamples, const size_t SamplesToDo);
 };
 
-const PhaseShifterT<UhjEncoder::sFilterDelay*2> PShift{};
+auto &PShift = gPShifter<UhjEncoder::sFilterDelay*2>;
 
 
 /* Encoding UHJ from B-Format is done as:

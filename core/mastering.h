@@ -2,12 +2,11 @@
 #define CORE_MASTERING_H
 
 #include <array>
-#include <bitset>
 #include <memory>
 #include <span>
 
-#include "alnumeric.h"
 #include "altypes.hpp"
+#include "bitset.hpp"
 #include "bufferline.h"
 #include "vector.h"
 
@@ -34,42 +33,43 @@ class Compressor {
     };
     AutoFlags mAuto{};
 
-    u32 mLookAhead{0};
+    unsigned mLookAhead{0};
 
-    float mPreGain{0.0f};
-    float mPostGain{0.0f};
+    f32 mPreGain{0.0f};
+    f32 mPostGain{0.0f};
 
-    float mThreshold{0.0f};
-    float mSlope{0.0f};
-    float mKnee{0.0f};
+    f32 mThreshold{0.0f};
+    f32 mSlope{0.0f};
+    f32 mKnee{0.0f};
 
-    float mAttack{0.0f};
-    float mRelease{0.0f};
+    f32 mAttack{0.0f};
+    f32 mRelease{0.0f};
 
-    alignas(16) std::array<float,BufferLineSize*2_uz> mSideChain{};
-    alignas(16) std::array<float,BufferLineSize> mCrestFactor{};
+    alignas(16) std::array<f32, BufferLineSize*2_uz> mSideChain{};
+    alignas(16) std::array<f32, BufferLineSize> mCrestFactor{};
 
     std::unique_ptr<SlidingHold> mHold;
-    al::vector<FloatBufferLine,16> mDelay;
+    al::vector<FloatBufferLine, 16> mDelay;
 
-    float mCrestCoeff{0.0f};
-    float mGainEstimate{0.0f};
-    float mAdaptCoeff{0.0f};
+    f32 mCrestCoeff{0.0f};
+    f32 mGainEstimate{0.0f};
+    f32 mAdaptCoeff{0.0f};
 
-    float mLastPeakSq{0.0f};
-    float mLastRmsSq{0.0f};
-    float mLastRelease{0.0f};
-    float mLastAttack{0.0f};
-    float mLastGainDev{0.0f};
+    f32 mLastPeakSq{0.0f};
+    f32 mLastRmsSq{0.0f};
+    f32 mLastRelease{0.0f};
+    f32 mLastAttack{0.0f};
+    f32 mLastGainDev{0.0f};
 
-    void gainCompressor(u32 SamplesToDo);
+    void gainCompressor(unsigned SamplesToDo);
 
     struct PrivateToken { };
 public:
-    enum {
-        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip, FlagsCount
+    enum class Flags {
+        AutoKnee, AutoAttack, AutoRelease, AutoPostGain, AutoDeclip,
+        MaxValue = AutoDeclip
     };
-    using FlagBits = std::bitset<FlagsCount>;
+    using FlagBits = al::bitset<Flags>;
 
     Compressor() = delete;
     explicit Compressor(PrivateToken);
@@ -78,40 +78,41 @@ public:
     Compressor(const Compressor&) = delete;
     auto operator=(const Compressor&) -> Compressor& = delete;
 
-    void process(u32 SamplesToDo, std::span<FloatBufferLine> InOut);
-    [[nodiscard]] auto getLookAhead() const noexcept -> u32 { return mLookAhead; }
+    void process(unsigned SamplesToDo, std::span<FloatBufferLine> InOut) noexcept NONBLOCKING;
+    [[nodiscard]] auto getLookAhead() const noexcept -> unsigned { return mLookAhead; }
 
-    /**
-     * The compressor is initialized with the following settings:
-     *
-     * \param NumChans      Number of channels to process.
-     * \param SampleRate    Sample rate to process.
-     * \param AutoFlags     Flags to automate specific parameters:
-     *                      AutoKnee - automate the knee width parameter
-     *                      AutoAttack - automate the attack time parameter
-     *                      AutoRelease - automate the release time parameter
-     *                      AutoPostGain - automate the make-up (post) gain
-     *                                     parameter
-     *                      AutoDeclip - automate clipping reduction. Ignored
-     *                                   when not automating make-up gain
-     * \param LookAheadTime Look-ahead time (in seconds).
-     * \param HoldTime      Peak hold-time (in seconds).
-     * \param PreGainDb     Gain applied before detection (in dB).
-     * \param PostGainDb    Make-up gain applied after compression (in dB).
-     * \param ThresholdDb   Triggering threshold (in dB).
-     * \param Ratio         Compression ratio (x:1). Set to INFINIFTY for true
-     *        limiting. Ignored when automating knee width.
-     * \param KneeDb        Knee width (in dB). Ignored when automating knee
-     *        width.
-     * \param AttackTime    Attack time (in seconds). Acts as a maximum when
-     *        automating attack time.
-     * \param ReleaseTime   Release time (in seconds). Acts as a maximum when
-     *        automating release time.
-     */
-    static auto Create(const size_t NumChans, const float SampleRate, const FlagBits AutoFlags,
-        const float LookAheadTime, const float HoldTime, const float PreGainDb,
-        const float PostGainDb, const float ThresholdDb, const float Ratio, const float KneeDb,
-        const float AttackTime, const float ReleaseTime) -> std::unique_ptr<Compressor>;
+    /** Parameters for initializing the compressor. */
+    struct Params {
+        u32 NumChans; /**< Number of channels to process. */
+        f32 SampleRate; /**< Sample rate to process. */
+        FlagBits AutoFlags; /**< Flags to automate specific parameters:
+            * AutoKnee - automate the knee width parameter
+            * AutoAttack - automate the attack time parameter
+            * AutoRelease - automate the release time parameter
+            * AutoPostGain - automate the make-up (post) gain parameter
+            * AutoDeclip - automate clipping reduction. Ignored when not
+            *              automating make-up gain
+            */
+        f32 LookAheadTime; /**< Look-ahead time (in seconds). */
+        f32 HoldTime; /**< Peak hold-time (in seconds). */
+        f32 PreGainDb; /**< Gain applied before detection (in dB). */
+        f32 PostGainDb; /**< Make-up gain applied after compression (in dB). */
+        f32 ThresholdDb; /**< Triggering threshold (in dB). */
+        f32 Ratio; /**< Compression ratio (x:1). Set to INFINITY for true
+            * limiting. Ignored when automating knee width.
+            */
+        f32 KneeDb; /**< Knee width (in dB). Ignored when automating knee
+            * width.
+            */
+        f32 AttackTime; /**< Attack time (in seconds). Acts as a maximum when
+            * automating attack time.
+            */
+        f32 ReleaseTime; /**< Release time (in seconds). Acts as a maximum when
+            * automating release time.
+            */
+    };
+
+    static auto Create(Params params) -> std::unique_ptr<Compressor>;
 };
 using CompressorPtr = std::unique_ptr<Compressor>;
 

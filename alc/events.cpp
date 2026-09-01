@@ -6,14 +6,29 @@
 #include <ranges>
 #include <span>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
-#include "core/logging.h"
 #include "device.h"
+#include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import gsl;
+import logging;
+#else
+#include "core/logging.h"
 #include "gsl/gsl"
+#endif
 
 
 namespace {
+
+#if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && __has_cpp_attribute(gnu::alias)
+#define DefineAlcAlias(X) extern "C" DECL_HIDDEN [[gnu::alias(#X)]] decltype(X) X##_;
+#else
+#define DefineAlcAlias(X)
+#endif
+
+using EventBitSet = al::bitset<alc::EventType>;
+auto gEventsEnabled = EventBitSet{0};
 
 auto EnumFromEventType(const alc::EventType type) -> ALCenum
 {
@@ -22,7 +37,6 @@ auto EnumFromEventType(const alc::EventType type) -> ALCenum
     case alc::EventType::DefaultDeviceChanged: return ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT;
     case alc::EventType::DeviceAdded: return ALC_EVENT_TYPE_DEVICE_ADDED_SOFT;
     case alc::EventType::DeviceRemoved: return ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT;
-    case alc::EventType::Count: break;
     }
     throw std::runtime_error{al::format("Invalid EventType: {}", int{al::to_underlying(type)})};
 }
@@ -31,28 +45,28 @@ auto EnumFromEventType(const alc::EventType type) -> ALCenum
 
 namespace alc {
 
-auto GetEventType(ALCenum type) -> std::optional<alc::EventType>
+auto GetEventType(ALCenum const type) -> std::optional<EventType>
 {
     switch(type)
     {
-    case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: return alc::EventType::DefaultDeviceChanged;
-    case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return alc::EventType::DeviceAdded;
-    case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return alc::EventType::DeviceRemoved;
+    case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: return EventType::DefaultDeviceChanged;
+    case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return EventType::DeviceAdded;
+    case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return EventType::DeviceRemoved;
     }
     return std::nullopt;
 }
 
-void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::string_view message)
-    noexcept
+void Event(EventType const eventType, DeviceType const deviceType, ALCdevice *const device,
+    std::string_view const message) noexcept
 {
     auto eventlock = std::unique_lock{EventMutex};
-    if(EventCallback && EventsEnabled.test(al::to_underlying(eventType)))
+    if(EventCallback && gEventsEnabled.test(eventType))
         EventCallback(EnumFromEventType(eventType), al::to_underlying(deviceType), device,
             /* NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) */
-            gsl::narrow_cast<ALCsizei>(message.size()), message.data(), EventUserPtr);
+            al::saturate_cast<ALCsizei>(message.size()), message.data(), EventUserPtr);
 }
 
-} // namespace alc
+} /* namespace alc */
 
 FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events,
     ALCboolean enable) noexcept -> ALCboolean
@@ -75,14 +89,14 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
         return ALC_FALSE;
     }
 
-    auto eventSet = alc::EventBitSet{0};
+    auto eventSet = EventBitSet{};
     auto eventrange = std::views::counted(events, count);
-    const auto invalidevent = std::ranges::find_if_not(eventrange, [&eventSet](ALCenum type)
+    const auto invalidevent = std::ranges::find_if_not(eventrange, [&eventSet](ALCenum const type)
     {
         const auto etype = alc::GetEventType(type);
         if(!etype) return false;
 
-        eventSet.set(al::to_underlying(*etype));
+        eventSet.set(*etype);
         return true;
     });
     if(invalidevent != eventrange.end())
@@ -93,10 +107,11 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
     }
 
     auto eventlock = std::unique_lock{alc::EventMutex};
-    if(enable) alc::EventsEnabled |= eventSet;
-    else alc::EventsEnabled &= ~eventSet;
+    if(enable) gEventsEnabled |= eventSet;
+    else gEventsEnabled &= ~eventSet;
     return ALC_TRUE;
 }
+DefineAlcAlias(alcEventControlSOFT)
 
 FORCE_ALIGN void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) noexcept
 {
@@ -104,3 +119,4 @@ FORCE_ALIGN void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback
     alc::EventCallback = callback;
     alc::EventUserPtr = userParam;
 }
+DefineAlcAlias(alcEventCallbackSOFT)

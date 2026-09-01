@@ -11,7 +11,7 @@
 #include "AL/efx.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/effects/base.h"
 #include "effects/effects.h"
 #include "gsl/gsl"
@@ -61,9 +61,9 @@ struct Effect {
     EffectProps mProps;
 
     /* Self ID */
-    u32 mId{0u};
+    ALuint mId{0u};
 
-    static void SetName(gsl::not_null<al::Context*> context, u32 id, std::string_view name);
+    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -33,6 +32,7 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -107,12 +107,12 @@ DIAGNOSTIC_POP
 namespace {
 
 using voidp = void*;
-using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1_i64<<32)>>;
-using nanoseconds = std::chrono::nanoseconds;
-using microseconds = std::chrono::microseconds;
-using milliseconds = std::chrono::milliseconds;
-using seconds = std::chrono::seconds;
+using fixed32 = std::chrono::duration<int64_t, std::ratio<1, (int64_t{1}<<32)>>;
 using seconds_d64 = std::chrono::duration<double>;
+using std::chrono::nanoseconds;
+using std::chrono::microseconds;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
 using std::chrono::duration_cast;
 
 
@@ -124,11 +124,8 @@ auto EnableWideStereo = false;
 auto EnableUhj = false;
 auto EnableSuperStereo = false;
 auto DisableVideo = false;
-auto alGetSourcei64vSOFT = LPALGETSOURCEI64VSOFT{};
-auto alEventControlSOFT = LPALEVENTCONTROLSOFT{};
-auto alEventCallbackSOFT = LPALEVENTCALLBACKSOFT{};
-
-auto alBufferCallbackSOFT = LPALBUFFERCALLBACKSOFT{};
+auto TimeStretchFactor = 1.0f;
+auto PitchTuneFactor = 1.0f;
 
 constexpr auto AVNoSyncThreshold = seconds{10};
 
@@ -429,6 +426,8 @@ struct AudioState {
     std::array<ALuint,AudioBufferCount> mBuffers{};
     ALuint mBufferIdx{0};
 
+    static inline auto sPShiftSlot = ALuint{};
+
     explicit AudioState(MovieState &movie LIFETIMEBOUND) : mMovie(movie)
     { mConnected.test_and_set(std::memory_order_relaxed); }
     ~AudioState()
@@ -544,7 +543,6 @@ struct MovieState {
             mParseThread.join();
     }
 
-    static auto decode_interrupt_cb(void *ctx) -> int;
     auto prepare() -> bool;
     void setTitle(SDL_Window *window) const;
     void stop();
@@ -568,7 +566,11 @@ auto AudioState::getClockNoLock() const -> nanoseconds
      * keep going.
      */
     if(mEndTime > nanoseconds::min())
-        return std::chrono::steady_clock::now().time_since_epoch() - mEndTime + mCurrentPts;
+    {
+        auto const rtdiff = std::chrono::steady_clock::now().time_since_epoch() - mEndTime;
+        auto const diff = duration_cast<seconds_d64>(rtdiff) * TimeStretchFactor;
+        return duration_cast<nanoseconds>(diff) + mCurrentPts;
+    }
 
     /* This more safely converts fixed32 to nanoseconds, avoiding overflow
      * unlike a normal duration_cast call.
@@ -586,8 +588,8 @@ auto AudioState::getClockNoLock() const -> nanoseconds
          * source offset.
          */
         auto offset = std::array<ALint64SOFT,2>{};
-        if(alGetSourcei64vSOFT)
-            alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
+        if(palGetSourcei64vSOFT)
+            palGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
         else
         {
             auto ioffset = ALint{};
@@ -644,8 +646,8 @@ auto AudioState::getClockNoLock() const -> nanoseconds
     if(mSource)
     {
         auto offset = std::array<ALint64SOFT,2>{};
-        if(alGetSourcei64vSOFT)
-            alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
+        if(palGetSourcei64vSOFT)
+            palGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset.data());
         else
         {
             auto ioffset = ALint{};
@@ -745,21 +747,22 @@ auto AudioState::decodeFrame() -> int
         mCurrentPts = duration_cast<nanoseconds>(seconds_d64{av_q2d(mStream->time_base) *
             gsl::narrow_cast<double>(mDecodedFrame->best_effort_timestamp)});
 
-    if(mDecodedFrame->nb_samples > mSamplesMax)
+    auto const dst_size = swr_get_out_samples(mSwresCtx.get(), mDecodedFrame->nb_samples);
+    if(dst_size > mSamplesMax)
     {
         av_freep(static_cast<void*>(mSamples.data()));
         if(av_samples_alloc(mSamples.data(), nullptr, mCodecCtx->ch_layout.nb_channels,
-            mDecodedFrame->nb_samples, mDstSampleFmt, 0) < 0)
+            dst_size, mDstSampleFmt, 0) < 0)
         {
             mSamplesMax = 0;
             mSamplesSpan = {};
             return 0;
         }
-        mSamplesMax = mDecodedFrame->nb_samples;
+        mSamplesMax = dst_size;
         mSamplesSpan = {mSamples[0], gsl::narrow_cast<size_t>(mSamplesMax)*mFrameSize};
     }
     /* Return the amount of sample frames converted */
-    const auto data_size = swr_convert(mSwresCtx.get(), mSamples.data(), mDecodedFrame->nb_samples,
+    auto const data_size = swr_convert(mSwresCtx.get(), mSamples.data(), dst_size,
         mDecodedFrame->extended_data, mDecodedFrame->nb_samples);
 
     av_frame_unref(mDecodedFrame.get());
@@ -965,7 +968,7 @@ void AudioState::handler()
     auto srclock = std::unique_lock{mSrcMutex, std::defer_lock};
     auto sleep_time = milliseconds{AudioBufferTime / 2};
 
-    if(alEventControlSOFT)
+    if(palEventControlSOFT)
     {
         static constexpr auto callback = [](ALenum eventType, ALuint object, ALuint param,
             ALsizei length, const ALchar *message, void *userParam) noexcept -> void
@@ -974,16 +977,16 @@ void AudioState::handler()
                 std::string_view{message, gsl::narrow_cast<ALuint>(length)});
         };
 
-        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
-        alEventCallbackSOFT(callback, this);
+        palEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
+        palEventCallbackSOFT(callback, this);
         sleep_time = AudioBufferTotalTime;
     }
     const auto _ = gsl::finally([]
     {
-        if(alEventControlSOFT)
+        if(palEventControlSOFT)
         {
-            alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
-            alEventCallbackSOFT(nullptr, nullptr);
+            palEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
+            palEventCallbackSOFT(nullptr, nullptr);
         }
     });
 
@@ -1007,7 +1010,7 @@ void AudioState::handler()
         auto chansvar = layout.getChannels();
         if(auto *mask = std::get_if<uint64_t>(&chansvar))
             return *mask;
-        return 0_u64;
+        return uint64_t{0};
     });
     mDstChanLayout = 0;
     mFormat = AL_NONE;
@@ -1327,17 +1330,32 @@ void AudioState::handler()
     if(ambi_order > 1)
     {
         std::ranges::for_each(mBuffers, [ambi_order](const ALuint bufid)
-        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, gsl::narrow_cast<int>(ambi_order)); });
+        { alBufferi(bufid, AL_UNPACK_AMBISONIC_ORDER_SOFT, static_cast<int>(ambi_order)); });
     }
     if(EnableSuperStereo)
         alSourcei(mSource, AL_STEREO_MODE_SOFT, AL_SUPER_STEREO_SOFT);
+    if(sPShiftSlot != 0)
+    {
+        /* Filter to mute the dry (un-corrected) path. */
+        auto mutefilter = ALuint{};
+        palGenFilters(1, &mutefilter);
+        palFilteri(mutefilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+        palFilterf(mutefilter, AL_LOWPASS_GAIN, 0.0f);
+
+        alSourcef(mSource, AL_PITCH, TimeStretchFactor);
+        alSourcei(mSource, AL_DIRECT_FILTER, static_cast<ALint>(mutefilter));
+        alSource3i(mSource, AL_AUXILIARY_SEND_FILTER, static_cast<ALint>(sPShiftSlot), 0,
+            AL_FILTER_NULL);
+
+        palDeleteFilters(1, &mutefilter);
+    }
 
     if(alGetError() != AL_NO_ERROR)
         return;
 
     auto samples = std::vector<uint8_t>{};
     auto callback_ok = false;
-    if(alBufferCallbackSOFT)
+    if(palBufferCallbackSOFT)
     {
         static constexpr auto callback = [](void *userptr, void *data, ALsizei size) noexcept
             -> ALsizei
@@ -1345,7 +1363,7 @@ void AudioState::handler()
             return static_cast<AudioState*>(userptr)->bufferCallback(
                 std::views::counted(static_cast<ALubyte*>(data), size));
         };
-        alBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, callback, this);
+        palBufferCallbackSOFT(mBuffers[0], mFormat, mCodecCtx->sample_rate, callback, this);
 
         alSourcei(mSource, AL_BUFFER, as_signed(mBuffers[0]));
         if(alGetError() != AL_NO_ERROR)
@@ -1393,7 +1411,7 @@ void AudioState::handler()
          * buffered. Prerolling would be better here, but short of that, this
          * will do.
          */
-        const auto start_delay = round<seconds>(AudioBufferTotalTime/2
+        const auto start_delay = round<seconds>(AudioBufferTotalTime/2 * TimeStretchFactor
             * mCodecCtx->sample_rate).count();
         alSourcei(mSource, AL_SAMPLE_OFFSET, -gsl::narrow_cast<int>(start_delay));
     }
@@ -1500,8 +1518,8 @@ auto VideoState::getClock() -> nanoseconds
     auto displock = std::lock_guard{mDispPtsMutex};
     if(mDisplayPtsTime == microseconds::min())
         return nanoseconds::zero();
-    auto delta = get_avtime() - mDisplayPtsTime;
-    return mDisplayPts + delta;
+    auto const delta = duration_cast<seconds_d64>(get_avtime() - mDisplayPtsTime);
+    return duration_cast<nanoseconds>(mDisplayPts + delta*TimeStretchFactor);
 }
 
 /* Called by VideoState::updateVideo to display the next video frame. */
@@ -1828,8 +1846,8 @@ void VideoState::updateVideo(SDL_Window *screen, SDL_Renderer *renderer, bool re
 
 void VideoState::handler()
 {
-    std::ranges::for_each(mPictQ, [](Picture &pict) -> void
-    { pict.mFrame = AVFramePtr{av_frame_alloc()}; });
+    std::ranges::generate(mPictQ | std::views::transform(&Picture::mFrame),
+        [] { return AVFramePtr{av_frame_alloc()}; });
 
     /* Prefill the codec buffer. */
     auto sender [[maybe_unused]] = std::async(std::launch::async, [this]
@@ -1900,14 +1918,13 @@ void VideoState::handler()
 }
 
 
-int MovieState::decode_interrupt_cb(void *ctx)
-{
-    return static_cast<MovieState*>(ctx)->mQuit.load(std::memory_order_relaxed);
-}
-
 bool MovieState::prepare()
 {
-    auto intcb = AVIOInterruptCB{decode_interrupt_cb, this};
+    auto const intcb = AVIOInterruptCB{
+        .callback = [](void *ctx) noexcept NONBLOCKING -> int
+        { return static_cast<MovieState*>(ctx)->mQuit.load(std::memory_order_relaxed); },
+        .opaque = this
+    };
     if(avio_open2(al::out_ptr(mIOContext), mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr) < 0)
     {
         fmt::println(std::cerr, "Failed to open {}", mFilename);
@@ -1957,7 +1974,8 @@ auto MovieState::getClock() const -> nanoseconds
 {
     if(mClockBase == microseconds::min())
         return nanoseconds::zero();
-    return get_avtime() - mClockBase;
+    auto const diff = duration_cast<seconds_d64>(get_avtime() - mClockBase);
+    return duration_cast<nanoseconds>(diff * TimeStretchFactor);
 }
 
 auto MovieState::getMasterClock() -> nanoseconds
@@ -2103,8 +2121,8 @@ void MovieState::stop()
 // Helper method to print the time with human-readable formatting.
 auto PrettyTime(seconds t) -> std::string
 {
-    using minutes = std::chrono::minutes;
-    using hours = std::chrono::hours;
+    using std::chrono::minutes;
+    using std::chrono::hours;
 
     if(t.count() < 0)
         return "0s";
@@ -2116,6 +2134,83 @@ auto PrettyTime(seconds t) -> std::string
     return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
 }
 
+
+struct Application {
+    std::span<std::string_view> mArgs{};
+
+    using ALMgrHandle = std::invoke_result_t<decltype(InitAL), std::span<std::string_view>&,
+        ALCint const*>;
+    std::optional<ALMgrHandle> mALManager{};
+
+    SDL_Window *mWindow{};
+    SDL_Renderer *mRenderer{};
+
+    enum class EomAction : bool {
+        Next, Quit
+    };
+    EomAction mEomAction{EomAction::Next};
+
+    seconds mLastTime{seconds::min()};
+
+    std::unique_ptr<MovieState> mMovieState{};
+
+    explicit Application(std::span<std::string_view> const args) noexcept : mArgs{args} { }
+    ~Application()
+    {
+        mMovieState = nullptr;
+
+        if(mRenderer)
+            SDL_DestroyRenderer(mRenderer);
+        if(mWindow)
+            SDL_DestroyWindow(mWindow);
+
+        if(SDL_WasInit(SDL_INIT_VIDEO))
+            SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+
+        if(AudioState::sPShiftSlot)
+            palDeleteAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+        AudioState::sPShiftSlot = 0;
+    }
+
+    Application(const Application&) = delete;
+    auto operator=(const Application&) -> Application& = delete;
+
+    auto init() -> bool
+    {
+        if(!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+        {
+            fmt::println(std::cerr, "Could not initialize SDL - {}", SDL_GetError());
+            return false;
+        }
+
+        /* Make a window to put our video */
+        mWindow = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
+        if(mWindow == nullptr)
+        {
+            fmt::println(std::cerr, "SDL: could not set video mode - exiting");
+            return false;
+        }
+        SDL_SetWindowSurfaceVSync(mWindow, 1);
+
+        /* Make a renderer to handle the texture image surface and rendering. */
+        mRenderer = SDL_CreateRenderer(mWindow, nullptr);
+        if(mRenderer == nullptr)
+        {
+            fmt::println(std::cerr, "SDL: could not create renderer - exiting");
+            return false;
+        }
+
+        SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(mRenderer, nullptr);
+        SDL_RenderPresent(mRenderer);
+
+        /* Open an audio device */
+        mALManager.emplace(InitAL(mArgs));
+
+        return true;
+    }
+};
+
 auto main(std::span<std::string_view> args) -> int
 {
     SDL_SetMainReady();
@@ -2126,73 +2221,35 @@ auto main(std::span<std::string_view> args) -> int
         fmt::println(std::cerr, "\n  Options:\n"
             "    -gain <g>     Set audio playback gain (prepend +/- or append \"dB\" to \n"
             "                  indicate decibels, otherwise it's linear amplitude)\n"
+            "    -tstretch <s> Set playback speed factor (with pitch correction)"
+            "    -tune <st>    Adjust pitch tuning (in semitones, decimals allowed)"
             "    -novideo      Disable video playback\n"
             "    -direct       Play audio directly on the output, bypassing virtualization\n"
             "    -superstereo  Apply Super Stereo processing to stereo tracks\n"
             "    -uhj          Decode as UHJ (stereo = UHJ2, 3.0 = UHJ3, quad = UHJ4)");
         return 1;
     }
-    args = args.subspan(1);
 
     /* Initialize networking protocols */
     avformat_network_init();
 
-    if(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
-    {
-        fmt::println(std::cerr, "Could not initialize SDL - {}", SDL_GetError());
-        return 1;
-    }
+    auto app = Application{args.subspan(1)};
+    if(not app.init())
+        return EXIT_FAILURE;
 
-    /* Make a window to put our video */
-    auto *screen = SDL_CreateWindow(AppName.data(), 640, 480, SDL_WINDOW_RESIZABLE);
-    if(!screen)
-    {
-        fmt::println(std::cerr, "SDL: could not set video mode - exiting");
-        return 1;
-    }
-    SDL_SetWindowSurfaceVSync(screen, 1);
+    app.mALManager->printName();
 
-    /* Make a renderer to handle the texture image surface and rendering. */
-    auto *renderer = SDL_CreateRenderer(screen, nullptr);
-    if(!renderer)
-    {
-        fmt::println(std::cerr, "SDL: could not create renderer - exiting");
-        return 1;
-    }
+    LoadALExtensions();
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderFillRect(renderer, nullptr);
-    SDL_RenderPresent(renderer);
-
-    /* Open an audio device */
-    auto almgr = InitAL(args);
-    almgr.printName();
-
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
-    {
         fmt::println("Found AL_SOFT_source_latency");
-        alGetSourcei64vSOFT = reinterpret_cast<LPALGETSOURCEI64VSOFT>(
-            alGetProcAddress("alGetSourcei64vSOFT"));
-    }
     if(alIsExtensionPresent("AL_SOFT_events"))
-    {
         fmt::println("Found AL_SOFT_events");
-        alEventControlSOFT = reinterpret_cast<LPALEVENTCONTROLSOFT>(
-            alGetProcAddress("alEventControlSOFT"));
-        alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
-            alGetProcAddress("alEventCallbackSOFT"));
-    }
     if(alIsExtensionPresent("AL_SOFT_callback_buffer"))
-    {
         fmt::println("Found AL_SOFT_callback_buffer");
-        alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
-            alGetProcAddress("alBufferCallbackSOFT"));
-    }
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-    auto curarg = args.begin();
-    for(auto args_end=args.end();curarg != args_end;++curarg)
+    auto curarg = app.mArgs.begin();
+    for(auto args_end=app.mArgs.end();curarg != args_end;++curarg)
     {
         const auto argval = *curarg;
         if(argval == "-direct")
@@ -2266,11 +2323,11 @@ auto main(std::span<std::string_view> args) -> int
                     }
                     return std::numeric_limits<float>::quiet_NaN();
                 });
-                if(optarg.starts_with("+") || optarg.starts_with("-")
-                    || al::case_compare(optarg.substr(endpos), "db") == 0)
+                if(optarg.starts_with('+') || optarg.starts_with('-')
+                    || is_eq(al::case_compare(optarg.substr(endpos), "db")))
                 {
                     if(!std::isfinite(gainval) || (endpos != optarg.size()
-                            && al::case_compare(optarg.substr(endpos), "db") != 0))
+                            && is_neq(al::case_compare(optarg.substr(endpos), "db"))))
                         fmt::println(std::cerr, "Invalid dB gain value: {}", optarg);
                     else
                         PlaybackGain = std::pow(10.0f, gainval/20.0f);
@@ -2285,43 +2342,146 @@ auto main(std::span<std::string_view> args) -> int
             }
             continue;
         }
+        if(argval == "-tstretch")
+        {
+            if(curarg+1 == args_end)
+                fmt::println(std::cerr, "Missing argument for -tstretch");
+            else
+            {
+                const auto optarg = *++curarg;
+
+                auto endpos = size_t{};
+                const auto stretchval = std::invoke([optarg, &endpos]
+                {
+                    try { return std::stof(std::string{optarg}, &endpos); }
+                    catch(std::exception &e) {
+                        fmt::println(std::cerr, "Exception reading tstretch value: {}", e.what());
+                    }
+                    return std::numeric_limits<float>::quiet_NaN();
+                });
+                if(!(stretchval > 0.0f) || endpos != optarg.size())
+                    fmt::println(std::cerr, "Invalid tstretch value: {}", optarg);
+                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
+                    fmt::println(std::cerr, "EFX not supported for time stretching");
+                else
+                    TimeStretchFactor = stretchval;
+            }
+            continue;
+        }
+        if(argval == "-tune")
+        {
+            if(curarg+1 == args_end)
+                fmt::println(std::cerr, "Missing argument for -tune");
+            else
+            {
+                const auto optarg = *++curarg;
+
+                auto endpos = size_t{};
+                const auto tuneval = std::invoke([optarg, &endpos]
+                {
+                    try { return std::stof(std::string{optarg}, &endpos); }
+                    catch(std::exception &e) {
+                        fmt::println(std::cerr, "Exception reading tune value: {}", e.what());
+                    }
+                    return std::numeric_limits<float>::quiet_NaN();
+                });
+                auto const pitchtune = std::pow(2.0f, tuneval / 12.0f);
+                if(!std::isfinite(pitchtune) || endpos != optarg.size())
+                    fmt::println(std::cerr, "Invalid tune value: {}", optarg);
+                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
+                    fmt::println(std::cerr, "EFX not supported for pitch tuning");
+                else
+                    PitchTuneFactor = pitchtune;
+            }
+            continue;
+        }
         break;
     }
 
-    auto movState = std::unique_ptr<MovieState>{};
-    curarg = std::ranges::find_if(curarg, args.end(), [&movState](const std::string_view argval)
+    if(TimeStretchFactor != 1.0f || PitchTuneFactor != 1.0f)
+    {
+        /* AL_PITCH alone will speed up or slow down playback and alter the
+         * pitch (e.g. 2.0 will play twice as fast, 12 semitones higher).
+         * AL_EFFECT_PITCH_SHIFTER can be used to adjust the sound back to its
+         * original pitch while maintaining the speed change.
+         */
+        auto effect = ALuint{};
+        palGenEffects(1, &effect);
+        palEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_PITCH_SHIFTER);
+        if(auto const err = alGetError(); err != AL_NO_ERROR)
+        {
+            fmt::print(std::cerr, "Could not create the Pitch Shifter effect: {:#06x}\n", err);
+            TimeStretchFactor = 1.0f;
+        }
+        else
+        {
+            /* Calculate the tuning (in semitones and cents) to counteract the
+             * pitch change from AL_PITCH.
+             */
+            auto const pitch = PitchTuneFactor / TimeStretchFactor;
+            if(!(pitch >= 0.5f && pitch <= 2.0f))
+            {
+                fmt::println(std::cerr, "Pitch tuning out of range: {}", pitch);
+                TimeStretchFactor = 1.0f;
+            }
+            else
+            {
+                auto const tune = static_cast<int>(std::lround(std::log2(pitch) * 1200.0f));
+                auto const [course_tune, fine_tune] = std::invoke([tune]() -> std::pair<int, int>
+                {
+                    auto const course = tune / 100;
+                    auto const fine = tune % 100;
+                    /* Fine-tuning is limited to -50...+50, so adjust values as
+                     * needed (e.g. course=-5, fine=-90 -> course=-6, fine=10).
+                     */
+                    if(fine > 50)
+                        return {course+1, fine-100};
+                    if(fine < -50)
+                        return {course-1, fine+100};
+                    return {course, fine};
+                });
+                fmt::println("Speed factor: {} (pitch adj: {}; course tuning: {}, fine tuning: {})",
+                    TimeStretchFactor, pitch, course_tune, fine_tune);
+
+                palEffecti(effect, AL_PITCH_SHIFTER_COARSE_TUNE, std::clamp(course_tune, -12, +12));
+                palEffecti(effect, AL_PITCH_SHIFTER_FINE_TUNE, fine_tune);
+
+                palGenAuxiliaryEffectSlots(1, &AudioState::sPShiftSlot);
+                palAuxiliaryEffectSloti(AudioState::sPShiftSlot, AL_EFFECTSLOT_EFFECT,
+                    static_cast<ALint>(effect));
+            }
+        }
+        palDeleteEffects(1, &effect);
+    }
+
+    curarg = std::ranges::find_if(curarg, app.mArgs.end(), [&app](const std::string_view argval)
     {
         auto movie = std::make_unique<MovieState>(argval);
         if(!movie->prepare())
             return false;
-        movState = std::move(movie);
+        app.mMovieState = std::move(movie);
         return true;
     });
-    if(curarg == args.end())
+    if(curarg == app.mArgs.end())
     {
         fmt::println(std::cerr, "Could not start a video");
         return 1;
     }
     ++curarg;
-    movState->setTitle(screen);
+    app.mMovieState->setTitle(app.mWindow);
 
-    /* Default to going to the next movie at the end of one. */
-    enum class EomAction {
-        Next, Quit
-    } eom_action{EomAction::Next};
-    auto last_time = seconds::min();
     while(true)
     {
         auto event = SDL_Event{};
         auto have_event = SDL_WaitEventTimeout(&event, 10);
 
-        const auto cur_time = duration_cast<seconds>(movState->getMasterClock());
-        if(cur_time != last_time)
+        const auto cur_time = duration_cast<seconds>(app.mMovieState->getMasterClock());
+        if(cur_time != app.mLastTime)
         {
-            const auto end_time = duration_cast<seconds>(movState->getDuration());
+            const auto end_time = duration_cast<seconds>(app.mMovieState->getDuration());
             fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
             std::cout.flush();
-            last_time = cur_time;
+            app.mLastTime = cur_time;
         }
 
         auto force_redraw = false;
@@ -2333,13 +2493,13 @@ auto main(std::span<std::string_view> args) -> int
                 switch(event.key.key)
                 {
                 case SDLK_ESCAPE:
-                    movState->stop();
-                    eom_action = EomAction::Quit;
+                    app.mMovieState->stop();
+                    app.mEomAction = Application::EomAction::Quit;
                     break;
 
                 case SDLK_N:
-                    movState->stop();
-                    eom_action = EomAction::Next;
+                    app.mMovieState->stop();
+                    app.mEomAction = Application::EomAction::Next;
                     break;
 
                 default:
@@ -2353,51 +2513,41 @@ auto main(std::span<std::string_view> args) -> int
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
             case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
             case SDL_EVENT_RENDER_TARGETS_RESET:
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                SDL_RenderFillRect(renderer, nullptr);
+                SDL_SetRenderDrawColor(app.mRenderer, 0, 0, 0, 255);
+                SDL_RenderFillRect(app.mRenderer, nullptr);
                 force_redraw = true;
                 break;
 
             case SDL_EVENT_QUIT:
-                movState->stop();
-                eom_action = EomAction::Quit;
+                app.mMovieState->stop();
+                app.mEomAction = Application::EomAction::Quit;
                 break;
 
             case FF_MOVIE_DONE_EVENT:
                 fmt::println("");
-                last_time = seconds::min();
-                if(eom_action != EomAction::Quit)
+                app.mLastTime = seconds::min();
+                if(app.mEomAction != Application::EomAction::Quit)
                 {
-                    movState = nullptr;
-                    curarg = std::ranges::find_if(curarg, args.end(),
-                        [&movState](const std::string_view argval)
+                    app.mMovieState = nullptr;
+                    curarg = std::ranges::find_if(curarg, app.mArgs.end(),
+                        [&app](const std::string_view argval)
                     {
                         auto movie = std::make_unique<MovieState>(argval);
                         if(!movie->prepare())
                             return false;
-                        movState = std::move(movie);
+                        app.mMovieState = std::move(movie);
                         return true;
                     });
-                    if(curarg != args.end())
+                    if(curarg != app.mArgs.end())
                     {
                         ++curarg;
-                        movState->setTitle(screen);
+                        app.mMovieState->setTitle(app.mWindow);
                         break;
                     }
                 }
 
                 /* Nothing more to play. Shut everything down and quit. */
-                movState = nullptr;
-
-                almgr.close();
-
-                SDL_DestroyRenderer(renderer);
-                renderer = nullptr;
-                SDL_DestroyWindow(screen);
-                screen = nullptr;
-
-                SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-                exit(0);
+                return 0;
 
             default:
                 break;
@@ -2405,7 +2555,7 @@ auto main(std::span<std::string_view> args) -> int
             have_event = SDL_PollEvent(&event);
         }
 
-        movState->mVideo.updateVideo(screen, renderer, force_redraw);
+        app.mMovieState->mVideo.updateVideo(app.mWindow, app.mRenderer, force_redraw);
     }
 
     fmt::println(std::cerr, "SDL_WaitEvent error - {}", SDL_GetError());

@@ -16,10 +16,10 @@
 #include <span>
 #include <vector>
 
-#if HAVE_SSE_INTRINSICS
-#include <xmmintrin.h>
-#elif HAVE_NEON
+#if HAVE_NEON
 #include <arm_neon.h>
+#elif HAVE_SSE_INTRINSICS
+#include <xmmintrin.h>
 #endif
 
 #include "alcomplex.h"
@@ -148,6 +148,55 @@ struct ChanPosMap {
     std::array<float,3> pos;
 };
 
+/* TODO: LFE is not mixed to output. This will require each buffer channel to
+ * have its own output target since the main mixing buffer won't have an LFE
+ * channel (due to being B-Format).
+ */
+constexpr std::array MonoMap{
+    ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
+};
+constexpr std::array StereoMap{
+    ChanPosMap{FrontLeft,  std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight, std::array{ sin30, 0.0f, -cos30}},
+};
+constexpr std::array RearMap{
+    ChanPosMap{BackLeft,  std::array{-sin30, 0.0f, cos30}},
+    ChanPosMap{BackRight, std::array{ sin30, 0.0f, cos30}},
+};
+constexpr std::array QuadMap{
+    ChanPosMap{FrontLeft,  std::array{-sin45, 0.0f, -cos45}},
+    ChanPosMap{FrontRight, std::array{ sin45, 0.0f, -cos45}},
+    ChanPosMap{BackLeft,   std::array{-sin45, 0.0f,  cos45}},
+    ChanPosMap{BackRight,  std::array{ sin45, 0.0f,  cos45}},
+};
+constexpr std::array X51Map{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{SideLeft,    std::array{-sin110, 0.0f, -cos110}},
+    ChanPosMap{SideRight,   std::array{ sin110, 0.0f, -cos110}},
+};
+constexpr std::array X61Map{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{BackCenter,  std::array{ 0.0f, 0.0f, 1.0f} },
+    ChanPosMap{SideLeft,    std::array{-1.0f, 0.0f, 0.0f} },
+    ChanPosMap{SideRight,   std::array{ 1.0f, 0.0f, 0.0f} },
+};
+constexpr std::array X71Map{
+    ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
+    ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
+    ChanPosMap{LFE, {}},
+    ChanPosMap{BackLeft,    std::array{-sin30, 0.0f, cos30}},
+    ChanPosMap{BackRight,   std::array{ sin30, 0.0f, cos30}},
+    ChanPosMap{SideLeft,    std::array{ -1.0f, 0.0f,  0.0f}},
+    ChanPosMap{SideRight,   std::array{  1.0f, 0.0f,  0.0f}},
+};
+
 
 constexpr size_t ConvolveUpdateSize{256};
 constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
@@ -156,7 +205,20 @@ constexpr size_t ConvolveUpdateSamples{ConvolveUpdateSize / 2};
 void apply_fir(std::span<float> dst, std::span<const float> input,
     const std::span<const float,ConvolveUpdateSamples> filter)
 {
-#if HAVE_SSE_INTRINSICS
+#if HAVE_NEON
+    std::ranges::generate(dst, [&input,filter]
+    {
+        auto r4 = vdupq_n_f32(0.0f);
+        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
+            r4 = vmlaq_f32(r4, vld1q_f32(&input[j]), vld1q_f32(&filter[j]));
+        input = input.subspan(1);
+
+        r4 = vaddq_f32(r4, vrev64q_f32(r4));
+        return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
+    });
+
+#elif HAVE_SSE_INTRINSICS
+
     std::ranges::generate(dst, [&input,filter]
     {
         auto r4 = _mm_setzero_ps();
@@ -172,19 +234,6 @@ void apply_fir(std::span<float> dst, std::span<const float> input,
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
         return _mm_cvtss_f32(r4);
-    });
-
-#elif HAVE_NEON
-
-    std::ranges::generate(dst, [&input,filter]
-    {
-        auto r4 = vdupq_n_f32(0.0f);
-        for(size_t j{0};j < ConvolveUpdateSamples;j+=4)
-            r4 = vmlaq_f32(r4, vld1q_f32(&input[j]), vld1q_f32(&filter[j]));
-        input = input.subspan(1);
-
-        r4 = vaddq_f32(r4, vrev64q_f32(r4));
-        return vget_lane_f32(vadd_f32(vget_low_f32(r4), vget_high_f32(r4)), 0);
     });
 
 #else
@@ -205,7 +254,7 @@ struct ConvolutionState final : public EffectState {
     FmtChannels mChannels{};
     AmbiLayout mAmbiLayout{};
     AmbiScaling mAmbiScaling{};
-    u32 mAmbiOrder{};
+    unsigned mAmbiOrder{};
 
     size_t mFifoPos{0};
     alignas(16) std::array<float,ConvolveUpdateSamples*2> mInput{};
@@ -233,20 +282,21 @@ struct ConvolutionState final : public EffectState {
     ConvolutionState() = default;
     ~ConvolutionState() override = default;
 
-    void NormalMix(const std::span<FloatBufferLine> samplesOut, const size_t samplesToDo);
-    void UpsampleMix(const std::span<FloatBufferLine> samplesOut, const size_t samplesToDo);
-    void (ConvolutionState::*mMix)(const std::span<FloatBufferLine>,const size_t)
-    {&ConvolutionState::NormalMix};
+    void NormalMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo) noexcept NONBLOCKING;
+    void UpsampleMix(std::span<FloatBufferLine> samplesOut, size_t samplesToDo) noexcept
+        NONBLOCKING;
+    void (ConvolutionState::*mMix)(std::span<FloatBufferLine>, size_t) noexcept NONBLOCKING
+        {&ConvolutionState::NormalMix};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void ConvolutionState::NormalMix(const std::span<FloatBufferLine> samplesOut,
-    const size_t samplesToDo)
+    const size_t samplesToDo) noexcept NONBLOCKING
 {
     for(auto &chan : mChans)
         MixSamples(std::span{chan.mBuffer}.first(samplesToDo), samplesOut, chan.Current,
@@ -254,7 +304,7 @@ void ConvolutionState::NormalMix(const std::span<FloatBufferLine> samplesOut,
 }
 
 void ConvolutionState::UpsampleMix(const std::span<FloatBufferLine> samplesOut,
-    const size_t samplesToDo)
+    const size_t samplesToDo) noexcept NONBLOCKING
 {
     for(auto &chan : mChans)
     {
@@ -270,7 +320,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     using UhjDecoderType = UhjDecoder<512>;
     static constexpr auto DecoderPadding = UhjDecoderType::sInputPadding;
 
-    static constexpr auto MaxConvolveAmbiOrder = 1_u32;
+    static constexpr auto MaxConvolveAmbiOrder = 1u;
 
     if(!mFft)
         mFft = PFFFTSetup{ConvolveUpdateSize, PFFFT_REAL};
@@ -309,8 +359,8 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     auto resampler = PPhaseResampler{};
     if(device->mSampleRate != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->mSampleRate);
-    const auto resampledCount = static_cast<u32>(
-        (u64{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
+    const auto resampledCount = static_cast<unsigned>(
+        (u64::value_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
     const auto splitter = BandSplitter{device->mXOverFreq/static_cast<float>(device->mSampleRate)};
@@ -422,61 +472,12 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
 
 
 void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    /* TODO: LFE is not mixed to output. This will require each buffer channel
-     * to have its own output target since the main mixing buffer won't have an
-     * LFE channel (due to being B-Format).
-     */
-    static constexpr std::array MonoMap{
-        ChanPosMap{FrontCenter, std::array{0.0f, 0.0f, -1.0f}}
-    };
-    static constexpr std::array StereoMap{
-        ChanPosMap{FrontLeft,  std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight, std::array{ sin30, 0.0f, -cos30}},
-    };
-    static constexpr std::array RearMap{
-        ChanPosMap{BackLeft,  std::array{-sin30, 0.0f, cos30}},
-        ChanPosMap{BackRight, std::array{ sin30, 0.0f, cos30}},
-    };
-    static constexpr std::array QuadMap{
-        ChanPosMap{FrontLeft,  std::array{-sin45, 0.0f, -cos45}},
-        ChanPosMap{FrontRight, std::array{ sin45, 0.0f, -cos45}},
-        ChanPosMap{BackLeft,   std::array{-sin45, 0.0f,  cos45}},
-        ChanPosMap{BackRight,  std::array{ sin45, 0.0f,  cos45}},
-    };
-    static constexpr std::array X51Map{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{SideLeft,    std::array{-sin110, 0.0f, -cos110}},
-        ChanPosMap{SideRight,   std::array{ sin110, 0.0f, -cos110}},
-    };
-    static constexpr std::array X61Map{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{BackCenter,  std::array{ 0.0f, 0.0f, 1.0f} },
-        ChanPosMap{SideLeft,    std::array{-1.0f, 0.0f, 0.0f} },
-        ChanPosMap{SideRight,   std::array{ 1.0f, 0.0f, 0.0f} },
-    };
-    static constexpr std::array X71Map{
-        ChanPosMap{FrontLeft,   std::array{-sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontRight,  std::array{ sin30, 0.0f, -cos30}},
-        ChanPosMap{FrontCenter, std::array{  0.0f, 0.0f,  -1.0f}},
-        ChanPosMap{LFE, {}},
-        ChanPosMap{BackLeft,    std::array{-sin30, 0.0f, cos30}},
-        ChanPosMap{BackRight,   std::array{ sin30, 0.0f, cos30}},
-        ChanPosMap{SideLeft,    std::array{ -1.0f, 0.0f,  0.0f}},
-        ChanPosMap{SideRight,   std::array{  1.0f, 0.0f,  0.0f}},
-    };
-
     if(mNumConvolveSegs < 1) [[unlikely]]
         return;
 
-    auto &props = std::get<ConvolutionProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<ConvolutionProps>(*props_));
     mMix = &ConvolutionState::NormalMix;
 
     std::ranges::fill(mChans|std::views::transform(&ChannelData::Target)|std::views::join, 0.0f);
@@ -532,8 +533,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
         std::array<float,MaxAmbiChannels> coeffs{};
         for(size_t c{0u};c < mChans.size();++c)
         {
-            const size_t acn{index_map[c]};
-            const float scale{scales[acn]};
+            auto const acn = std::size_t{index_map[c].c_val};
+            auto const scale = scales[acn];
 
             std::ranges::transform(mixmatrix[acn], coeffs.begin(), [scale](const float in) -> float
             { return in * scale; });
@@ -621,6 +622,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
 
 void ConvolutionState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept NONBLOCKING
 {
     if(mNumConvolveSegs < 1) [[unlikely]]
         return;

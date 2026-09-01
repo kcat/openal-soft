@@ -8,24 +8,21 @@
 
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-auto GetHrtfResource(int name [[maybe_unused]]) noexcept -> std::span<const char>
+auto GetHrtfResource(int const name [[maybe_unused]]) noexcept -> std::span<const char>
 { return {}; }
 
 #else
 
 namespace {
 
-/* NOLINTNEXTLINE(*-avoid-c-arrays) */
-constexpr char hrtf_default[] = {
-#include "default_hrtf.txt"
-};
+#include "default_hrtf.hpp"
 
 } // namespace
 
-auto GetHrtfResource(int name) noexcept -> std::span<const char>
+auto GetHrtfResource(int const name) noexcept -> std::span<const char>
 {
     if(name == DefaultHrtfResourceID)
-        return hrtf_default;
+        return default_hrtf;
     return {};
 }
 #endif

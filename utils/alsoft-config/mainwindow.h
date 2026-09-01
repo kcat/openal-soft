@@ -61,6 +61,9 @@ public:
     explicit MainWindow(QWidget *parent=nullptr);
     ~MainWindow() override;
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private:
     std::unique_ptr<QValidator> mPeriodSizeValidator;
     std::unique_ptr<QValidator> mPeriodCountValidator;
@@ -73,8 +76,6 @@ private:
     std::unique_ptr<Ui::MainWindow> ui;
 
     bool mNeedsSave{};
-
-    void closeEvent(QCloseEvent *event) override;
 
     void selectDecoderFile(QLineEdit *line, const char *caption);
 

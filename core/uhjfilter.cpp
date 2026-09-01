@@ -4,24 +4,22 @@
 #include "uhjfilter.h"
 
 #include <algorithm>
-#include <cmath>
 #include <complex>
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
-#include <vector>
 
-#include "alcomplex.h"
-#include "alnumeric.h"
 #include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
-#include "phase_shifter.h"
-#include "vector.h"
 
+#if HAVE_CXXMODULES
+import phase_shifter;
+#else
+#include "phase_shifter.hpp"
+#endif
 
 /* UHJ is primarily defined in terms of classical B-Format. In particular,
  * classical B-Format defines the encoding gains for a given sound at
@@ -34,7 +32,7 @@
  *
  * That is, FuMa with an additional sqrt(2) scaling. The encoding and decoding
  * functions below work according to N3D scaling, which has the gains:
-*
+ *
  * W = 1
  * X = sqrt(3) * cos(a) * cos(e)
  * Y = sqrt(3) * sin(a) * cos(e)
@@ -81,9 +79,9 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  * segmented FFT'd response for the desired shift.
  */
 
-template<usize N>
+template<std::size_t N>
 void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
     static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
@@ -231,7 +229,7 @@ void UhjEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float
  * inputs.
  */
 void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);
@@ -299,8 +297,9 @@ void UhjEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float
  * Y = 0.974857725791*D - 0.82840763305*T + j(0.228577809582*S)
  * Z = 1.25332058063*Q
  */
-template<size_t N>
+template<std::size_t N>
 void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
+    noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
@@ -362,6 +361,7 @@ void UhjDecoder<N>::decode(const std::span<std::span<float>> samples, const bool
 }
 
 void UhjDecoderIIR::decode(const std::span<std::span<float>> samples, const bool updateState)
+    noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
@@ -446,8 +446,9 @@ void UhjDecoderIIR::decode(const std::span<std::span<float>> samples, const bool
  * X = 1.05631501729*S - j(0.934107402059*w*D)
  * Y = 2.06031664957*w*D + j(0.264078754323*S)
  */
-template<size_t N>
+template<std::size_t N>
 void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, const bool updateState)
+    noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
@@ -525,6 +526,7 @@ void UhjStereoDecoder<N>::decode(const std::span<std::span<float>> samples, cons
 }
 
 void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, const bool updateState)
+    noexcept NONBLOCKING
 {
     static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
 
@@ -602,10 +604,10 @@ void UhjStereoDecoderIIR::decode(const std::span<std::span<float>> samples, cons
 }
 
 
-template struct UhjEncoder<UhjLength256>;
-template struct UhjDecoder<UhjLength256>;
-template struct UhjStereoDecoder<UhjLength256>;
+template struct UhjEncoder<256>;
+template struct UhjDecoder<256>;
+template struct UhjStereoDecoder<256>;
 
-template struct UhjEncoder<UhjLength512>;
-template struct UhjDecoder<UhjLength512>;
-template struct UhjStereoDecoder<UhjLength512>;
+template struct UhjEncoder<512>;
+template struct UhjDecoder<512>;
+template struct UhjStereoDecoder<512>;

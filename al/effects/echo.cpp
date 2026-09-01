@@ -4,7 +4,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
 
@@ -13,6 +12,12 @@
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {
@@ -104,12 +109,17 @@ void EchoEffectHandler::GetParamfv(al::Context *context, const EchoProps &props,
 #if ALSOFT_EAX
 namespace {
 
-using EchoCommitter = EaxCommitter<EaxEchoCommitter>;
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxEchoException final : EaxException {
+    explicit EaxEchoException(std::string_view const message)
+        : EaxException{"EAX_ECHO_EFFECT", message}
+    { }
+};
 
 struct DelayValidator {
-    void operator()(f32 const flDelay) const
+    void operator()(float const flDelay) const
     {
-        eax_validate_range<EchoCommitter::Exception>(
+        eax_validate_range<EaxEchoException>(
             "Delay",
             flDelay,
             EAXECHO_MINDELAY,
@@ -118,9 +128,9 @@ struct DelayValidator {
 }; // DelayValidator
 
 struct LrDelayValidator {
-    void operator()(f32 const flLRDelay) const
+    void operator()(float const flLRDelay) const
     {
-        eax_validate_range<EchoCommitter::Exception>(
+        eax_validate_range<EaxEchoException>(
             "LR Delay",
             flLRDelay,
             EAXECHO_MINLRDELAY,
@@ -129,9 +139,9 @@ struct LrDelayValidator {
 }; // LrDelayValidator
 
 struct DampingValidator {
-    void operator()(f32 const flDamping) const
+    void operator()(float const flDamping) const
     {
-        eax_validate_range<EchoCommitter::Exception>(
+        eax_validate_range<EaxEchoException>(
             "Damping",
             flDamping,
             EAXECHO_MINDAMPING,
@@ -140,9 +150,9 @@ struct DampingValidator {
 }; // DampingValidator
 
 struct FeedbackValidator {
-    void operator()(f32 const flFeedback) const
+    void operator()(float const flFeedback) const
     {
-        eax_validate_range<EchoCommitter::Exception>(
+        eax_validate_range<EaxEchoException>(
             "Feedback",
             flFeedback,
             EAXECHO_MINFEEDBACK,
@@ -151,9 +161,9 @@ struct FeedbackValidator {
 }; // FeedbackValidator
 
 struct SpreadValidator {
-    void operator()(f32 const flSpread) const
+    void operator()(float const flSpread) const
     {
-        eax_validate_range<EchoCommitter::Exception>(
+        eax_validate_range<EaxEchoException>(
             "Spread",
             flSpread,
             EAXECHO_MINSPREAD,
@@ -174,16 +184,11 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EchoCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_ECHO_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EchoCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxEchoCommitter::fail(std::string_view const message)
+{ throw EaxEchoException{message}; }
 
+template<>
 auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXECHOPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -200,6 +205,7 @@ auto EaxEchoCommitter::commit(const EAXECHOPROPERTIES &props) const -> bool
     return true;
 }
 
+template<>
 void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXECHOPROPERTIES{
@@ -210,6 +216,7 @@ void EaxEchoCommitter::SetDefaults(EaxEffectProps &props)
         .flSpread = EAXECHO_DEFAULTSPREAD};
 }
 
+template<>
 void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -225,6 +232,7 @@ void EaxEchoCommitter::Get(const EaxCall &call, const EAXECHOPROPERTIES &props)
     }
 }
 
+template<>
 void EaxEchoCommitter::Set(const EaxCall &call, EAXECHOPROPERTIES &props)
 {
     switch(call.get_property_id())

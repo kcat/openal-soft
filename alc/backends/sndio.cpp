@@ -34,11 +34,16 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <sndio.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {
@@ -66,7 +71,7 @@ struct SndioPlayback final : BackendBase {
     void stop() override;
 
     sio_hdl *mSndHandle{nullptr};
-    u32 mFrameStep{};
+    unsigned mFrameStep{};
 
     std::vector<std::byte> mBuffer;
 
@@ -83,7 +88,7 @@ SndioPlayback::~SndioPlayback()
 
 void SndioPlayback::mixerProc()
 {
-    auto const frameStep = usize{mFrameStep};
+    auto const frameStep = std::size_t{mFrameStep};
     auto const frameSize = frameStep * mDevice->bytesFromFmt();
 
     SetRTPriority();
@@ -94,7 +99,7 @@ void SndioPlayback::mixerProc()
     {
         auto buffer = std::span{mBuffer};
 
-        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<u32>(buffer.size() / frameSize),
+        mDevice->renderSamples(buffer.data(), gsl::narrow_cast<unsigned>(buffer.size()/frameSize),
             frameStep);
         while(!buffer.empty() && !mKillNow.load(std::memory_order_acquire))
         {
@@ -231,7 +236,7 @@ auto SndioPlayback::reset() -> bool
     mDevice->mUpdateSize = par.round;
     mDevice->mBufferSize = par.bufsz + par.round;
 
-    mBuffer.resize(usize{mDevice->mUpdateSize} * par.pchan*par.bps);
+    mBuffer.resize(std::size_t{mDevice->mUpdateSize} * par.pchan*par.bps);
 
     return true;
 }
@@ -279,7 +284,7 @@ struct SndioCapture final : BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     sio_hdl *mSndHandle{nullptr};
 
@@ -448,8 +453,9 @@ void SndioCapture::open(std::string_view name)
             DevFmtTypeString(mDevice->FmtType), DevFmtChannelsString(mDevice->FmtChans),
             mDevice->mSampleRate, par.sig?'s':'u', par.bps*8, par.rchan, par.rate};
 
-    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, usize{par.bps}*par.rchan, false);
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(mRing->writeSpace());
+    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, std::size_t{par.bps}*par.rchan,
+        false);
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mRing->writeSpace());
     mDevice->mUpdateSize = par.round;
 
     setDefaultChannelOrder();
@@ -486,7 +492,7 @@ void SndioCapture::stop()
 void SndioCapture::captureSamples(std::span<std::byte> const outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto SndioCapture::availableSamples() -> usize
+auto SndioCapture::availableSamples() -> std::size_t
 { return mRing->readSpace(); }
 
 } // namespace

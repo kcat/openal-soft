@@ -18,7 +18,7 @@
 #include "AL/alext.h"
 
 #include "almalloc.h"
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/context.h"
 #include "core/voice.h"
 #include "gsl/gsl"
@@ -37,7 +37,7 @@ struct Context;
 struct Buffer;
 struct EffectSlot;
 } // namespace al
-enum class Resampler : u8;
+enum class Resampler : u8::value_t;
 
 enum class SourceStereo : bool {
     Normal = AL_NORMAL_SOFT,
@@ -46,7 +46,7 @@ enum class SourceStereo : bool {
 
 inline constexpr auto DefaultSendCount = 2_uz;
 
-inline constexpr auto InvalidVoiceIndex = std::numeric_limits<u32>::max();
+inline constexpr auto InvalidVoiceIndex = std::numeric_limits<unsigned>::max();
 
 inline constinit auto sBufferSubDataCompat = false;
 
@@ -58,6 +58,11 @@ public:
         : EaxException{"EAX_SOURCE", message}
     { }
 };
+
+struct EaxAlLowPassParam {
+    float gain;
+    float gain_hf;
+};
 #endif // ALSOFT_EAX
 
 namespace al {
@@ -67,26 +72,26 @@ struct BufferQueueItem : VoiceBufferItem {
 };
 
 struct Source {
-    f32 mPitch{1.0f};
-    f32 mGain{1.0f};
-    f32 mOuterGain{0.0f};
-    f32 mMinGain{0.0f};
-    f32 mMaxGain{1.0f};
-    f32 mInnerAngle{360.0f};
-    f32 mOuterAngle{360.0f};
-    f32 mRefDistance{1.0f};
-    f32 mMaxDistance{std::numeric_limits<f32>::max()};
-    f32 mRolloffFactor{1.0f};
+    float mPitch{1.0f};
+    float mGain{1.0f};
+    float mOuterGain{0.0f};
+    float mMinGain{0.0f};
+    float mMaxGain{1.0f};
+    float mInnerAngle{360.0f};
+    float mOuterAngle{360.0f};
+    float mRefDistance{1.0f};
+    float mMaxDistance{std::numeric_limits<float>::max()};
+    float mRolloffFactor{1.0f};
 #if ALSOFT_EAX
     // For EAXSOURCE_ROLLOFFFACTOR, which is distinct from and added to
     // AL_ROLLOFF_FACTOR
-    f32 mRolloffFactor2{0.0f};
+    float mRolloffFactor2{0.0f};
 #endif
-    std::array<f32, 3> mPosition{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mVelocity{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mDirection{{0.0f, 0.0f, 0.0f}};
-    std::array<f32, 3> mOrientAt{{0.0f, 0.0f, -1.0f}};
-    std::array<f32, 3> mOrientUp{{0.0f, 1.0f,  0.0f}};
+    std::array<float, 3> mPosition{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mVelocity{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mDirection{{0.0f, 0.0f, 0.0f}};
+    std::array<float, 3> mOrientAt{{0.0f, 0.0f, -1.0f}};
+    std::array<float, 3> mOrientUp{{0.0f, 1.0f,  0.0f}};
     bool mHeadRelative{false};
     bool mLooping{false};
     DistanceModel mDistanceModel{DistanceModel::Default};
@@ -99,39 +104,39 @@ struct Source {
     bool mDryGainHFAuto{true};
     bool mWetGainAuto{true};
     bool mWetGainHFAuto{true};
-    f32 mOuterGainHF{1.0f};
+    float mOuterGainHF{1.0f};
 
-    f32 mAirAbsorptionFactor{0.0f};
-    f32 mRoomRolloffFactor{0.0f};
-    f32 mDopplerFactor{1.0f};
+    float mAirAbsorptionFactor{0.0f};
+    float mRoomRolloffFactor{0.0f};
+    float mDopplerFactor{1.0f};
 
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    std::array<f32, 2> mStereoPan{{std::numbers::pi_v<f32>/6.0f,
-        -std::numbers::pi_v<f32>/6.0f}};
+    std::array<float, 2> mStereoPan{{std::numbers::pi_v<float>/6.0f,
+        -std::numbers::pi_v<float>/6.0f}};
 
-    f32 mRadius{0.0f};
-    f32 mEnhWidth{0.593f};
-    f32 mPan{0.0f};
+    float mRadius{0.0f};
+    float mEnhWidth{0.46f};
+    float mPan{0.0f};
 
     /** Direct filter and auxiliary send info. */
     struct DirectData {
-        f32 mGain{};
-        f32 mGainHF{};
-        f32 mHFReference{};
-        f32 mGainLF{};
-        f32 mLFReference{};
+        float mGain{};
+        float mGainHF{};
+        float mHFReference{};
+        float mGainLF{};
+        float mLFReference{};
     };
     DirectData mDirect;
 
     struct SendData {
         intrusive_ptr<EffectSlot> mSlot;
-        f32 mGain{};
-        f32 mGainHF{};
-        f32 mHFReference{};
-        f32 mGainLF{};
-        f32 mLFReference{};
+        float mGain{};
+        float mGainHF{};
+        float mHFReference{};
+        float mGainLF{};
+        float mLFReference{};
     };
     std::array<SendData, MaxSendCount> mSend;
 
@@ -139,7 +144,7 @@ struct Source {
      * Last user-specified offset, and the offset type (bytes, samples, or
      * seconds).
      */
-    f64 mOffset{0.0};
+    double mOffset{0.0};
     ALenum mOffsetType{AL_NONE};
 
     /** Source type (static, streaming, or undetermined) */
@@ -156,10 +161,10 @@ struct Source {
     /* Index into the context's Voices array. Lazily updated, only checked and
      * reset when looking up the voice.
      */
-    u32 mVoiceIdx{InvalidVoiceIndex};
+    unsigned mVoiceIdx{InvalidVoiceIndex};
 
     /** Self ID */
-    u32 mId{0};
+    ALuint mId{0};
 
 
     Source() noexcept;
@@ -168,7 +173,7 @@ struct Source {
     Source(const Source&) = delete;
     auto operator=(const Source&) -> Source& = delete;
 
-    static void SetName(gsl::not_null<Context*> context, u32 id, std::string_view name);
+    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 
@@ -179,15 +184,15 @@ public:
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static auto EaxLookupSource(gsl::not_null<Context*> al_context LIFETIMEBOUND, u32 source_id)
+    static auto EaxLookupSource(gsl::not_null<Context*> al_context LIFETIMEBOUND, ALuint source_id)
         noexcept -> Source*;
 
 private:
     using Exception = EaxSourceException;
 
-    static constexpr auto eax_max_speakers = 9_u32;
+    static constexpr auto eax_max_speakers = 9u;
 
-    using EaxFxSlotIds = std::array<const GUID*, EAX_MAX_FXSLOTS>;
+    using EaxFxSlotIds = std::array<AL_GUID const*, EAX_MAX_FXSLOTS>;
 
     static constexpr auto eax4_fx_slot_ids = EaxFxSlotIds{
         &EAXPROPERTYID_EAX40_FXSlot0,
@@ -261,7 +266,7 @@ private:
     // Source validators
 
     struct Eax1SourceReverbMixValidator {
-        void operator()(f32 const reverb_mix) const
+        void operator()(float const reverb_mix) const
         {
             if (reverb_mix == EAX_REVERBMIX_USEDISTANCE)
                 return;
@@ -319,7 +324,7 @@ private:
     };
 
     struct Eax2SourceRoomRolloffFactorValidator {
-        void operator()(f32 const flRoomRolloffFactor) const
+        void operator()(float const flRoomRolloffFactor) const
         {
             eax_validate_range<Exception>(
                 "Room Rolloff Factor",
@@ -341,7 +346,7 @@ private:
     };
 
     struct Eax2SourceObstructionLfRatioValidator {
-        void operator()(f32 const flObstructionLFRatio) const
+        void operator()(float const flObstructionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Obstruction LF Ratio",
@@ -363,7 +368,7 @@ private:
     };
 
     struct Eax2SourceOcclusionLfRatioValidator {
-        void operator()(f32 const flOcclusionLFRatio) const
+        void operator()(float const flOcclusionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion LF Ratio",
@@ -374,7 +379,7 @@ private:
     };
 
     struct Eax2SourceOcclusionRoomRatioValidator {
-        void operator()(f32 const flOcclusionRoomRatio) const
+        void operator()(float const flOcclusionRoomRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion Room Ratio",
@@ -396,7 +401,7 @@ private:
     };
 
     struct Eax2SourceAirAbsorptionFactorValidator {
-        void operator()(f32 const flAirAbsorptionFactor) const
+        void operator()(float const flAirAbsorptionFactor) const
         {
             eax_validate_range<Exception>(
                 "Air Absorption Factor",
@@ -418,7 +423,7 @@ private:
     };
 
     struct Eax3SourceOcclusionDirectRatioValidator {
-        void operator()(f32 const flOcclusionDirectRatio) const
+        void operator()(float const flOcclusionDirectRatio) const
         {
             eax_validate_range<Exception>(
                 "Occlusion Direct Ratio",
@@ -440,7 +445,7 @@ private:
     };
 
     struct Eax3SourceExclusionLfRatioValidator {
-        void operator()(f32 const flExclusionLFRatio) const
+        void operator()(float const flExclusionLFRatio) const
         {
             eax_validate_range<Exception>(
                 "Exclusion LF Ratio",
@@ -451,7 +456,7 @@ private:
     };
 
     struct Eax3SourceDopplerFactorValidator {
-        void operator()(f32 const flDopplerFactor) const
+        void operator()(float const flDopplerFactor) const
         {
             eax_validate_range<Exception>(
                 "Doppler Factor",
@@ -462,7 +467,7 @@ private:
     };
 
     struct Eax3SourceRolloffFactorValidator {
-        void operator()(f32 const flRolloffFactor) const
+        void operator()(float const flRolloffFactor) const
         {
             eax_validate_range<Exception>(
                 "Rolloff Factor",
@@ -473,7 +478,7 @@ private:
     };
 
     struct Eax5SourceMacroFXFactorValidator {
-        void operator()(f32 const flMacroFXFactor) const
+        void operator()(float const flMacroFXFactor) const
         {
             eax_validate_range<Exception>(
                 "Macro FX Factor",
@@ -611,7 +616,7 @@ private:
     // Send validators
 
     struct Eax4SendReceivingFxSlotIdValidator {
-        void operator()(const GUID& guidReceivingFXSlotID) const
+        void operator()(AL_GUID const& guidReceivingFXSlotID) const
         {
             if (guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
                 guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
@@ -624,7 +629,7 @@ private:
     };
 
     struct Eax5SendReceivingFxSlotIdValidator {
-        void operator()(const GUID& guidReceivingFXSlotID) const
+        void operator()(AL_GUID const& guidReceivingFXSlotID) const
         {
             if (guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
                 guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
@@ -723,7 +728,7 @@ private:
     // Active FX slot ID validators
 
     struct Eax4ActiveFxSlotIdValidator {
-        void operator()(const GUID &guid) const
+        void operator()(AL_GUID const& guid) const
         {
             if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
                 && guid != EAXPROPERTYID_EAX40_FXSlot0 && guid != EAXPROPERTYID_EAX40_FXSlot1
@@ -735,7 +740,7 @@ private:
     };
 
     struct Eax5ActiveFxSlotIdValidator {
-        void operator()(const GUID &guid) const
+        void operator()(AL_GUID const& guid) const
         {
             if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
                 && guid != EAXPROPERTYID_EAX50_FXSlot0 && guid != EAXPROPERTYID_EAX50_FXSlot1
@@ -792,7 +797,7 @@ private:
     // ----------------------------------------------------------------------
 
     struct Eax4SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID &guid) const
+        EaxFxSlotIndexValue operator()(AL_GUID const &guid) const
         {
             if(guid == EAXPROPERTYID_EAX40_FXSlot0)
                 return 0;
@@ -807,7 +812,7 @@ private:
     };
 
     struct Eax5SendIndexGetter {
-        EaxFxSlotIndexValue operator()(const GUID &guid) const
+        EaxFxSlotIndexValue operator()(AL_GUID const& guid) const
         {
             if(guid == EAXPROPERTYID_EAX50_FXSlot0)
                 return 0;
@@ -850,8 +855,8 @@ private:
     static void eax3_translate(const EAX30SOURCEPROPERTIES& src, Eax5Props& dst) noexcept;
     static void eax4_translate(const Eax4Props& src, Eax5Props& dst) noexcept;
 
-    static auto eax_calculate_dst_occlusion_mb(eax_long src_occlusion_mb, f32 path_ratio,
-        f32 lf_ratio) noexcept -> f32;
+    static auto eax_calculate_dst_occlusion_mb(eax_long src_occlusion_mb, float path_ratio,
+        float lf_ratio) noexcept -> float;
 
     [[nodiscard]] auto eax_create_direct_filter_param() const noexcept -> EaxAlLowPassParam;
 
@@ -901,7 +906,7 @@ private:
         }
     }
 
-    static void eax_get_active_fx_slot_id(const EaxCall &call, const std::span<const GUID> srcids);
+    static void eax_get_active_fx_slot_id(const EaxCall &call, std::span<AL_GUID const> srcids);
     static void eax1_get(const EaxCall &call, const EAXBUFFER_REVERBPROPERTIES &props);
     static void eax2_get(const EaxCall &call, const EAX20BUFFERPROPERTIES &props);
     static void eax3_get(const EaxCall &call, const EAX30SOURCEPROPERTIES &props);
@@ -937,7 +942,7 @@ private:
         dst.mExclusion = src.mExclusion;
     }
 
-    template<std::invocable<const GUID&> TIndexGetter, typename TSrcSend>
+    template<std::invocable<AL_GUID const&> TIndexGetter, typename TSrcSend>
     static void eax_defer_sends(const EaxCall &call, EaxSends &dst_sends,
         std::invocable<TSrcSend> auto&& validator)
     {
@@ -961,20 +966,20 @@ private:
         std::invocable<TSrcSend> auto validator)
     { eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
 
-    template<std::invocable<const GUID&> TValidator>
-    static void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    template<std::invocable<AL_GUID const&> TValidator>
+    static void eax_defer_active_fx_slot_id(const EaxCall &call, const std::span<AL_GUID> dst_ids)
     {
-        const auto src_ids = call.as_span<const GUID>(dst_ids.size());
+        const auto src_ids = call.as_span<AL_GUID const>(dst_ids.size());
         std::ranges::for_each(src_ids, TValidator{});
         std::ranges::uninitialized_copy(src_ids, dst_ids);
     }
 
-    static void eax4_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax4_defer_active_fx_slot_id(EaxCall const& call, std::span<AL_GUID> const dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
     }
 
-    static void eax5_defer_active_fx_slot_id(const EaxCall &call, const std::span<GUID> dst_ids)
+    static void eax5_defer_active_fx_slot_id(EaxCall const& call, std::span<AL_GUID> const dst_ids)
     {
         eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
     }
@@ -1007,7 +1012,7 @@ private:
     void eax_set(const EaxCall& call);
 
     // `alSource3i(source, AL_AUXILIARY_SEND_FILTER, ...)`
-    void eax_set_al_source_send(intrusive_ptr<EffectSlot> slot, usize sendidx,
+    void eax_set_al_source_send(intrusive_ptr<EffectSlot> slot, std::size_t sendidx,
         EaxAlLowPassParam const &filter);
 
     void eax_commit_active_fx_slots();

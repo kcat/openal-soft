@@ -4,7 +4,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
 #include "gsl/gsl"
@@ -14,6 +13,12 @@
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {
@@ -142,12 +147,17 @@ void EqualizerEffectHandler::GetParamfv(al::Context *context, const EqualizerPro
 #if ALSOFT_EAX
 namespace {
 
-using EqualizerCommitter = EaxCommitter<EaxEqualizerCommitter>;
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxEqualizerException final : EaxException {
+    explicit EaxEqualizerException(std::string_view const message)
+        : EaxException{"EAX_EQUALIZER_EFFECT", message}
+    { }
+};
 
 struct LowGainValidator {
     void operator()(eax_long const lLowGain) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Low Gain",
             lLowGain,
             EAXEQUALIZER_MINLOWGAIN,
@@ -158,7 +168,7 @@ struct LowGainValidator {
 struct LowCutOffValidator {
     void operator()(float const flLowCutOff) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Low Cutoff",
             flLowCutOff,
             EAXEQUALIZER_MINLOWCUTOFF,
@@ -169,7 +179,7 @@ struct LowCutOffValidator {
 struct Mid1GainValidator {
     void operator()(eax_long const lMid1Gain) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid1 Gain",
             lMid1Gain,
             EAXEQUALIZER_MINMID1GAIN,
@@ -180,7 +190,7 @@ struct Mid1GainValidator {
 struct Mid1CenterValidator {
     void operator()(float const flMid1Center) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid1 Center",
             flMid1Center,
             EAXEQUALIZER_MINMID1CENTER,
@@ -191,7 +201,7 @@ struct Mid1CenterValidator {
 struct Mid1WidthValidator {
     void operator()(float const flMid1Width) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid1 Width",
             flMid1Width,
             EAXEQUALIZER_MINMID1WIDTH,
@@ -202,7 +212,7 @@ struct Mid1WidthValidator {
 struct Mid2GainValidator {
     void operator()(eax_long const lMid2Gain) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid2 Gain",
             lMid2Gain,
             EAXEQUALIZER_MINMID2GAIN,
@@ -213,7 +223,7 @@ struct Mid2GainValidator {
 struct Mid2CenterValidator {
     void operator()(float const flMid2Center) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid2 Center",
             flMid2Center,
             EAXEQUALIZER_MINMID2CENTER,
@@ -224,7 +234,7 @@ struct Mid2CenterValidator {
 struct Mid2WidthValidator {
     void operator()(float const flMid2Width) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "Mid2 Width",
             flMid2Width,
             EAXEQUALIZER_MINMID2WIDTH,
@@ -235,7 +245,7 @@ struct Mid2WidthValidator {
 struct HighGainValidator {
     void operator()(eax_long const lHighGain) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "High Gain",
             lHighGain,
             EAXEQUALIZER_MINHIGHGAIN,
@@ -246,7 +256,7 @@ struct HighGainValidator {
 struct HighCutOffValidator {
     void operator()(float const flHighCutOff) const
     {
-        eax_validate_range<EqualizerCommitter::Exception>(
+        eax_validate_range<EaxEqualizerException>(
             "High Cutoff",
             flHighCutOff,
             EAXEQUALIZER_MINHIGHCUTOFF,
@@ -272,17 +282,11 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct EqualizerCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message)
-        : EaxException{"EAX_EQUALIZER_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void EqualizerCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxEqualizerCommitter::fail(std::string_view const message)
+{ throw EaxEqualizerException{message}; }
 
+template<>
 auto EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXEQUALIZERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -304,6 +308,7 @@ auto EaxEqualizerCommitter::commit(const EAXEQUALIZERPROPERTIES &props) const ->
     return true;
 }
 
+template<>
 void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXEQUALIZERPROPERTIES{
@@ -319,6 +324,7 @@ void EaxEqualizerCommitter::SetDefaults(EaxEffectProps &props)
         .flHighCutOff = EAXEQUALIZER_DEFAULTHIGHCUTOFF};
 }
 
+template<>
 void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -339,6 +345,7 @@ void EaxEqualizerCommitter::Get(const EaxCall &call, const EAXEQUALIZERPROPERTIE
     }
 }
 
+template<>
 void EaxEqualizerCommitter::Set(const EaxCall &call, EAXEQUALIZERPROPERTIES &props)
 {
     switch(call.get_property_id())

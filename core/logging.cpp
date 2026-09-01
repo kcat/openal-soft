@@ -1,8 +1,7 @@
 
 #include "config.h"
 
-#include "logging.h"
-
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -11,8 +10,10 @@
 #include <string_view>
 #include <utility>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "filesystem.h"
 #include "fmt/std.h"
 #include "strutils.hpp"
 
@@ -21,6 +22,12 @@
 #include <windows.h>
 #elif defined(__ANDROID__)
 #include <android/log.h>
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
 #endif
 
 
@@ -36,7 +43,7 @@ using namespace std::string_view_literals;
 
 using lpvoid = void*;
 
-enum class LogState : u8 {
+enum class LogState : std::uint8_t {
     FirstRun,
     Ready,
     Disable

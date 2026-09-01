@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cerrno>
 #include <chrono>
 #include <cstring>
 #include <exception>
@@ -43,12 +42,17 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <alsa/asoundlib.h>
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {
@@ -518,7 +522,7 @@ void AlsaPlayback::mixerProc()
 
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
             auto *WritePtr = static_cast<char*>(areas->addr) + (offset * areas->step / 8);
-            mDevice->renderSamples(WritePtr, gsl::narrow_cast<u32>(frames), mFrameStep);
+            mDevice->renderSamples(WritePtr, gsl::narrow_cast<unsigned>(frames), mFrameStep);
 
             if(const auto commitres = snd_pcm_mmap_commit(mPcmHandle, offset, frames);
                 std::cmp_not_equal(commitres, frames))
@@ -582,7 +586,7 @@ void AlsaPlayback::mixerNoMMapProc()
         auto WritePtr = mBuffer.begin();
         avail = snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         const auto dlock = std::lock_guard{mMutex};
-        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<u32>(avail),
+        mDevice->renderSamples(std::to_address(WritePtr), gsl::narrow_cast<unsigned>(avail),
             mFrameStep);
         while(avail > 0)
         {
@@ -670,9 +674,9 @@ auto AlsaPlayback::reset() -> bool
     }
 
     auto allowmmap = GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true);
-    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * 1000000_u64
+    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * u64::value_t{1000000}
         / mDevice->mSampleRate);
-    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * 1000000_u64
+    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * u64::value_t{1000000}
         / mDevice->mSampleRate);
     auto rate = mDevice->mSampleRate;
 
@@ -730,7 +734,7 @@ auto AlsaPlayback::reset() -> bool
     }
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(mDevice->mDeviceName, "alsa", "allow-resampler", false)
-        || !mDevice->Flags.test(FrequencyRequest))
+        || !mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
     {
         if(snd_pcm_hw_params_set_rate_resample(mPcmHandle, hp.get(), 0) < 0)
             WARN("Failed to disable ALSA resampler");
@@ -766,8 +770,8 @@ auto AlsaPlayback::reset() -> bool
 #undef CHECK
     sp = nullptr;
 
-    mDevice->mBufferSize = gsl::narrow_cast<u32>(bufferSizeInFrames);
-    mDevice->mUpdateSize = gsl::narrow_cast<u32>(periodSizeInFrames);
+    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(bufferSizeInFrames);
+    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(periodSizeInFrames);
     mDevice->mSampleRate = rate;
 
     setDefaultChannelOrder();
@@ -793,7 +797,7 @@ void AlsaPlayback::start()
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
         auto const datalen = snd_pcm_frames_to_bytes(mPcmHandle, mDevice->mUpdateSize);
-        mBuffer.resize(gsl::narrow<usize>(datalen));
+        mBuffer.resize(gsl::narrow<std::size_t>(datalen));
         thread_func = &AlsaPlayback::mixerNoMMapProc;
     }
     else
@@ -850,7 +854,7 @@ struct AlsaCapture final : public BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
     auto getClockLatency() -> ClockLatency override;
 
     snd_pcm_t *mPcmHandle{nullptr};
@@ -985,7 +989,7 @@ void AlsaCapture::stop()
          */
         auto const savail = al::saturate_cast<snd_pcm_sframes_t>(avail);
         auto const numbytes = snd_pcm_frames_to_bytes(mPcmHandle, savail);
-        auto temp = std::vector<std::byte>(al::saturate_cast<usize>(numbytes));
+        auto temp = std::vector<std::byte>(al::saturate_cast<std::size_t>(numbytes));
         captureSamples(temp);
         mBuffer = std::move(temp);
     }
@@ -1056,7 +1060,7 @@ void AlsaCapture::captureSamples(std::span<std::byte> outbuffer)
         std::ranges::fill(outbuffer, (mDevice->FmtType==DevFmtUByte)?std::byte{0x80}:std::byte{0});
 }
 
-auto AlsaCapture::availableSamples() -> usize
+auto AlsaCapture::availableSamples() -> std::size_t
 {
     auto avail = snd_pcm_sframes_t{0};
     if(mDevice->Connected.load(std::memory_order_acquire) && mDoCapture)
@@ -1085,7 +1089,7 @@ auto AlsaCapture::availableSamples() -> usize
         avail = std::max<snd_pcm_sframes_t>(avail, 0);
         avail += snd_pcm_bytes_to_frames(mPcmHandle, std::ssize(mBuffer));
         mLastAvail = std::max(mLastAvail, avail);
-        return gsl::narrow_cast<usize>(mLastAvail);
+        return gsl::narrow_cast<std::size_t>(mLastAvail);
     }
 
     while(avail > 0)
@@ -1171,21 +1175,19 @@ auto AlsaBackendFactory::init() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, gsl::czstring const name) -> bool
+        static constexpr auto load_sym = []<typename T>(T *&func, gsl::czstring const name) -> bool
         {
-            using func_t = std::remove_reference_t<decltype(func)>;
-            auto const funcresult = GetSymbol(alsa_handle, name);
+            auto const funcresult = GetSymbolAddress<T>(alsa_handle, name);
             if(!funcresult)
             {
-                WARN("Failed to load function {}: {}", name, funcresult.error());
+                WARN("Failed to load symbol {}: {}", name, funcresult.error());
                 return false;
             }
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<func_t>(funcresult.value());
+            func = funcresult.value();
             return true;
         };
         auto ok = true;
-#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+#define LOAD_FUNC(f) ok &= load_sym(p##f, #f)
         ALSA_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
         if(!ok)

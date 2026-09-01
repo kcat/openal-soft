@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <complex>
+#include <cstddef>
 #include <numbers>
 #include <ranges>
 #include <vector>
@@ -11,7 +12,6 @@
 #include "alcomplex.h"
 #include "altypes.hpp"
 #include "gsl/gsl"
-#include "phase_shifter.h"
 #include "pffft.h"
 #include "vector.h"
 
@@ -39,7 +39,7 @@
  * being applied in the frequency domain, so these "overflow" samples need to
  * be accounted for.
  */
-template<usize FilterSize>
+template<std::size_t FilterSize>
 struct SegmentedFilter {
     static constexpr auto sFftLength = 256_uz;
     static constexpr auto sSampleLength = sFftLength / 2_uz;
@@ -48,33 +48,38 @@ struct SegmentedFilter {
     static_assert((FilterSize % sSampleLength) == 0);
 
     PFFFTSetup mFft;
-    alignas(16) std::array<f32, sFftLength*sNumSegments> mFilterData;
+    alignas(16) std::array<float, sFftLength*sNumSegments> mFilterData;
 
     SegmentedFilter() noexcept : mFft{sFftLength, PFFFT_REAL}
     {
+        static constexpr auto FilterHalfSize = unsigned{FilterSize/2};
+
         /* To set up the filter, we first need to generate the desired
-         * response (not reversed).
+         * response.
          */
         auto tmpBuffer = std::vector(FilterSize, 0.0);
-        for(const auto i : std::views::iota(0_uz, FilterSize/2))
+        for(const auto i : std::views::iota(0_uz, FilterHalfSize))
         {
-            const auto k = int{FilterSize/2} - gsl::narrow_cast<int>(i*2 + 1);
+            const auto k = int{FilterHalfSize} - gsl::narrow_cast<int>(i*2 + 1);
 
-            const auto w = 2.0*std::numbers::pi/f64{FilterSize}
-                * gsl::narrow_cast<f64>(i*2 + 1);
+            /* Calculate the Blackman-Nuttall window value for this
+             * coefficient.
+             */
+            const auto w = 2.0*std::numbers::pi/double{FilterHalfSize-1}
+                * gsl::narrow_cast<double>(i);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = std::numbers::pi * gsl::narrow_cast<f64>(k);
-            tmpBuffer[i*2 + 1] = window * (1.0-std::cos(pk)) / pk;
+            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
+            tmpBuffer[i*2 + 1] = window * 2.0 / pk;
         }
 
         /* The response is split into segments that are converted to the
          * frequency domain, each on their own (0 stuffed).
          */
-        using complex_d = std::complex<f64>;
+        using complex_d = std::complex<double>;
         auto fftBuffer = std::vector<complex_d>(sFftLength);
-        auto fftTmp = al::vector<f32, 16>(sFftLength);
+        auto fftTmp = al::vector<float, 16>(sFftLength);
         auto filter = mFilterData.begin();
         for(const auto s : std::views::iota(0_uz, sNumSegments))
         {
@@ -88,9 +93,9 @@ struct SegmentedFilter {
              */
             for(const auto i : std::views::iota(0_uz, sSampleLength))
             {
-                fftTmp[i*2 + 0] = gsl::narrow_cast<f32>(fftBuffer[i].real()) / f32{sFftLength};
-                fftTmp[i*2 + 1] = gsl::narrow_cast<f32>((i==0) ? fftBuffer[sSampleLength].real()
-                    : fftBuffer[i].imag()) / f32{sFftLength};
+                fftTmp[i*2 + 0] = gsl::narrow_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = gsl::narrow_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
+                    : fftBuffer[i].imag()) / float{sFftLength};
             }
             mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);
             std::advance(filter, sFftLength);
@@ -98,10 +103,7 @@ struct SegmentedFilter {
     }
 };
 
-template<usize N>
-inline const SegmentedFilter<N> gSegmentedFilter;
-
-template<usize N>
-inline const PhaseShifterT<N> gPShifter;
+template<std::size_t N> inline
+auto const gSegmentedFilter = SegmentedFilter<N>{};
 
 #endif /* CORE_ALLPASS_CONV_HPP */

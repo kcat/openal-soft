@@ -21,21 +21,29 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alc/device.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
 #include "core/except.h"
-#include "core/logging.h"
 #include "core/voice.h"
 #include "direct_defs.h"
 #include "effect.h"
 #include "filter.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "source.h"
+
+#if HAVE_CXXMODULES
+import alc.context;
+import format.types;
+import gsl;
+import logging;
+#else
+#include "alc/context.hpp"
+#include "alformattypes.hpp"
+#include "core/logging.h"
+#include "gsl/gsl"
+#endif
 
 
 namespace {
@@ -48,7 +56,7 @@ template<typename T, T ...Vals>
 constexpr auto make_array_sequence(std::integer_sequence<T, Vals...>)
 { return std::array<T,sizeof...(Vals)>{Vals...}; }
 
-template<typename T, size_t N>
+template<typename T, T N>
 constexpr auto make_array_sequence()
 { return make_array_sequence(std::make_integer_sequence<T,N>{}); }
 
@@ -185,7 +193,7 @@ constexpr auto GetDebugSeverityName(DebugSeverity severity) noexcept -> std::str
 }
 
 
-void alDebugMessageCallbackEXT(gsl::not_null<al::Context*> context, ALDEBUGPROCEXT callback,
+void alDebugMessageCallbackEXT_(gsl::not_null<al::Context*> context, ALDEBUGPROCEXT callback,
     void *userParam) noexcept
 {
     auto debuglock = std::lock_guard{context->mDebugCbLock};
@@ -194,7 +202,7 @@ void alDebugMessageCallbackEXT(gsl::not_null<al::Context*> context, ALDEBUGPROCE
 }
 
 
-void alDebugMessageInsertEXT(gsl::not_null<al::Context*> context, ALenum source, ALenum type,
+void alDebugMessageInsertEXT_(gsl::not_null<al::Context*> context, ALenum source, ALenum type,
     ALuint id, ALenum severity, ALsizei length, const ALchar *message) noexcept
 try {
     if(!context->mContextFlags.test(ContextFlags::DebugBit))
@@ -204,7 +212,7 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Null message pointer");
 
     const auto msgview = (length < 0) ? std::string_view{message}
-        : std::string_view{message, gsl::narrow_cast<usize>(length)};
+        : std::string_view{message, gsl::narrow<std::size_t>(length)};
     if(msgview.size() >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", msgview.size(),
             MaxDebugMessageLength);
@@ -234,7 +242,7 @@ catch(std::exception &e) {
 }
 
 
-void alDebugMessageControlEXT(gsl::not_null<al::Context*> context, ALenum source, ALenum type,
+void alDebugMessageControlEXT_(gsl::not_null<al::Context*> context, ALenum source, ALenum type,
     ALenum severity, ALsizei count, const ALuint *ids, ALboolean enable) noexcept
 try {
     if(count > 0)
@@ -256,7 +264,7 @@ try {
         context->throw_error(AL_INVALID_ENUM, "Invalid debug enable {}", enable);
 
     static constexpr auto ElemCount = DebugSourceCount + DebugTypeCount + DebugSeverityCount;
-    static constexpr auto Values = make_array_sequence<u8,ElemCount>();
+    static constexpr auto Values = make_array_sequence<u8::value_t, ElemCount>();
 
     auto srcIdxs = std::span{Values}.subspan(DebugSourceBase,DebugSourceCount);
     if(source != AL_DONT_CARE_EXT)
@@ -291,12 +299,12 @@ try {
     auto &debug = context->mDebugGroups.back();
     if(count > 0)
     {
-        const auto filterbase = (1u<<srcIdxs[0]) | (1u<<typeIdxs[0]);
+        const auto filterbase = (1_u64<<srcIdxs[0]) | (1_u64<<typeIdxs[0]);
 
         std::ranges::for_each(std::views::counted(ids, count),
-            [enable,filterbase,&debug](const u32 id)
+            [enable,filterbase,&debug](ALuint const id)
         {
-            const auto filter = u64{filterbase} | (u64{id} << 32);
+            const auto filter = filterbase | (u64{id} << 32);
 
             const auto iter = std::ranges::lower_bound(debug.mIdFilters, filter);
             if(!enable && (iter == debug.mIdFilters.cend() || *iter != filter))
@@ -310,13 +318,13 @@ try {
         /* C++23 has std::views::cartesian(srcIdxs, typeIdxs, svrIdxs) for a
          * range that gives all value combinations of the given ranges.
          */
-        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](const u32 srcidx)
+        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](u8::value_t const srcidx)
         {
             const auto srcfilt = 1_u32<<srcidx;
-            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](const u32 typeidx)
+            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](u8::value_t const typeidx)
             {
                 const auto srctype = srcfilt | (1_u32<<typeidx);
-                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](const u32 svridx)
+                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](u8::value_t const svridx)
                 {
                     const auto filter = srctype | (1_u32<<svridx);
                     auto iter = std::ranges::lower_bound(debug.mFilters, filter);
@@ -336,7 +344,7 @@ catch(std::exception &e) {
 }
 
 
-void alPushDebugGroupEXT(gsl::not_null<al::Context*> context, ALenum source, ALuint id,
+void alPushDebugGroupEXT_(gsl::not_null<al::Context*> context, ALenum source, ALuint id,
     ALsizei length, const ALchar *message) noexcept
 try {
     if(length < 0)
@@ -363,7 +371,7 @@ try {
         context->throw_error(AL_STACK_OVERFLOW_EXT, "Pushing too many debug groups");
 
     context->mDebugGroups.emplace_back(*dsource, id,
-        std::string_view{message, gsl::narrow_cast<usize>(length)});
+        std::string_view{message, gsl::narrow<std::size_t>(length)});
     auto &oldback = *(context->mDebugGroups.end()-2);
     auto &newback = context->mDebugGroups.back();
 
@@ -380,7 +388,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alPopDebugGroupEXT(gsl::not_null<al::Context*> context) noexcept
+void alPopDebugGroupEXT_(gsl::not_null<al::Context*> context) noexcept
 try {
     auto debuglock = std::unique_lock{context->mDebugCbLock};
     if(context->mDebugGroups.size() <= 1)
@@ -403,9 +411,9 @@ catch(std::exception &e) {
 }
 
 
-auto alGetDebugMessageLogEXT(gsl::not_null<al::Context*> context, ALuint count, ALsizei logBufSize,
-    ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities, ALsizei *lengths,
-    ALchar *logBuf) noexcept -> ALuint
+auto alGetDebugMessageLogEXT_(gsl::not_null<al::Context*> context, ALuint count,
+    ALsizei logBufSize, ALenum *sources, ALenum *types, ALuint *ids, ALenum *severities,
+    ALsizei *lengths, ALchar *logBuf) noexcept -> ALuint
 try {
     if(logBuf && logBufSize < 0)
         context->throw_error(AL_INVALID_VALUE, "Negative debug log buffer size");
@@ -495,14 +503,14 @@ catch(std::exception &e) {
 }
 
 
-void alObjectLabelEXT(gsl::not_null<al::Context*> context, ALenum identifier, ALuint name,
+void alObjectLabelEXT_(gsl::not_null<al::Context*> context, ALenum identifier, ALuint name,
     ALsizei length, const ALchar *label) noexcept
 try {
     if(!label && length != 0)
         context->throw_error(AL_INVALID_VALUE, "Null label pointer");
 
     auto objname = (length < 0) ? std::string_view{label}
-        : std::string_view{label, gsl::narrow_cast<usize>(length)};
+        : std::string_view{label, gsl::narrow<std::size_t>(length)};
     if(objname.size() >= MaxObjectLabelLength)
         context->throw_error(AL_INVALID_VALUE, "Object label length too long ({} >= {})",
             objname.size(), MaxObjectLabelLength);
@@ -525,7 +533,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetObjectLabelEXT(gsl::not_null<al::Context*> context, ALenum identifier, ALuint name,
+void alGetObjectLabelEXT_(gsl::not_null<al::Context*> context, ALenum identifier, ALuint name,
     ALsizei bufSize, ALsizei *length, ALchar *label) noexcept
 try {
     if(bufSize < 0)
@@ -654,16 +662,16 @@ void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debu
 }
 
 
-FORCE_ALIGN DECL_FUNCEXT2(void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageCallback,EXT, ALDEBUGPROCEXT,callback, void*,userParam)
 
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageInsert,EXT, ALenum,source, ALenum,type, ALuint,id, ALenum,severity, ALsizei,length, const ALchar*,message)
 
-FORCE_ALIGN DECL_FUNCEXT6(void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
+DECL_FUNCEXT(FORCE_ALIGN, void, alDebugMessageControl,EXT, ALenum,source, ALenum,type, ALenum,severity, ALsizei,count, const ALuint*,ids, ALboolean,enable)
 
-FORCE_ALIGN DECL_FUNCEXT4(void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
-FORCE_ALIGN DECL_FUNCEXT(void, alPopDebugGroup,EXT)
+DECL_FUNCEXT(FORCE_ALIGN, void, alPushDebugGroup,EXT, ALenum,source, ALuint,id, ALsizei,length, const ALchar*,message)
+DECL_FUNCEXT(FORCE_ALIGN, void, alPopDebugGroup,EXT)
 
-FORCE_ALIGN DECL_FUNCEXT8(ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
+DECL_FUNCEXT(FORCE_ALIGN, ALuint, alGetDebugMessageLog,EXT, ALuint,count, ALsizei,logBufSize, ALenum*,sources, ALenum*,types, ALuint*,ids, ALenum*,severities, ALsizei*,lengths, ALchar*,logBuf)
 
-FORCE_ALIGN DECL_FUNCEXT4(void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
-FORCE_ALIGN DECL_FUNCEXT5(void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)
+DECL_FUNCEXT(FORCE_ALIGN, void, alObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,length, const ALchar*,label)
+DECL_FUNCEXT(FORCE_ALIGN, void, alGetObjectLabel,EXT, ALenum,identifier, ALuint,name, ALsizei,bufSize, ALsizei*,length, ALchar*,label)

@@ -1,15 +1,23 @@
 
+#include "config.h"
+
 #include <algorithm>
 
 #include "allpass_conv.hpp"
 #include "altypes.hpp"
 #include "tsmefilter.hpp"
 
+#if HAVE_CXXMODULES
+import phase_shifter;
+#else
+#include "phase_shifter.hpp"
+#endif
+
 namespace {
 
-template<usize A, typename T, usize N>
-constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span<T,N>
-{ return std::span<T,N>{std::assume_aligned<A>(s.data()), s.size()}; }
+template<std::size_t A, typename T, std::size_t N> constexpr
+auto assume_aligned_span(std::span<T, N> const s) noexcept -> std::span<T, N>
+{ return std::span<T, N>{std::assume_aligned<A>(s.data()), s.size()}; }
 
 } /* namespace */
 
@@ -24,11 +32,11 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * Flt = 0.985144642804*Fl - 0.169433780045*Fr
  * Frt = 0.985144642804*Fr - 0.169433780045*Fl
  *
- * Blt = -0.459812358448*Bu + j(0.888016100653*Bu) + 0.459812358448*Bd + j(0.888016100653*Bd)
- * Brt = -0.459812358448*Bd + j(0.888016100653*Bd) + 0.459812358448*Bu + j(0.888016100653*Bu)
+ * Blt = 0.888016100653*Bu + j(0.459812358448*Bu) + 0.888016100653*Bd + j(-0.459812358448*Bd)
+ * Brt = 0.888016100653*Bd + j(0.459812358448*Bd) + 0.888016100653*Bu + j(-0.459812358448*Bu)
  *
- * Left  = Flt + 0.707106781187*Blt
- * Right = Frt - 0.707106781187*Brt
+ * Left  = Flt + j(0.707106781187*Blt)
+ * Right = Frt - j(0.707106781187*Brt)
  *
  * where j is a wide-band +90 degree phase shift. Breaking this down, we can
  * calculate Flt, Frt, Blt, and Brt directly:
@@ -47,40 +55,34 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  *     = (0.985144642804*0.353553390592 + -0.169433780045*0.353553390592)*W + (0.985144642804*-0.288623887591 + -0.169433780045*0.288623887591)*Y + (0.985144642804*0.204196677392 + -0.169433780045*0.204196677392)*X
  *     = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X
  *
- * Blt = -0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + j(0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X))
- *       + 0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + j(0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X))
- *     = -0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + 0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X)
- *       + j(0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + 0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X))
- *     = -0.459812358448*0.353553390592*W + -0.459812358448*0.288623887591*Z + -0.459812358448*-0.204196677392*X + 0.459812358448*0.353553390592*W + 0.459812358448*-0.288623887591*Z + 0.459812358448*-0.204196677392*X
- *       + j(0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X)
- *     = -0.459812358448*0.353553390592*W + 0.459812358448*0.353553390592*W + -0.459812358448*0.288623887591*Z + 0.459812358448*-0.288623887591*Z + -0.459812358448*-0.204196677392*X + 0.459812358448*-0.204196677392*X
- *       + j(0.888016100653*0.353553390592*W + 0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*-0.204196677392*X)
- *     = (-0.459812358448*0.353553390592 + 0.459812358448*0.353553390592)*W + (-0.459812358448*0.288623887591 + 0.459812358448*-0.288623887591)*Z + (-0.459812358448*-0.204196677392 + 0.459812358448*-0.204196677392)*X
- *       + j((0.888016100653*0.353553390592 + 0.888016100653*0.353553390592)*W + (0.888016100653*0.288623887591 + 0.888016100653*-0.288623887591)*Z + (0.888016100653*-0.204196677392 + 0.888016100653*-0.204196677392)*X)
- *     = -0.265425660915*Z + j(0.627922206572*W + -0.362659874448*X)
+ * Blt = 0.888016100653*Bu + j(0.459812358448*Bu) + 0.888016100653*Bd + j(-0.459812358448*Bd)
+ *     = 0.888016100653*Bu + 0.888016100653*Bd + j(0.459812358448*Bu + -0.459812358448*Bd)
+ *     = 0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + 0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + j(0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + -0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X))
+ *     = 0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X + j(0.459812358448*0.353553390592*W + 0.459812358448*0.288623887591*Z + 0.459812358448*-0.204196677392*X + -0.459812358448*0.353553390592*W + -0.459812358448*-0.288623887591*Z + -0.459812358448*-0.204196677392*X)
+ *     = 0.888016100653*0.353553390592*W + 0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*-0.204196677392*X + j(0.459812358448*0.353553390592*W + -0.459812358448*0.353553390592*W + 0.459812358448*0.288623887591*Z + -0.459812358448*-0.288623887591*Z + 0.459812358448*-0.204196677392*X + -0.459812358448*-0.204196677392*X)
+ *     = (0.888016100653*0.353553390592 + 0.888016100653*0.353553390592)*W + (0.888016100653*0.288623887591 + 0.888016100653*-0.288623887591)*Z + (0.888016100653*-0.204196677392 + 0.888016100653*-0.204196677392)*X + j((0.459812358448*0.353553390592 + -0.459812358448*0.353553390592)*W + (0.459812358448*0.288623887591 + -0.459812358448*-0.288623887591)*Z + (0.459812358448*-0.204196677392 + -0.459812358448*-0.204196677392)*X)
+ *     = 0.627922206572*W + -0.362659874448*X + j(0.265425660915*Z)
  *
- * Brt = -0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + j(0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X))
- *       + 0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + j(0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X))
- *     = -0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + 0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X)
- *       + j(0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + 0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X))
- *     = -0.459812358448*0.353553390592*W + -0.459812358448*-0.288623887591*Z + -0.459812358448*-0.204196677392*X + 0.459812358448*0.353553390592*W + 0.459812358448*0.288623887591*Z + 0.459812358448*-0.204196677392*X
- *       + j(0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X)
- *     = -0.459812358448*0.353553390592*W + 0.459812358448*0.353553390592*W + -0.459812358448*-0.288623887591*Z + 0.459812358448*0.288623887591*Z + -0.459812358448*-0.204196677392*X + 0.459812358448*-0.204196677392*X
- *       + j(0.888016100653*0.353553390592*W + 0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*-0.204196677392*X)
- *     = (-0.459812358448*0.353553390592 + 0.459812358448*0.353553390592)*W + (-0.459812358448*-0.288623887591 + 0.459812358448*0.288623887591)*Z + (-0.459812358448*-0.204196677392 + 0.459812358448*-0.204196677392)*X
- *       + j((0.888016100653*0.353553390592 + 0.888016100653*0.353553390592)*W + (0.888016100653*-0.288623887591 + 0.888016100653*0.288623887591)*Z + (0.888016100653*-0.204196677392 + 0.888016100653*-0.204196677392)*X)
- *     = 0.265425660915*Z + j(0.627922206572*W + -0.362659874448*X)
+ * Brt = 0.888016100653*Bd + j(0.459812358448*Bd) + 0.888016100653*Bu + j(-0.459812358448*Bu)
+ *     = 0.888016100653*Bd + 0.888016100653*Bu + j(0.459812358448*Bd + -0.459812358448*Bu)
+ *     = 0.888016100653*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + 0.888016100653*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X) + j(0.459812358448*(0.353553390592*W + -0.288623887591*Z + -0.204196677392*X) + -0.459812358448*(0.353553390592*W + 0.288623887591*Z + -0.204196677392*X))
+ *     = 0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*0.353553390592*W + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X + j(0.459812358448*0.353553390592*W + 0.459812358448*-0.288623887591*Z + 0.459812358448*-0.204196677392*X + -0.459812358448*0.353553390592*W + -0.459812358448*0.288623887591*Z + -0.459812358448*-0.204196677392*X)
+ *     = 0.888016100653*0.353553390592*W + 0.888016100653*0.353553390592*W + 0.888016100653*-0.288623887591*Z + 0.888016100653*0.288623887591*Z + 0.888016100653*-0.204196677392*X + 0.888016100653*-0.204196677392*X + j(0.459812358448*0.353553390592*W + -0.459812358448*0.353553390592*W + 0.459812358448*-0.288623887591*Z + -0.459812358448*0.288623887591*Z + 0.459812358448*-0.204196677392*X + -0.459812358448*-0.204196677392*X)
+ *     = (0.888016100653*0.353553390592 + 0.888016100653*0.353553390592)*W + (0.888016100653*-0.288623887591 + 0.888016100653*0.288623887591)*Z + (0.888016100653*-0.204196677392 + 0.888016100653*-0.204196677392)*X + j((0.459812358448*0.353553390592 + -0.459812358448*0.353553390592)*W + (0.459812358448*-0.288623887591 + -0.459812358448*0.288623887591)*Z + (0.459812358448*-0.204196677392 + -0.459812358448*-0.204196677392)*X)
+ *     = 0.627922206572*W + -0.362659874448*X + j(-0.265425660915*Z)
  *
  * We can further break down the Left and Right results using the new inputs:
  *
- * Left  = Flt + 0.707106781187*Blt
- *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + 0.707106781187*(-0.265425660915*Z + j(0.627922206572*W + -0.362659874448*X))
- *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + 0.707106781187*-0.265425660915*Z + j(0.707106781187*0.627922206572*W + 0.707106781187*-0.362659874448*X)
+ * Left  = Flt + j(0.707106781187*Blt)
+ *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + 0.707106781187*j(0.627922206572*W + -0.362659874448*X + j(0.265425660915*Z))
+ *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + j(0.707106781187*0.627922206572*W + 0.707106781187*-0.362659874448*X + j(0.707106781187*0.265425660915*Z))
+ *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + -0.707106781187*0.265425660915*Z + j(0.707106781187*0.627922206572*W + 0.707106781187*-0.362659874448*X)
  *       = 0.288397341271*W + 0.333238912931*Y + 0.166565447888*X + -0.187684284734*Z + j(0.444008050325*W + -0.256439256487*X)
  *
- * Right = Frt + -0.707106781187*Brt
- *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + -0.707106781187*( 0.265425660915*Z + j(0.627922206572*W + -0.362659874448*X))
- *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + -0.707106781187*0.265425660915*Z + j(-0.707106781187*0.627922206572*W + -0.707106781187*-0.362659874448*X)
+ * Right = Frt + j(-0.707106781187*Brt)
+ *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + -0.707106781187*j(0.627922206572*W + -0.362659874448*X + j(-0.265425660915*Z))
+ *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + j(-0.707106781187*0.627922206572*W + -0.707106781187*-0.362659874448*X + j(-0.707106781187*-0.265425660915*Z))
+ *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + 0.707106781187*-0.265425660915*Z + j(-0.707106781187*0.627922206572*W + -0.707106781187*-0.362659874448*X)
  *       = 0.288397341271*W + -0.333238912931*Y + 0.166565447888*X + -0.187684284734*Z + j(-0.444008050325*W + 0.256439256487*X)
  *
  * To simplify this more, we can take the Sum and Difference signals:
@@ -112,18 +114,29 @@ constexpr auto assume_aligned_span(std::span<T,N> const s) noexcept -> std::span
  * Left  = (S + D)/2
  * Right = (S - D)/2
  *
+ * FIXME: There seems to be something incorrect in the initial encoding math,
+ * as some tests indicate the height (Z) is inverted from what it should be.
+ * That is, sounds above the horizon are encoded as if they're below the
+ * horizon, both compared to other encodings, as well as with decoder tests.
+ * I've tested and checked my transforms in different ways but get the same
+ * result, suggesting this is accurate to the original math. This should be
+ * investigated, but to fix it for now, we just negate Z:
+ *
+ * S = 0.576794682542*W + 0.333130895776*X + 0.375368569468*Z
+ * D = j(0.88801610065*W + -0.512878512974*X) + 0.666477825862*Y
+ *
  * Or to preapply the half scale:
  *
- * S = 0.288397341271*W + 0.166565447888*X + -0.187684284734*Z
+ * S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z
  * D = j(0.444008050325*W + -0.256439256487*X) + 0.333238912931*Y
  *
  * Left  = S + D
  * Right = S - D
  */
 
-template<usize N>
+template<std::size_t N>
 void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     static_assert(sFftLength == gSegmentedFilter<N>.sFftLength);
     static_assert(sSegmentSize == gSegmentedFilter<N>.sSampleLength);
@@ -140,11 +153,11 @@ void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<floa
     std::ranges::copy(zinput, std::next(mZ.begin(), sFilterDelay));
     std::ranges::copy(xinput, std::next(mX.begin(), sFilterDelay));
 
-    /* S = 0.288397341271*W + 0.166565447888*X + -0.187684284734*Z */
+    /* S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z */
     std::ranges::transform(mW | std::views::take(samplesToDo), mX, mS.begin(),
         [](const float w, const float x) { return 0.288397341271f*w + 0.166565447888f*x; });
     std::ranges::transform(mS | std::views::take(samplesToDo), mZ, mS.begin(),
-        [](const float wx, const float z) { return wx + -0.187684284734f*z; });
+        [](const float wx, const float z) { return wx + 0.187684284734f*z; });
 
     /* Precompute j(0.444008050325*W + -0.256439256487*X) and store in mD. */
     auto dstore = mD.begin();
@@ -265,7 +278,7 @@ void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<floa
  * details.
  */
 void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<float> RightOut,
-    const std::span<const std::span<const float>> InSamples)
+    const std::span<const std::span<const float>> InSamples) noexcept NONBLOCKING
 {
     const auto samplesToDo = InSamples[0].size();
     const auto winput = assume_aligned_span<16>(InSamples[0]);
@@ -273,11 +286,11 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
     const auto zinput = assume_aligned_span<16>(InSamples[2].first(samplesToDo));
     const auto xinput = assume_aligned_span<16>(InSamples[3].first(samplesToDo));
 
-    /* S = 0.288397341271*W + 0.166565447888*X - 0.187684284734*Z */
+    /* S = 0.288397341271*W + 0.166565447888*X + 0.187684284734*Z */
     std::ranges::transform(winput, xinput, mTemp.begin(),
         [](const float w, const float x) { return 0.288397341271f*w + 0.166565447888f*x; });
     std::ranges::transform(mTemp, zinput, mTemp.begin(),
-        [](const float wx, const float z) { return wx - 0.187684284734f*z; });
+        [](const float wx, const float z) { return wx + 0.187684284734f*z; });
     process(mFilter1WXZ, Filter1Coeff, std::span{mTemp}.first(samplesToDo), true,
         std::span{mS}.subspan(1));
     mS[0] = mDelayWXZ; mDelayWXZ = mS[samplesToDo];
@@ -315,6 +328,184 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
         right[i] = mS[i] - mD[i] + mTemp[i];
 }
 
-template struct TsmeEncoder<TsmeLength256>;
 
-template struct TsmeEncoder<TsmeLength512>;
+/* This Super Stereo decoder is copied from uhjfilter.cpp. The reason for a
+ * separate implementation is due to the phase shift not interacting well with
+ * the TSME encoder, resulting in severely reduced stereo separation. Reversing
+ * the phase shift fixes it to retain stereo separation, although causes
+ * reduced stereo separation with the UHJ encoder.
+ *
+ * For N3D output scaling, this becomes:
+ *
+ * S = Left + Right
+ * D = Left - Right
+ *
+ * W = 0.6098637*S - j(0.6896511*w*D)
+ * X = 1.05631501729*S + j(0.934107402059*w*D)
+ * Y = 2.06031664957*w*D - j(0.264078754323*S)
+ *
+ * where j is a +90 degree phase shift. w is a variable control for the
+ * resulting stereo width, with the range 0 <= w <= 0.7.
+ */
+template<std::size_t N>
+void TsmeStereoDecoder<N>::decode(std::span<std::span<float>> const samples,
+    bool const updateState) noexcept NONBLOCKING
+{
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
+
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+
+    {
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
+
+        std::ranges::transform(left, right, mS.begin(), std::plus{});
+
+        /* Pre-apply the width factor to the difference signal D. Smoothly
+         * interpolate when it changes.
+         */
+        const auto wtarget = mWidthControl;
+        const auto wcurrent = (mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth;
+        if(wtarget == wcurrent || !updateState)
+        {
+            std::ranges::transform(left, right, mD.begin(), [wcurrent](float l, float r) noexcept
+            { return (l-r) * wcurrent; });
+            mCurrentWidth = wcurrent;
+        }
+        else
+        {
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
+            auto fi = 0.0f;
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::ranges::transform(lfade, right, mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+            {
+                const float ret{(l-r) * (wcurrent + wstep*fi)};
+                fi += 1.0f;
+                return ret;
+            }).out;
+
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
+            std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
+            { return (l-r) * wtarget; });
+            mCurrentWidth = wtarget;
+        }
+    }
+
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
+
+    /* Precompute j*D and store in xoutput. */
+    auto tmpiter = std::ranges::copy(mDTHistory, mTemp.begin()).out;
+    std::ranges::copy(mD | std::views::take(samplesToDo+sInputPadding), tmpiter);
+    if(updateState) [[likely]]
+        std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mDTHistory.size()),
+            mDTHistory.begin());
+    gPShifter<N>.process(xoutput, mTemp);
+
+    /* W = 0.6098637*S - j(0.6896511*w*D) */
+    std::ranges::transform(mS, xoutput, woutput.begin(), [](const float s, const float jd) noexcept
+    { return 0.6098637f*s - 0.6896511f*jd; });
+    /* X = 1.05631501729*S + j(0.934107402059*w*D) */
+    std::ranges::transform(mS, xoutput, xoutput.begin(), [](const float s, const float jd) noexcept
+    { return 1.05631501729f*s + 0.934107402059f*jd; });
+
+    /* Precompute j*S and store in youtput. */
+    tmpiter = std::ranges::copy(mSHistory, mTemp.begin()).out;
+    std::ranges::copy(mS | std::views::take(samplesToDo+sInputPadding), tmpiter);
+    if(updateState) [[likely]]
+        std::ranges::copy(mTemp|std::views::drop(samplesToDo)|std::views::take(mSHistory.size()),
+            mSHistory.begin());
+    gPShifter<N>.process(youtput, mTemp);
+
+    /* Y = 2.06031664957*w*D - j(0.264078754323*S) */
+    std::ranges::transform(mD, youtput, youtput.begin(), [](const float d, const float js) noexcept
+    { return 2.06031664957f*d - 0.264078754323f*js; });
+}
+
+void TsmeStereoDecoderIIR::decode(std::span<std::span<float>> const samples,
+    bool const updateState) noexcept NONBLOCKING
+{
+    static_assert(sInputPadding <= sMaxPadding, "Filter padding is too large");
+
+    const auto samplesToDo = samples[0].size() - sInputPadding;
+
+    {
+        const auto left = assume_aligned_span<16>(samples[0]);
+        const auto right = assume_aligned_span<16>(samples[1]);
+
+        std::ranges::transform(left, right, mS.begin(), std::plus{});
+
+        /* Pre-apply the width factor to the difference signal D. Smoothly
+         * interpolate when it changes.
+         */
+        const auto wtarget = mWidthControl;
+        const auto wcurrent = (mCurrentWidth < 0.0f) ? wtarget : mCurrentWidth;
+        if(wtarget == wcurrent || !updateState)
+        {
+            std::ranges::transform(left, right, mD.begin(), [wcurrent](float l, float r) noexcept
+            { return (l-r) * wcurrent; });
+            mCurrentWidth = wcurrent;
+        }
+        else
+        {
+            const auto wstep = (wtarget - wcurrent) / gsl::narrow_cast<float>(samplesToDo);
+            auto fi = 0.0f;
+
+            const auto lfade = left.first(samplesToDo);
+            auto dstore = std::ranges::transform(lfade, right, mD.begin(),
+                [wcurrent,wstep,&fi](const float l, const float r) noexcept
+            {
+                const float ret{(l-r) * (wcurrent + wstep*fi)};
+                fi += 1.0f;
+                return ret;
+            }).out;
+
+            const auto lend = left.last(sInputPadding);
+            const auto rend = right.last(sInputPadding);
+            std::ranges::transform(lend, rend, dstore, [wtarget](float l, float r) noexcept
+            { return (l-r) * wtarget; });
+            mCurrentWidth = wtarget;
+        }
+    }
+
+    const auto woutput = assume_aligned_span<16>(samples[0].first(samplesToDo));
+    const auto xoutput = assume_aligned_span<16>(samples[1].first(samplesToDo));
+    const auto youtput = assume_aligned_span<16>(samples[2].first(samplesToDo));
+
+    /* Apply filter1 to S and store in mTemp. */
+    process(mFilter1S, Filter1Coeff, std::span{mS}.first(samplesToDo), updateState, mTemp);
+
+    /* Precompute j*D and store in xoutput. */
+    if(mFirstRun) processOne(mFilter2D, Filter2Coeff, mD[0]);
+    process(mFilter2D, Filter2Coeff, std::span{mD}.subspan(1, samplesToDo), updateState, xoutput);
+
+    /* W = 0.6098637*S - j(0.6896511*w*D) */
+    std::ranges::transform(mTemp, xoutput, woutput.begin(), [](float s, float jd) noexcept
+    { return 0.6098637f*s - 0.6896511f*jd; });
+    /* X = 1.05631501729*S + j(0.934107402059*w*D) */
+    std::ranges::transform(mTemp, xoutput, xoutput.begin(), [](float s, float jd) noexcept
+    { return 1.05631501729f*s + 0.934107402059f*jd; });
+
+    /* Precompute j*S and store in youtput. */
+    if(mFirstRun) processOne(mFilter2S, Filter2Coeff, mS[0]);
+    process(mFilter2S, Filter2Coeff, std::span{mS}.subspan(1, samplesToDo), updateState, youtput);
+
+    /* Apply filter1 to D and store in mTemp. */
+    process(mFilter1D, Filter1Coeff, std::span{mD}.first(samplesToDo), updateState, mTemp);
+
+    /* Y = 2.06031664957*w*D - j(0.264078754323*S) */
+    std::ranges::transform(mTemp, youtput, youtput.begin(), [](float d, float js) noexcept
+    { return 2.06031664957f*d - 0.264078754323f*js; });
+
+    mFirstRun = false;
+}
+
+
+template struct TsmeEncoder<256>;
+template struct TsmeStereoDecoder<256>;
+template struct TsmeEncoder<512>;
+template struct TsmeStereoDecoder<512>;

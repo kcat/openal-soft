@@ -233,6 +233,6 @@ inline void ERR(fmt::format_string<Args...> fmt, Args&& ...args)
 }
 
 
-void LoadDriverList();
+extern "C++" void LoadDriverList();
 
 } /* export */

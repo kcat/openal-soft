@@ -4,7 +4,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
 #include "gsl/gsl"
@@ -14,6 +13,12 @@
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {
@@ -104,12 +109,17 @@ void DistortionEffectHandler::GetParamfv(al::Context *context, const DistortionP
 #if ALSOFT_EAX
 namespace {
 
-using DistortionCommitter = EaxCommitter<EaxDistortionCommitter>;
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxDistortionException final : EaxException {
+    explicit EaxDistortionException(std::string_view const message)
+        : EaxException{"EAX_DISTORTION_EFFECT", message}
+    { }
+};
 
 struct EdgeValidator {
     void operator()(float const flEdge) const
     {
-        eax_validate_range<DistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Edge",
             flEdge,
             EAXDISTORTION_MINEDGE,
@@ -120,7 +130,7 @@ struct EdgeValidator {
 struct GainValidator {
     void operator()(eax_long const lGain) const
     {
-        eax_validate_range<DistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Gain",
             lGain,
             EAXDISTORTION_MINGAIN,
@@ -131,7 +141,7 @@ struct GainValidator {
 struct LowPassCutOffValidator {
     void operator()(float const flLowPassCutOff) const
     {
-        eax_validate_range<DistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "Low-pass Cut-off",
             flLowPassCutOff,
             EAXDISTORTION_MINLOWPASSCUTOFF,
@@ -142,7 +152,7 @@ struct LowPassCutOffValidator {
 struct EqCenterValidator {
     void operator()(float const flEQCenter) const
     {
-        eax_validate_range<DistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "EQ Center",
             flEQCenter,
             EAXDISTORTION_MINEQCENTER,
@@ -153,7 +163,7 @@ struct EqCenterValidator {
 struct EqBandwidthValidator {
     void operator()(float const flEQBandwidth) const
     {
-        eax_validate_range<DistortionCommitter::Exception>(
+        eax_validate_range<EaxDistortionException>(
             "EQ Bandwidth",
             flEQBandwidth,
             EAXDISTORTION_MINEQBANDWIDTH,
@@ -174,17 +184,11 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct DistortionCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message)
-        : EaxException{"EAX_DISTORTION_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void DistortionCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxDistortionCommitter::fail(std::string_view const message)
+{ throw EaxDistortionException{message}; }
 
+template<>
 auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXDISTORTIONPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -201,6 +205,7 @@ auto EaxDistortionCommitter::commit(const EAXDISTORTIONPROPERTIES &props) const 
     return true;
 }
 
+template<>
 void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXDISTORTIONPROPERTIES{
@@ -211,6 +216,7 @@ void EaxDistortionCommitter::SetDefaults(EaxEffectProps &props)
         .flEQBandwidth = EAXDISTORTION_DEFAULTEQBANDWIDTH};
 }
 
+template<>
 void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -226,6 +232,7 @@ void EaxDistortionCommitter::Get(const EaxCall &call, const EAXDISTORTIONPROPERT
     }
 }
 
+template<>
 void EaxDistortionCommitter::Set(const EaxCall &call, EAXDISTORTIONPROPERTIES &props)
 {
     switch(call.get_property_id())

@@ -23,7 +23,6 @@
 
 #include "config.h"
 
-#include <cstdio>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -31,7 +30,7 @@
 #include <string_view>
 #include <vector>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "fmt/base.h"
 #include "sofa-support.h"
 

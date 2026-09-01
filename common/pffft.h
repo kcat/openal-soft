@@ -84,6 +84,7 @@
 #include <memory>
 
 #include "almalloc.h"
+#include "opthelpers.h"
 
 
 /* opaque struct holding internal stuff (precomputed twiddle factors) this
@@ -125,7 +126,8 @@ PFFFTSetupPtr pffft_new_setup(unsigned int N, pffft_transform_t transform);
  *
  * The input and output parameters may alias.
  */
-void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction);
+void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
+    pffft_direction_t direction) noexcept NONBLOCKING;
 
 /**
  * Similar to pffft_transform, but handles the complex values in the usual form
@@ -137,7 +139,8 @@ void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output
  *
  * The input and output parameters may alias.
  */
-void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output, float *work, pffft_direction_t direction);
+void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
+    float *work, pffft_direction_t direction) noexcept NONBLOCKING;
 
 /**
  * Reorder the z-domain data. For PFFFT_FORWARD, it reorders from the internal
@@ -148,7 +151,8 @@ void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float
  *
  * The input and output parameters should not alias.
  */
-void pffft_zreorder(const PFFFT_Setup *setup, const float *input, float *output, pffft_direction_t direction);
+void pffft_zreorder(const PFFFT_Setup *setup, const float *input, float *output,
+    pffft_direction_t direction) noexcept NONBLOCKING;
 
 /**
  * Perform a multiplication of the z-domain data in dft_a and dft_b, and scale
@@ -161,7 +165,8 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *input, float *output,
  *
  * The dft_a, dft_b, and dft_ab parameters may alias.
  */
-void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab, float scaling);
+void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *setup, const float *dft_a,
+    const float *dft_b, float *dft_ab, float scaling) noexcept NONBLOCKING;
 
 /**
  * Perform a multiplication of the z-domain data in dft_a and dft_b, and
@@ -171,7 +176,8 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *setup, const float *dft
  *
  * The dft_a, dft_b, and dft_ab parameters may alias.
  */
-void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, const float *dft_b, float *dft_ab);
+void pffft_zconvolve_accumulate(const PFFFT_Setup *setup, const float *dft_a, const float *dft_b,
+    float *dft_ab) noexcept NONBLOCKING;
 
 
 struct PFFFTSetup {

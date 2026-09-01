@@ -1,11 +1,11 @@
 #ifndef EAX_EAX_CALL_INCLUDED
 #define EAX_EAX_CALL_INCLUDED
 
+#include <limits>
 #include <span>
 #include <string_view>
 
 #include "AL/al.h"
-#include "alnumeric.h"
 #include "api.h"
 #include "fx_slot_index.h"
 
@@ -27,7 +27,7 @@ class EaxCall {
 public:
     EaxCall(
         EaxCallType type,
-        const GUID& property_set_guid,
+        AL_GUID const& property_set_guid,
         ALuint property_id,
         ALuint property_source_id,
         ALvoid* property_buffer,
@@ -51,7 +51,8 @@ public:
     }
 
     template<typename TValue>
-    [[nodiscard]] auto as_span(size_t max_count=~0_uz) const -> std::span<TValue>
+    [[nodiscard]] auto as_span(size_t const max_count=std::numeric_limits<size_t>::max()) const
+        -> std::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -81,13 +82,5 @@ private:
     [[noreturn]] static void fail(const std::string_view message);
     [[noreturn]] static void fail_too_small();
 }; // EaxCall
-
-EaxCall create_eax_call(
-    EaxCallType type,
-    const GUID* property_set_id,
-    ALuint property_id,
-    ALuint property_source_id,
-    ALvoid* property_buffer,
-    ALuint property_size);
 
 #endif // !EAX_EAX_CALL_INCLUDED

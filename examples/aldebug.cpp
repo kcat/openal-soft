@@ -42,6 +42,7 @@
 #include "fmt/ostream.h"
 #include "fmt/std.h"
 
+#include "common/alhelpers.h"
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
@@ -110,17 +111,6 @@ constexpr auto GetDebugSeverityName(ALenum severity) noexcept -> std::string_vie
     return "<invalid severity>"sv;
 }
 
-auto alDebugMessageCallbackEXT = LPALDEBUGMESSAGECALLBACKEXT{};
-auto alDebugMessageInsertEXT = LPALDEBUGMESSAGEINSERTEXT{};
-auto alDebugMessageControlEXT = LPALDEBUGMESSAGECONTROLEXT{};
-auto alPushDebugGroupEXT = LPALPUSHDEBUGGROUPEXT{};
-auto alPopDebugGroupEXT = LPALPOPDEBUGGROUPEXT{};
-auto alGetDebugMessageLogEXT = LPALGETDEBUGMESSAGELOGEXT{};
-auto alObjectLabelEXT = LPALOBJECTLABELEXT{};
-auto alGetObjectLabelEXT = LPALGETOBJECTLABELEXT{};
-auto alGetPointerEXT = LPALGETPOINTEREXT{};
-auto alGetPointervEXT = LPALGETPOINTERVEXT{};
-
 
 auto main(std::span<std::string_view> args) -> int
 {
@@ -156,22 +146,6 @@ auto main(std::span<std::string_view> args) -> int
         return 1;
     }
 
-    /* Load the Debug API functions we're using. */
-#define LOAD_PROC(N) N = reinterpret_cast<decltype(N)>(alcGetProcAddress(device.get(), #N))
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast) */
-    LOAD_PROC(alDebugMessageCallbackEXT);
-    LOAD_PROC(alDebugMessageInsertEXT);
-    LOAD_PROC(alDebugMessageControlEXT);
-    LOAD_PROC(alPushDebugGroupEXT);
-    LOAD_PROC(alPopDebugGroupEXT);
-    LOAD_PROC(alGetDebugMessageLogEXT);
-    LOAD_PROC(alObjectLabelEXT);
-    LOAD_PROC(alGetObjectLabelEXT);
-    LOAD_PROC(alGetPointerEXT);
-    LOAD_PROC(alGetPointervEXT);
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
-#undef LOAD_PROC
-
     /* Create a debug context and set it as current. If -nodebug was specified,
      * create a non-debug context (to see how debug messages react).
      */
@@ -190,8 +164,10 @@ auto main(std::span<std::string_view> args) -> int
         return 1;
     }
 
+    LoadALExtensions();
+
     /* Enable low-severity debug messages, which are disabled by default. */
-    alDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
+    palDebugMessageControlEXT(AL_DONT_CARE_EXT, AL_DONT_CARE_EXT, AL_DEBUG_SEVERITY_LOW_EXT, 0,
         nullptr, AL_TRUE);
 
     fmt::println("Context flags: {:#010x}", as_unsigned(alGetInteger(AL_CONTEXT_FLAGS_EXT)));
@@ -230,7 +206,7 @@ auto main(std::span<std::string_view> args) -> int
         auto msglength = ALsizei{};
 
         /* Getting the message removes it from the log. */
-        const auto read = alGetDebugMessageLogEXT(1, maxloglength, &source, &type, &id, &severity,
+        const auto read = palGetDebugMessageLogEXT(1, maxloglength, &source, &type, &id, &severity,
             &msglength, message.data());
         if(read != 1)
         {
@@ -274,7 +250,7 @@ auto main(std::span<std::string_view> args) -> int
             "  Message: \"{}\"", GetDebugSourceName(source), GetDebugTypeName(type), id,
             GetDebugSeverityName(severity), msgstr);
     };
-    alDebugMessageCallbackEXT(debug_callback, nullptr);
+    palDebugMessageCallbackEXT(debug_callback, nullptr);
 
     if(const auto numlogs = alGetInteger(AL_DEBUG_LOGGED_MESSAGES_EXT))
         fmt::println(std::cerr, "{} left over logged message{}!", numlogs, (numlogs==1)?"":"s");
@@ -295,19 +271,19 @@ auto main(std::span<std::string_view> args) -> int
     fmt::println("");
 
     fmt::println("Pushing a debug group, making some invalid calls, and popping the debug group...");
-    alPushDebugGroupEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, 0, -1, "Error test group");
+    palPushDebugGroupEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, 0, -1, "Error test group");
     alSpeedOfSound(0.0f);
     /* Can't set the label of the null buffer. */
-    alObjectLabelEXT(AL_BUFFER, 0, -1, "The null buffer");
-    alPopDebugGroupEXT();
+    palObjectLabelEXT(AL_BUFFER, 0, -1, "The null buffer");
+    palPopDebugGroupEXT();
     fmt::println("");
 
     /* All done, insert a custom message and unset the callback. The context
      * and device will clean themselves up.
      */
-    alDebugMessageInsertEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, AL_DEBUG_TYPE_MARKER_EXT, 0,
+    palDebugMessageInsertEXT(AL_DEBUG_SOURCE_APPLICATION_EXT, AL_DEBUG_TYPE_MARKER_EXT, 0,
         AL_DEBUG_SEVERITY_NOTIFICATION_EXT, -1, "End of run, cleaning up");
-    alDebugMessageCallbackEXT(nullptr, nullptr);
+    palDebugMessageCallbackEXT(nullptr, nullptr);
 
     return 0;
 }

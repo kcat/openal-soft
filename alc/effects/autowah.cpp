@@ -67,7 +67,7 @@ struct AutowahState final : public EffectState {
     std::array<FilterParam,BufferLineSize> mEnv;
 
     struct ChannelData {
-        u32 mTargetChannel{InvalidChannelIndex};
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
         struct FilterHistory {
             float z1{}, z2{};
@@ -86,9 +86,9 @@ struct AutowahState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        const EffectTarget target) override;
-    void process(const size_t samplesToDo, const std::span<const FloatBufferLine> samplesIn,
-        const std::span<FloatBufferLine> samplesOut) override;
+        EffectTarget target) noexcept NONBLOCKING override;
+    void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 };
 
 void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
@@ -107,9 +107,9 @@ void AutowahState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<AutowahProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<AutowahProps>(*props_));
     auto const device = al::get_not_null(context->mDevice);
     auto const frequency = static_cast<float>(device->mSampleRate);
 
@@ -125,15 +125,16 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u32 const outchan, float const outgain)
+        [this](std::size_t const idx, u8 const outchan, float const outgain)
     {
-        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetChannel = outchan.c_val;
         mChans[idx].mTargetGain = outgain;
     });
 }
 
 void AutowahState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept NONBLOCKING
 {
     auto env_delay = mEnvDelay;
     std::ranges::transform(samplesIn[0] | std::views::take(samplesToDo), mEnv.begin(),

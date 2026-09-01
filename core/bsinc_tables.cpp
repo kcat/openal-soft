@@ -31,22 +31,22 @@ namespace {
  * starts with the largest value and accumulates successively smaller values,
  * compounding the rounding and precision error), but it's good enough.
  */
-template<typename T, typename U>
+template<al::weak_number T, al::strict_floating_point U>
 constexpr auto cyl_bessel_i(T nu, U x) -> U
 {
     if(nu != T{0})
         throw std::runtime_error{"cyl_bessel_i: nu != 0"};
 
     /* Start at k=1 since k=0 is trivial. */
-    const auto x2 = x/2.0;
-    auto term = 1.0;
-    auto sum = 1.0;
-    auto k = 1;
+    const auto x2 = x/2;
+    auto term = 1.0_f64;
+    auto sum = 1.0_f64;
+    auto k = 1_i32;
 
     /* Let the integration converge until the term of the sum is no longer
      * significant.
      */
-    auto last_sum = double{};
+    auto last_sum = f64{};
     do {
         const auto y = x2 / k;
         ++k;
@@ -54,7 +54,7 @@ constexpr auto cyl_bessel_i(T nu, U x) -> U
         term *= y * y;
         sum += term;
     } while(sum != last_sum);
-    return gsl::narrow_cast<U>(sum);
+    return sum.cast_to<U>();
 }
 
 /* This is the normalized cardinal sine (sinc) function.
@@ -62,12 +62,11 @@ constexpr auto cyl_bessel_i(T nu, U x) -> U
  *   sinc(x) = { 1,                   x = 0
  *             { sin(pi x) / (pi x),  otherwise.
  */
-constexpr auto Sinc(const double x) -> double
+constexpr auto Sinc(f64 const x) -> f64
 {
-    constexpr auto epsilon = std::numeric_limits<double>::epsilon();
-    if(!(x > epsilon || x < -epsilon))
-        return 1.0;
-    return std::sin(std::numbers::pi*x) / (std::numbers::pi*x);
+    if(!(x > f64::epsilon() || x < -f64::epsilon()))
+        return 1.0_f64;
+    return sin(std::numbers::pi*x) / (std::numbers::pi*x);
 }
 
 /* Calculate a Kaiser window from the given beta value and a normalized k
@@ -84,61 +83,62 @@ constexpr auto Sinc(const double x) -> double
  *
  *   k = 2 i / M - 1,   where 0 <= i <= M.
  */
-constexpr auto Kaiser(const double beta, const double k, const double besseli_0_beta) -> double
+constexpr auto Kaiser(f64 const beta, f64 const k, f64 const besseli_0_beta) -> f64
 {
     if(!(k >= -1.0 && k <= 1.0))
-        return 0.0;
-    return ::cyl_bessel_i(0, beta * std::sqrt(1.0 - k*k)) / besseli_0_beta;
+        return 0.0_f64;
+    return ::cyl_bessel_i(0, beta * sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.
  * Rejection is in dB.
  */
-constexpr auto CalcKaiserWidth(double const rejection, u32 const order) noexcept -> double
+constexpr auto CalcKaiserWidth(f64 const rejection, f64 const order) noexcept -> f64
 {
     if(rejection > 21.19)
-        return (rejection - 7.95) / (2.285 * std::numbers::pi*2.0 * order);
+        return (rejection-7.95) / (2.285 * std::numbers::pi*2.0 * order);
     /* This enforces a minimum rejection of just above 21.18dB */
-    return 5.79 / (std::numbers::pi*2.0 * order);
+    return 5.79 / (std::numbers::pi*2.0) / order;
 }
 
 /* Calculates the beta value of the Kaiser window. Rejection is in dB. */
-constexpr auto CalcKaiserBeta(const double rejection) -> double
+constexpr auto CalcKaiserBeta(f64 const rejection) -> f64
 {
     if(rejection > 50.0)
-        return 0.1102 * (rejection-8.7);
+        return 0.1102_f64 * (rejection-8.7_f64);
     if(rejection >= 21.0)
-        return (0.5842 * std::pow(rejection-21.0, 0.4)) + (0.07886 * (rejection-21.0));
-    return 0.0;
+        return 0.5842_f64*pow(rejection-21.0_f64, 0.4_f64) + 0.07886_f64*(rejection-21.0_f64);
+    return 0.0_f64;
 }
 
 
 struct BSincHeader {
-    double beta{};
-    double scaleBase{};
-    double scaleLimit{};
+    f64 beta{};
+    f64 scaleBase{};
+    f64 scaleLimit{};
 
-    std::array<double, BSincScaleCount> a{};
+    std::array<f64, BSincScaleCount> a{};
     std::array<u32, BSincScaleCount> m{};
-    u32 total_size{};
+    usize total_size{};
 
-    constexpr BSincHeader(u32 const rejection, u32 const order, u32 const maxScale) noexcept
-        : beta{CalcKaiserBeta(rejection)}, scaleBase{CalcKaiserWidth(rejection, order) / 2.0}
-        , scaleLimit{1.0 / maxScale}
+    consteval
+    BSincHeader(f64 const rejection, f64 const order, f64 const maxScale) noexcept
+        : beta{CalcKaiserBeta(rejection)}, scaleBase{CalcKaiserWidth(rejection, order) / 2.0_f64}
+        , scaleLimit{1.0_f64 / maxScale}
     {
         const auto base_a = (order+1.0) / 2.0;
-        for(const auto si : std::views::iota(0_u32, BSincScaleCount))
+        for(const auto si : std::views::iota(0u, BSincScaleCount))
         {
-            const auto scale = std::lerp(scaleBase, 1.0, (si+1u) / double{BSincScaleCount});
+            const auto scale = lerp(scaleBase, 1.0_f64, f64{si+1u} / f64{BSincScaleCount});
             a[si] = std::min(base_a/scale, base_a*maxScale);
             /* std::ceil() isn't constexpr until C++23, this should behave the
              * same.
              */
-            auto a_ = gsl::narrow_cast<u32>(a[si]);
-            a_ += (gsl::narrow_cast<double>(a_) != a[si]);
-            m[si] = a_ * 2u;
+            auto a_ = a[si].reinterpret_as<u32>();
+            a_ += (a_.cast_to<f64>() != a[si]) ? 1_u32 : 0_u32;
+            m[si] = a_ * 2_u32;
 
-            total_size += 4u * BSincPhaseCount * ((m[si]+3u) & ~3u);
+            total_size += 4_usize * BSincPhaseCount * ((m[si]+3_u32) & ~3_u32);
         }
     }
 };
@@ -157,14 +157,14 @@ constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
-    alignas(16) std::array<float, hdr.total_size> mTable{};
+    alignas(16) std::array<float, hdr.total_size.c_val> mTable{};
 
     BSincFilterArray() noexcept
     {
-        static constexpr auto BSincPointsMax = (hdr.m[0]+3u) & ~3u;
+        static constexpr auto BSincPointsMax = (hdr.m[0]+3u).c_val & ~3u;
         static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
-        using filter_type = std::array<std::array<double,BSincPointsMax>,BSincPhaseCount>;
+        using filter_type = std::array<std::array<f64, BSincPointsMax>, BSincPhaseCount>;
         auto filter = std::vector<filter_type>(BSincScaleCount);
 
         static constexpr auto besseli_0_beta = ::cyl_bessel_i(0, hdr.beta);
@@ -176,10 +176,10 @@ struct BSincFilterArray {
         {
             const auto a = hdr.a[si];
             const auto m = hdr.m[si];
-            const auto l = std::floor(m*0.5) - 1.0;
-            const auto o = size_t{BSincPointsMax-m} / 2u;
-            const auto scale = std::lerp(hdr.scaleBase, 1.0,
-                gsl::narrow_cast<double>(si+1u)/double{BSincScaleCount});
+            const auto l = floor(m*0.5_f64) - 1.0_f64;
+            const auto o = size_t{BSincPointsMax-m.c_val} / 2u;
+            const auto scale = lerp(hdr.scaleBase, 1.0_f64,
+                f64::from(si+1u)/f64{BSincScaleCount});
 
             /* Calculate an appropriate cutoff frequency. An explanation may be
              * in order here.
@@ -239,15 +239,15 @@ struct BSincFilterArray {
             const auto width = hdr.scaleBase * std::max(hdr.scaleLimit, scale);
             const auto cutoff2 = std::min(max_cutoff, (scale - width)*0.5) * 2.0;
 
-            for(const auto pi : std::views::iota(0_uz, BSincPhaseCount))
+            for(const auto pi : std::views::iota(0_u32, BSincPhaseCount))
             {
-                const auto phase = l + gsl::narrow_cast<double>(pi)/double{BSincPhaseCount};
+                const auto phase = l + pi.as<f64>()/BSincPhaseCount;
 
-                for(const auto i : std::views::iota(0_uz, m))
+                for(const auto i : std::views::iota(0_u32, m))
                 {
-                    const auto x = gsl::narrow_cast<double>(i) - phase;
-                    filter[si][pi][o+i] = Kaiser(hdr.beta, x/a, besseli_0_beta) * cutoff2 *
-                        Sinc(cutoff2*x);
+                    const auto x = i - phase;
+                    filter[si][pi.c_val][o+i.c_val] = Kaiser(hdr.beta, x/a, besseli_0_beta)
+                        * cutoff2 * Sinc(cutoff2*x);
                 }
             }
         }
@@ -255,7 +255,7 @@ struct BSincFilterArray {
         auto idx = 0_uz;
         for(const auto si : std::views::iota(0_uz, BSincScaleCount))
         {
-            const auto m = (hdr.m[si]+3_uz) & ~3_uz;
+            const auto m = (hdr.m[si].c_val+3_uz) & ~3_uz;
             const auto o = size_t{BSincPointsMax-m} / 2u;
 
             /* Write out each phase index's filter and phase delta for this
@@ -264,7 +264,7 @@ struct BSincFilterArray {
             for(const auto pi : std::views::iota(0_uz, BSincPhaseCount))
             {
                 for(const auto i : std::views::iota(0_uz, m))
-                    mTable[idx++] = gsl::narrow_cast<float>(filter[si][pi][o+i]);
+                    mTable[idx++] = f64{filter[si][pi][o+i]}.cast_to<f32>().c_val;
 
                 /* Linear interpolation between phases is simplified by pre-
                  * calculating the delta (b - a) in: x = a + f (b - a)
@@ -274,7 +274,7 @@ struct BSincFilterArray {
                     for(const auto i : std::views::iota(0_uz, m))
                     {
                         const auto phDelta = filter[si][pi+1][o+i] - filter[si][pi][o+i];
-                        mTable[idx++] = gsl::narrow_cast<float>(phDelta);
+                        mTable[idx++] = f64{phDelta}.cast_to<f32>().c_val;
                     }
                 }
                 else
@@ -284,11 +284,11 @@ struct BSincFilterArray {
                      * first delta targets 0, as it represents a coefficient
                      * for a sample that won't be part of the filter.
                      */
-                    mTable[idx++] = gsl::narrow_cast<float>(0.0 - filter[si][pi][o]);
+                    mTable[idx++] = f64{0.0 - filter[si][pi][o]}.cast_to<f32>().c_val;
                     for(const auto i : std::views::iota(1_uz, m))
                     {
                         const auto phDelta = filter[si][0][o+i-1] - filter[si][pi][o+i];
-                        mTable[idx++] = gsl::narrow_cast<float>(phDelta);
+                        mTable[idx++] = f64{phDelta}.cast_to<f32>().c_val;
                     }
                 }
             }
@@ -304,7 +304,7 @@ struct BSincFilterArray {
                     for(const auto i : std::views::iota(0_uz, m))
                     {
                         const auto scDelta = filter[si+1][pi][o+i] - filter[si][pi][o+i];
-                        mTable[idx++] = gsl::narrow_cast<float>(scDelta);
+                        mTable[idx++] = f64{scDelta}.cast_to<f32>().c_val;
                     }
 
                     if(pi < BSincPhaseCount-1)
@@ -313,18 +313,18 @@ struct BSincFilterArray {
                         {
                             const auto spDelta = (filter[si+1][pi+1][o+i]-filter[si+1][pi][o+i]) -
                                 (filter[si][pi+1][o+i]-filter[si][pi][o+i]);
-                            mTable[idx++] = gsl::narrow_cast<float>(spDelta);
+                            mTable[idx++] = f64{spDelta}.cast_to<f32>().c_val;
                         }
                     }
                     else
                     {
-                        mTable[idx++] = gsl::narrow_cast<float>((0.0 - filter[si+1][pi][o]) -
-                            (0.0 - filter[si][pi][o]));
+                        mTable[idx++] = ((0.0 - filter[si+1][pi][o]) - (0.0 - filter[si][pi][o]))
+                            .template cast_to<f32>().c_val;
                         for(const auto i : std::views::iota(1_uz, m))
                         {
                             const auto spDelta = (filter[si+1][0][o+i-1] - filter[si+1][pi][o+i]) -
                                 (filter[si][0][o+i-1] - filter[si][pi][o+i]);
-                            mTable[idx++] = gsl::narrow_cast<float>(spDelta);
+                            mTable[idx++] = f64{spDelta}.cast_to<f32>().c_val;
                         }
                     }
                 }
@@ -332,8 +332,9 @@ struct BSincFilterArray {
             else
             {
                 /* The last scale index doesn't have scale-related deltas. */
-                for(const auto i [[maybe_unused]] : std::views::iota(0_uz, BSincPhaseCount*m*2))
-                    mTable[idx++] = 0.0f;
+                auto const count = BSincPhaseCount * m * 2;
+                std::ranges::fill(std::span{mTable}.subspan(idx, count), 0.0f);
+                idx += count;
             }
         }
         Ensures(idx == hdr.total_size);
@@ -352,13 +353,13 @@ constexpr auto GenerateBSincTable(const T &filter) noexcept -> BSincTable
 {
     auto ret = BSincTable{};
     const BSincHeader &hdr = filter.getHeader();
-    ret.scaleBase = gsl::narrow_cast<float>(hdr.scaleBase);
-    ret.scaleRange = gsl::narrow_cast<float>(1.0 / (1.0 - hdr.scaleBase));
+    ret.scaleBase = hdr.scaleBase.cast_to<f32>();
+    ret.scaleRange = (1.0 / (1.0 - hdr.scaleBase)).cast_to<f32>();
     for(const auto i : std::views::iota(0_uz, BSincScaleCount))
         ret.m[i] = (hdr.m[i]+3u) & ~3u;
     ret.filterOffset[0] = 0;
     for(const auto i : std::views::iota(1_uz, BSincScaleCount))
-        ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1]*4*BSincPhaseCount;
+        ret.filterOffset[i] = ret.filterOffset[i-1] + ret.m[i-1]*4u*BSincPhaseCount;
     ret.Tab = filter.getTable();
     return ret;
 }

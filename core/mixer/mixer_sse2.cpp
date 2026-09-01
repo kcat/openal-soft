@@ -36,23 +36,23 @@
 #include "opthelpers.h"
 
 
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__)
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE2__) && !defined(__powerpc64__)
 #pragma GCC target("sse2")
 #endif
 
 namespace {
 
-constexpr auto CubicPhaseDiffBits = u32{MixerFracBits - CubicPhaseBits};
-constexpr auto CubicPhaseDiffOne = 1_u32 << CubicPhaseDiffBits;
-constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1_u32;
+constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
+constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
+constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
 force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 } // namespace
 
-void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Linear_SSE2(InterpState const*, std::span<float const> const src, unsigned frac,
+    unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
@@ -60,8 +60,8 @@ void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u3
     auto const fracMask4 = _mm_set1_epi32(MixerFracMask);
     auto const fracOne4 = _mm_set1_ps(1.0f/MixerFracOne);
 
-    auto pos_ = std::array<u32, 4>{};
-    auto frac_ = std::array<u32, 4>{};
+    auto pos_ = std::array<unsigned, 4>{};
+    auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge, frac, increment, std::span{frac_}, std::span{pos_});
     auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
         as_signed(pos_[3]));
@@ -72,13 +72,13 @@ void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u3
     std::ranges::generate(std::span{reinterpret_cast<__m128*>(dst.data()), dst.size()/4},
         [src,increment4,fracMask4,fracOne4,&pos4,&frac4]
     {
-        auto const pos0 = as_unsigned(_mm_cvtsi128_si32(pos4));
-        auto const pos1 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)));
-        auto const pos2 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)));
-        auto const pos3 = as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)));
+        auto const pos0 = std::size_t{as_unsigned(_mm_cvtsi128_si32(pos4))};
+        auto const pos1 = std::size_t{as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 4)))};
+        auto const pos2 = std::size_t{as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 8)))};
+        auto const pos3 = std::size_t{as_unsigned(_mm_cvtsi128_si32(_mm_srli_si128(pos4, 12)))};
         ASSUME(pos0 <= pos1); ASSUME(pos1 <= pos2); ASSUME(pos2 <= pos3);
         auto const val1 = _mm_setr_ps(src[pos0], src[pos1], src[pos2], src[pos3]);
-        auto const val2 = _mm_setr_ps(src[pos0+1_uz], src[pos1+1_uz], src[pos2+1_uz], src[pos3+1_uz]);
+        auto const val2 = _mm_setr_ps(src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1]);
 
         /* val1 + (val2-val1)*mu */
         auto const r0 = _mm_sub_ps(val2, val1);
@@ -93,13 +93,13 @@ void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u3
 
     if(auto const todo = dst.size()&3)
     {
-        auto pos = usize{as_unsigned(_mm_cvtsi128_si32(pos4))};
+        auto pos = std::size_t{as_unsigned(_mm_cvtsi128_si32(pos4))};
         frac = as_unsigned(_mm_cvtsi128_si32(frac4));
 
         std::ranges::generate(dst.last(todo), [src,increment,&pos,&frac]
         {
             auto const smp = lerpf(src[pos+0], src[pos+1],
-                gsl::narrow_cast<f32>(frac) * (1.0f/MixerFracOne));
+                gsl::narrow_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;
             pos  += frac>>MixerFracBits;
@@ -109,20 +109,20 @@ void Resample_Linear_SSE2(InterpState const*, std::span<f32 const> const src, u3
     }
 }
 
-void Resample_Cubic_SSE2(InterpState const *const state, std::span<f32 const> const src, u32 frac,
-    u32 const increment, std::span<f32> const dst)
+void Resample_Cubic_SSE2(InterpState const *const state, std::span<float const> const src,
+    unsigned frac, unsigned const increment, std::span<float> const dst) noexcept NONBLOCKING
 {
     ASSUME(frac < MixerFracOne);
 
-    auto const filter = std::get<CubicState>(*state).filter;
+    auto const filter = gsl::not_null{std::get_if<CubicState>(state)}->filter;
 
     auto const increment4 = _mm_set1_epi32(as_signed(increment*4));
     auto const fracMask4 = _mm_set1_epi32(MixerFracMask);
     auto const fracDiffOne4 = _mm_set1_ps(1.0f/CubicPhaseDiffOne);
     auto const fracDiffMask4 = _mm_set1_epi32(CubicPhaseDiffMask);
 
-    auto pos_ = std::array<u32, 4>{};
-    auto frac_ = std::array<u32, 4>{};
+    auto pos_ = std::array<unsigned, 4>{};
+    auto frac_ = std::array<unsigned, 4>{};
     InitPosArrays(MaxResamplerEdge-1, frac, increment, std::span{frac_}, std::span{pos_});
     auto pos4 = _mm_setr_epi32(as_signed(pos_[0]), as_signed(pos_[1]), as_signed(pos_[2]),
         as_signed(pos_[3]));
@@ -182,13 +182,13 @@ void Resample_Cubic_SSE2(InterpState const *const state, std::span<f32 const> co
 
     if(auto const todo = dst.size()&3)
     {
-        auto pos = usize{as_unsigned(_mm_cvtsi128_si32(pos4))};
+        auto pos = std::size_t{as_unsigned(_mm_cvtsi128_si32(pos4))};
         frac = as_unsigned(_mm_cvtsi128_si32(frac4));
 
         std::ranges::generate(dst.last(todo), [src,filter,increment,&pos,&frac]
         {
-            const auto pi = usize{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
-            const auto pf = gsl::narrow_cast<f32>(frac&CubicPhaseDiffMask)
+            const auto pi = std::size_t{frac >> CubicPhaseDiffBits}; ASSUME(pi < CubicPhaseCount);
+            const auto pf = gsl::narrow_cast<float>(frac&CubicPhaseDiffMask)
                 * (1.0f/CubicPhaseDiffOne);
             const auto pf4 = _mm_set1_ps(pf);
 

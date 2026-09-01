@@ -35,19 +35,16 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
-#include <memory.h>
 #include <span>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/device.h"
 #include "core/helpers.h"
-#include "core/logging.h"
 #include "dynload.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
@@ -84,6 +81,12 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 #endif
 #ifndef KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
 #endif
 
 namespace {
@@ -202,7 +205,7 @@ FORCE_ALIGN void DSoundPlayback::mixerProc() const
         return;
     }
 
-    auto const FrameStep = usize{mDevice->channelsFromFmt()};
+    auto const FrameStep = std::size_t{mDevice->channelsFromFmt()};
     auto const FrameSize = DWORD{mDevice->frameSizeFromFmt()};
     auto const FragSize = DWORD{mDevice->mUpdateSize} * FrameSize;
 
@@ -349,7 +352,7 @@ auto DSoundPlayback::reset() -> bool
         mDevice->FmtType = DevFmtUByte;
         break;
     case DevFmtFloat:
-        if(mDevice->Flags.test(SampleTypeRequest))
+        if(mDevice->mFlags.test(DeviceFlag::SampleTypeRequest))
             break;
         [[fallthrough]];
     case DevFmtUShort:
@@ -372,7 +375,7 @@ auto DSoundPlayback::reset() -> bool
             "Failed to get speaker config: {:#x}", as_unsigned(hr)};
 
     speakers = DSSPEAKER_CONFIG(speakers);
-    if(!mDevice->Flags.test(ChannelsRequest))
+    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
     {
         if(speakers == DSSPEAKER_MONO)
             mDevice->FmtChans = DevFmtMono;
@@ -387,7 +390,7 @@ auto DSoundPlayback::reset() -> bool
         else
             ERR("Unknown system speaker config: {:#x}", speakers);
     }
-    mDevice->Flags.set(DirectEar, (speakers == DSSPEAKER_HEADPHONE));
+    mDevice->mFlags.set(DeviceFlag::DirectEar, (speakers == DSSPEAKER_HEADPHONE));
     auto const isRear51 = speakers == DSSPEAKER_5POINT1_BACK;
 
     switch(mDevice->FmtChans)
@@ -471,10 +474,10 @@ auto DSoundPlayback::reset() -> bool
         if(SUCCEEDED(hr))
         {
             auto const num_updates = std::min(mDevice->mBufferSize / mDevice->mUpdateSize,
-                u32{MAX_UPDATES});
+                unsigned{MAX_UPDATES});
 
             auto nots = std::array<DSBPOSITIONNOTIFY, MAX_UPDATES>{};
-            for(auto i = 0_u32;i < num_updates;++i)
+            for(auto i = 0u;i < num_updates;++i)
             {
                 nots[i].dwOffset = i * mDevice->mUpdateSize * OutputType.Format.nBlockAlign;
                 nots[i].hEventNotify = mNotifyEvent;
@@ -530,7 +533,7 @@ struct DSoundCapture final : BackendBase {
     void start() override;
     void stop() override;
     void captureSamples(std::span<std::byte> outbuffer) override;
-    auto availableSamples() -> usize override;
+    auto availableSamples() -> std::size_t override;
 
     ComPtr<IDirectSoundCapture> mDSC;
     ComPtr<IDirectSoundCaptureBuffer> mDSCbuffer;
@@ -692,7 +695,7 @@ void DSoundCapture::stop()
 void DSoundCapture::captureSamples(std::span<std::byte> outbuffer)
 { std::ignore = mRing->read(outbuffer); }
 
-auto DSoundCapture::availableSamples() -> usize
+auto DSoundCapture::availableSamples() -> std::size_t
 {
     if(mDevice->Connected.load(std::memory_order_acquire))
     {
@@ -753,21 +756,19 @@ auto DSoundBackendFactory::init() -> bool
             return false;
         }
 
-        static constexpr auto load_func = [](auto *&func, const char *name) -> bool
+        static constexpr auto load_sym = []<typename T>(T *&func, gsl::czstring const name) -> bool
         {
-            using func_t = std::remove_reference_t<decltype(func)>;
-            auto funcresult = GetSymbol(ds_handle, name);
+            auto const funcresult = GetSymbolAddress<T>(ds_handle, name);
             if(!funcresult)
             {
-                WARN("Failed to load function {}: {}", name, funcresult.error());
+                WARN("Failed to load symbol {}: {}", name, funcresult.error());
                 return false;
             }
-            /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-            func = reinterpret_cast<func_t>(funcresult.value());
+            func = funcresult.value();
             return true;
         };
         auto ok = true;
-#define LOAD_FUNC(f) ok &= load_func(p##f, #f)
+#define LOAD_FUNC(f) ok &= load_sym(p##f, #f)
         LOAD_FUNC(DirectSoundCreate);
         LOAD_FUNC(DirectSoundEnumerateW);
         LOAD_FUNC(DirectSoundCaptureCreate);

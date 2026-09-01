@@ -8,8 +8,18 @@ OpenAL provides capabilities for playing audio in a virtual 3D environment. Dist
 
 More information is available on the [official website](http://openal-soft.org/).
 
+
+License
+-------
+
+The OpenAL Soft project is provided under the terms of the LGPL 2 or later (see COPYING).
+
+The default HRTF dataset is derived from the [SADIE II database[(https://www.york.ac.uk/sadie-project/database.html), and is provided under the Apache 2.0 license (see LICENSE.Apache-2.0.txt).
+
+
 Source Install
 -------------
+
 To install OpenAL Soft, use your favorite shell to go into the build/
 directory, and run:
 
@@ -47,6 +57,7 @@ You can download and install openal-soft using the [vcpkg](https://github.com/Mi
     ./vcpkg install openal-soft
 
 The openal-soft port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+
 
 Utilities
 ---------

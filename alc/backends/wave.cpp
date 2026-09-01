@@ -27,6 +27,7 @@
 #include <bit>
 #include <cerrno>
 #include <chrono>
+#include <cstddef>
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -36,14 +37,17 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "core/device.h"
-#include "core/logging.h"
 #include "filesystem.h"
 #include "gsl/gsl"
-#include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "core/logging.h"
+#endif
 
 
 namespace {
@@ -55,24 +59,21 @@ using std::chrono::nanoseconds;
 
 [[nodiscard]] constexpr auto GetDeviceName() noexcept { return "Wave File Writer"sv; }
 
-constexpr auto SUBTYPE_PCM = std::bit_cast<std::array<char,16>>(std::to_array<u8>({
+constexpr auto SUBTYPE_PCM = std::bit_cast<std::array<char,16>>(std::to_array<u8::value_t>({
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
-    0x00, 0x38, 0x9b, 0x71
-}));
-constexpr auto SUBTYPE_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<u8>({
+    0x00, 0x38, 0x9b, 0x71}));
+constexpr auto SUBTYPE_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<u8::value_t>({
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
-    0x00, 0x38, 0x9b, 0x71
-}));
+    0x00, 0x38, 0x9b, 0x71}));
 
-constexpr auto SUBTYPE_BFORMAT_PCM = std::bit_cast<std::array<char,16>>(std::to_array<u8>({
-    0x01, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
-    0xca, 0x00, 0x00, 0x00
-}));
-
-constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(std::to_array<u8>({
-    0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
-    0xca, 0x00, 0x00, 0x00
-}));
+constexpr auto SUBTYPE_BFORMAT_PCM = std::bit_cast<std::array<char,16>>(
+    std::to_array<u8::value_t>({
+        0x01, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
+        0xca, 0x00, 0x00, 0x00}));
+constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(
+    std::to_array<u8::value_t>({
+        0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
+        0xca, 0x00, 0x00, 0x00}));
 
 constexpr auto MonoChannels = 0x04u;
 constexpr auto StereoChannels = 0x01u | 0x02u;
@@ -154,8 +155,8 @@ void WaveBackend::mixerProc()
 
     althrd_setname(GetMixerThreadName());
 
-    auto const frameStep = usize{mDevice->channelsFromFmt()};
-    auto const frameSize = usize{mDevice->frameSizeFromFmt()};
+    auto const frameStep = std::size_t{mDevice->channelsFromFmt()};
+    auto const frameSize = std::size_t{mDevice->frameSizeFromFmt()};
 
     auto done = 0_i64;
     auto start = std::chrono::steady_clock::now();
@@ -175,7 +176,7 @@ void WaveBackend::mixerProc()
         while(avail-done >= mDevice->mUpdateSize)
         {
             mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
-            done += mDevice->mUpdateSize;
+            done += i64{mDevice->mUpdateSize};
 
             if constexpr(std::endian::native != std::endian::little)
             {
@@ -217,8 +218,8 @@ void WaveBackend::mixerProc()
          */
         if(done >= mDevice->mSampleRate)
         {
-            auto const s = seconds{done/mDevice->mSampleRate};
-            done %= mDevice->mSampleRate;
+            auto const s = seconds{(done/i64{mDevice->mSampleRate}).c_val};
+            done %= i64{mDevice->mSampleRate};
             start += s;
         }
     }
@@ -249,9 +250,9 @@ auto WaveBackend::reset() -> bool
     mCAFOutput = false;
     if(const auto formatopt = ConfigValueStr({}, "wave"sv, "format"sv))
     {
-        if(al::case_compare(*formatopt, "caf"sv) == 0)
+        if(is_eq(al::case_compare(*formatopt, "caf"sv)))
             mCAFOutput = true;
-        else if(al::case_compare(*formatopt, "wav"sv) != 0)
+        else if(is_neq(al::case_compare(*formatopt, "wav"sv)))
             WARN("Unsupported wave file format: \"{}\"", *formatopt);
     }
 
@@ -281,7 +282,7 @@ auto WaveBackend::reset() -> bool
     case DevFmtFloat:
         break;
     }
-    auto chanmask = 0_u32;
+    auto chanmask = 0u;
     auto isbformat = false;
     switch(mDevice->FmtChans)
     {
@@ -305,14 +306,14 @@ auto WaveBackend::reset() -> bool
         if(!mCAFOutput)
         {
             /* .amb output requires FuMa */
-            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3_u32);
+            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3u);
             mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
             mDevice->mAmbiScale = DevAmbiScaling::FuMa;
         }
         else
         {
             /* .ambix output requires ACN+SN3D */
-            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, u32{MaxAmbiOrder});
+            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, unsigned{MaxAmbiOrder});
             mDevice->mAmbiLayout = DevAmbiLayout::ACN;
             mDevice->mAmbiScale = DevAmbiScaling::SN3D;
         }
@@ -328,37 +329,37 @@ auto WaveBackend::reset() -> bool
     if(!mCAFOutput)
     {
         mFile.write("RIFF", 4);
-        fwrite32le(0xFFFFFFFF, mFile); // 'RIFF' header len; filled in at stop
+        fwrite32le(0xFFFFFFFF_u32, mFile); // 'RIFF' header len; filled in at stop
         mFile.write("WAVE", 4);
 
         mFile.write("fmt ", 4);
-        fwrite32le(40, mFile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+        fwrite32le(40_u32, mFile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
-        fwrite16le(0xFFFE, mFile);
+        fwrite16le(0xFFFE_u16, mFile);
         // 16-bit val, channel count
-        fwrite16le(gsl::narrow_cast<u16>(channels), mFile);
+        fwrite16le(u16::from(channels), mFile);
         // 32-bit val, frequency
-        fwrite32le(mDevice->mSampleRate, mFile);
+        fwrite32le(u32{mDevice->mSampleRate}, mFile);
         // 32-bit val, bytes per second
-        fwrite32le(mDevice->mSampleRate * channels * bytes, mFile);
+        fwrite32le(u32{mDevice->mSampleRate * channels * bytes}, mFile);
         // 16-bit val, frame size
-        fwrite16le(gsl::narrow_cast<u16>(channels * bytes), mFile);
+        fwrite16le(u16::from(channels * bytes), mFile);
         // 16-bit val, bits per sample
-        fwrite16le(gsl::narrow_cast<u16>(bytes * 8), mFile);
+        fwrite16le(u16::from(bytes * 8), mFile);
         // 16-bit val, extra byte count
-        fwrite16le(22, mFile);
+        fwrite16le(22_u16, mFile);
         // 16-bit val, valid bits per sample
-        fwrite16le(gsl::narrow_cast<u16>(bytes * 8), mFile);
+        fwrite16le(u16::from(bytes * 8), mFile);
         // 32-bit val, channel mask
-        fwrite32le(chanmask, mFile);
+        fwrite32le(u32{chanmask}, mFile);
         // 16 byte GUID, sub-type format
         mFile.write((mDevice->FmtType == DevFmtFloat) ?
             (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
             (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 16);
 
         mFile.write("data", 4);
-        fwrite32le(~0u, mFile); // 'data' header len; filled in at stop
+        fwrite32le(~0_u32, mFile); // 'data' header len; filled in at stop
 
         mDataStart = mFile.tellp();
     }
@@ -367,19 +368,19 @@ auto WaveBackend::reset() -> bool
         /* 32-bit uint, mFileType */
         mFile.write("caff", 4);
         /* 16-bit uint, mFileVersion */
-        fwrite16be(1, mFile);
+        fwrite16be(1_u16, mFile);
         /* 16-bit uint, mFileFlags */
-        fwrite16be(0, mFile);
+        fwrite16be(0_u16, mFile);
 
         /* Audio Description chunk */
         mFile.write("desc", 4);
-        fwrite64be(32, mFile);
+        fwrite64be(32_u64, mFile);
         /* 64-bit double, mSampleRate */
-        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<f64>(mDevice->mSampleRate)), mFile);
+        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<double>(mDevice->mSampleRate)), mFile);
         /* 32-bit uint, mFormatID */
         mFile.write("lpcm", 4);
 
-        const auto flags = std::invoke([this]
+        const auto flags = std::invoke([this]() -> u32
         {
             switch(mDevice->FmtType)
             {
@@ -406,26 +407,26 @@ auto WaveBackend::reset() -> bool
         /* 32-bit uint, mFormatFlags */
         fwrite32be(flags, mFile);
         /* 32-bit uint, mBytesPerPacket */
-        fwrite32be(bytes*channels, mFile);
+        fwrite32be(u32{bytes*channels}, mFile);
         /* 32-bit uint, mFramesPerPacket */
-        fwrite32be(1, mFile);
+        fwrite32be(1_u32, mFile);
         /* 32-bit uint, mChannelsPerFrame */
-        fwrite32be(channels, mFile);
+        fwrite32be(u32{channels}, mFile);
         /* 32-bit uint, mBitsPerChannel */
-        fwrite32be(bytes*8, mFile);
+        fwrite32be(u32{bytes*8}, mFile);
 
         if(chanmask != 0)
         {
             /* Channel Layout chunk */
             mFile.write("chan", 4);
-            fwrite64be(12, mFile);
+            fwrite64be(12_u64, mFile);
 
             /* 32-bit uint, mChannelLayoutTag */
-            fwrite32be(0x10000, mFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
+            fwrite32be(0x10000_u32, mFile); /* kCAFChannelLayoutTag_UseChannelBitmap */
             /* 32-bit uint, mChannelBitmap */
-            fwrite32be(chanmask, mFile); /* Same as WFX, thankfully. */
+            fwrite32be(u32{chanmask}, mFile); /* Same as WFX, thankfully. */
             /* 32-bit uint, mNumberChannelDescriptions */
-            fwrite32be(0, mFile);
+            fwrite32be(0_u32, mFile);
         }
 
         /* Audio Data chunk */
@@ -434,7 +435,7 @@ auto WaveBackend::reset() -> bool
 
         mDataStart = mFile.tellp();
         /* 32-bit uint, mEditCount */
-        fwrite32be(0, mFile);
+        fwrite32be(0_u32, mFile);
     }
 
     if(!mFile)
@@ -445,7 +446,7 @@ auto WaveBackend::reset() -> bool
 
     setDefaultWFXChannelOrder();
 
-    mBuffer.resize(usize{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
+    mBuffer.resize(std::size_t{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
 
     return true;
 }
@@ -477,14 +478,14 @@ void WaveBackend::stop()
             if(!mCAFOutput)
             {
                 if(mFile.seekp(4)) // 'WAVE' header len
-                    fwrite32le(gsl::narrow_cast<u32>(size-8), mFile);
+                    fwrite32le(u32::from(size-8), mFile);
                 if(mFile.seekp(mDataStart-4)) // 'data' header len
-                    fwrite32le(gsl::narrow_cast<u32>(dataLen), mFile);
+                    fwrite32le(u32::from(dataLen), mFile);
             }
             else
             {
                 if(mFile.seekp(mDataStart-8)) // 'data' header len
-                    fwrite64be(gsl::narrow_cast<u64>(dataLen), mFile);
+                    fwrite64be(i64{dataLen}.reinterpret_as<u64>(), mFile);
             }
             mFile.seekp(0, std::ios_base::end);
         }

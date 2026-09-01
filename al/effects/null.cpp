@@ -4,7 +4,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
 #include "effects.h"
 
@@ -12,6 +11,12 @@
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+#else
+#include "alc/context.hpp"
+#endif
 
 
 namespace {
@@ -67,20 +72,20 @@ void NullEffectHandler::GetParamfv(al::Context *context, const std::monostate &p
 #if ALSOFT_EAX
 namespace {
 
-using NullCommitter = EaxCommitter<EaxNullCommitter>;
-
-} // namespace
-
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct NullCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message) : EaxException{"EAX_NULL_EFFECT", message}
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxNullEffectException final : EaxException {
+    explicit EaxNullEffectException(std::string_view const message)
+        : EaxException{"EAX_NULL_EFFECT", message}
     { }
 };
 
-template<> [[noreturn]]
-void NullCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+} // namespace
 
+template<> [[noreturn]]
+void EaxNullCommitter::fail(std::string_view const message)
+{ throw EaxNullEffectException{message}; }
+
+template<>
 auto EaxNullCommitter::commit(const std::monostate &props) const -> bool
 {
     const bool ret{std::holds_alternative<std::monostate>(mEaxProps)};
@@ -89,17 +94,20 @@ auto EaxNullCommitter::commit(const std::monostate &props) const -> bool
     return ret;
 }
 
+template<>
 void EaxNullCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = std::monostate{};
 }
 
+template<>
 void EaxNullCommitter::Get(const EaxCall &call, const std::monostate&)
 {
     if(call.get_property_id() != 0)
         fail_unknown_property_id();
 }
 
+template<>
 void EaxNullCommitter::Set(const EaxCall &call, std::monostate&)
 {
     if(call.get_property_id() != 0)

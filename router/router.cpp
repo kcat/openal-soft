@@ -83,7 +83,7 @@ void AddModule(HMODULE const module, std::wstring_view const name)
     if(!gAcceptList.empty())
     {
         if(std::ranges::none_of(gAcceptList, [name](std::wstring_view const accept)
-            { return al::case_compare(name, accept) == 0; }))
+            { return is_eq(al::case_compare(name, accept)); }))
         {
             TRACE("{} not found in ALROUTER_ACCEPT, skipping", wstr_to_utf8(name));
             FreeLibrary(module);
@@ -91,7 +91,7 @@ void AddModule(HMODULE const module, std::wstring_view const name)
         }
     }
     if(std::ranges::any_of(gRejectList, [name](std::wstring_view const reject)
-        { return al::case_compare(name, reject) == 0; }))
+        { return is_eq(al::case_compare(name, reject)); }))
     {
         TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_utf8(name));
         FreeLibrary(module);
@@ -417,7 +417,7 @@ void LoadDriverList()
         return drv.ALCVer >= MakeALCVer(1, 1)
             || drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT")
             || drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
-    }, &DriverIfacePtr::operator*);
+    }, al::dereference{});
 
     /* HACK: rapture3d_oal.dll isn't likely to work if it's one distributed for
      * specific games licensed to use it. It will enumerate a Rapture3D device
@@ -427,7 +427,7 @@ void LoadDriverList()
      * to open. Move it down so it's not used for the default device.
      */
     if(DriverList.size() > 1
-        && al::case_compare(DriverList.front()->Name, L"rapture3d_oal.dll") == 0)
+        and is_eq(al::case_compare(DriverList.front()->Name, L"rapture3d_oal.dll")))
         std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 

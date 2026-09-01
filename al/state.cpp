@@ -39,18 +39,14 @@
 #include "al/debug.h"
 #include "al/listener.h"
 #include "alc/alu.h"
-#include "alc/context.h"
 #include "alc/device.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/context.h"
-#include "core/logging.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -59,6 +55,16 @@
 #include "eax/globals.h"
 #include "eax/x_ram.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+import gsl;
+import logging;
+#else
+#include "alc/context.hpp"
+#include "core/logging.h"
+#include "gsl/gsl"
+#endif
 
 
 namespace {
@@ -153,40 +159,58 @@ constexpr auto ALenumFromDistanceModel(DistanceModel model) -> ALenum
         al::to_underlying(model))};
 }
 
-enum PropertyValue : ALenum {
-    DopplerFactorProp = AL_DOPPLER_FACTOR,
-    DopplerVelocityProp = AL_DOPPLER_VELOCITY,
-    DistanceModelProp = AL_DISTANCE_MODEL,
-    SpeedOfSoundProp = AL_SPEED_OF_SOUND,
-    DeferredUpdatesProp = AL_DEFERRED_UPDATES_SOFT,
-    GainLimitProp = AL_GAIN_LIMIT_SOFT,
-    NumResamplersProp = AL_NUM_RESAMPLERS_SOFT,
-    DefaultResamplerProp = AL_DEFAULT_RESAMPLER_SOFT,
-    DebugLoggedMessagesProp = AL_DEBUG_LOGGED_MESSAGES_EXT,
-    DebugNextLoggedMessageLengthProp = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
-    MaxDebugMessageLengthProp = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
-    MaxDebugLoggedMessagesProp = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
-    MaxDebugGroupDepthProp = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
-    MaxLabelLengthProp = AL_MAX_LABEL_LENGTH_EXT,
-    ContextFlagsProp = AL_CONTEXT_FLAGS_EXT,
+enum class PropertyValue : ALenum {
+    DopplerFactor = AL_DOPPLER_FACTOR,
+    DopplerVelocity = AL_DOPPLER_VELOCITY,
+    DistanceModel = AL_DISTANCE_MODEL,
+    SpeedOfSound = AL_SPEED_OF_SOUND,
+    DeferredUpdates = AL_DEFERRED_UPDATES_SOFT,
+    GainLimit = AL_GAIN_LIMIT_SOFT,
+    NumResamplers = AL_NUM_RESAMPLERS_SOFT,
+    DefaultResampler = AL_DEFAULT_RESAMPLER_SOFT,
+    DebugLoggedMessages = AL_DEBUG_LOGGED_MESSAGES_EXT,
+    DebugNextLoggedMessageLength = AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT,
+    MaxDebugMessageLength = AL_MAX_DEBUG_MESSAGE_LENGTH_EXT,
+    MaxDebugLoggedMessages = AL_MAX_DEBUG_LOGGED_MESSAGES_EXT,
+    MaxDebugGroupStackDepth = AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT,
+    MaxLabelLength = AL_MAX_LABEL_LENGTH_EXT,
+    ContextFlags = AL_CONTEXT_FLAGS_EXT,
 #if ALSOFT_EAX
-    EaxRamSizeProp = AL_EAX_RAM_SIZE,
-    EaxRamFreeProp = AL_EAX_RAM_FREE,
+    EaxRamSize = AL_EAX_RAM_SIZE,
+    EaxRamFree = AL_EAX_RAM_FREE,
 #endif
+};
+
+enum class PropertyPtrValue : ALenum {
+    EventCallbackFunction = AL_EVENT_CALLBACK_FUNCTION_SOFT,
+    EventCallbackUserParam = AL_EVENT_CALLBACK_USER_PARAM_SOFT,
+
+    DebugCallbackFunction = AL_DEBUG_CALLBACK_FUNCTION_EXT,
+    DebugCallbackUserParam = AL_DEBUG_CALLBACK_USER_PARAM_EXT,
 };
 
 template<typename T>
 struct PropertyCastType {
     template<typename U> [[nodiscard]]
     constexpr auto operator()(U&& value) const noexcept -> T
-    { return gsl::narrow_cast<T>(std::forward<U>(value)); }
+    {
+        if constexpr(al::strict_number<std::remove_cvref_t<U>>)
+            return gsl::narrow_cast<T>(std::forward<U>(value).c_val);
+        else
+            return gsl::narrow_cast<T>(std::forward<U>(value));
+    }
 };
 /* Special-case ALboolean to be an actual bool instead of a char type. */
 template<>
 struct PropertyCastType<ALboolean> {
     template<typename U> [[nodiscard]]
     constexpr auto operator()(U&& value) const noexcept -> ALboolean
-    { return gsl::narrow_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE; }
+    {
+        if constexpr(al::strict_number<std::remove_cvref_t<U>>)
+            return gsl::narrow_cast<bool>(std::forward<U>(value).c_val) ? AL_TRUE : AL_FALSE;
+        else
+            return gsl::narrow_cast<bool>(std::forward<U>(value)) ? AL_TRUE : AL_FALSE;
+    }
 };
 
 
@@ -200,11 +224,11 @@ void GetValue(gsl::not_null<al::Context*> context, ALenum pname, T *values) noex
 
     switch(PropertyValue{pname})
     {
-    case AL_DOPPLER_FACTOR:
+    case PropertyValue::DopplerFactor:
         *values = cast_value(context->mDopplerFactor);
         return;
 
-    case AL_DOPPLER_VELOCITY:
+    case PropertyValue::DopplerVelocity:
         if(context->mContextFlags.test(ContextFlags::DebugBit)) [[unlikely]]
             context->debugMessage(DebugSource::API, DebugType::DeprecatedBehavior, 0,
                 DebugSeverity::Medium,
@@ -213,38 +237,38 @@ void GetValue(gsl::not_null<al::Context*> context, ALenum pname, T *values) noex
         *values = cast_value(context->mDopplerVelocity);
         return;
 
-    case AL_SPEED_OF_SOUND:
+    case PropertyValue::SpeedOfSound:
         *values = cast_value(context->mSpeedOfSound);
         return;
 
-    case AL_GAIN_LIMIT_SOFT:
+    case PropertyValue::GainLimit:
         *values = cast_value(GainMixMax / context->mGainBoost);
         return;
 
-    case AL_DEFERRED_UPDATES_SOFT:
+    case PropertyValue::DeferredUpdates:
         *values = cast_value(context->mDeferUpdates ? AL_TRUE : AL_FALSE);
         return;
 
-    case AL_DISTANCE_MODEL:
+    case PropertyValue::DistanceModel:
         *values = cast_value(ALenumFromDistanceModel(context->mDistanceModel));
         return;
 
-    case AL_NUM_RESAMPLERS_SOFT:
+    case PropertyValue::NumResamplers:
         *values = cast_value(al::to_underlying(Resampler::Max) + 1);
         return;
 
-    case AL_DEFAULT_RESAMPLER_SOFT:
+    case PropertyValue::DefaultResampler:
         *values = cast_value(al::to_underlying(ResamplerDefault));
         return;
 
-    case AL_DEBUG_LOGGED_MESSAGES_EXT:
+    case PropertyValue::DebugLoggedMessages:
     {
         auto debuglock = std::lock_guard{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.size());
         return;
     }
 
-    case AL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_EXT:
+    case PropertyValue::DebugNextLoggedMessageLength:
     {
         auto debuglock = std::lock_guard{context->mDebugCbLock};
         *values = cast_value(context->mDebugLog.empty() ? 0_uz
@@ -252,39 +276,37 @@ void GetValue(gsl::not_null<al::Context*> context, ALenum pname, T *values) noex
         return;
     }
 
-    case AL_MAX_DEBUG_MESSAGE_LENGTH_EXT:
+    case PropertyValue::MaxDebugMessageLength:
         *values = cast_value(MaxDebugMessageLength);
         return;
 
-    case AL_MAX_DEBUG_LOGGED_MESSAGES_EXT:
+    case PropertyValue::MaxDebugLoggedMessages:
         *values = cast_value(MaxDebugLoggedMessages);
         return;
 
-    case AL_MAX_DEBUG_GROUP_STACK_DEPTH_EXT:
+    case PropertyValue::MaxDebugGroupStackDepth:
         *values = cast_value(MaxDebugGroupDepth);
         return;
 
-    case AL_MAX_LABEL_LENGTH_EXT:
+    case PropertyValue::MaxLabelLength:
         *values = cast_value(MaxObjectLabelLength);
         return;
 
-    case AL_CONTEXT_FLAGS_EXT:
+    case PropertyValue::ContextFlags:
         *values = cast_value(context->mContextFlags.to_ulong());
         return;
 
 #if ALSOFT_EAX
 #define EAX_ERROR "[alGetInteger] EAX not enabled"
 
-    case AL_EAX_RAM_SIZE:
+    case PropertyValue::EaxRamSize:
         if(eax_g_is_enabled)
         {
             *values = cast_value(eax_x_ram_max_size);
             return;
         }
-        ERR(EAX_ERROR);
-        break;
-
-    case AL_EAX_RAM_FREE:
+        [[fallthrough]];
+    case PropertyValue::EaxRamFree:
         if(eax_g_is_enabled)
         {
             auto const device = al::get_not_null(context->mALDevice);
@@ -307,23 +329,21 @@ void GetValue(gsl::not_null<al::Context*> context, ALenum pname, ALvoid **values
     if(!values) [[unlikely]]
         return context->setError(AL_INVALID_VALUE, "NULL pointer");
 
-    switch(pname)
+    switch(PropertyPtrValue{pname})
     {
-    case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+    case PropertyPtrValue::EventCallbackFunction:
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         *values = reinterpret_cast<void*>(context->mEventCb);
         return;
-
-    case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+    case PropertyPtrValue::EventCallbackUserParam:
         *values = context->mEventParam;
         return;
 
-    case AL_DEBUG_CALLBACK_FUNCTION_EXT:
+    case PropertyPtrValue::DebugCallbackFunction:
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         *values = reinterpret_cast<void*>(context->mDebugCb);
         return;
-
-    case AL_DEBUG_CALLBACK_USER_PARAM_EXT:
+    case PropertyPtrValue::DebugCallbackUserParam:
         *values = context->mDebugParam;
         return;
     }
@@ -341,7 +361,7 @@ inline void UpdateProps(al::Context *context)
 }
 
 
-void alEnable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
+void alEnable_(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -365,7 +385,7 @@ void alEnable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
         as_unsigned(capability));
 }
 
-void alDisable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
+void alDisable_(gsl::not_null<al::Context*> context, ALenum capability) noexcept
 {
     switch(capability)
     {
@@ -389,7 +409,7 @@ void alDisable(gsl::not_null<al::Context*> context, ALenum capability) noexcept
         as_unsigned(capability));
 }
 
-auto alIsEnabled(gsl::not_null<al::Context*> context, ALenum capability) noexcept -> ALboolean
+auto alIsEnabled_(gsl::not_null<al::Context*> context, ALenum capability) noexcept -> ALboolean
 {
     auto proplock = std::lock_guard{context->mPropLock};
     switch(capability)
@@ -405,7 +425,7 @@ auto alIsEnabled(gsl::not_null<al::Context*> context, ALenum capability) noexcep
 }
 
 
-auto alGetString(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> gsl::czstring
+auto alGetString_(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> gsl::czstring
 {
     switch(pname)
     {
@@ -436,7 +456,7 @@ auto alGetString(gsl::not_null<al::Context*> context, ALenum pname) noexcept -> 
 }
 
 
-void alDopplerFactor(gsl::not_null<al::Context*> context, ALfloat value) noexcept
+void alDopplerFactor_(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value >= 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Doppler factor {} out of range", value);
@@ -448,7 +468,7 @@ void alDopplerFactor(gsl::not_null<al::Context*> context, ALfloat value) noexcep
     }
 }
 
-void alSpeedOfSound(gsl::not_null<al::Context*> context, ALfloat value) noexcept
+void alSpeedOfSound_(gsl::not_null<al::Context*> context, ALfloat value) noexcept
 {
     if(!(value > 0.0f && std::isfinite(value)))
         context->setError(AL_INVALID_VALUE, "Speed of sound {} out of range", value);
@@ -460,7 +480,7 @@ void alSpeedOfSound(gsl::not_null<al::Context*> context, ALfloat value) noexcept
     }
 }
 
-void alDistanceModel(gsl::not_null<al::Context*> context, ALenum value) noexcept
+void alDistanceModel_(gsl::not_null<al::Context*> context, ALenum value) noexcept
 {
     if(auto model = DistanceModelFromALenum(value))
     {
@@ -475,7 +495,7 @@ void alDistanceModel(gsl::not_null<al::Context*> context, ALenum value) noexcept
 }
 
 
-auto alGetStringiSOFT(gsl::not_null<al::Context*> context, ALenum pname, ALsizei index) noexcept
+auto alGetStringiSOFT_(gsl::not_null<al::Context*> context, ALenum pname, ALsizei index) noexcept
     -> gsl::czstring
 {
     switch(pname)
@@ -492,13 +512,13 @@ auto alGetStringiSOFT(gsl::not_null<al::Context*> context, ALenum pname, ALsizei
 }
 
 
-void alDeferUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
+void alDeferUpdatesSOFT_(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->deferUpdates();
 }
 
-void alProcessUpdatesSOFT(gsl::not_null<al::Context*> context) noexcept
+void alProcessUpdatesSOFT_(gsl::not_null<al::Context*> context) noexcept
 {
     auto proplock = std::lock_guard{context->mPropLock};
     context->processUpdates();
@@ -517,9 +537,9 @@ AL_API auto AL_APIENTRY alsoft_get_version() noexcept -> const ALchar*
 }
 
 
-AL_API DECL_FUNC1(void, alEnable, ALenum,capability)
-AL_API DECL_FUNC1(void, alDisable, ALenum,capability)
-AL_API DECL_FUNC1(ALboolean, alIsEnabled, ALenum,capability)
+DECL_FUNC(AL_API, void, alEnable, ALenum,capability)
+DECL_FUNC(AL_API, void, alDisable, ALenum,capability)
+DECL_FUNC(AL_API, ALboolean, alIsEnabled, ALenum,capability)
 
 #define DECL_GETFUNC(DECL, R, Name, Ext)                                      \
 DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
@@ -530,6 +550,7 @@ DECL auto AL_APIENTRY Name##Ext(ALenum pname) noexcept -> R                   \
         GetValue(gsl::make_not_null(context.get()), pname, &value);           \
     return value;                                                             \
 }                                                                             \
+DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
@@ -537,17 +558,20 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     GetValue(al::verify_context(context), pname, &value);                     \
     return value;                                                             \
 }                                                                             \
+DefineFuncAlias(Name##Direct##Ext)                                            \
 DECL auto AL_APIENTRY Name##v##Ext(ALenum pname, R *values) noexcept -> void  \
 {                                                                             \
     auto context = GetContextRef();                                           \
     if(context) [[likely]]                                                    \
         GetValue(gsl::make_not_null(context.get()), pname, values);           \
 }                                                                             \
+DefineFuncAlias(Name##v##Ext)                                                 \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
     GetValue(al::verify_context(context), pname, values);                     \
-}
+}                                                                             \
+DefineFuncAlias(Name##v##Direct##Ext)
 
 DECL_GETFUNC(AL_API, ALboolean, alGetBoolean,)
 DECL_GETFUNC(AL_API, ALdouble, alGetDouble,)
@@ -560,16 +584,16 @@ DECL_GETFUNC(AL_API, ALvoidptr, alGetPointer,SOFT)
 #undef DECL_GETFUNC
 
 
-AL_API DECL_FUNC1(const ALchar*, alGetString, ALenum,pname)
+DECL_FUNC(AL_API, const ALchar*, alGetString, ALenum,pname)
 
-AL_API DECL_FUNC1(void, alDopplerFactor, ALfloat,value)
-AL_API DECL_FUNC1(void, alSpeedOfSound, ALfloat,value)
-AL_API DECL_FUNC1(void, alDistanceModel, ALenum,value)
+DECL_FUNC(AL_API, void, alDopplerFactor, ALfloat,value)
+DECL_FUNC(AL_API, void, alSpeedOfSound, ALfloat,value)
+DECL_FUNC(AL_API, void, alDistanceModel, ALenum,value)
 
-AL_API DECL_FUNCEXT(void, alDeferUpdates,SOFT)
-AL_API DECL_FUNCEXT(void, alProcessUpdates,SOFT)
+DECL_FUNCEXT(AL_API, void, alDeferUpdates,SOFT)
+DECL_FUNCEXT(AL_API, void, alProcessUpdates,SOFT)
 
-AL_API DECL_FUNCEXT2(const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
+DECL_FUNCEXT(AL_API, const ALchar*, alGetStringi,SOFT, ALenum,pname, ALsizei,index)
 
 
 AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
@@ -592,6 +616,7 @@ AL_API void AL_APIENTRY alDopplerVelocity(ALfloat value) noexcept
         UpdateProps(context.get());
     }
 }
+DefineFuncAlias(alDopplerVelocity)
 
 
 void UpdateContextProps(al::Context *context)

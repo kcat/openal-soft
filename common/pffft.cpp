@@ -62,9 +62,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <memory>
 #include <new>
 #include <numbers>
@@ -73,8 +71,8 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "alnumeric.h"
-#include "fmt/core.h"
+#include "altypes.hpp"
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
@@ -149,54 +147,9 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 }
 
 /*
- * SSE1 support macros
- */
-#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
-    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
-
-#include <xmmintrin.h>
-using v4sf = __m128;
-/* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
- * finalize functions anyway so you will have to work if you want to enable AVX
- * with its 256-bit vectors.
- */
-constexpr auto SimdSize = 4u;
-force_inline auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
-force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
-force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
-force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
-{ return _mm_add_ps(_mm_mul_ps(a,b), c); }
-force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
-force_inline auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
-
-force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
-{ return _mm_setr_ps(a, b, c, d); }
-force_inline auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
-{ return _mm_move_ss(v, _mm_set_ss(a)); }
-force_inline auto vextract0(v4sf v) noexcept -> float
-{ return _mm_cvtss_f32(v); }
-
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
-{ return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
-
-force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
-{
-    out1 = _mm_unpacklo_ps(in1, in2);
-    out2 = _mm_unpackhi_ps(in1, in2);
-}
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
-{
-    out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
-    out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
-}
-
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
-{ _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
-
-/*
  * ARM NEON support macros
  */
-#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64)
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64) || defined(_M_ARM64EC)
 
 #include <arm_neon.h>
 using v4sf = float32x4_t;
@@ -255,6 +208,51 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
     x2 = u1_.val[0];
     x3 = u1_.val[1];
 }
+
+/*
+ * SSE1 support macros
+ */
+#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
+    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+
+#include <xmmintrin.h>
+using v4sf = __m128;
+/* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
+ * finalize functions anyway so you will have to work if you want to enable AVX
+ * with its 256-bit vectors.
+ */
+constexpr auto SimdSize = 4u;
+force_inline auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
+force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
+force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
+force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
+{ return _mm_add_ps(_mm_mul_ps(a,b), c); }
+force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
+force_inline auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
+
+force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+{ return _mm_setr_ps(a, b, c, d); }
+force_inline auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
+{ return _mm_move_ss(v, _mm_set_ss(a)); }
+force_inline auto vextract0(v4sf v) noexcept -> float
+{ return _mm_cvtss_f32(v); }
+
+force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+{ return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
+
+force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    out1 = _mm_unpacklo_ps(in1, in2);
+    out2 = _mm_unpackhi_ps(in1, in2);
+}
+force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+{
+    out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
+    out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
+}
+
+force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+{ _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
 /*
  * Generic GCC vector macros
@@ -330,7 +328,7 @@ force_inline constexpr auto ld_ps1(float a) noexcept -> v4sf { return a; }
 [[maybe_unused, nodiscard]] inline
 auto valigned(const float *ptr) noexcept -> bool
 {
-    static constexpr auto alignmask = uintptr_t{SimdSize*sizeof(float) - 1};
+    constexpr auto alignmask = uintptr_t{SimdSize*sizeof(float) - 1};
     return (std::bit_cast<uintptr_t>(ptr) & alignmask) == 0;
 }
 #endif
@@ -814,9 +812,9 @@ void radf3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 void radb3_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *RESTRICT ch,
     const float *const wa1)
 {
-    static constexpr auto taur = -0.5f;
-    static constexpr auto taui = 0.866025403784439f;
-    static constexpr auto taui_2 = taui*2.0f;
+    constexpr auto taur = -0.5f;
+    constexpr auto taui = 0.866025403784439f;
+    constexpr auto taui_2 = taui*2.0f;
 
     const auto vtaur = ld_ps1(taur);
     const auto vtaui_2 = ld_ps1(taui_2);
@@ -1226,7 +1224,7 @@ void radb5_ps(const size_t ido, const size_t l1, const v4sf *RESTRICT cc, v4sf *
 } /* radb5 */
 
 NOINLINE auto rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac) -> v4sf*
+    const float *wa, const std::span<unsigned const, 15> ifac) -> v4sf*
 {
     Expects(work1 != work2);
 
@@ -1269,7 +1267,7 @@ NOINLINE auto rfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1,
 } /* rfftf1 */
 
 NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac)
+    const float *wa, const std::span<unsigned const, 15> ifac)
 {
     Expects(work1 != work2);
 
@@ -1312,7 +1310,7 @@ NOINLINE v4sf *rfftb1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1
 }
 
 v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *work2,
-    const float *wa, const std::span<u32 const, 15> ifac, const float fsign)
+    const float *wa, const std::span<unsigned const, 15> ifac, const float fsign)
 {
     Expects(work1 != work2);
 
@@ -1355,11 +1353,11 @@ v4sf *cfftf1_ps(const size_t n, const v4sf *input_readonly, v4sf *work1, v4sf *w
 }
 
 
-auto decompose(u32 const n, const std::span<u32, 15> ifac, const std::span<u32 const, 4> ntryh)
-    -> u32
+auto decompose(unsigned const n, const std::span<unsigned, 15> ifac,
+    const std::span<unsigned const, 4> ntryh) -> unsigned
 {
     auto nl = n;
-    auto nf = 0_u32;
+    auto nf = 0u;
     for(const auto ntry : ntryh)
     {
         while(nl != 1)
@@ -1386,33 +1384,32 @@ auto decompose(u32 const n, const std::span<u32, 15> ifac, const std::span<u32 c
     return nf;
 }
 
-void rffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
+void rffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
-    static constexpr std::array ntryh{4_u32, 2_u32, 3_u32, 5_u32};
+    static constexpr auto ntryh = std::array{4u, 2u, 3u, 5u};
 
-    const auto nf = usize{decompose(n, ifac, ntryh)};
-    const auto argh = 2.0*std::numbers::pi / n;
-    auto is = 0_uz;
-    auto nfm1 = nf - 1_uz;
-    auto l1 = 1_uz;
+    auto const nfm1 = usize{decompose(n, ifac, ntryh)} - 1;
+    auto const argh = 2.0_f64*std::numbers::pi / n;
+    auto is = 0_usize;
+    auto l1 = 1_usize;
     for(auto k1 = 0_uz;k1 < nfm1;++k1)
     {
-        const auto ip = size_t{ifac[k1+2]};
+        const auto ip = usize{ifac[k1+2]};
         const auto l2 = l1 * ip;
         const auto ido = n / l2;
         const auto ipm = ip - 1;
-        auto ld = 0_uz;
+        auto ld = 0_usize;
         for(auto j = 0_uz;j < ipm;++j)
         {
-            auto i = is;
+            auto i = is.c_val;
             ld += l1;
-            const auto argld = gsl::narrow_cast<double>(ld)*argh;
+            const auto argld = ld.reinterpret_as<f64>() * argh;
             auto fi = 0.0;
             for(auto ii = 2_uz;ii < ido;ii += 2)
             {
                 fi += 1.0;
-                wa[i++] = gsl::narrow_cast<float>(std::cos(fi*argld));
-                wa[i++] = gsl::narrow_cast<float>(std::sin(fi*argld));
+                wa[i++] = cos(fi*argld).cast_to<f32>().c_val;
+                wa[i++] = sin(fi*argld).cast_to<f32>().c_val;
             }
             is += ido;
         }
@@ -1420,35 +1417,35 @@ void rffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
     }
 } /* rffti1 */
 
-void cffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
+void cffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
-    static constexpr auto ntryh = std::array{5_u32, 3_u32, 4_u32, 2_u32};
+    static constexpr auto ntryh = std::array{5u, 3u, 4u, 2u};
 
     const auto nf = usize{decompose(n, ifac, ntryh)};
-    const auto argh = 2.0*std::numbers::pi / n;
+    const auto argh = 2.0_f64*std::numbers::pi / n;
     auto i = 1_uz;
-    auto l1 = 1_uz;
+    auto l1 = 1_usize;
     for(auto k1 = 0_uz;k1 < nf;++k1)
     {
-        const auto ip = size_t{ifac[k1+2]};
+        const auto ip = usize{ifac[k1+2]};
         const auto l2 = l1 * ip;
         const auto ido = n / l2;
         const auto idot = ido + ido + 2_uz;
         const auto ipm = ip - 1_uz;
-        auto ld = 0_uz;
+        auto ld = 0_usize;
         for(auto j = 0_uz;j < ipm;++j)
         {
-            auto i1 = i;
+            auto const i1 = i;
             wa[i-1] = 1.0f;
             wa[i] = 0.0f;
             ld += l1;
-            const auto argld = gsl::narrow_cast<double>(ld)*argh;
+            const auto argld = ld.reinterpret_as<f64>()*argh;
             auto fi = 0.0;
             for(auto ii = 3_uz;ii < idot;ii += 2)
             {
                 fi += 1.0;
-                wa[++i] = gsl::narrow_cast<float>(std::cos(fi*argld));
-                wa[++i] = gsl::narrow_cast<float>(std::sin(fi*argld));
+                wa[++i] = cos(fi*argld).reinterpret_as<f32>().c_val;
+                wa[++i] = sin(fi*argld).reinterpret_as<f32>().c_val;
             }
             if(ip > 5)
             {
@@ -1464,9 +1461,9 @@ void cffti1_ps(u32 const n, float *wa, std::span<u32, 15> const ifac)
 
 
 struct alignas(V4sfAlignment) PFFFT_Setup {
-    u32 N{};
-    u32 Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
-    std::array<u32, 15> ifac{};
+    unsigned N{};
+    unsigned Ncvec{}; /* nb of complex simd vectors (N/4 if PFFFT_COMPLEX, N/8 if PFFFT_REAL) */
+    std::array<unsigned, 15> ifac{};
     pffft_transform_t transform{};
 
     float *twiddle{}; /* N/4 elements */
@@ -1494,7 +1491,7 @@ auto pffft_new_setup(const unsigned int N, const pffft_transform_t transform) ->
         Expects((N%(SimdSize*SimdSize)) == 0);
     }
 
-    const auto Ncvec = u32{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
+    const auto Ncvec = unsigned{(transform == PFFFT_REAL ? N/2 : N) / SimdSize};
     Expects(Ncvec > 0u);
 
     const auto storelen = sizeof(PFFFT_Setup) + 2_zu*Ncvec*sizeof(v4sf);
@@ -1792,7 +1789,7 @@ force_inline void pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, cons
 NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
-    static constexpr auto s = std::numbers::sqrt2_v<float>/2.0f;
+    constexpr auto s = std::numbers::sqrt2_v<float>/2.0f;
 
     Expects(in != out);
     const auto dk = size_t{Ncvec/SimdSize}; // number of 4x4 matrix blocks
@@ -1893,7 +1890,7 @@ force_inline void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf 
 NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,
     const v4sf *e)
 {
-    static constexpr auto sqrt2 = std::numbers::sqrt2_v<float>;
+    constexpr auto sqrt2 = std::numbers::sqrt2_v<float>;
 
     Expects(in != out);
     const auto dk = size_t{Ncvec/SimdSize}; // number of 4x4 matrix blocks
@@ -2175,7 +2172,7 @@ void pffft_zconvolve_accumulate_internal(const PFFFT_Setup *s, const v4sf *RESTR
  * vectors, these casts are needed.
  */
 void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
-    pffft_direction_t direction)
+    pffft_direction_t direction) noexcept NONBLOCKING
 {
     Expects(in != out);
     Expects(valigned(in) && valigned(out));
@@ -2184,7 +2181,7 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *out,
 }
 
 void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
-    float *ab, float scaling)
+    float *ab, float scaling) noexcept NONBLOCKING
 {
     Expects(valigned(a) && valigned(b) && valigned(ab));
     pffft_zconvolve_scale_accumulate_internal(s, reinterpret_cast<const v4sf*>(a),
@@ -2192,6 +2189,7 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, cons
 }
 
 void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
+    noexcept NONBLOCKING
 {
     Expects(valigned(a) && valigned(b) && valigned(ab));
     pffft_zconvolve_accumulate_internal(s, reinterpret_cast<const v4sf*>(a),
@@ -2199,7 +2197,7 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const floa
 }
 
 void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
-    pffft_direction_t direction)
+    pffft_direction_t direction) noexcept NONBLOCKING
 {
     Expects(valigned(input) && valigned(output) && valigned(work));
     pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(std::assume_aligned<16>(input)),
@@ -2208,7 +2206,7 @@ void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output
 }
 
 void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
-    float *work, pffft_direction_t direction)
+    float *work, pffft_direction_t direction) noexcept NONBLOCKING
 {
     Expects(valigned(input) && valigned(output) && valigned(work));
     pffft_transform_internal(setup, reinterpret_cast<const v4sf*>(std::assume_aligned<16>(input)),
@@ -2276,7 +2274,7 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const float *input, floa
 } // namespace
 
 void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *RESTRICT out,
-    pffft_direction_t direction)
+    pffft_direction_t direction) noexcept NONBLOCKING
 {
     const auto N = size_t{setup->N};
     if(setup->transform == PFFFT_COMPLEX)
@@ -2303,7 +2301,7 @@ void pffft_zreorder(const PFFFT_Setup *setup, const float *in, float *RESTRICT o
 }
 
 void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, const float *b,
-    float *ab, float scaling)
+    float *ab, float scaling) noexcept NONBLOCKING
 {
     auto Ncvec = size_t{s->Ncvec};
 
@@ -2327,6 +2325,7 @@ void pffft_zconvolve_scale_accumulate(const PFFFT_Setup *s, const float *a, cons
 }
 
 void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const float *b, float *ab)
+    noexcept NONBLOCKING
 {
     auto Ncvec = size_t{s->Ncvec};
 
@@ -2351,13 +2350,13 @@ void pffft_zconvolve_accumulate(const PFFFT_Setup *s, const float *a, const floa
 
 
 void pffft_transform(const PFFFT_Setup *setup, const float *input, float *output, float *work,
-    pffft_direction_t direction)
+    pffft_direction_t direction) noexcept NONBLOCKING
 {
     pffft_transform_internal(setup, input, output, work, direction, false);
 }
 
 void pffft_transform_ordered(const PFFFT_Setup *setup, const float *input, float *output,
-    float *work, pffft_direction_t direction)
+    float *work, pffft_direction_t direction) noexcept NONBLOCKING
 {
     pffft_transform_internal(setup, input, output, work, direction, true);
 }

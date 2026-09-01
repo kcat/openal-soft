@@ -30,8 +30,6 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
-#include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -47,6 +45,7 @@
 #include "sndfile.h"
 
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
@@ -71,8 +70,6 @@ namespace {
 
 using std::chrono::seconds;
 using std::chrono::nanoseconds;
-
-auto alBufferCallbackSOFT = LPALBUFFERCALLBACKSOFT{};
 
 struct StreamPlayer {
     /* A buffer that can hold int16 or float samples, or raw (ADPCM) bytes. */
@@ -391,7 +388,7 @@ auto StreamPlayer::prepare() -> bool
         auto output = std::views::counted(static_cast<std::byte*>(data), size);
         return static_cast<StreamPlayer*>(userptr)->bufferCallback(output);
     };
-    alBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, callback, this);
+    palBufferCallbackSOFT(mBuffer, mFormat, mSfInfo.samplerate, callback, this);
 
     alSourcei(mSource, AL_BUFFER, static_cast<ALint>(mBuffer));
     if(const auto err = alGetError())
@@ -539,9 +536,7 @@ auto main(std::span<std::string_view> args) -> int
         return 1;
     }
 
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-    alBufferCallbackSOFT = reinterpret_cast<LPALBUFFERCALLBACKSOFT>(
-        alGetProcAddress("alBufferCallbackSOFT"));
+    LoadALExtensions();
 
     auto refresh = ALCint{25};
     alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);

@@ -7,17 +7,23 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/context.h"
 #include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
-#include "gsl/gsl"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
+
+#if HAVE_CXXMODULES
+import alc.context;
+import gsl;
+#else
+#include "alc/context.hpp"
+#include "gsl/gsl"
+#endif
 
 
 namespace {
@@ -239,12 +245,17 @@ void VmorpherEffectHandler::GetParamfv(al::Context *context, const VmorpherProps
 #if ALSOFT_EAX
 namespace {
 
-using VocalMorpherCommitter = EaxCommitter<EaxVocalMorpherCommitter>;
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+struct EaxVocalMorpherException final : EaxException {
+    explicit EaxVocalMorpherException(std::string_view const message)
+        : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
+    { }
+};
 
 struct PhonemeAValidator {
     void operator()(eax_ulong const ulPhonemeA) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Phoneme A",
             ulPhonemeA,
             EAXVOCALMORPHER_MINPHONEMEA,
@@ -255,7 +266,7 @@ struct PhonemeAValidator {
 struct PhonemeACoarseTuningValidator {
     void operator()(eax_long const lPhonemeACoarseTuning) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Phoneme A Coarse Tuning",
             lPhonemeACoarseTuning,
             EAXVOCALMORPHER_MINPHONEMEACOARSETUNING,
@@ -266,7 +277,7 @@ struct PhonemeACoarseTuningValidator {
 struct PhonemeBValidator {
     void operator()(eax_ulong const ulPhonemeB) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Phoneme B",
             ulPhonemeB,
             EAXVOCALMORPHER_MINPHONEMEB,
@@ -277,7 +288,7 @@ struct PhonemeBValidator {
 struct PhonemeBCoarseTuningValidator {
     void operator()(eax_long const lPhonemeBCoarseTuning) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Phoneme B Coarse Tuning",
             lPhonemeBCoarseTuning,
             EAXVOCALMORPHER_MINPHONEMEBCOARSETUNING,
@@ -288,7 +299,7 @@ struct PhonemeBCoarseTuningValidator {
 struct WaveformValidator {
     void operator()(eax_ulong const ulWaveform) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Waveform",
             ulWaveform,
             EAXVOCALMORPHER_MINWAVEFORM,
@@ -299,7 +310,7 @@ struct WaveformValidator {
 struct RateValidator {
     void operator()(float const flRate) const
     {
-        eax_validate_range<VocalMorpherCommitter::Exception>(
+        eax_validate_range<EaxVocalMorpherException>(
             "Rate",
             flRate,
             EAXVOCALMORPHER_MINRATE,
@@ -321,17 +332,11 @@ struct AllValidator {
 
 } // namespace
 
-template<> /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-struct VocalMorpherCommitter::Exception final : EaxException {
-    explicit Exception(const std::string_view message)
-        : EaxException{"EAX_VOCAL_MORPHER_EFFECT", message}
-    { }
-};
-
 template<> [[noreturn]]
-void VocalMorpherCommitter::fail(const std::string_view message)
-{ throw Exception{message}; }
+void EaxVocalMorpherCommitter::fail(std::string_view const message)
+{ throw EaxVocalMorpherException{message}; }
 
+template<>
 auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) const -> bool
 {
     if(auto *cur = std::get_if<EAXVOCALMORPHERPROPERTIES>(&mEaxProps); cur && *cur == props)
@@ -401,6 +406,7 @@ auto EaxVocalMorpherCommitter::commit(const EAXVOCALMORPHERPROPERTIES &props) co
     return true;
 }
 
+template<>
 void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
 {
     props = EAXVOCALMORPHERPROPERTIES{
@@ -412,6 +418,7 @@ void EaxVocalMorpherCommitter::SetDefaults(EaxEffectProps &props)
         .flRate = EAXVOCALMORPHER_DEFAULTRATE};
 }
 
+template<>
 void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPROPERTIES &props)
 {
     switch(call.get_property_id())
@@ -428,6 +435,7 @@ void EaxVocalMorpherCommitter::Get(const EaxCall &call, const EAXVOCALMORPHERPRO
     }
 }
 
+template<>
 void EaxVocalMorpherCommitter::Set(const EaxCall &call, EAXVOCALMORPHERPROPERTIES &props)
 {
     switch(call.get_property_id())

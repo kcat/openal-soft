@@ -47,46 +47,6 @@
 #endif
 
 
-/* Filter object functions */
-static LPALGENFILTERS alGenFilters;
-static LPALDELETEFILTERS alDeleteFilters;
-static LPALISFILTER alIsFilter;
-static LPALFILTERI alFilteri;
-static LPALFILTERIV alFilteriv;
-static LPALFILTERF alFilterf;
-static LPALFILTERFV alFilterfv;
-static LPALGETFILTERI alGetFilteri;
-static LPALGETFILTERIV alGetFilteriv;
-static LPALGETFILTERF alGetFilterf;
-static LPALGETFILTERFV alGetFilterfv;
-
-/* Effect object functions */
-static LPALGENEFFECTS alGenEffects;
-static LPALDELETEEFFECTS alDeleteEffects;
-static LPALISEFFECT alIsEffect;
-static LPALEFFECTI alEffecti;
-static LPALEFFECTIV alEffectiv;
-static LPALEFFECTF alEffectf;
-static LPALEFFECTFV alEffectfv;
-static LPALGETEFFECTI alGetEffecti;
-static LPALGETEFFECTIV alGetEffectiv;
-static LPALGETEFFECTF alGetEffectf;
-static LPALGETEFFECTFV alGetEffectfv;
-
-/* Auxiliary Effect Slot object functions */
-static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
-
-
 /* This stuff defines a simple streaming player object, the same as alstream.c.
  * Comments are removed for brevity, see alstream.c for more details.
  */
@@ -292,16 +252,16 @@ static ALuint CreateEffect(void)
     printf("Using Convolution\n");
 
     /* Create the effect object and set the convolution effect type. */
-    alGenEffects(1, &effect);
-    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_SOFT);
+    palGenEffects(1, &effect);
+    palEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_CONVOLUTION_SOFT);
 
     /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL error: %s\n", alGetString(err));
-        if(alIsEffect(effect))
-            alDeleteEffects(1, &effect);
+        if(palIsEffect(effect))
+            palDeleteEffects(1, &effect);
         return 0;
     }
 
@@ -436,6 +396,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Error: Convolution effect not supported\n");
         return 1;
     }
+    LoadALExtensions();
 
     if(argc < 2)
     {
@@ -443,45 +404,6 @@ int main(int argc, char **argv)
         fprintf(stderr, "Error: Missing impulse response or sound files\n");
         return 1;
     }
-
-    /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
-    LOAD_PROC(LPALGENFILTERS, alGenFilters);
-    LOAD_PROC(LPALDELETEFILTERS, alDeleteFilters);
-    LOAD_PROC(LPALISFILTER, alIsFilter);
-    LOAD_PROC(LPALFILTERI, alFilteri);
-    LOAD_PROC(LPALFILTERIV, alFilteriv);
-    LOAD_PROC(LPALFILTERF, alFilterf);
-    LOAD_PROC(LPALFILTERFV, alFilterfv);
-    LOAD_PROC(LPALGETFILTERI, alGetFilteri);
-    LOAD_PROC(LPALGETFILTERIV, alGetFilteriv);
-    LOAD_PROC(LPALGETFILTERF, alGetFilterf);
-    LOAD_PROC(LPALGETFILTERFV, alGetFilterfv);
-
-    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
-    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
-    LOAD_PROC(LPALISEFFECT, alIsEffect);
-    LOAD_PROC(LPALEFFECTI, alEffecti);
-    LOAD_PROC(LPALEFFECTIV, alEffectiv);
-    LOAD_PROC(LPALEFFECTF, alEffectf);
-    LOAD_PROC(LPALEFFECTFV, alEffectfv);
-    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
-    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
-    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
-    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
-
-    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
-    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
-    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
-#undef LOAD_PROC
 
     /* Load the reverb into an effect. */
     effect = CreateEffect();
@@ -495,7 +417,7 @@ int main(int argc, char **argv)
     ir_buffer = LoadSound(argv[0]);
     if(!ir_buffer)
     {
-        alDeleteEffects(1, &effect);
+        palDeleteEffects(1, &effect);
         CloseAL();
         return 1;
     }
@@ -504,7 +426,7 @@ int main(int argc, char **argv)
      * that connect to it.
      */
     slot = 0;
-    alGenAuxiliaryEffectSlots(1, &slot);
+    palGenAuxiliaryEffectSlots(1, &slot);
 
     /* Set the impulse response sound buffer on the effect slot. This allows
      * effects to access it as needed. In this case, convolution uses it as the
@@ -523,16 +445,16 @@ int main(int argc, char **argv)
      * listener. You can use a send filter to alter a given source's
      * contribution to reverb.
      */
-    alAuxiliaryEffectSloti(slot, AL_BUFFER, (ALint)ir_buffer);
-    alAuxiliaryEffectSlotf(slot, AL_EFFECTSLOT_GAIN, 1.0f / 16.0f);
-    alAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
+    palAuxiliaryEffectSloti(slot, AL_BUFFER, (ALint)ir_buffer);
+    palAuxiliaryEffectSlotf(slot, AL_EFFECTSLOT_GAIN, 1.0f / 16.0f);
+    palAuxiliaryEffectSloti(slot, AL_EFFECTSLOT_EFFECT, (ALint)effect);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
     /* Create a filter that can silence the dry path. */
     filter = 0;
-    alGenFilters(1, &filter);
-    alFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-    alFilterf(filter, AL_LOWPASS_GAIN, 0.0f);
+    palGenFilters(1, &filter);
+    palFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+    palFilterf(filter, AL_LOWPASS_GAIN, 0.0f);
 
     player = NewPlayer();
     /* Connect the player's source to the effect slot. */
@@ -589,9 +511,9 @@ int main(int argc, char **argv)
     DeletePlayer(player);
     player = NULL;
 
-    alDeleteAuxiliaryEffectSlots(1, &slot);
-    alDeleteEffects(1, &effect);
-    alDeleteFilters(1, &filter);
+    palDeleteAuxiliaryEffectSlots(1, &slot);
+    palDeleteEffects(1, &effect);
+    palDeleteFilters(1, &filter);
     alDeleteBuffers(1, &ir_buffer);
 
     CloseAL();

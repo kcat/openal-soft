@@ -4,7 +4,7 @@
 
 #include "cpu_caps.h"
 
-#if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+#if defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
 #include <windows.h>
 #ifndef PF_ARM_NEON_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_NEON_INSTRUCTIONS_AVAILABLE 19
@@ -39,7 +39,7 @@ inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
 #define CAN_GET_CPUID
 
 #elif defined(HAVE_CPUID_INTRINSIC) \
-    && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
+    && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || (defined(_M_X64) && !defined(_M_ARM64EC)))
 
 using reg_type = int;
 inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
@@ -107,13 +107,13 @@ auto GetCPUInfo() -> std::optional<CPUInfo>
     {
         cpuregs = get_cpuid(1);
         if((cpuregs[3]&(1<<25)))
-            ret.mCaps |= CPU_CAP_SSE;
-        if((ret.mCaps&CPU_CAP_SSE) && (cpuregs[3]&(1<<26)))
-            ret.mCaps |= CPU_CAP_SSE2;
-        if((ret.mCaps&CPU_CAP_SSE2) && (cpuregs[2]&(1<<0)))
-            ret.mCaps |= CPU_CAP_SSE3;
-        if((ret.mCaps&CPU_CAP_SSE3) && (cpuregs[2]&(1<<19)))
-            ret.mCaps |= CPU_CAP_SSE4_1;
+            ret.mCaps.set(CPUCap::SSE);
+        if(ret.mCaps.test(CPUCap::SSE) and (cpuregs[3]&(1<<26)))
+            ret.mCaps.set(CPUCap::SSE2);
+        if(ret.mCaps.test(CPUCap::SSE2) and (cpuregs[2]&(1<<0)))
+            ret.mCaps.set(CPUCap::SSE3);
+        if(ret.mCaps.test(CPUCap::SSE3) and (cpuregs[2]&(1<<19)))
+            ret.mCaps.set(CPUCap::SSE4_1);
     }
 
 #else
@@ -121,28 +121,28 @@ auto GetCPUInfo() -> std::optional<CPUInfo>
     /* Assume support for whatever's supported if we can't check for it */
 #if HAVE_SSE4_1
 #warning "Assuming SSE 4.1 run-time support!"
-    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
+    ret.mCaps.set(CPUCap::SSE).set(CPUCap::SSE2).set(CPUCap::SSE3).set(CPUCap::SSE4_1);
 #elif HAVE_SSE3
 #warning "Assuming SSE 3 run-time support!"
-    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
+    ret.mCaps.set(CPUCap::SSE).set(CPUCap::SSE2).set(CPUCap::SSE3);
 #elif HAVE_SSE2
 #warning "Assuming SSE 2 run-time support!"
-    ret.mCaps |= CPU_CAP_SSE | CPU_CAP_SSE2;
+    ret.mCaps.set(CPUCap::SSE).set(CPUCap::SSE2);
 #elif HAVE_SSE
 #warning "Assuming SSE run-time support!"
-    ret.mCaps |= CPU_CAP_SSE;
+    ret.mCaps.set(CPUCap::SSE);
 #endif
 #endif /* CAN_GET_CPUID */
 
 #if HAVE_NEON
 #ifdef __ARM_NEON
-    ret.mCaps |= CPU_CAP_NEON;
-#elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64))
+    ret.mCaps.set(CPUCap::NEON);
+#elif defined(_WIN32) && (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC))
     if(IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
-        ret.mCaps |= CPU_CAP_NEON;
+        ret.mCaps.set(CPUCap::NEON);
 #else
 #warning "Assuming NEON run-time support!"
-    ret.mCaps |= CPU_CAP_NEON;
+    ret.mCaps.set(CPUCap::NEON);
 #endif
 #endif
 

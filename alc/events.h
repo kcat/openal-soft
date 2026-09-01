@@ -4,24 +4,24 @@
 #include "inprogext.h"
 #include "opthelpers.h"
 
-#include <bitset>
 #include <mutex>
 #include <optional>
 #include <string_view>
 
 #include "altypes.hpp"
+#include "bitset.hpp"
 
 namespace alc {
 
-enum class EventType : u8 {
+enum class EventType : u8::value_t {
     DefaultDeviceChanged,
     DeviceAdded,
     DeviceRemoved,
 
-    Count
+    MaxValue = DeviceRemoved
 };
 
-std::optional<alc::EventType> GetEventType(ALCenum type);
+std::optional<EventType> GetEventType(ALCenum type);
 
 enum class EventSupport : ALCenum {
     FullSupport = ALC_EVENT_SUPPORTED_SOFT,
@@ -32,9 +32,6 @@ enum class DeviceType : ALCenum {
     Playback = ALC_PLAYBACK_DEVICE_SOFT,
     Capture = ALC_CAPTURE_DEVICE_SOFT,
 };
-
-using EventBitSet = std::bitset<al::to_underlying(EventType::Count)>;
-inline EventBitSet EventsEnabled{0};
 
 inline std::mutex EventMutex;
 

@@ -20,6 +20,9 @@ namespace {
 template<typename... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 } // namespace
 
 BFormatDec::BFormatDec(const size_t inchans, const std::span<const ChannelDec> coeffs,
@@ -55,11 +58,12 @@ BFormatDec::BFormatDec(const size_t inchans, const std::span<const ChannelDec> c
 
 
 void BFormatDec::process(const std::span<FloatBufferLine> OutBuffer,
-    const std::span<const FloatBufferLine> InSamples, const size_t SamplesToDo)
+    const std::span<const FloatBufferLine> InSamples, const size_t SamplesToDo) noexcept
+    NONBLOCKING
 {
     ASSUME(SamplesToDo > 0);
 
-    std::visit(overloaded {
+    auto do_proc = overloaded {
         [=,this](DBandDecoderVector &decoder)
         {
             using decoder_t = DBandDecoderVector::value_type;
@@ -88,5 +92,6 @@ void BFormatDec::process(const std::span<FloatBufferLine> OutBuffer,
                 return true;
             });
         },
-    }, mChannelDec);
+    };
+    IGNORE_FUNCTION_EFFECTS( visit(do_proc, mChannelDec); )
 }

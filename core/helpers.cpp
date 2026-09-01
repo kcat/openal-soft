@@ -24,8 +24,13 @@
 #include "alstring.h"
 #include "filesystem.h"
 #include "gsl/gsl"
-#include "logging.h"
 #include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import logging;
+#else
+#include "logging.h"
+#endif
 
 
 namespace {
@@ -54,7 +59,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
             if(fs::status(entrypath).type() != fs::file_type::regular)
                 continue;
             const auto u8ext = entrypath.extension().u8string();
-            if(al::case_compare(al::u8_as_char(u8ext), ext) == 0)
+            if(is_eq(al::case_compare(al::u8_as_char(u8ext), ext)))
                 results->emplace_back(al::u8_as_char(entrypath.u8string()));
         }
     }
@@ -345,7 +350,7 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     const auto datadirs = std::string{al::getenv("XDG_DATA_DIRS")
         .value_or("/usr/local/share/:/usr/share/")};
 
-    auto curpos = 0_uz;
+    auto curpos = std::size_t{0};
     while(curpos < datadirs.size())
     {
         auto nextpos = datadirs.find(':', curpos);

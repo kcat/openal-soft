@@ -60,32 +60,33 @@ namespace {
 constexpr auto MaxUpdateSamples = 256_uz;
 constexpr auto NumFormants = 4_uz;
 constexpr auto RcpQFactor = 1.0f / 5.0f;
-enum : size_t {
+enum : std::size_t {
     VowelAIndex,
     VowelBIndex,
     NumFilters
 };
 
-constexpr auto WaveformFracBits{24_uz};
-constexpr auto WaveformFracOne{1_uz<<WaveformFracBits};
-constexpr auto WaveformFracMask{WaveformFracOne-1};
+constexpr auto WaveformFracBits = 24_uz;
+constexpr auto WaveformFracOne = 1_uz << WaveformFracBits;
+constexpr auto WaveformFracMask = WaveformFracOne - 1;
 
-inline auto Sin(u32 const index) -> float
+inline auto Sin(unsigned const index) noexcept NONBLOCKING -> float
 {
-    static constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
+    constexpr auto scale = std::numbers::pi_v<float>*2.0f / float{WaveformFracOne};
     return std::sin(static_cast<float>(index) * scale)*0.5f + 0.5f;
 }
 
-inline auto Saw(u32 const index) -> float
+inline auto Saw(unsigned const index) noexcept NONBLOCKING -> float
 { return static_cast<float>(index) / float{WaveformFracOne}; }
 
-inline auto Triangle(u32 const index) -> float
+inline auto Triangle(unsigned const index) noexcept NONBLOCKING -> float
 { return std::fabs(static_cast<float>(index)*(2.0f/WaveformFracOne) - 1.0f); }
 
-inline auto Half(u32) -> float { return 0.5f; }
+inline auto Half(unsigned) noexcept NONBLOCKING -> float { return 0.5f; }
 
-template<float(&func)(u32)>
-void Oscillate(std::span<float> const dst, u32 index, u32 const step)
+template<float(&func)(unsigned) noexcept NONBLOCKING>
+void Oscillate(std::span<float> const dst, unsigned index, unsigned const step) noexcept
+    NONBLOCKING
 {
     std::ranges::generate(dst, [&index,step]
     {
@@ -145,9 +146,9 @@ struct FormantFilter {
 };
 
 
-struct VmorpherState final : public EffectState {
+struct VmorpherState final : EffectState {
     struct OutParams {
-        u32 mTargetChannel{InvalidChannelIndex};
+        unsigned mTargetChannel{InvalidChannelIndex.c_val};
 
         /* Effect parameters */
         std::array<std::array<FormantFilter,NumFormants>,NumFilters> mFormants;
@@ -158,10 +159,10 @@ struct VmorpherState final : public EffectState {
     };
     std::array<OutParams,MaxAmbiChannels> mChans;
 
-    void (*mGetSamples)(std::span<float> dst, u32 const index, u32 step){};
+    void (*mGetSamples)(std::span<float> dst, unsigned index, unsigned step) noexcept NONBLOCKING{};
 
-    u32 mIndex{0};
-    u32 mStep{1};
+    unsigned mIndex{0};
+    unsigned mStep{1};
 
     /* Effects buffers */
     alignas(16) std::array<float,MaxUpdateSamples> mSampleBufferA{};
@@ -170,9 +171,9 @@ struct VmorpherState final : public EffectState {
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
-        EffectTarget target) override;
+        EffectTarget target) noexcept NONBLOCKING override;
     void process(size_t samplesToDo, std::span<const FloatBufferLine> samplesIn,
-        std::span<FloatBufferLine> samplesOut) override;
+        std::span<FloatBufferLine> samplesOut) noexcept override;
 
     static std::array<FormantFilter,NumFormants> getFiltersByPhoneme(VMorpherPhenome phoneme,
         float frequency, float pitch) noexcept;
@@ -236,9 +237,9 @@ void VmorpherState::deviceUpdate(const DeviceBase*, const BufferStorage*)
 }
 
 void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slot,
-    const EffectProps *props_, const EffectTarget target)
+    const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
-    auto &props = std::get<VmorpherProps>(*props_);
+    auto &props = IGNORE_FUNCTION_EFFECTS(std::get<VmorpherProps>(*props_));
     const auto device = al::get_not_null(context->mDevice);
     const auto frequency = static_cast<float>(device->mSampleRate);
     const auto step = props.Rate / frequency;
@@ -268,15 +269,16 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](usize const idx, u32 const outchan, f32 const outgain)
+        [this](std::size_t const idx, u8 const outchan, float const outgain)
     {
-        mChans[idx].mTargetChannel = outchan;
+        mChans[idx].mTargetChannel = outchan.c_val;
         mChans[idx].mTargetGain = outgain;
     });
 }
 
 void VmorpherState::process(const size_t samplesToDo,
     const std::span<const FloatBufferLine> samplesIn, const std::span<FloatBufferLine> samplesOut)
+    noexcept NONBLOCKING
 {
     alignas(16) auto blended = std::array<float,MaxUpdateSamples>{};
 
@@ -288,7 +290,7 @@ void VmorpherState::process(const size_t samplesToDo,
         const auto td = std::min(MaxUpdateSamples, samplesToDo-base);
 
         mGetSamples(std::span{mLfo}.first(td), mIndex, mStep);
-        mIndex += static_cast<u32>(mStep * td);
+        mIndex += static_cast<unsigned>(mStep * td);
         mIndex &= WaveformFracMask;
 
         auto chandata = mChans.begin();

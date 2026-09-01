@@ -44,13 +44,13 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
     std::mutex StateLock;
     std::unique_ptr<BackendBase> Backend;
 
-    u32 NumMonoSources{};
-    u32 NumStereoSources{};
+    ALCuint NumMonoSources{};
+    ALCuint NumStereoSources{};
 
     // Maximum number of sources that can be created
-    u32 SourcesMax{};
+    ALCuint SourcesMax{};
     // Maximum number of slots that can be created
-    u32 AuxiliaryEffectSlotMax{};
+    ALCuint AuxiliaryEffectSlotMax{};
 
     std::string mHrtfName;
     std::vector<std::string> mHrtfList;
@@ -87,13 +87,13 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
     std::vector<FilterSubList> FilterList;
 
 #if ALSOFT_EAX
-    u32 eax_x_ram_free_size{eax_x_ram_max_size};
+    ALCuint eax_x_ram_free_size{eax_x_ram_max_size};
 #endif // ALSOFT_EAX
 
 
-    std::unordered_map<u32, std::string> mBufferNames;
-    std::unordered_map<u32, std::string> mEffectNames;
-    std::unordered_map<u32, std::string> mFilterNames;
+    std::unordered_map<ALuint, std::string> mBufferNames;
+    std::unordered_map<ALuint, std::string> mEffectNames;
+    std::unordered_map<ALuint, std::string> mFilterNames;
 
     std::string mVendorOverride;
     std::string mVersionOverride;
@@ -135,15 +135,15 @@ auto Device::configValue(std::string_view const block, std::string_view const ke
 { return ConfigValueStr(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<i32>
+    -> std::optional<int>
 { return ConfigValueI32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<u32>
+    -> std::optional<unsigned>
 { return ConfigValueU32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const
-    -> std::optional<f32>
+    -> std::optional<float>
 { return ConfigValueF32(mDeviceName, block, key); }
 template<> inline
 auto Device::configValue(std::string_view const block, std::string_view const key) const

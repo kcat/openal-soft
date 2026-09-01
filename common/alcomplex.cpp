@@ -9,17 +9,17 @@
 #include <numbers>
 #include <ranges>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "gsl/gsl"
 
 
 namespace {
 
 using u16x2 = std::array<u16, 2>;
-using complex_d = std::complex<f64>;
+using complex_d = std::complex<double>;
 
 [[nodiscard]]
-constexpr auto BitReverseCounter(usize const log2_size) noexcept -> usize
+constexpr auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::size_t
 {
     /* Some magic math that calculates the number of swaps needed for a
      * sequence of bit-reversed indices when index < reversed_index.
@@ -28,7 +28,7 @@ constexpr auto BitReverseCounter(usize const log2_size) noexcept -> usize
 }
 
 
-template<usize N>
+template<std::size_t N>
 struct BitReverser {
     static_assert(N <= sizeof(u16)*8, "Too many bits for the bit-reversal table.");
 
@@ -52,8 +52,8 @@ struct BitReverser {
 
             if(idx < revidx)
             {
-                mData[ret_i][0] = gsl::narrow<u16>(idx);
-                mData[ret_i][1] = gsl::narrow<u16>(revidx);
+                mData[ret_i][0] = u16::from(idx);
+                mData[ret_i][1] = u16::from(revidx);
                 ++ret_i;
             }
         }
@@ -107,17 +107,18 @@ constexpr auto gArgAngle = std::array<std::complex<T>, gBitReverses.size()-1>{{
 
 } // namespace
 
-void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
+void complex_fft(std::span<std::complex<double>> const buffer, double const sign) noexcept
+    NONBLOCKING
 {
     auto const fftsize = buffer.size();
     /* Get the number of bits used for indexing. Simplifies bit-reversal and
      * the main loop count.
      */
-    if(auto const log2_size = gsl::narrow_cast<usize>(std::countr_zero(fftsize));
+    if(auto const log2_size = gsl::narrow_cast<std::size_t>(std::countr_zero(fftsize));
         log2_size < gBitReverses.size()) [[likely]]
     {
         for(auto &rev : gBitReverses[log2_size])
-            std::swap(buffer[rev[0]], buffer[rev[1]]);
+            std::swap(buffer[rev[0].c_val], buffer[rev[1].c_val]);
 
         /* Iterative form of Danielson-Lanczos lemma */
         for(auto const i : std::views::iota(0_uz, log2_size))
@@ -134,7 +135,7 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
                 buffer[k] += temp;
             }
 
-            auto const w = complex_d{gArgAngle<f64>[i].real(),gArgAngle<f64>[i].imag()*sign};
+            auto const w = complex_d{gArgAngle<double>[i].real(),gArgAngle<double>[i].imag()*sign};
             auto u = w;
             for(auto const j : std::views::iota(1_uz, step2))
             {
@@ -178,7 +179,7 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
                 buffer[k] += temp;
             }
 
-            auto const arg = pi / gsl::narrow_cast<f64>(step2);
+            auto const arg = pi / gsl::narrow_cast<double>(step2);
             auto const w = std::polar(1.0, arg);
             auto u = w;
             for(auto const j : std::views::iota(1_uz, step2))
@@ -195,11 +196,11 @@ void complex_fft(std::span<std::complex<f64>> const buffer, f64 const sign)
     }
 }
 
-void complex_hilbert(std::span<std::complex<f64>> const buffer)
+void complex_hilbert(std::span<std::complex<double>> const buffer) noexcept NONBLOCKING
 {
     inverse_fft(buffer);
 
-    auto const inverse_size = 1.0 / gsl::narrow_cast<f64>(buffer.size());
+    auto const inverse_size = 1.0 / gsl::narrow_cast<double>(buffer.size());
     auto bufiter = buffer.begin();
     auto const halfiter = std::next(bufiter, gsl::narrow_cast<ptrdiff_t>(buffer.size()>>1));
 

@@ -4,20 +4,21 @@
 #include <optional>
 #include <string>
 
+#include "bitset.hpp"
 
-inline int CPUCapFlags{0};
-enum {
-    CPU_CAP_SSE    = 1<<0,
-    CPU_CAP_SSE2   = 1<<1,
-    CPU_CAP_SSE3   = 1<<2,
-    CPU_CAP_SSE4_1 = 1<<3,
-    CPU_CAP_NEON   = 1<<4,
+
+enum class CPUCap {
+    SSE, SSE2, SSE3, SSE4_1, NEON,
+    Count
 };
+
+using CPUCapBitset = al::bitset<CPUCap>;
+inline CPUCapBitset CPUCapFlags;
 
 struct CPUInfo {
     std::string mVendor;
     std::string mName;
-    int mCaps{0};
+    CPUCapBitset mCaps;
 };
 
 std::optional<CPUInfo> GetCPUInfo();

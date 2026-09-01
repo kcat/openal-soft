@@ -31,7 +31,7 @@ namespace {
 [[maybe_unused]]
 auto disable_denormals() -> unsigned int
 {
-#if HAVE_SSE_INTRINSICS
+#if HAVE_SSE_INTRINSICS && !defined(__powerpc64__)
     const auto state = _mm_getcsr();
     auto sseState = state;
     sseState &= ~(_MM_FLUSH_ZERO_MASK | _MM_DENORMALS_ZERO_MASK);
@@ -39,13 +39,13 @@ auto disable_denormals() -> unsigned int
     _mm_setcsr(sseState);
     return state;
 
-#elif HAVE_SSE
+#elif HAVE_SSE && !defined(__powerpc64__)
 
     const auto state = _mm_getcsr();
     auto sseState = state;
     sseState &= ~_MM_FLUSH_ZERO_MASK;
     sseState |= _MM_FLUSH_ZERO_ON;
-    if((CPUCapFlags&CPU_CAP_SSE2))
+    if(CPUCapFlags.test(CPUCap::SSE2))
     {
         sseState &= ~_MM_DENORMALS_ZERO_MASK;
         sseState |= _MM_DENORMALS_ZERO_ON;
@@ -65,7 +65,7 @@ auto disable_denormals() -> unsigned int
 [[maybe_unused]]
 void reset_fpu(unsigned int state [[maybe_unused]])
 {
-#if HAVE_SSE_INTRINSICS || HAVE_SSE
+#if (HAVE_SSE_INTRINSICS || HAVE_SSE) && !defined(__powerpc64__)
     _mm_setcsr(state);
 #endif
 }
@@ -73,7 +73,7 @@ void reset_fpu(unsigned int state [[maybe_unused]])
 } // namespace
 
 
-auto FPUCtl::Set() noexcept -> unsigned int
+auto FPUCtl::Set() noexcept NONBLOCKING -> unsigned int
 {
 #if HAVE_SSE_INTRINSICS
     return disable_denormals();
@@ -81,19 +81,19 @@ auto FPUCtl::Set() noexcept -> unsigned int
 #else
 
 #if HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         return disable_denormals();
 #endif
     return 0u;
 #endif
 }
 
-void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept
+void FPUCtl::Reset(unsigned int state [[maybe_unused]]) noexcept NONBLOCKING
 {
 #if HAVE_SSE_INTRINSICS
     reset_fpu(state);
 #elif HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if(CPUCapFlags.test(CPUCap::SSE))
         reset_fpu(state);
 #endif
 }

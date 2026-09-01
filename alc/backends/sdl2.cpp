@@ -59,7 +59,7 @@ struct Sdl2Backend final : BackendBase {
 
     std::string mSDLName;
     SDL_AudioDeviceID mDeviceID{0u};
-    u32 mFrameSize{0};
+    unsigned mFrameSize{0};
 };
 
 Sdl2Backend::~Sdl2Backend()
@@ -90,7 +90,7 @@ void Sdl2Backend::open(std::string_view name)
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
     want.channels = al::saturate_cast<Uint8>(mDevice->channelsFromFmt());
-    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192_u32));
+    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -154,7 +154,7 @@ auto Sdl2Backend::reset() -> bool
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
     want.channels = al::saturate_cast<Uint8>(mDevice->channelsFromFmt());
-    want.samples = al::saturate_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192_u32));
+    want.samples = al::saturate_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -213,7 +213,7 @@ auto Sdl2Backend::reset() -> bool
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
 
-    mDevice->mSampleRate = static_cast<u32>(have.freq);
+    mDevice->mSampleRate = static_cast<unsigned>(have.freq);
     mDevice->mUpdateSize = have.samples;
     mDevice->mBufferSize = std::max(have.size/mFrameSize, mDevice->mUpdateSize*2u);
 

@@ -15,8 +15,9 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "alstring.h"
+#include "opthelpers.h"
 #include "strutils.hpp"
 
 #if HAVE_CXXMODULES
@@ -341,7 +342,7 @@ auto LastError = std::atomic{ALC_NO_ERROR};
 template<typename T>
 class ProtectedIfaceMap {
     std::mutex IfaceMutex;
-    std::unordered_map<T, u32> IfaceMap{};
+    std::unordered_map<T, ALCuint> IfaceMap{};
 
 public:
     [[nodiscard]] auto lock() { return IfaceMutex.lock(); }
@@ -364,7 +365,7 @@ public:
         }
 
         template<typename K> [[nodiscard]]
-        auto lookup_idx(K&& key) -> std::optional<u32>
+        auto lookup_idx(K&& key) -> std::optional<ALCuint>
         {
             auto iter = this->mutex()->IfaceMap.find(std::forward<K>(key));
             if(iter != this->mutex()->IfaceMap.end()) return iter->second;
@@ -397,12 +398,12 @@ public:
 
     explicit operator bool() const noexcept { return !mEnumeratedDevices.empty(); }
 
-    void reserveDeviceCount(usize const count) { mEnumeratedDevices.reserve(count); }
-    void appendDeviceList(gsl::czstring names, u32 idx);
+    void reserveDeviceCount(std::size_t const count) { mEnumeratedDevices.reserve(count); }
+    void appendDeviceList(gsl::czstring names, ALCuint idx);
     void finishEnumeration();
 
     [[nodiscard]]
-    auto getDriverIndexForName(std::string_view name) const -> std::optional<u32>;
+    auto getDriverIndexForName(std::string_view name) const -> std::optional<ALCuint>;
 
     [[nodiscard]]
     auto getNameData() const noexcept -> gsl::czstring { return mNamesStore.data(); }
@@ -411,7 +412,7 @@ auto DevicesList = EnumeratedList{};
 auto AllDevicesList = EnumeratedList{};
 auto CaptureDevicesList = EnumeratedList{};
 
-void EnumeratedList::appendDeviceList(gsl::czstring const names, u32 const idx)
+void EnumeratedList::appendDeviceList(gsl::czstring const names, ALCuint const idx)
 {
     auto *name_end = names;
     if(!name_end) return;
@@ -453,9 +454,10 @@ void EnumeratedList::finishEnumeration()
     });
 }
 
-auto EnumeratedList::getDriverIndexForName(std::string_view const name) const -> std::optional<u32>
+auto EnumeratedList::getDriverIndexForName(std::string_view const name) const
+    -> std::optional<ALCuint>
 {
-    auto idx = 0_u32;
+    auto idx = ALCuint{0};
     std::ignore = std::ranges::find_if(mEnumeratedDevices,
         [name,&idx](const std::span<const std::string_view> names) -> bool
     {
@@ -530,7 +532,7 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(ALCchar const *const devicename) noexcep
     LoadDrivers();
 
     auto *device = LPALCdevice{nullptr};
-    auto idx = std::optional<u32>{};
+    auto idx = std::optional<ALCuint>{};
 
     /* Prior to the enumeration extension, apps would use these names as a
      * quality hint for the wrapper driver. Ignore them since there's no sane
@@ -573,13 +575,13 @@ ALC_API auto ALC_APIENTRY alcOpenDevice(ALCchar const *const devicename) noexcep
                 return true;
             }
             return false;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter == DriverList.end())
         {
             LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
-        idx = gsl::narrow_cast<u32>(std::distance(DriverList.begin(), iter));
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
     if(!device)
@@ -642,7 +644,7 @@ ALC_API auto ALC_APIENTRY alcMakeContextCurrent(ALCcontext *const context) noexc
 {
     auto const ctxlock = std::lock_guard{ContextSwitchLock};
 
-    auto idx = std::optional<u32>{};
+    auto idx = std::optional<ALCuint>{};
     if(context)
     {
         idx = ContextIfaceMap.get_lock().lookup_idx(context);
@@ -749,7 +751,7 @@ ALC_API auto ALC_APIENTRY alcIsExtensionPresent(ALCdevice *const device,
     }
 
     auto matchext = [tofind = std::string_view{extname}](std::string_view const entry)
-    { return tofind.size() == entry.size() && al::case_compare(tofind, entry) == 0; };
+    { return tofind.size() == entry.size() and is_eq(al::case_compare(tofind, entry)); };
     return std::ranges::any_of(GetExtensionArray(), matchext) ? ALC_TRUE : ALC_FALSE;
 }
 
@@ -818,7 +820,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         auto enumlock = std::lock_guard{EnumerationLock};
         DevicesList.clear();
         DevicesList.reserveDeviceCount(DriverList.size());
-        auto idx = 0_u32;
+        auto idx = ALCuint{0};
         std::ranges::for_each(DriverList, [&idx](DriverIface const &drv)
         {
             /* Only enumerate names from drivers that support it. */
@@ -826,7 +828,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
                 || drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
                 DevicesList.appendDeviceList(drv.alcGetString(nullptr, ALC_DEVICE_SPECIFIER), idx);
             ++idx;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         DevicesList.finishEnumeration();
         return DevicesList.getNameData();
     }
@@ -836,7 +838,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         auto enumlock = std::lock_guard{EnumerationLock};
         AllDevicesList.clear();
         AllDevicesList.reserveDeviceCount(DriverList.size());
-        auto idx = 0_u32;
+        auto idx = ALCuint{0};
         std::ranges::for_each(DriverList, [&idx](DriverIface const &drv)
         {
             /* If the driver doesn't support ALC_ENUMERATE_ALL_EXT, substitute
@@ -850,7 +852,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
                 AllDevicesList.appendDeviceList(
                     drv.alcGetString(nullptr, ALC_DEVICE_SPECIFIER), idx);
             ++idx;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         AllDevicesList.finishEnumeration();
         return AllDevicesList.getNameData();
     }
@@ -860,7 +862,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         auto enumlock = std::lock_guard{EnumerationLock};
         CaptureDevicesList.clear();
         CaptureDevicesList.reserveDeviceCount(DriverList.size());
-        auto idx = 0_u32;
+        auto idx = ALCuint{0};
         std::ranges::for_each(DriverList, [&idx](DriverIface const &drv)
         {
             if(drv.ALCVer >= MakeALCVer(1, 1)
@@ -868,7 +870,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
                 CaptureDevicesList.appendDeviceList(
                     drv.alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER), idx);
             ++idx;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         CaptureDevicesList.finishEnumeration();
         return CaptureDevicesList.getNameData();
     }
@@ -879,7 +881,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         {
             return drv.ALCVer >= MakeALCVer(1, 1)
                 || drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT");
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter != DriverList.end())
             return (*iter)->alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
         return "";
@@ -890,7 +892,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         auto const iter = std::ranges::find_if(DriverList, [](const DriverIface &drv)
         {
             return drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT") != ALC_FALSE;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter != DriverList.end())
             return (*iter)->alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
         return "";
@@ -902,7 +904,7 @@ ALC_API auto ALC_APIENTRY alcGetString(ALCdevice *const device, ALCenum const pa
         {
             return drv.ALCVer >= MakeALCVer(1, 1)
                 || drv.alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE");
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter != DriverList.end())
             return (*iter)->alcGetString(nullptr, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
         return "";
@@ -977,7 +979,7 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(ALCchar const *const devicename,
     LoadDrivers();
 
     auto *device = LPALCdevice{nullptr};
-    auto idx = std::optional<u32>{};
+    auto idx = std::optional<ALCuint>{};
 
     if(devicename && *devicename != '\0')
     {
@@ -1010,13 +1012,13 @@ ALC_API auto ALC_APIENTRY alcCaptureOpenDevice(ALCchar const *const devicename,
                 return true;
             }
             return false;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter == DriverList.end())
         {
             LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
-        idx = gsl::narrow_cast<u32>(std::distance(DriverList.begin(), iter));
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
     if(!device)
@@ -1118,7 +1120,7 @@ ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(ALCchar const *const deviceN
     LoadDrivers();
 
     auto *device = LPALCdevice{nullptr};
-    auto idx = std::optional<u32>{};
+    auto idx = std::optional<ALCuint>{};
 
     if(deviceName && *deviceName != '\0')
     {
@@ -1155,13 +1157,13 @@ ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceSOFT(ALCchar const *const deviceN
                 return true;
             }
             return false;
-        }, &DriverIfacePtr::operator*);
+        }, al::dereference{});
         if(iter == DriverList.end())
         {
             LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
-        idx = gsl::narrow_cast<u32>(std::distance(DriverList.begin(), iter));
+        idx = gsl::narrow_cast<ALCuint>(std::distance(DriverList.begin(), iter));
     }
 
     if(!device)

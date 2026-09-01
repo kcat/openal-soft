@@ -55,46 +55,6 @@
 #endif
 
 
-/* Filter object functions */
-static LPALGENFILTERS alGenFilters;
-static LPALDELETEFILTERS alDeleteFilters;
-static LPALISFILTER alIsFilter;
-static LPALFILTERI alFilteri;
-static LPALFILTERIV alFilteriv;
-static LPALFILTERF alFilterf;
-static LPALFILTERFV alFilterfv;
-static LPALGETFILTERI alGetFilteri;
-static LPALGETFILTERIV alGetFilteriv;
-static LPALGETFILTERF alGetFilterf;
-static LPALGETFILTERFV alGetFilterfv;
-
-/* Effect object functions */
-static LPALGENEFFECTS alGenEffects;
-static LPALDELETEEFFECTS alDeleteEffects;
-static LPALISEFFECT alIsEffect;
-static LPALEFFECTI alEffecti;
-static LPALEFFECTIV alEffectiv;
-static LPALEFFECTF alEffectf;
-static LPALEFFECTFV alEffectfv;
-static LPALGETEFFECTI alGetEffecti;
-static LPALGETEFFECTIV alGetEffectiv;
-static LPALGETEFFECTF alGetEffectf;
-static LPALGETEFFECTFV alGetEffectfv;
-
-/* Auxiliary Effect Slot object functions */
-static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
-
-
 /* LoadEffect loads the given initial reverb properties into the given OpenAL
  * effect object, and returns non-zero on success.
  */
@@ -107,7 +67,7 @@ static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
     /* Prepare the effect for EAX Reverb (standard reverb doesn't contain
      * the needed panning vectors).
      */
-    alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+    palEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
     err = alGetError();
     if(err != AL_NO_ERROR)
     {
@@ -116,29 +76,29 @@ static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
     }
 
     /* Load the reverb properties. */
-    alEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
-    alEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
-    alEffectf(effect, AL_EAXREVERB_GAIN, reverb->flGain);
-    alEffectf(effect, AL_EAXREVERB_GAINHF, reverb->flGainHF);
-    alEffectf(effect, AL_EAXREVERB_GAINLF, reverb->flGainLF);
-    alEffectf(effect, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
-    alEffectf(effect, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
-    alEffectf(effect, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
-    alEffectf(effect, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
-    alEffectf(effect, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
-    alEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
-    alEffectf(effect, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
-    alEffectf(effect, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
-    alEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
-    alEffectf(effect, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
-    alEffectf(effect, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
-    alEffectf(effect, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
-    alEffectf(effect, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
-    alEffectf(effect, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
-    alEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
-    alEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
-    alEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
-    alEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+    palEffectf(effect, AL_EAXREVERB_DENSITY, reverb->flDensity);
+    palEffectf(effect, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
+    palEffectf(effect, AL_EAXREVERB_GAIN, reverb->flGain);
+    palEffectf(effect, AL_EAXREVERB_GAINHF, reverb->flGainHF);
+    palEffectf(effect, AL_EAXREVERB_GAINLF, reverb->flGainLF);
+    palEffectf(effect, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
+    palEffectf(effect, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
+    palEffectf(effect, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
+    palEffectf(effect, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
+    palEffectf(effect, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
+    palEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
+    palEffectf(effect, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
+    palEffectf(effect, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
+    palEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
+    palEffectf(effect, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
+    palEffectf(effect, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
+    palEffectf(effect, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
+    palEffectf(effect, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
+    palEffectf(effect, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
+    palEffectf(effect, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
+    palEffectf(effect, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
+    palEffectf(effect, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
+    palEffecti(effect, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
 
     /* Check if an error occurred, and return failure if so. */
     err = alGetError();
@@ -413,15 +373,15 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
          * between environments, so attenuate according to each zone's
          * contribution (note: gain^2 = energy).
          */
-        alEffectf(this_effect, AL_EAXREVERB_REFLECTIONS_GAIN, this_reverb->flReflectionsGain * sqrtf(magnitude));
-        alEffectf(this_effect, AL_EAXREVERB_LATE_REVERB_GAIN, this_reverb->flLateReverbGain * sqrtf(magnitude));
-        alEffectfv(this_effect, AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
-        alEffectfv(this_effect, AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
+        palEffectf(this_effect, AL_EAXREVERB_REFLECTIONS_GAIN, this_reverb->flReflectionsGain * sqrtf(magnitude));
+        palEffectf(this_effect, AL_EAXREVERB_LATE_REVERB_GAIN, this_reverb->flLateReverbGain * sqrtf(magnitude));
+        palEffectfv(this_effect, AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
+        palEffectfv(this_effect, AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
 
-        alEffectf(other_effect, AL_EAXREVERB_REFLECTIONS_GAIN, other_reverb->flReflectionsGain * sqrtf(1.0f-magnitude));
-        alEffectf(other_effect, AL_EAXREVERB_LATE_REVERB_GAIN, other_reverb->flLateReverbGain * sqrtf(1.0f-magnitude));
-        alEffectfv(other_effect, AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
-        alEffectfv(other_effect, AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
+        palEffectf(other_effect, AL_EAXREVERB_REFLECTIONS_GAIN, other_reverb->flReflectionsGain * sqrtf(1.0f-magnitude));
+        palEffectf(other_effect, AL_EAXREVERB_LATE_REVERB_GAIN, other_reverb->flLateReverbGain * sqrtf(1.0f-magnitude));
+        palEffectfv(other_effect, AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
+        palEffectfv(other_effect, AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
     }
     else
     {
@@ -437,20 +397,20 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
         other_dir[1] = local_norm[1] / -2.0f;
         other_dir[2] = local_norm[2] / -2.0f;
 
-        alEffectf(effects[0], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[0].flReflectionsGain * sqrtf(0.5f));
-        alEffectf(effects[0], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[0].flLateReverbGain * sqrtf(0.5f));
-        alEffectfv(effects[0], AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
-        alEffectfv(effects[0], AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
+        palEffectf(effects[0], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[0].flReflectionsGain * sqrtf(0.5f));
+        palEffectf(effects[0], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[0].flLateReverbGain * sqrtf(0.5f));
+        palEffectfv(effects[0], AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
+        palEffectfv(effects[0], AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
 
-        alEffectf(effects[1], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[1].flReflectionsGain * sqrtf(0.5f));
-        alEffectf(effects[1], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[1].flLateReverbGain * sqrtf(0.5f));
-        alEffectfv(effects[1], AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
-        alEffectfv(effects[1], AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
+        palEffectf(effects[1], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[1].flReflectionsGain * sqrtf(0.5f));
+        palEffectf(effects[1], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[1].flLateReverbGain * sqrtf(0.5f));
+        palEffectfv(effects[1], AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
+        palEffectfv(effects[1], AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
     }
 
     /* Finally, update the effect slots with the updated effect parameters. */
-    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
-    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
+    palAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
+    palAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
 }
 
 
@@ -517,6 +477,7 @@ int main(int argc, char **argv)
         CloseAL();
         return 1;
     }
+    LoadALExtensions();
 
     num_sends = 0;
     alcGetIntegerv(device, ALC_MAX_AUXILIARY_SENDS, 1, &num_sends);
@@ -527,45 +488,6 @@ int main(int argc, char **argv)
         CloseAL();
         return 1;
     }
-
-    /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(T, x)  ((x) = FUNCTION_CAST(T, alGetProcAddress(#x)))
-    LOAD_PROC(LPALGENFILTERS, alGenFilters);
-    LOAD_PROC(LPALDELETEFILTERS, alDeleteFilters);
-    LOAD_PROC(LPALISFILTER, alIsFilter);
-    LOAD_PROC(LPALFILTERI, alFilteri);
-    LOAD_PROC(LPALFILTERIV, alFilteriv);
-    LOAD_PROC(LPALFILTERF, alFilterf);
-    LOAD_PROC(LPALFILTERFV, alFilterfv);
-    LOAD_PROC(LPALGETFILTERI, alGetFilteri);
-    LOAD_PROC(LPALGETFILTERIV, alGetFilteriv);
-    LOAD_PROC(LPALGETFILTERF, alGetFilterf);
-    LOAD_PROC(LPALGETFILTERFV, alGetFilterfv);
-
-    LOAD_PROC(LPALGENEFFECTS, alGenEffects);
-    LOAD_PROC(LPALDELETEEFFECTS, alDeleteEffects);
-    LOAD_PROC(LPALISEFFECT, alIsEffect);
-    LOAD_PROC(LPALEFFECTI, alEffecti);
-    LOAD_PROC(LPALEFFECTIV, alEffectiv);
-    LOAD_PROC(LPALEFFECTF, alEffectf);
-    LOAD_PROC(LPALEFFECTFV, alEffectfv);
-    LOAD_PROC(LPALGETEFFECTI, alGetEffecti);
-    LOAD_PROC(LPALGETEFFECTIV, alGetEffectiv);
-    LOAD_PROC(LPALGETEFFECTF, alGetEffectf);
-    LOAD_PROC(LPALGETEFFECTFV, alGetEffectfv);
-
-    LOAD_PROC(LPALGENAUXILIARYEFFECTSLOTS, alGenAuxiliaryEffectSlots);
-    LOAD_PROC(LPALDELETEAUXILIARYEFFECTSLOTS, alDeleteAuxiliaryEffectSlots);
-    LOAD_PROC(LPALISAUXILIARYEFFECTSLOT, alIsAuxiliaryEffectSlot);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTI, alAuxiliaryEffectSloti);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTIV, alAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTF, alAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALAUXILIARYEFFECTSLOTFV, alAuxiliaryEffectSlotfv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTI, alGetAuxiliaryEffectSloti);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTIV, alGetAuxiliaryEffectSlotiv);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
-    LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
-#undef LOAD_PROC
 
     /* Load the sound into a buffer. */
     buffer = LoadSound(argv[0]);
@@ -582,25 +504,25 @@ int main(int argc, char **argv)
      * effects' properties in real-time based on the environment instance
      * relative to the listener.
      */
-    alGenEffects(2, effects);
+    palGenEffects(2, effects);
     if(!LoadEffect(effects[0], &reverbs[0]) || !LoadEffect(effects[1], &reverbs[1]))
     {
-        alDeleteEffects(2, effects);
+        palDeleteEffects(2, effects);
         alDeleteBuffers(1, &buffer);
         CloseAL();
         return 1;
     }
 
     /* Create the effect slot objects, one for each "active" effect. */
-    alGenAuxiliaryEffectSlots(2, slots);
+    palGenAuxiliaryEffectSlots(2, slots);
 
     /* Tell the effect slots to use the loaded effect objects, with slot 0 for
      * Zone 0 and slot 1 for Zone 1. Note that this effectively copies the
      * effect properties. Modifying or deleting the effect object afterward
      * won't directly affect the effect slot until they're reapplied like this.
      */
-    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
-    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
+    palAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
+    palAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
     assert(alGetError()==AL_NO_ERROR && "Failed to set effect slot");
 
     /* For the purposes of this example, prepare a filter that optionally
@@ -610,9 +532,9 @@ int main(int argc, char **argv)
      * properties depending on the type and thickness of the obstructing
      * material).
      */
-    alGenFilters(1, &direct_filter);
-    alFilteri(direct_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-    alFilterf(direct_filter, AL_LOWPASS_GAIN, direct_gain);
+    palGenFilters(1, &direct_filter);
+    palFilteri(direct_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+    palFilterf(direct_filter, AL_LOWPASS_GAIN, direct_gain);
     assert(alGetError()==AL_NO_ERROR && "Failed to set direct filter");
 
     /* Create the source to play the sound with, place it in front of the
@@ -687,9 +609,9 @@ int main(int argc, char **argv)
 
     /* All done. Delete resources, and close down OpenAL. */
     alDeleteSources(1, &source);
-    alDeleteAuxiliaryEffectSlots(2, slots);
-    alDeleteEffects(2, effects);
-    alDeleteFilters(1, &direct_filter);
+    palDeleteAuxiliaryEffectSlots(2, slots);
+    palDeleteEffects(2, effects);
+    palDeleteFilters(1, &direct_filter);
     alDeleteBuffers(1, &buffer);
 
     CloseAL();

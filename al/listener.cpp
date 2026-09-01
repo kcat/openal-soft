@@ -29,14 +29,22 @@
 #include <span>
 
 #include "AL/al.h"
-#include "AL/efx.h"
+#include "AL/alext.h"
 
-#include "alc/context.h"
 #include "alnumeric.h"
+#include "altypes.hpp"
 #include "core/except.h"
-#include "core/logging.h"
 #include "direct_defs.h"
+
+#if HAVE_CXXMODULES
+import alc.context;
+import gsl;
+import logging;
+#else
+#include "alc/context.hpp"
+#include "core/logging.h"
 #include "gsl/gsl"
+#endif
 
 
 namespace {
@@ -70,7 +78,7 @@ inline void CommitAndUpdateProps(gsl::not_null<al::Context*> context)
 }
 
 
-void alListenerf(gsl::not_null<al::Context*> context, ALenum param, ALfloat value) noexcept
+void alListenerf_(gsl::not_null<al::Context*> context, ALenum param, ALfloat value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     auto &listener = context->mListener;
@@ -100,7 +108,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3f(gsl::not_null<al::Context*> context, ALenum param, ALfloat value1,
+void alListener3f_(gsl::not_null<al::Context*> context, ALenum param, ALfloat value1,
     ALfloat value2, ALfloat value3) noexcept
 try {
     auto &listener = context->mListener;
@@ -134,7 +142,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListenerfv(gsl::not_null<al::Context*> context, ALenum param, const ALfloat *values)
+void alListenerfv_(gsl::not_null<al::Context*> context, ALenum param, const ALfloat *values)
     noexcept
 try {
     if(!values)
@@ -144,13 +152,13 @@ try {
     {
     case AL_GAIN:
     case AL_METERS_PER_UNIT:
-        alListenerf(context, param, *values);
+        alListenerf_(context, param, *values);
         return;
 
     case AL_POSITION:
     case AL_VELOCITY:
         const auto vals = std::span<const float,3>{values, 3_uz};
-        alListener3f(context, param, vals[0], vals[1], vals[2]);
+        alListener3f_(context, param, vals[0], vals[1], vals[2]);
         return;
     }
 
@@ -178,7 +186,7 @@ catch(std::exception &e) {
 }
 
 
-void alListeneri(gsl::not_null<al::Context*> context, ALenum param, ALint value) noexcept
+void alListeneri_(gsl::not_null<al::Context*> context, ALenum param, ALint value) noexcept
 try {
     const auto proplock = std::lock_guard{context->mPropLock};
     auto &listener = context->mListener;
@@ -208,14 +216,14 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3i(gsl::not_null<al::Context*> context, ALenum param, ALint value1, ALint value2,
+void alListener3i_(gsl::not_null<al::Context*> context, ALenum param, ALint value1, ALint value2,
     ALint value3) noexcept
 try {
     switch(param)
     {
     case AL_POSITION:
     case AL_VELOCITY:
-        alListener3f(context, param, gsl::narrow_cast<float>(value1),
+        alListener3f_(context, param, gsl::narrow_cast<float>(value1),
             gsl::narrow_cast<float>(value2), gsl::narrow_cast<float>(value3));
         return;
     }
@@ -230,7 +238,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListeneriv(gsl::not_null<al::Context*> context, ALenum param, const ALint *values) noexcept
+void alListeneriv_(gsl::not_null<al::Context*> context, ALenum param, const ALint *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -240,13 +248,13 @@ try {
     {
     case AL_GAIN:
     case AL_METERS_PER_UNIT:
-        alListeneri(context, param, *values);
+        alListeneri_(context, param, *values);
         return;
 
     case AL_POSITION:
     case AL_VELOCITY:
         vals = {values, 3_uz};
-        alListener3f(context, param, gsl::narrow_cast<float>(vals[0]),
+        alListener3f_(context, param, gsl::narrow_cast<float>(vals[0]),
             gsl::narrow_cast<float>(vals[1]), gsl::narrow_cast<float>(vals[2]));
         return;
 
@@ -257,7 +265,7 @@ try {
             gsl::narrow_cast<float>(vals[3]), gsl::narrow_cast<float>(vals[4]),
             gsl::narrow_cast<float>(vals[5]),
         };
-        alListenerfv(context, param, fvals.data());
+        alListenerfv_(context, param, fvals.data());
         return;
     }
 
@@ -272,7 +280,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetListenerf(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value) noexcept
+void alGetListenerf_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value) noexcept
 try {
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -293,7 +301,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3f(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value1,
+void alGetListener3f_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value1,
     ALfloat *value2, ALfloat *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
@@ -324,7 +332,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListenerfv(gsl::not_null<al::Context*> context, ALenum param, ALfloat *values) noexcept
+void alGetListenerfv_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -333,13 +341,13 @@ try {
     {
     case AL_GAIN:
     case AL_METERS_PER_UNIT:
-        alGetListenerf(context, param, values);
+        alGetListenerf_(context, param, values);
         return;
 
     case AL_POSITION:
     case AL_VELOCITY:
         const auto vals = std::span{values, 3_uz};
-        alGetListener3f(context, param, &vals[0], &vals[1], &vals[2]);
+        alGetListener3f_(context, param, &vals[0], &vals[1], &vals[2]);
         return;
     }
 
@@ -364,7 +372,7 @@ catch(std::exception &e) {
 }
 
 
-void alGetListeneri(gsl::not_null<al::Context*> context, ALenum param, ALint *value) noexcept
+void alGetListeneri_(gsl::not_null<al::Context*> context, ALenum param, ALint *value) noexcept
 try {
     /* The largest float value that can fit in an int. */
     static constexpr auto float_int_max = 2147483520.0f;
@@ -392,7 +400,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3i(gsl::not_null<al::Context*> context, ALenum param, ALint *value1,
+void alGetListener3i_(gsl::not_null<al::Context*> context, ALenum param, ALint *value1,
     ALint *value2, ALint *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
@@ -423,7 +431,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListeneriv(gsl::not_null<al::Context*> context, ALenum param, ALint *values) noexcept
+void alGetListeneriv_(gsl::not_null<al::Context*> context, ALenum param, ALint *values) noexcept
 try {
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
@@ -432,13 +440,13 @@ try {
     {
     case AL_GAIN:
     case AL_METERS_PER_UNIT:
-        alGetListeneri(context, param, values);
+        alGetListeneri_(context, param, values);
         return;
 
     case AL_POSITION:
     case AL_VELOCITY:
         const auto vals = std::span{values, 3_uz};
-        alGetListener3i(context, param, &vals[0], &vals[1], &vals[2]);
+        alGetListener3i_(context, param, &vals[0], &vals[1], &vals[2]);
         return;
     }
 
@@ -466,18 +474,18 @@ catch(std::exception &e) {
 
 } // namespace
 
-AL_API DECL_FUNC2(void, alListenerf, ALenum,param, ALfloat,value)
-AL_API DECL_FUNC4(void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
-AL_API DECL_FUNC2(void, alListenerfv, ALenum,param, const ALfloat*,values)
+DECL_FUNC(AL_API, void, alListenerf, ALenum,param, ALfloat,value)
+DECL_FUNC(AL_API, void, alListener3f, ALenum,param, ALfloat,value1, ALfloat,value2, ALfloat,value3)
+DECL_FUNC(AL_API, void, alListenerfv, ALenum,param, const ALfloat*,values)
 
-AL_API DECL_FUNC2(void, alListeneri, ALenum,param, ALint,value)
-AL_API DECL_FUNC4(void, alListener3i, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
-AL_API DECL_FUNC2(void, alListeneriv, ALenum,param, const ALint*,values)
+DECL_FUNC(AL_API, void, alListeneri, ALenum,param, ALint,value)
+DECL_FUNC(AL_API, void, alListener3i, ALenum,param, ALint,value1, ALint,value2, ALint,value3)
+DECL_FUNC(AL_API, void, alListeneriv, ALenum,param, const ALint*,values)
 
-AL_API DECL_FUNC2(void, alGetListenerf, ALenum,param, ALfloat*,value)
-AL_API DECL_FUNC4(void, alGetListener3f, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
-AL_API DECL_FUNC2(void, alGetListenerfv, ALenum,param, ALfloat*,values)
+DECL_FUNC(AL_API, void, alGetListenerf, ALenum,param, ALfloat*,value)
+DECL_FUNC(AL_API, void, alGetListener3f, ALenum,param, ALfloat*,value1, ALfloat*,value2, ALfloat*,value3)
+DECL_FUNC(AL_API, void, alGetListenerfv, ALenum,param, ALfloat*,values)
 
-AL_API DECL_FUNC2(void, alGetListeneri, ALenum,param, ALint*,value)
-AL_API DECL_FUNC4(void, alGetListener3i, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
-AL_API DECL_FUNC2(void, alGetListeneriv, ALenum,param, ALint*,values)
+DECL_FUNC(AL_API, void, alGetListeneri, ALenum,param, ALint*,value)
+DECL_FUNC(AL_API, void, alGetListener3i, ALenum,param, ALint*,value1, ALint*,value2, ALint*,value3)
+DECL_FUNC(AL_API, void, alGetListeneriv, ALenum,param, ALint*,values)

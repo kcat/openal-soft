@@ -16,14 +16,14 @@ public:
     using std::optional<EaxFxSlotIndexValue>::optional;
 
     EaxFxSlotIndex& operator=(const EaxFxSlotIndexValue &value) { set(value); return *this; }
-    EaxFxSlotIndex& operator=(const GUID &guid) { set(guid); return *this; }
+    EaxFxSlotIndex& operator=(AL_GUID const& guid) { set(guid); return *this; }
 
     void set(EaxFxSlotIndexValue index);
-    void set(const GUID& guid);
+    void set(AL_GUID const& guid);
 
 private:
     [[noreturn]]
-    static void fail(const std::string_view message);
+    static void fail(std::string_view message);
 }; // EaxFxSlotIndex
 
 inline bool operator==(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept

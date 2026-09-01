@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdlib>
-#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -45,7 +44,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"
@@ -313,7 +311,7 @@ auto TrIsOperator(TokenReaderT *tr, const std::string_view op) -> bool
     if(!TrSkipWhitespace(tr))
         return false;
     auto out = tr->mOut;
-    auto len = 0_uz;
+    auto len = std::size_t{0};
     while(len < op.size() && out < tr->mIn)
     {
         if(tr->mRing[out&TRRingMask] != op[len])
@@ -517,7 +515,7 @@ auto TrReadString(TokenReaderT *tr) -> std::optional<std::string>
         if(char ch{tr->mRing[tr->mOut&TRRingMask]}; ch == '\"')
         {
             tr->mOut++;
-            auto len = 0_uz;
+            auto len = std::size_t{0};
             while(TrLoad(tr))
             {
                 ch = tr->mRing[tr->mOut&TRRingMask];
@@ -554,7 +552,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> bool
     if(TrSkipWhitespace(tr))
     {
         col = tr->mColumn;
-        auto len = 0_uz;
+        auto len = std::size_t{0};
         while(len < op.size() && TrLoad(tr))
         {
             if(tr->mRing[tr->mOut&TRRingMask] != op[len])
@@ -948,7 +946,7 @@ auto LoadAsciiSource(std::istream &istream, const SourceRefT *src, const std::sp
             &dummy))
             return false;
     }
-    for(size_t i{0_uz};i < hrir.size();++i)
+    for(size_t i{0};i < hrir.size();++i)
     {
         if(!ReadAsciiAsDouble(&tr, src->mPath, src->mType, static_cast<unsigned>(src->mBits),
             &hrir[i]))
@@ -969,7 +967,7 @@ auto LoadBinarySource(std::istream &istream, const SourceRefT *src, const std::e
     const std::span<double> hrir) -> bool
 {
     istream.seekg(static_cast<long>(src->mOffset), std::ios::beg);
-    for(size_t i{0_uz};i < hrir.size();++i)
+    for(size_t i{0};i < hrir.size();++i)
     {
         if(!ReadBinAsDouble(istream, src->mPath, order, src->mType, src->mSize, src->mBits,
             &hrir[i]))
@@ -1119,8 +1117,8 @@ auto LoadSofaSource(SourceRefT *src, unsigned const hrirRate, std::span<double> 
         return false;
     }
 
-    auto coords = std::span{sofa->hrtf->SourcePosition.values, sofa->hrtf->M*3_uz}
-        .subspan(static_cast<unsigned>(nearest)*3_uz).first<3>();
+    auto coords = std::span{sofa->hrtf->SourcePosition.values, sofa->hrtf->M*std::size_t{3}}
+        .subspan(static_cast<unsigned>(nearest)*std::size_t{3}).first<3>();
     if(std::abs(coords[0] - target[0]) > 0.001 || std::abs(coords[1] - target[1]) > 0.001
         || std::abs(coords[2] - target[2]) > 0.001)
     {
@@ -1174,9 +1172,9 @@ auto LoadSource(SourceRefT *src, unsigned const hrirRate, std::span<double> cons
 // Match the channel type from a given identifier.
 auto MatchChannelType(const std::string_view ident) -> ChannelTypeT
 {
-    if(al::case_compare(ident, "mono"sv) == 0)
+    if(is_eq(al::case_compare(ident, "mono"sv)))
         return CT_MONO;
-    if(al::case_compare(ident, "stereo"sv) == 0)
+    if(is_eq(al::case_compare(ident, "stereo"sv)))
         return CT_STEREO;
     return CT_NONE;
 }
@@ -1210,7 +1208,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
         const auto ident = TrReadIdent(tr);
         if(ident.empty())
             return false;
-        if(al::case_compare(ident, "rate"sv) == 0)
+        if(is_eq(al::case_compare(ident, "rate"sv)))
         {
             if(hasRate)
             {
@@ -1224,7 +1222,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mIrRate = static_cast<unsigned>(intVal);
             hasRate = 1;
         }
-        else if(al::case_compare(ident, "type"sv) == 0)
+        else if(is_eq(al::case_compare(ident, "type"sv)))
         {
             if(hasType)
             {
@@ -1250,7 +1248,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             }
             hasType = 1;
         }
-        else if(al::case_compare(ident, "points"sv) == 0)
+        else if(is_eq(al::case_compare(ident, "points"sv)))
         {
             if(hasPoints)
             {
@@ -1278,7 +1276,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mIrSize = std::max(points, 1u + (fftSize/2u));
             hasPoints = 1;
         }
-        else if(al::case_compare(ident, "radius"sv) == 0)
+        else if(is_eq(al::case_compare(ident, "radius"sv)))
         {
             if(hasRadius)
             {
@@ -1292,7 +1290,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mRadius = fpVal;
             hasRadius = 1;
         }
-        else if(al::case_compare(ident, "distance"sv) == 0)
+        else if(is_eq(al::case_compare(ident, "distance"sv)))
         {
             auto count = 0u;
 
@@ -1331,7 +1329,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             fdCount = count;
             hasDistance = 1;
         }
-        else if(al::case_compare(ident, "azimuths"sv) == 0)
+        else if(is_eq(al::case_compare(ident, "azimuths"sv)))
         {
             auto count = 0u;
 
@@ -1452,15 +1450,15 @@ auto ReadIndexTriplet(TokenReaderT *tr, HrirDataT const *hData, unsigned *fi, un
 // Match the source format from a given identifier.
 auto MatchSourceFormat(const std::string_view ident) -> SourceFormatT
 {
-    if(al::case_compare(ident, "ascii"sv) == 0)
+    if(is_eq(al::case_compare(ident, "ascii"sv)))
         return SF_ASCII;
-    if(al::case_compare(ident, "bin_le"sv) == 0)
+    if(is_eq(al::case_compare(ident, "bin_le"sv)))
         return SF_BIN_LE;
-    if(al::case_compare(ident, "bin_be"sv) == 0)
+    if(is_eq(al::case_compare(ident, "bin_be"sv)))
         return SF_BIN_BE;
-    if(al::case_compare(ident, "wave"sv) == 0)
+    if(is_eq(al::case_compare(ident, "wave"sv)))
         return SF_WAVE;
-    if(al::case_compare(ident, "sofa"sv) == 0)
+    if(is_eq(al::case_compare(ident, "sofa"sv)))
         return SF_SOFA;
     return SF_NONE;
 }
@@ -1468,9 +1466,9 @@ auto MatchSourceFormat(const std::string_view ident) -> SourceFormatT
 // Match the source element type from a given identifier.
 auto MatchElementType(const std::string_view ident) -> ElementTypeT
 {
-    if(al::case_compare(ident, "int"sv) == 0)
+    if(is_eq(al::case_compare(ident, "int"sv)))
         return ET_INT;
-    if(al::case_compare(ident, "fp"sv) == 0)
+    if(is_eq(al::case_compare(ident, "fp"sv)))
         return ET_FP;
     return ET_NONE;
 }
@@ -1673,9 +1671,9 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> bool
 // Match the target ear (index) from a given identifier.
 auto MatchTargetEar(const std::string_view ident) -> std::optional<uint8_t>
 {
-    if(al::case_compare(ident, "left"sv) == 0)
+    if(is_eq(al::case_compare(ident, "left"sv)))
         return 0u;
-    if(al::case_compare(ident, "right"sv) == 0)
+    if(is_eq(al::case_compare(ident, "right"sv)))
         return 1u;
     return std::nullopt;
 }
@@ -1794,14 +1792,13 @@ auto ProcessSources(TokenReaderT *tr, HrirDataT *hData, unsigned const outRate) 
             if(!sofa) return false;
 
             const auto srcPosValues = std::span{sofa->hrtf->SourcePosition.values,
-                sofa->hrtf->M*3_uz};
-            for(auto const si : std::views::iota(0u, sofa->hrtf->M))
+                sofa->hrtf->M*std::size_t{3}};
+            for(auto const si : std::views::iota(std::size_t{0}, sofa->hrtf->M))
             {
                 fmt::print("\rLoading sources... {} of {}", si+1, sofa->hrtf->M);
                 std::cout.flush();
 
-                std::array aer{srcPosValues[3_uz*si], srcPosValues[3_uz*si + 1],
-                    srcPosValues[3_uz*si + 2]};
+                std::array aer{srcPosValues[3*si], srcPosValues[3*si + 1], srcPosValues[3*si + 2]};
                 mysofa_c2s(aer.data());
 
                 if(std::fabs(aer[1]) >= 89.999f)

@@ -1270,7 +1270,7 @@ void Voice::prepare(DeviceBase *device)
     };
     if(mFmtChannels == FmtSuperStereo)
     {
-        if(std::holds_alternative<TsmePostProcess>(device->mPostProcess))
+        if(false and std::holds_alternative<TsmePostProcess>(device->mPostProcess))
         {
             switch(TsmeDecodeQuality)
             {

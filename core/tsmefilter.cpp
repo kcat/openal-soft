@@ -176,7 +176,7 @@ void TsmeEncoder<N>::encode(const std::span<float> LeftOut, const std::span<floa
          * filter input.
          */
         std::ranges::transform(wseg, xseg, wxio.begin(), [](const float w, const float x) noexcept
-        { return 0.444008050325f*w + -0.256439256487f*x; });
+        { return -0.444008050325f*w + 0.256439256487f*x; });
 
         mFifoPos += todo;
         base += todo;
@@ -295,9 +295,9 @@ void TsmeEncoderIIR::encode(const std::span<float> LeftOut, const std::span<floa
         std::span{mS}.subspan(1));
     mS[0] = mDelayWXZ; mDelayWXZ = mS[samplesToDo];
 
-    /* Precompute j(0.444008050325*W - 0.256439256487*X) and store in mWX. */
+    /* Precompute j(0.444008050325*W + -0.256439256487*X) and store in mWX. */
     std::ranges::transform(winput, xinput, mTemp.begin(),
-        [](const float w, const float x) { return 0.444008050325f*w - 0.256439256487f*x; });
+        [](const float w, const float x) { return -0.444008050325f*w + 0.256439256487f*x; });
     process(mFilter2WX, Filter2Coeff, std::span{mTemp}.first(samplesToDo), true, mWX);
 
     /* Apply filter1 to Y and store in mD. */

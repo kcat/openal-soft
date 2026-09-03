@@ -795,7 +795,6 @@ set(CORE_SRCS
     core/context.cpp
     core/converter.cpp
     core/cpu_caps.cpp
-    core/cubic_tables.cpp
     core/devformat.cpp
     core/device.cpp
     core/effectslot.cpp

@@ -54,7 +54,6 @@
 #include "core/buffer_storage.h"
 #include "core/context.h"
 #include "core/cpu_caps.h"
-#include "core/cubic_tables.h"
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/effects/base.h"
@@ -79,6 +78,12 @@
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vecmat.h"
+
+#if HAVE_CXXMODULES
+import cubic_tables;
+#else
+#include "core/cubic_tables.h"
+#endif
 
 
 static_assert((MaxResamplerPadding&1) == 0, "MaxResamplerPadding is not a multiple of two");

@@ -2,7 +2,6 @@
 #define CORE_CUBIC_TABLES_H
 
 #include <array>
-#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <numbers>

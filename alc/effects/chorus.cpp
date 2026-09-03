@@ -36,7 +36,6 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/cubic_tables.h"
 #include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
@@ -45,6 +44,12 @@
 #include "core/resampler_limits.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import cubic_tables;
+#else
+#include "core/cubic_tables.h"
+#endif
 
 struct BufferStorage;
 

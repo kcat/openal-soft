@@ -858,7 +858,9 @@ set(CORE_HDRS
     core/voice.h
     core/voice_change.h)
 if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS core/logging.cppm)
+    list(APPEND CORE_MODS
+        core/cubic_tables.cppm
+        core/logging.cppm)
 else()
     list(APPEND CORE_HDRS core/logging.h)
 endif()

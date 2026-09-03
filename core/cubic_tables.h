@@ -12,8 +12,8 @@ struct CubicTable {
     std::array<CubicCoefficients,CubicPhaseCount> mTable{};
 };
 
-struct GaussianTable : CubicTable { GaussianTable() noexcept; };
-inline const GaussianTable gGaussianFilter;
+struct GaussianTable : CubicTable { consteval GaussianTable() noexcept; };
+DECL_HIDDEN extern constinit const GaussianTable gGaussianFilter;
 
 struct SplineTable : CubicTable { consteval SplineTable() noexcept; };
 DECL_HIDDEN extern constinit const SplineTable gSplineFilter;
@@ -26,7 +26,7 @@ struct CubicFilter {
 
     std::array<float,sTableSteps*2 + 1> mFilter{};
 
-    CubicFilter() noexcept;
+    consteval CubicFilter() noexcept;
 
     [[nodiscard]] constexpr
     auto getCoeff0(std::size_t i) const noexcept -> float { return mFilter[sTableSteps+i]; }
@@ -37,6 +37,6 @@ struct CubicFilter {
     [[nodiscard]] constexpr
     auto getCoeff3(std::size_t i) const noexcept -> float { return mFilter[sTableSteps*2-i]; }
 };
-inline const CubicFilter gCubicTable;
+DECL_HIDDEN extern constinit const CubicFilter gCubicTable;
 
 #endif /* CORE_CUBIC_TABLES_H */

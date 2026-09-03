@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <numbers>
 #include <ranges>
@@ -23,22 +24,70 @@
  */
 namespace {
 
-[[nodiscard]]
-auto GetCoeff(double idx) noexcept -> double
+/* Pre-C++23 constexpr-capable cos and sin. */
+template<std::floating_point T> [[nodiscard]] constexpr
+auto cecos(T const x) noexcept -> T
+{
+    auto sign = T{1};
+    auto fact = T{2};
+    auto acc = 3llu;
+    auto tmp = x*x;
+    auto result = T{1} - tmp/fact;
+
+    auto last_result = result;
+    do {
+        tmp *= x*x;
+        fact *= static_cast<T>(acc * (acc+1));
+
+        last_result = result;
+        result += tmp / fact * sign;
+
+        sign *= T{-1};
+        acc += 2;
+    } while(result != last_result);
+    return result;
+}
+
+template<std::floating_point T> [[nodiscard]] constexpr
+auto cesin(T const x) noexcept -> T
+{
+    auto sign = T{1};
+    auto fact = T{6};
+    auto acc = 4llu;
+    auto tmp = x*x*x;
+    auto result = x - tmp/fact;
+
+    auto last_result = result;
+    do {
+        tmp *= x*x;
+        fact *= static_cast<T>(acc * (acc+1));
+
+        last_result = result;
+        result += tmp / fact * sign;
+
+        sign *= T{-1};
+        acc += 2;
+    } while(result != last_result);
+    return result;
+}
+
+
+[[nodiscard]] constexpr
+auto GetCoeff(double const idx) noexcept -> double
 {
     const auto k = 0.5 + idx;
     if(k > 512.0) return 0.0;
-    const auto s =  std::sin(std::numbers::pi*1.280/1024.0 * k);
-    const auto t = (std::cos(std::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50;
-    const auto u = (std::cos(std::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08;
+    const auto s =  cesin(std::numbers::pi*1.280/1024.0 * k);
+    const auto t = (cecos(std::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50;
+    const auto u = (cecos(std::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08;
     return s * (t + u + 1.0) / k;
 }
 
 } // namespace
 
-GaussianTable::GaussianTable() noexcept
+consteval GaussianTable::GaussianTable() noexcept
 {
-    static constexpr auto IndexScale = 512.0 / double{CubicPhaseCount*2};
+    constexpr auto IndexScale = 512.0 / double{CubicPhaseCount*2};
     /* Fill in the main coefficients. */
     for(const auto pi : std::views::iota(0_uz, std::size_t{CubicPhaseCount}))
     {
@@ -70,6 +119,7 @@ GaussianTable::GaussianTable() noexcept
     mTable[pi].mDeltas[2] = mTable[0].mCoeffs[1] - mTable[pi].mCoeffs[2];
     mTable[pi].mDeltas[3] = mTable[0].mCoeffs[2] - mTable[pi].mCoeffs[3];
 }
+constinit const GaussianTable gGaussianFilter;
 
 consteval SplineTable::SplineTable() noexcept
 {
@@ -106,9 +156,9 @@ consteval SplineTable::SplineTable() noexcept
 constinit const SplineTable gSplineFilter;
 
 
-CubicFilter::CubicFilter() noexcept
+consteval CubicFilter::CubicFilter() noexcept
 {
-    static constexpr auto IndexScale = 512.0 / double{sTableSteps*2};
+    constexpr auto IndexScale = 512.0 / double{sTableSteps*2};
     /* Only half the coefficients need to be iterated here, since Coeff2 and
      * Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
      */
@@ -126,3 +176,4 @@ CubicFilter::CubicFilter() noexcept
         mFilter[sTableSteps*2 - i] = gsl::narrow_cast<float>(coeff3 * scale);
     }
 }
+constinit const CubicFilter gCubicTable;

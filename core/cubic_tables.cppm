@@ -1,6 +1,6 @@
 module;
 
-#include "cubic_tables.h"
+#include "cubic_tables.hpp"
 
 export module cubic_tables;
 

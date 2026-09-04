@@ -831,7 +831,7 @@ set(CORE_HDRS
     core/converter.h
     core/cpu_caps.h
     core/cubic_defs.h
-    core/cubic_tables.h
+    core/cubic_tables.hpp
     core/decoderbase.hpp
     core/devformat.h
     core/device.h

@@ -1,5 +1,5 @@
-#ifndef CORE_CUBIC_TABLES_H
-#define CORE_CUBIC_TABLES_H
+#ifndef CORE_CUBIC_TABLES_HPP
+#define CORE_CUBIC_TABLES_HPP
 
 #include <array>
 #include <concepts>
@@ -210,4 +210,4 @@ struct CubicFilter {
 };
 inline constexpr auto gCubicTable = CubicFilter{};
 
-#endif /* CORE_CUBIC_TABLES_H */
+#endif /* CORE_CUBIC_TABLES_HPP */

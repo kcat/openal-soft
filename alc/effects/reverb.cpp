@@ -49,7 +49,7 @@
 #if HAVE_CXXMODULES
 import cubic_tables;
 #else
-#include "core/cubic_tables.h"
+#include "core/cubic_tables.hpp"
 #endif
 
 struct BufferStorage;

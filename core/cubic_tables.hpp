@@ -28,22 +28,20 @@ namespace detail_ {
 template<std::floating_point T> [[nodiscard]] constexpr
 auto cecos(T const x) noexcept -> T
 {
-    auto sign = T{1};
+    auto const nx2 = -(x*x);
     auto fact = T{2};
     auto acc = 3llu;
-    auto tmp = x*x;
-    auto result = T{1} - tmp/fact;
+    auto tmp = nx2;
+    auto result = T{1} + tmp/fact;
 
     auto last_result = result;
     do {
-        tmp *= x*x;
+        tmp *= nx2;
         fact *= static_cast<T>(acc * (acc+1));
+        acc += 2;
 
         last_result = result;
-        result += tmp / fact * sign;
-
-        sign *= T{-1};
-        acc += 2;
+        result += tmp / fact;
     } while(result != last_result);
     return result;
 }
@@ -51,22 +49,20 @@ auto cecos(T const x) noexcept -> T
 template<std::floating_point T> [[nodiscard]] constexpr
 auto cesin(T const x) noexcept -> T
 {
-    auto sign = T{1};
+    auto const nx2 = -(x*x);
     auto fact = T{6};
     auto acc = 4llu;
-    auto tmp = x*x*x;
-    auto result = x - tmp/fact;
+    auto tmp = nx2*x;
+    auto result = x + tmp/fact;
 
     auto last_result = result;
     do {
-        tmp *= x*x;
+        tmp *= nx2;
         fact *= static_cast<T>(acc * (acc+1));
+        acc += 2;
 
         last_result = result;
-        result += tmp / fact * sign;
-
-        sign *= T{-1};
-        acc += 2;
+        result += tmp / fact;
     } while(result != last_result);
     return result;
 }

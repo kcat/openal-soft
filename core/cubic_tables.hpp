@@ -168,29 +168,30 @@ struct CubicFilter {
     static constexpr std::size_t sTableSteps{1 << sTableBits};
     static constexpr std::size_t sTableMask{sTableSteps - 1};
 
-    std::array<float,sTableSteps*2 + 1> mFilter{};
+    std::array<float, sTableSteps*2 + 1> mFilter{};
 
     consteval CubicFilter() noexcept
     {
-        constexpr auto IndexScale = 512.0 / double{sTableSteps*2};
+        constexpr auto third = 1.0/3.0;
+        constexpr auto sixth = 1.0/6.0;
+        constexpr auto IndexScale = 1.0 / double{sTableSteps};
         /* Only half the coefficients need to be iterated here, since Coeff2 and
          * Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
          */
         for(const auto i : std::views::iota(0u, sTableSteps/2u + 1u))
         {
-            const auto coeff0 = detail_::GetCoeff(gsl::narrow_cast<double>(sTableSteps + i)
-                *IndexScale);
-            const auto coeff1 = detail_::GetCoeff(gsl::narrow_cast<double>(i)*IndexScale);
-            const auto coeff2 = detail_::GetCoeff(gsl::narrow_cast<double>(sTableSteps - i)
-                *IndexScale);
-            const auto coeff3 = detail_::GetCoeff(gsl::narrow_cast<double>(sTableSteps*2u - i)
-                *IndexScale);
+            const auto mu = gsl::narrow_cast<double>(i) * IndexScale;
+            const auto mu2 = mu*mu;
+            const auto mu3 = mu*mu2;
+            auto const coeff0 =       -third*mu + 0.5*mu2 - sixth*mu3;
+            auto const coeff1 = 1.0 -    0.5*mu -     mu2 +   0.5*mu3;
+            auto const coeff2 =              mu + 0.5*mu2 -   0.5*mu3;
+            auto const coeff3 =       -sixth*mu           + sixth*mu3;
 
-            const auto scale = 1.0 / (coeff0 + coeff1 + coeff2 + coeff3);
-            mFilter[sTableSteps + i] = gsl::narrow_cast<float>(coeff0 * scale);
-            mFilter[i] = gsl::narrow_cast<float>(coeff1 * scale);
-            mFilter[sTableSteps - i] = gsl::narrow_cast<float>(coeff2 * scale);
-            mFilter[sTableSteps*2 - i] = gsl::narrow_cast<float>(coeff3 * scale);
+            mFilter[sTableSteps + i] = gsl::narrow_cast<float>(coeff0);
+            mFilter[i] = gsl::narrow_cast<float>(coeff1);
+            mFilter[sTableSteps - i] = gsl::narrow_cast<float>(coeff2);
+            mFilter[sTableSteps*2 - i] = gsl::narrow_cast<float>(coeff3);
         }
     }
 
@@ -202,7 +203,7 @@ struct CubicFilter {
     auto getCoeff2(std::size_t const i) const noexcept -> float { return mFilter[sTableSteps-i]; }
     [[nodiscard]] constexpr
     auto getCoeff3(std::size_t const i) const noexcept -> float
-    { return mFilter[sTableSteps*2-i]; }
+    { return mFilter[sTableSteps*2 - i]; }
 };
 inline constexpr auto gCubicTable = CubicFilter{};
 

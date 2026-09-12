@@ -14,8 +14,8 @@ namespace al::detail_ {
     inline constexpr auto is_instance_of_v<U<Vs...>, U> = true;
 
     template<typename T>
-    concept zstring_view_type = is_instance_of_v<std::remove_cvref_t<T>, basic_zstring_view>;
-} /* namespace al::detail_ */
+    concept zstring_view_type = detail_::is_instance_of_v<std::remove_cvref_t<T>, basic_zstring_view>;
+}
 
 template<al::detail_::zstring_view_type T, typename CharT>
 struct al::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {

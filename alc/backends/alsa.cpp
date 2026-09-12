@@ -42,6 +42,7 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 
@@ -142,8 +143,8 @@ using namespace std::string_view_literals;
     MAGIC(snd_card_next);                                                     \
     MAGIC(snd_config_update_free_global);
 
-void *alsa_handle;
-#define MAKE_FUNC(f) decltype(f) * p##f
+auto alsa_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
 ALSA_FUNCS(MAKE_FUNC)
 #undef MAKE_FUNC
 

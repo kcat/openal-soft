@@ -12,10 +12,10 @@
 #include "gsl/gsl"
 #include "strutils.hpp"
 
-auto LoadLib(al::zstring_view const name) -> al::expected<void*, std::string>
+auto LoadLib(al::zstring_view const name) -> al::expected<LibHandle, std::string>
 {
     if(auto const res = LoadLibraryW(utf8_to_wstr(name).c_str())) [[likely]]
-        return res;
+        return reinterpret_cast<LibHandle>(res); /* NOLINT(cppcoreguidelines-pro-type-reinterpret-cast) */
     auto const err = GetLastError();
     auto message = std::wstring{};
     message.resize(1024u);
@@ -30,13 +30,17 @@ auto LoadLib(al::zstring_view const name) -> al::expected<void*, std::string>
     return al::unexpected(al::format("LoadLibraryW error: {}", err));
 }
 
-void CloseLib(void *const handle)
-{ FreeLibrary(static_cast<HMODULE>(handle)); }
+void CloseLib(LibHandle const handle)
+{
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+    FreeLibrary(reinterpret_cast<HMODULE>(handle));
+}
 
-auto GetSymbol_(void *const handle, al::zstring_view const name)
+auto GetSymbol_(LibHandle const handle, al::zstring_view const name)
     -> al::expected<void*, std::string>
 {
-    if(auto const sym = GetProcAddress(static_cast<HMODULE>(handle), name.c_str())) [[likely]]
+    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+    if(auto const sym = GetProcAddress(reinterpret_cast<HMODULE>(handle), name.c_str())) [[likely]]
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         return reinterpret_cast<void*>(sym);
@@ -59,20 +63,20 @@ auto GetSymbol_(void *const handle, al::zstring_view const name)
 
 #include <dlfcn.h>
 
-auto LoadLib(al::zstring_view const name) -> al::expected<void*, std::string>
+auto LoadLib(al::zstring_view const name) -> al::expected<LibHandle, std::string>
 {
     if(auto *const handle = dlopen(name.c_str(), RTLD_NOW))
-        return handle;
+        return static_cast<LibHandle>(handle);
 
     if(auto *const err = dlerror())
         return al::unexpected(err);
     return al::unexpected("dlerror() == NULL");
 }
 
-void CloseLib(void *const handle)
+void CloseLib(LibHandle const handle)
 { dlclose(handle); }
 
-auto GetSymbol_(void *const handle, al::zstring_view const name)
+auto GetSymbol_(LibHandle const handle, al::zstring_view const name)
     -> al::expected<void*, std::string>
 {
     if(auto *const sym = dlsym(handle, name.c_str()))

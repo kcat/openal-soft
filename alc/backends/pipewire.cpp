@@ -52,6 +52,7 @@
 #include "core/devformat.h"
 #include "core/device.h"
 #include "core/helpers.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -297,8 +298,8 @@ auto check_version(gsl::czstring const version) -> bool
     MAGIC(pw_stream_get_time);
 #endif
 
-void *pwire_handle;
-#define MAKE_FUNC(f) decltype(f) * p##f
+auto pwire_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
 PWIRE_FUNCS(MAKE_FUNC)
 PWIRE_FUNCS2(MAKE_FUNC)
 #undef MAKE_FUNC

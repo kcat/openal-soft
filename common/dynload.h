@@ -5,23 +5,22 @@
 
 #if HAVE_DYNLOAD && (defined(_WIN32) || defined(HAVE_DLFCN_H))
 
-#include <new>
 #include <string>
 
 #include "expected.hpp"
-#include "gsl/gsl"
-
-#include "dlopennote.h"
 #include "zstring_view.hpp"
 
+extern "C" struct LibHandleStruct;
+using LibHandle = LibHandleStruct*;
+
 [[nodiscard]]
-auto LoadLib(al::zstring_view name) -> al::expected<void*, std::string>;
-void CloseLib(void *handle);
+auto LoadLib(al::zstring_view name) -> al::expected<LibHandle, std::string>;
+void CloseLib(LibHandle handle);
 [[nodiscard]]
-auto GetSymbol_(void *handle, al::zstring_view name) -> al::expected<void*, std::string>;
+auto GetSymbol_(LibHandle handle, al::zstring_view name) -> al::expected<void*, std::string>;
 
 template<typename T> [[nodiscard]]
-auto GetSymbolAddress(void *const handle, al::zstring_view const name)
+auto GetSymbolAddress(LibHandle const handle, al::zstring_view const name)
     -> al::expected<T*, std::string>
 {
     return GetSymbol_(handle, name)

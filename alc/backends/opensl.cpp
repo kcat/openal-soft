@@ -42,6 +42,7 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -75,10 +76,10 @@ using namespace std::string_view_literals;
     MAGIC(SL_IID_PLAY);                     \
     MAGIC(SL_IID_RECORD);
 
-void *sles_handle;
-#define MAKE_SYMBOL(f) decltype(f) * p##f
-SLES_SYMBOLS(MAKE_SYMBOL)
-#undef MAKE_SYMBOL
+auto sles_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
+SLES_SYMBOLS(MAKE_FUNC)
+#undef MAKE_FUNC
 
 #ifndef IN_IDE_PARSER
 #define slCreateEngine (*pslCreateEngine)

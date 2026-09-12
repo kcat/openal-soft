@@ -45,6 +45,7 @@
 #include "base.h"
 #include "core/devformat.h"
 #include "core/device.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -139,8 +140,8 @@ using cvoidp = const void*;
     MAGIC(pa_xmalloc);                                                        \
     MAGIC(pa_xfree);
 
-void *pulse_handle;
-#define MAKE_FUNC(x) decltype(x) * p##x
+auto pulse_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
 PULSE_FUNCS(MAKE_FUNC)
 #undef MAKE_FUNC
 

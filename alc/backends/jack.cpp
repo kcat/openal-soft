@@ -37,6 +37,7 @@
 #include "althrd_setname.h"
 #include "core/device.h"
 #include "core/helpers.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
@@ -82,10 +83,10 @@ using namespace std::string_view_literals;
     MAGIC(jack_set_buffer_size);   \
     MAGIC(jack_get_buffer_size);
 
-void *jack_handle;
-#define MAKE_FUNC(f) decltype(f) * p##f
+auto jack_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
 JACK_FUNCS(MAKE_FUNC)
-decltype(jack_error_callback) * pjack_error_callback;
+decltype(jack_error_callback)* pjack_error_callback{};
 #undef MAKE_FUNC
 
 #ifndef IN_IDE_PARSER

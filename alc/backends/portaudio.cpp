@@ -29,6 +29,7 @@
 
 #include "alc/alconfig.h"
 #include "core/device.h"
+#include "dlopennote.h"
 #include "dynload.h"
 #include "ringbuffer.h"
 
@@ -46,8 +47,8 @@ import zstring_view;
 namespace {
 
 #if HAVE_DYNLOAD
-void *pa_handle;
-#define MAKE_FUNC(x) decltype(x) * p##x
+auto pa_handle = LibHandle{};
+#define MAKE_FUNC(f) decltype(f)* p##f{}
 MAKE_FUNC(Pa_Initialize);
 MAKE_FUNC(Pa_Terminate);
 MAKE_FUNC(Pa_GetErrorText);

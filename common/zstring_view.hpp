@@ -64,13 +64,14 @@ namespace al {
 
         // Needed as a workaround for gcc bug #61648
         // Allows non-friend string literal operators the ability to indirectly call the private constructor
+        // Can't use the CharT const* constructor in case the string contains null characters
         // Safe calling of this requires *certainty* that s[count] is a null character
         // Has to be public thusly, but don't call this
         [[nodiscard]] static constexpr
         auto INTERNAL_unsafe_make_from_string_range(CharT const *s LIFETIMEBOUND, size_type count)
             -> basic_zstring_view
         {
-            return {s, count};
+            return basic_zstring_view{s, count};
         }
 
         constexpr basic_zstring_view& operator=(const basic_zstring_view& view) & noexcept = default;
@@ -385,10 +386,13 @@ namespace al {
 
     private:
         // Private constructor, called by the string literal operators
-        constexpr basic_zstring_view(const CharT* s, size_type count) : m_view{s, count} {}
+        explicit constexpr
+        basic_zstring_view(CharT const *const s LIFETIMEBOUND, size_type const count)
+            : m_view{s, count}
+        { }
 
         // Private constructor, needed by suffix()
-        explicit constexpr basic_zstring_view(const underlying_type& v) noexcept : m_view{v} {}
+        explicit constexpr basic_zstring_view(underlying_type const v) noexcept : m_view{v} { }
 
         underlying_type m_view{""};
     };
@@ -422,34 +426,32 @@ namespace al {
     }
 
 
-    inline namespace literals
-    {
-        inline namespace zstring_view_literals
-        {
-            constexpr zstring_view operator ""_zsv(const char* str, std::size_t len) noexcept
-            {
-                return zstring_view::INTERNAL_unsafe_make_from_string_range(str, len);
-            }
+    inline namespace literals {
+        inline namespace zstring_view_literals {
+            consteval
+            auto operator ""_zsv(char const*const str, std::size_t const len) noexcept
+                -> zstring_view
+            { return zstring_view::INTERNAL_unsafe_make_from_string_range(str, len); }
 
-            constexpr u8zstring_view operator ""_zsv(const char8_t* str, std::size_t len) noexcept
-            {
-                return u8zstring_view::INTERNAL_unsafe_make_from_string_range(str, len);
-            }
+            consteval
+            auto operator ""_zsv(char8_t const*const str, std::size_t const len) noexcept
+                -> u8zstring_view
+            { return u8zstring_view::INTERNAL_unsafe_make_from_string_range(str, len); }
 
-            constexpr u16zstring_view operator ""_zsv(const char16_t* str, std::size_t len) noexcept
-            {
-                return u16zstring_view::INTERNAL_unsafe_make_from_string_range(str, len);
-            }
+            consteval
+            auto operator ""_zsv(char16_t const*const str, std::size_t const len) noexcept
+                -> u16zstring_view
+            { return u16zstring_view::INTERNAL_unsafe_make_from_string_range(str, len); }
 
-            constexpr u32zstring_view operator ""_zsv(const char32_t* str, std::size_t len) noexcept
-            {
-                return u32zstring_view::INTERNAL_unsafe_make_from_string_range(str, len);
-            }
+            consteval
+            auto operator ""_zsv(char32_t const*const str, std::size_t const len) noexcept
+                -> u32zstring_view
+            { return u32zstring_view::INTERNAL_unsafe_make_from_string_range(str, len); }
 
-            constexpr wzstring_view operator ""_zsv(const wchar_t* str, std::size_t len) noexcept
-            {
-                return wzstring_view::INTERNAL_unsafe_make_from_string_range(str, len);
-            }
+            consteval
+            auto operator ""_zsv(wchar_t const*const str, std::size_t const len) noexcept
+                -> wzstring_view
+            { return wzstring_view::INTERNAL_unsafe_make_from_string_range(str, len); }
         }
     }
 }

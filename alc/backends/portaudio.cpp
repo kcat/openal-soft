@@ -31,13 +31,12 @@
 #include "core/device.h"
 #include "dynload.h"
 #include "ringbuffer.h"
-#include "zstring_view.hpp"
 
 #include <portaudio.h>
 
 #if HAVE_CXXMODULES
-import format.zsv;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "core/logging.h"

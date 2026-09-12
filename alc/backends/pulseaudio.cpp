@@ -48,14 +48,13 @@
 #include "dynload.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
-#include "zstring_view.hpp"
 
 #include <pulse/pulseaudio.h>
 
 #if HAVE_CXXMODULES
-import format.zsv;
 import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "core/logging.h"

@@ -43,18 +43,18 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "dynload.h"
-#include "gsl/gsl"
 #include "ringbuffer.h"
-#include "zstring_view.hpp"
 
 #include <alsa/asoundlib.h>
 
 #if HAVE_CXXMODULES
-import format.zsv;
+import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

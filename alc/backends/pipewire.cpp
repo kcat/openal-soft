@@ -58,7 +58,6 @@
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
-#include "zstring_view.hpp"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
  * doesn't support ignoring -Weverything, so we have the list the individual
@@ -137,14 +136,15 @@ DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
 import format.types;
-import format.zsv;
 import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformattypes.hpp"
 #include "alformatzsv.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "zstring_view.hpp"
 #endif
 
 namespace {

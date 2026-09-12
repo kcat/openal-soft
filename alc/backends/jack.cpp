@@ -38,20 +38,20 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "dynload.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "zstring_view.hpp"
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 
 #if HAVE_CXXMODULES
-import format.zsv;
+import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

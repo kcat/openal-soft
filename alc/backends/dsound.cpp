@@ -46,10 +46,8 @@
 #include "core/device.h"
 #include "core/helpers.h"
 #include "dynload.h"
-#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
-#include "zstring_view.hpp"
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;
@@ -85,11 +83,13 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 #endif
 
 #if HAVE_CXXMODULES
-import format.zsv;
+import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

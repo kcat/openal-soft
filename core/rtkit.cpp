@@ -38,6 +38,7 @@
 #include <cstring>
 #include <dbus/dbus.h>
 #include <memory>
+#include <mutex>
 #include <string_view>
 #include <unistd.h>
 #include <sys/types.h>
@@ -48,17 +49,12 @@
 #endif
 
 #include "dynload.h"
-#include "zstring_view.hpp"
 
-
-#if HAVE_DYNLOAD
-
-#include <mutex>
 
 #if HAVE_CXXMODULES
-import format.zsv;
 import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "gsl/gsl"
@@ -66,6 +62,8 @@ import logging;
 #endif
 
 namespace {
+
+#if HAVE_DYNLOAD
 
 #define DBUS_FUNCTIONS(MAGIC) \
 MAGIC(dbus_error_init); \
@@ -154,23 +152,11 @@ auto HasDBus() -> bool
     return dbus_handle != nullptr;
 }
 
-} /* namespace */
-
 #else
 
-#if HAVE_CXXMODULES
-import logging;
-#else
-#include "logging.h"
-#endif
-
-namespace {
 constexpr auto HasDBus() noexcept -> bool { return true; }
-} /* namespace */
-
 #endif
 
-namespace {
 
 class dbusError : public DBusError {
 public:

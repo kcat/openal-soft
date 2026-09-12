@@ -395,17 +395,30 @@ namespace al {
 
     template<typename CharT, typename Traits> [[nodiscard]] constexpr
     auto operator<=>(basic_zstring_view<CharT, Traits> const lhs,
-        std::type_identity_t<std::basic_string_view<CharT, Traits>> const rhs) noexcept
+        basic_zstring_view<CharT, Traits> const rhs) noexcept
     {
         return lhs.view() <=> rhs.view();
     }
+    template<typename CharT, typename Traits> [[nodiscard]] constexpr
+    auto operator<=>(basic_zstring_view<CharT, Traits> const lhs,
+        std::type_identity_t<std::basic_string_view<CharT, Traits>> const rhs) noexcept
+    {
+        return lhs.view() <=> rhs;
+    }
 
+    template<typename CharT, typename Traits> [[nodiscard]] constexpr
+    auto operator==(basic_zstring_view<CharT, Traits> const lhs,
+        basic_zstring_view<CharT, Traits> const rhs)
+        noexcept -> bool
+    {
+        return lhs.view() == rhs.view();
+    }
     template<typename CharT, typename Traits> [[nodiscard]] constexpr
     auto operator==(basic_zstring_view<CharT, Traits> const lhs,
         std::type_identity_t<std::basic_string_view<CharT, Traits>> const rhs)
         noexcept -> bool
     {
-        return lhs.view() == rhs.view();
+        return lhs.view() == rhs;
     }
 
 

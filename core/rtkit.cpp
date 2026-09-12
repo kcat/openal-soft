@@ -139,7 +139,7 @@ auto HasDBus() -> bool
                 })
                 .transform([&func](T *addr) { func = addr; })
                 .has_value();
-            };
+        };
         auto ok = true;
 #define LOAD_FUNC(f) ok &= load_sym(p##f, #f)
         DBUS_FUNCTIONS(LOAD_FUNC)
@@ -304,14 +304,14 @@ auto RTKit::Create() -> RTKit
 auto RTKit::get_max_realtime_priority() const -> rtkitret_t<int>
 {
     return rtkit_get_int_property(mBus.get(), "MaxRealtimePriority")
-        .and_then([](long long const val) -> rtkitret_t<int>
+        .transform([](long long const val) -> int
             { return gsl::narrow_cast<int>(val); });
 }
 
 auto RTKit::get_min_nice_level() const -> rtkitret_t<int>
 {
     return rtkit_get_int_property(mBus.get(), "MinNiceLevel")
-        .and_then([](long long const val) -> rtkitret_t<int>
+        .transform([](long long const val) -> int
             { return gsl::narrow_cast<int>(val); });;
 }
 

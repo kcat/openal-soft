@@ -217,6 +217,7 @@ public:
         if(mHasObject) std::destroy_at(&mObject);
         else std::destroy_at(&mError);
         std::construct_at(&mObject, std::forward<Args>(args)...);
+        mHasObject = true;
         return *this;
     }
 

@@ -4,8 +4,8 @@
 #include <array>
 
 /* The number of distinct phase intervals within the cubic filter tables. */
-constexpr unsigned int CubicPhaseBits{5};
-constexpr unsigned int CubicPhaseCount{1 << CubicPhaseBits};
+inline auto constexpr CubicPhaseBits = 5u;
+inline auto constexpr CubicPhaseCount = 1u << CubicPhaseBits;
 
 struct CubicCoefficients {
     alignas(16) std::array<float,4> mCoeffs;

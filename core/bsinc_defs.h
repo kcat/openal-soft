@@ -4,9 +4,9 @@
 /* The number of distinct scale and phase intervals within the bsinc filter
  * tables.
  */
-constexpr unsigned int BSincScaleBits{4};
-constexpr unsigned int BSincScaleCount{1 << BSincScaleBits};
-constexpr unsigned int BSincPhaseBits{5};
-constexpr unsigned int BSincPhaseCount{1 << BSincPhaseBits};
+inline auto constexpr BSincScaleBits = 4u;
+inline auto constexpr BSincScaleCount = 1u << BSincScaleBits;
+inline auto constexpr BSincPhaseBits = 5u;
+inline auto constexpr BSincPhaseCount = 1u << BSincPhaseBits;
 
 #endif /* CORE_BSINC_DEFS_H */

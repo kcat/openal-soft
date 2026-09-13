@@ -37,10 +37,10 @@ class bad_expected_access : public bad_expected_access<void> {
 public:
     explicit bad_expected_access(Er error) : mError{std::move(error)} { }
 
-    auto error() const& noexcept -> Er const& { return mError; }
-    auto error() & noexcept -> Er& { return mError; }
-    auto error() const&& noexcept -> Er const&& { return std::move(mError); }
-    auto error() && noexcept -> Er&& { return std::move(mError); }
+    [[nodiscard]] auto error() const& noexcept -> Er const& { return mError; }
+    [[nodiscard]] auto error() & noexcept -> Er& { return mError; }
+    [[nodiscard]] auto error() const&& noexcept -> Er const&& { return std::move(mError); }
+    [[nodiscard]] auto error() && noexcept -> Er&& { return std::move(mError); }
 };
 
 

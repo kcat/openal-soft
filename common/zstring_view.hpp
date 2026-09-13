@@ -384,6 +384,38 @@ namespace al {
             return m_view;
         }
 
+
+        [[nodiscard]] friend constexpr
+        auto operator<=>(basic_zstring_view const lhs, basic_zstring_view const rhs) noexcept
+        { return lhs.view() <=> rhs.view(); }
+        [[nodiscard]] friend constexpr
+        auto operator<=>(basic_zstring_view const lhs,
+            std::basic_string_view<CharT, Traits> const rhs) noexcept
+        { return lhs.view() <=> rhs; }
+        template<typename Alloc> [[nodiscard]] friend constexpr
+        auto operator<=>(basic_zstring_view const lhs,
+            std::basic_string<CharT, Traits, Alloc> const rhs) noexcept
+        { return lhs.view() <=> rhs; }
+        [[nodiscard]] friend constexpr
+        auto operator<=>(basic_zstring_view const lhs, CharT const *rhs) noexcept
+        { return lhs.view() <=> rhs; }
+
+        [[nodiscard]] friend constexpr
+        auto operator==(basic_zstring_view const lhs, basic_zstring_view const rhs) noexcept
+            -> bool
+        { return lhs.view() == rhs.view(); }
+        [[nodiscard]] friend constexpr
+        auto operator==(basic_zstring_view const lhs,
+            std::basic_string_view<CharT, Traits> const rhs) noexcept -> bool
+        { return lhs.view() == rhs; }
+        template<typename Alloc> [[nodiscard]] friend constexpr
+        auto operator==(basic_zstring_view const lhs,
+            std::basic_string<CharT, Traits, Alloc> const rhs) noexcept -> bool
+        { return lhs.view() == rhs; }
+        [[nodiscard]] friend constexpr
+        auto operator==(basic_zstring_view const lhs, CharT const *rhs) noexcept -> bool
+        { return lhs.view() == rhs; }
+
     private:
         // Private constructor, called by the string literal operators
         explicit constexpr
@@ -396,34 +428,6 @@ namespace al {
 
         underlying_type m_view{""};
     };
-
-    template<typename CharT, typename Traits> [[nodiscard]] constexpr
-    auto operator<=>(basic_zstring_view<CharT, Traits> const lhs,
-        basic_zstring_view<CharT, Traits> const rhs) noexcept
-    {
-        return lhs.view() <=> rhs.view();
-    }
-    template<typename CharT, typename Traits> [[nodiscard]] constexpr
-    auto operator<=>(basic_zstring_view<CharT, Traits> const lhs,
-        std::type_identity_t<std::basic_string_view<CharT, Traits>> const rhs) noexcept
-    {
-        return lhs.view() <=> rhs;
-    }
-
-    template<typename CharT, typename Traits> [[nodiscard]] constexpr
-    auto operator==(basic_zstring_view<CharT, Traits> const lhs,
-        basic_zstring_view<CharT, Traits> const rhs)
-        noexcept -> bool
-    {
-        return lhs.view() == rhs.view();
-    }
-    template<typename CharT, typename Traits> [[nodiscard]] constexpr
-    auto operator==(basic_zstring_view<CharT, Traits> const lhs,
-        std::type_identity_t<std::basic_string_view<CharT, Traits>> const rhs)
-        noexcept -> bool
-    {
-        return lhs.view() == rhs;
-    }
 
 
     inline namespace literals {

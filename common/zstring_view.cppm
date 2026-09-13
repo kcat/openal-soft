@@ -26,9 +26,6 @@ export namespace al {
     using al::u32zstring_view;
     using al::wzstring_view;
 
-    using al::operator<=>;
-    using al::operator==;
-
     inline namespace literals
     {
         inline namespace zstring_view_literals

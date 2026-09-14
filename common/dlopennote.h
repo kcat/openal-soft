@@ -44,11 +44,9 @@ inline constexpr auto Type = 0x407C0C0Au;
 
 template<std::size_t json_len>
 struct [[gnu::aligned(4)]] Structure {
-    struct {
-        std::uint32_t n_namesz{sizeof(Structure::name)};
-        std::uint32_t n_descsz{sizeof(Structure::dlopen_json)};
-        std::uint32_t n_type{Type};
-    } nhdr;
+    std::uint32_t n_namesz{sizeof(name)};
+    std::uint32_t n_descsz{sizeof(dlopen_json)};
+    std::uint32_t n_type{Type};
     std::array<char, 4> name{Vendor};
     std::array<char, json_len> dlopen_json;
 

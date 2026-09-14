@@ -110,8 +110,8 @@ class [[nodiscard]] expected {
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-union-access) */
     auto check_object() const -> void { if(not mHasValue) throw bad_expected_access<Er>{mError}; }
 
-#if defined(_GLIBCXX_DEBUG_ASSERT)
-#define assert_object(x, msg) _GLIBCXX_DEBUG_ASSERT(x)
+#if defined(__glibcxx_assert)
+#define assert_object(x, msg) __glibcxx_assert(x)
 #elif defined(_LIBCPP_ASSERT_VALID_ELEMENT_ACCESS)
 #define assert_object(x, msg) _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(x, msg)
 #elif defined( _STL_VERIFY) && (_MSVC_STL_HARDENING_EXPECTED || _ITERATOR_DEBUG_LEVEL != 0)

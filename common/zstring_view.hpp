@@ -59,8 +59,10 @@ namespace al {
         constexpr basic_zstring_view() noexcept = default;
         constexpr basic_zstring_view(basic_zstring_view const &other) noexcept = default;
         explicit(false) constexpr basic_zstring_view(CharT const *s LIFETIMEBOUND) : m_view{s} { }
-        explicit(false) constexpr
-        basic_zstring_view(std::string const &s LIFETIMEBOUND) : m_view{s} { }
+        template<typename Alloc> explicit(false) constexpr
+        basic_zstring_view(std::basic_string<CharT, Traits, Alloc> const &s LIFETIMEBOUND)
+            : m_view{s}
+        { }
 
         // Needed as a workaround for gcc bug #61648
         // Allows non-friend string literal operators the ability to indirectly call the private constructor
@@ -74,7 +76,13 @@ namespace al {
             return basic_zstring_view{s, count};
         }
 
-        constexpr basic_zstring_view& operator=(const basic_zstring_view& view) & noexcept = default;
+        constexpr
+        auto operator=(const basic_zstring_view&) & noexcept LIFETIMEBOUND -> basic_zstring_view&
+            = default;
+        template<typename Alloc>
+        constexpr auto operator=(std::basic_string<CharT, Traits, Alloc> const &rhs) & noexcept
+            LIFETIMEBOUND -> basic_zstring_view&
+        { m_view = rhs; return *this; }
 
         [[nodiscard]] constexpr const_iterator begin() const noexcept
         {
@@ -389,12 +397,11 @@ namespace al {
         auto operator<=>(basic_zstring_view const lhs, basic_zstring_view const rhs) noexcept
         { return lhs.view() <=> rhs.view(); }
         [[nodiscard]] friend constexpr
-        auto operator<=>(basic_zstring_view const lhs,
-            std::basic_string_view<CharT, Traits> const rhs) noexcept
+        auto operator<=>(basic_zstring_view const lhs, underlying_type const rhs) noexcept
         { return lhs.view() <=> rhs; }
         template<typename Alloc> [[nodiscard]] friend constexpr
         auto operator<=>(basic_zstring_view const lhs,
-            std::basic_string<CharT, Traits, Alloc> const rhs) noexcept
+            std::basic_string<CharT, Traits, Alloc> const &rhs) noexcept
         { return lhs.view() <=> rhs; }
         [[nodiscard]] friend constexpr
         auto operator<=>(basic_zstring_view const lhs, CharT const *rhs) noexcept
@@ -405,12 +412,11 @@ namespace al {
             -> bool
         { return lhs.view() == rhs.view(); }
         [[nodiscard]] friend constexpr
-        auto operator==(basic_zstring_view const lhs,
-            std::basic_string_view<CharT, Traits> const rhs) noexcept -> bool
+        auto operator==(basic_zstring_view const lhs, underlying_type const rhs) noexcept -> bool
         { return lhs.view() == rhs; }
         template<typename Alloc> [[nodiscard]] friend constexpr
         auto operator==(basic_zstring_view const lhs,
-            std::basic_string<CharT, Traits, Alloc> const rhs) noexcept -> bool
+            std::basic_string<CharT, Traits, Alloc> const &rhs) noexcept -> bool
         { return lhs.view() == rhs; }
         [[nodiscard]] friend constexpr
         auto operator==(basic_zstring_view const lhs, CharT const *rhs) noexcept -> bool

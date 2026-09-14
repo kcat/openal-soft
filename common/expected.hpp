@@ -102,13 +102,13 @@ class [[nodiscard]] expected {
 
     using S = std::conditional_t<void_success, monostate, Ty>;
     union {
-        S mObject;
+        S mValue;
         Er mError;
     };
-    bool mHasObject;
+    bool mHasValue;
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-union-access) */
-    auto check_object() const -> void { if(not mHasObject) throw bad_expected_access<Er>{mError}; }
+    auto check_object() const -> void { if(not mHasValue) throw bad_expected_access<Er>{mError}; }
 
 #if defined(_GLIBCXX_DEBUG_ASSERT)
 #define assert_object(x, msg) _GLIBCXX_DEBUG_ASSERT(x)
@@ -129,18 +129,18 @@ class [[nodiscard]] expected {
     using unexpect_inv_ = detail_::unexpect_inv_;
 
     template<typename F> requires(not void_success) explicit constexpr
-    expected(in_place_inv_, F&& f) : mObject{std::invoke(std::forward<F>(f))}, mHasObject{true}
+    expected(in_place_inv_, F&& f) : mValue{std::invoke(std::forward<F>(f))}, mHasValue{true}
     { }
     template<typename F> requires(void_success) explicit constexpr
-    expected(in_place_inv_, F&& f) : mObject{}, mHasObject{true}
+    expected(in_place_inv_, F&& f) : mValue{}, mHasValue{true}
     { std::invoke(std::forward<F>(f)); }
     template<typename F> explicit constexpr
-    expected(unexpect_inv_, F&& f) : mError{std::invoke(std::forward<F>(f))}, mHasObject{false}
+    expected(unexpect_inv_, F&& f) : mError{std::invoke(std::forward<F>(f))}, mHasValue{false}
     { }
 
 public:
     constexpr
-    expected() noexcept(std::is_nothrow_default_constructible_v<S>) : mObject{}, mHasObject{true}
+    expected() noexcept(std::is_nothrow_default_constructible_v<S>) : mValue{}, mHasValue{true}
     { }
     constexpr expected(expected const &rhs)
         noexcept(std::is_nothrow_copy_constructible_v<S>
@@ -159,9 +159,9 @@ public:
             and std::is_nothrow_copy_constructible_v<Er>)
         requires(not std::is_trivially_copy_constructible_v<S>
             or not std::is_trivially_copy_constructible_v<Er>)
-        : mHasObject{rhs.mHasObject}
+        : mHasValue{rhs.mHasValue}
     {
-        if(rhs.mHasObject) std::construct_at(&mObject, rhs.mObject);
+        if(rhs.mHasValue) std::construct_at(&mValue, rhs.mValue);
         else std::construct_at(&mError, rhs.mError);
     }
     constexpr expected(expected&& rhs)
@@ -169,14 +169,14 @@ public:
             and std::is_nothrow_move_constructible_v<Er>)
         requires(not std::is_trivially_move_constructible_v<S>
             or not std::is_trivially_move_constructible_v<Er>)
-        : mHasObject{rhs.mHasObject}
+        : mHasValue{rhs.mHasValue}
     {
-        if(rhs.mHasObject) std::construct_at(&mObject, std::move(rhs.mObject));
+        if(rhs.mHasValue) std::construct_at(&mValue, std::move(rhs.mValue));
         else std::construct_at(&mError, std::move(rhs.mError));
     }
     constexpr ~expected()
     {
-        if(mHasObject) std::destroy_at(&mObject);
+        if(mHasValue) std::destroy_at(&mValue);
         else std::destroy_at(&mError);
     }
     constexpr ~expected() requires(std::is_trivially_destructible_v<S> and std::is_trivially_destructible_v<Er>) = default;
@@ -187,68 +187,68 @@ public:
             and not std::is_same_v<expected, std::remove_cvref_t<U>>
             and std::is_constructible_v<Ty, U>)
         constexpr explicit(!std::is_convertible_v<U, Ty>)
-    expected(U&& v) : mObject{std::forward<U>(v)}, mHasObject{true} { }
+    expected(U&& v) : mValue{std::forward<U>(v)}, mHasValue{true} { }
 
     template<typename ...Args> requires(not void_success and std::is_constructible_v<Ty, Args...>)
         constexpr explicit
     expected(std::in_place_t, Args&& ...args)
-        : mObject{std::forward<Args>(args)...}, mHasObject{true}
+        : mValue{std::forward<Args>(args)...}, mHasValue{true}
     { }
 
     constexpr explicit
-    expected(std::in_place_t) noexcept requires(void_success) : mObject{}, mHasObject{true} { }
+    expected(std::in_place_t) noexcept requires(void_success) : mValue{}, mHasValue{true} { }
 
     /* Error constructors */
     template<typename U> requires(std::is_constructible_v<Er, const U&>) constexpr
         explicit(not std::is_convertible_v<const U&, Er>)
-    expected(unexpected<U> const &rhs) : mError{rhs.error()}, mHasObject{false} { }
+    expected(unexpected<U> const &rhs) : mError{rhs.error()}, mHasValue{false} { }
 
     template<typename U> requires(std::is_constructible_v<Er, U>) constexpr
         explicit(not std::is_convertible_v<U, Er>)
-    expected(unexpected<U>&& rhs) : mError{std::move(rhs).error()}, mHasObject{false} { }
+    expected(unexpected<U>&& rhs) : mError{std::move(rhs).error()}, mHasValue{false} { }
 
     template<typename ...Args> requires(std::is_constructible_v<Er, Args...>) constexpr explicit
-    expected(unexpect_t, Args&& ...args) : mError{std::forward<Args>(args)...}, mHasObject{false}
+    expected(unexpect_t, Args&& ...args) : mError{std::forward<Args>(args)...}, mHasValue{false}
     { }
 
     template<typename ...Args> requires(std::is_nothrow_constructible_v<Ty, Args...>) constexpr
     auto emplace(Args&& ...args) & noexcept LIFETIMEBOUND -> expected&
     {
-        if(mHasObject) std::destroy_at(&mObject);
+        if(mHasValue) std::destroy_at(&mValue);
         else std::destroy_at(&mError);
-        std::construct_at(&mObject, std::forward<Args>(args)...);
-        mHasObject = true;
+        std::construct_at(&mValue, std::forward<Args>(args)...);
+        mHasValue = true;
         return *this;
     }
 
-    [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return mHasObject; }
+    [[nodiscard]] constexpr auto has_value() const noexcept -> bool { return mHasValue; }
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
     [[nodiscard]] constexpr
     auto operator*() & noexcept -> S& requires(not void_success)
-    { assert_object(has_value(), "expected::operator* called without a value"); return mObject; }
+    { assert_object(has_value(), "expected::operator* called without a value"); return mValue; }
     [[nodiscard]] constexpr
     auto operator*() const& noexcept -> S const& requires(not void_success)
-    { assert_object(has_value(), "expected::operator* called without a value"); return mObject; }
+    { assert_object(has_value(), "expected::operator* called without a value"); return mValue; }
     [[nodiscard]] constexpr
     auto operator*() && noexcept -> S&& requires(not void_success)
     {
         assert_object(has_value(), "expected::operator* called without a value");
-        return std::move(mObject);
+        return std::move(mValue);
     }
     [[nodiscard]] constexpr
     auto operator*() const&& noexcept -> S const&& requires(not void_success)
     {
         assert_object(has_value(), "expected::operator* called without a value");
-        return std::move(mObject);
+        return std::move(mValue);
     }
 
     [[nodiscard]] constexpr
     auto operator->() noexcept -> S* requires(not void_success)
-    { assert_object(has_value(), "expected::operator-> called without a value"); return &mObject; }
+    { assert_object(has_value(), "expected::operator-> called without a value"); return &mValue; }
     [[nodiscard]] constexpr
     auto operator->() const noexcept -> S const* requires(not void_success)
-    { assert_object(has_value(), "expected::operator-> called without a value"); return &mObject; }
+    { assert_object(has_value(), "expected::operator-> called without a value"); return &mValue; }
 
     constexpr auto value() const& -> void { check_object(); }
     constexpr auto value() & -> void { check_object(); }
@@ -256,15 +256,15 @@ public:
     constexpr auto value() && -> void { check_object(); }
 
     [[nodiscard]] constexpr
-    auto value() & -> S& requires(not void_success) { check_object(); return mObject; }
+    auto value() & -> S& requires(not void_success) { check_object(); return mValue; }
     [[nodiscard]] constexpr
-    auto value() const& -> const S& requires(not void_success) { check_object(); return mObject; }
+    auto value() const& -> const S& requires(not void_success) { check_object(); return mValue; }
     [[nodiscard]] constexpr
     auto value() && -> S&& requires(not void_success)
-    { check_object(); return std::move(mObject); }
+    { check_object(); return std::move(mValue); }
     [[nodiscard]] constexpr
     auto value() const&& -> const S&& requires(not void_success)
-    { check_object(); return std::move(mObject); }
+    { check_object(); return std::move(mValue); }
 
     template<typename U> [[nodiscard]] constexpr
     auto value_or(U&& defval) const& -> S requires(not void_success)
@@ -298,7 +298,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Ty&>>;
         if(has_value())
-            return std::invoke(std::forward<F>(fn), mObject);
+            return std::invoke(std::forward<F>(fn), mValue);
         return ret_t{unexpect, mError};
     }
     template<typename F> [[nodiscard]] constexpr
@@ -306,7 +306,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Ty const&>>;
         if(has_value())
-            return std::invoke(std::forward<F>(fn), mObject);
+            return std::invoke(std::forward<F>(fn), mValue);
         return ret_t{unexpect, mError};
     }
     template<typename F> [[nodiscard]] constexpr
@@ -314,7 +314,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Ty&&>>;
         if(has_value())
-            return std::invoke(std::forward<F>(fn), std::move(mObject));
+            return std::invoke(std::forward<F>(fn), std::move(mValue));
         return ret_t{unexpect, std::move(mError)};
     }
     template<typename F> [[nodiscard]] constexpr
@@ -322,7 +322,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Ty const&&>>;
         if(has_value())
-            return std::invoke(std::forward<F>(fn), std::move(mObject));
+            return std::invoke(std::forward<F>(fn), std::move(mValue));
         return ret_t{unexpect, std::move(mError)};
     }
 
@@ -337,7 +337,7 @@ public:
                 return ret_t{in_place_inv_{}, std::forward<F>(fn)};
             else
                 return ret_t{in_place_inv_{},
-                    [&]{ return std::invoke(std::forward<F>(fn), mObject); }};
+                    [&]{ return std::invoke(std::forward<F>(fn), mValue); }};
         }
         return ret_t{unexpect, mError};
     }
@@ -352,7 +352,7 @@ public:
                 return ret_t{in_place_inv_{}, std::forward<F>(fn)};
             else
                 return ret_t{in_place_inv_{},
-                    [&]{ return std::invoke(std::forward<F>(fn), mObject); }};
+                    [&]{ return std::invoke(std::forward<F>(fn), mValue); }};
         }
         return ret_t{unexpect, mError};
     }
@@ -367,7 +367,7 @@ public:
                 return ret_t{in_place_inv_{}, std::forward<F>(fn)};
             else
                 return ret_t{in_place_inv_{},
-                    [&]{ return std::invoke(std::forward<F>(fn), std::move(mObject)); }};
+                    [&]{ return std::invoke(std::forward<F>(fn), std::move(mValue)); }};
         }
         return ret_t{unexpect, std::move(mError)};
     }
@@ -382,7 +382,7 @@ public:
                 return ret_t{in_place_inv_{}, std::forward<F>(fn)};
             else
                 return ret_t{in_place_inv_{},
-                    [&]{ return std::invoke(std::forward<F>(fn), std::move(mObject)); }};
+                    [&]{ return std::invoke(std::forward<F>(fn), std::move(mValue)); }};
         }
         return ret_t{unexpect, std::move(mError)};
     }
@@ -392,7 +392,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Er&>>;
         if(has_value())
-            return ret_t{std::in_place, mObject};
+            return ret_t{std::in_place, mValue};
         return std::invoke(std::forward<F>(fn), mError);
     }
     template<typename F> [[nodiscard]] constexpr
@@ -400,7 +400,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Er const&>>;
         if(has_value())
-            return ret_t{std::in_place, mObject};
+            return ret_t{std::in_place, mValue};
         return std::invoke(std::forward<F>(fn), mError);
     }
     template<typename F> [[nodiscard]] constexpr
@@ -408,7 +408,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Er&&>>;
         if(has_value())
-            return ret_t{std::in_place, std::move(mObject)};
+            return ret_t{std::in_place, std::move(mValue)};
         return std::invoke(std::forward<F>(fn), std::move(mError));
     }
     template<typename F> [[nodiscard]] constexpr
@@ -416,7 +416,7 @@ public:
     {
         using ret_t = std::remove_cvref_t<std::invoke_result_t<F&&, Er const&&>>;
         if(has_value())
-            return ret_t{std::in_place, std::move(mObject)};
+            return ret_t{std::in_place, std::move(mValue)};
         return std::invoke(std::forward<F>(fn), std::move(mError));
     }
 
@@ -430,7 +430,7 @@ public:
             if constexpr(void_success)
                 return ret_t{std::in_place};
             else
-                return ret_t{std::in_place, mObject};
+                return ret_t{std::in_place, mValue};
         }
         return ret_t{unexpect_inv_{}, [&]{ return std::invoke(std::forward<F>(fn), mError); }};
     }
@@ -444,7 +444,7 @@ public:
             if constexpr(void_success)
                 return ret_t{std::in_place};
             else
-                return ret_t{std::in_place, mObject};
+                return ret_t{std::in_place, mValue};
         }
         return ret_t{unexpect_inv_{}, [&]{ return std::invoke(std::forward<F>(fn), mError); }};
     }
@@ -458,7 +458,7 @@ public:
             if constexpr(void_success)
                 return ret_t{std::in_place};
             else
-                return ret_t{std::in_place, std::move(mObject)};
+                return ret_t{std::in_place, std::move(mValue)};
         }
         return ret_t{unexpect_inv_{},
             [&]{ return std::invoke(std::forward<F>(fn), std::move(mError)); }};
@@ -473,7 +473,7 @@ public:
             if constexpr(void_success)
                 return ret_t{std::in_place};
             else
-                return ret_t{std::in_place, std::move(mObject)};
+                return ret_t{std::in_place, std::move(mValue)};
         }
         return ret_t{unexpect_inv_{},
             [&]{ return std::invoke(std::forward<F>(fn), std::move(mError)); }};

@@ -180,6 +180,24 @@ using SwsContextPtr = std::unique_ptr<SwsContext, decltype([](SwsContext *ptr)
     { sws_freeContext(ptr); })>;
 
 
+[[nodiscard]] constexpr
+auto NextPowerOf2(std::size_t value) noexcept -> std::size_t
+{
+    if(value > 0)
+    {
+        --value;
+        value |= value>>1;
+        value |= value>>2;
+        value |= value>>4;
+        value |= value>>8;
+        value |= value>>16;
+        if constexpr(sizeof(std::size_t) > 4)
+            value |= (value>>16)>>16;
+    }
+    return value+1;
+}
+
+
 struct SDLProps {
     SDL_PropertiesID mProperties{};
 
@@ -412,8 +430,8 @@ struct AudioState {
     int mSamplesMax{0};
 
     std::vector<uint8_t> mBufferData;
-    std::atomic<size_t> mReadPos{0};
-    std::atomic<size_t> mWritePos{0};
+    std::atomic<size_t> mReadCount{0};
+    std::atomic<size_t> mWriteCount{0};
 
     /* OpenAL format */
     ALenum mFormat{AL_NONE};
@@ -616,12 +634,11 @@ auto AudioState::getClockNoLock() const -> nanoseconds
              * is the pts of the next sample to be buffered, minus the amount
              * already in the buffer ready to play.
              */
-            const auto woffset = mWritePos.load(std::memory_order_acquire);
-            const auto roffset = mReadPos.load(std::memory_order_relaxed);
-            /* Account for the write offset wrapping behind the read offset. */
-            const auto readable = (woffset < roffset)*mBufferData.size() + woffset - roffset;
+            auto const roffset = mReadCount.load(std::memory_order_acquire);
+            auto const woffset = mWriteCount.load(std::memory_order_acquire);
+            auto const readable = (woffset-roffset) / mFrameSize;
 
-            pts = mCurrentPts - nanoseconds{seconds{readable/mFrameSize}}/mCodecCtx->sample_rate;
+            pts = mCurrentPts - nanoseconds{seconds{readable}}/mCodecCtx->sample_rate;
         }
 
         return pts;
@@ -681,14 +698,12 @@ auto AudioState::startPlayback() -> bool
 {
     if(!mBufferData.empty())
     {
-        const auto woffset = mWritePos.load(std::memory_order_acquire);
-        const auto roffset = mReadPos.load(std::memory_order_relaxed);
-        /* Account for the write offset wrapping behind the read offset. */
-        const auto readable = (woffset < roffset)*mBufferData.size() + woffset - roffset;
+        auto const roffset = mReadCount.load(std::memory_order_acquire);
+        auto const woffset = mWriteCount.load(std::memory_order_relaxed);
+        auto const readable = (woffset-roffset) / mFrameSize;
         if(readable == 0) return false;
 
-        const auto nanosamples = nanoseconds{seconds{readable / mFrameSize}};
-        mStartPts = mCurrentPts - nanosamples/mCodecCtx->sample_rate;
+        mStartPts = mCurrentPts - nanoseconds{seconds{readable}}/mCodecCtx->sample_rate;
     }
     else
     {
@@ -844,39 +859,40 @@ auto AudioState::readAudio(std::span<uint8_t> samples, int &sample_skip) -> bool
 
 auto AudioState::readAudio(int sample_skip) -> void
 {
-    auto woffset = mWritePos.load(std::memory_order_acquire);
-    const auto roffset = mReadPos.load(std::memory_order_relaxed);
+    auto const buffermask = mBufferData.size() - 1;
+    auto const roffset = mReadCount.load(std::memory_order_acquire);
+    auto woffset = mWriteCount.load(std::memory_order_relaxed);
     while(mSamplesLen > 0)
     {
-        const auto nsamples = ((roffset > woffset) ? roffset-woffset-1
-            : (roffset == 0) ? (mBufferData.size()-woffset-1)
-            : (mBufferData.size()-woffset)) / mFrameSize;
+        const auto nsamples = (mBufferData.size() - (woffset-roffset)) / mFrameSize;
         if(!nsamples) break;
 
         if(mSamplesPos < 0)
         {
-            const auto rem = std::min<size_t>(nsamples, gsl::narrow_cast<ALuint>(-mSamplesPos));
+            const auto rem = std::min<size_t>(gsl::narrow_cast<ALuint>(-mSamplesPos),
+                std::min(nsamples, (mBufferData.size() - (woffset&buffermask))/mFrameSize));
 
-            sample_dup(mBufferData|std::views::drop(woffset), mSamplesSpan.first(mFrameSize), rem);
+            sample_dup(std::span{mBufferData}.subspan(woffset&buffermask),
+                mSamplesSpan.first(mFrameSize), rem);
             woffset += rem * mFrameSize;
-            if(woffset == mBufferData.size()) woffset = 0;
-            mWritePos.store(woffset, std::memory_order_release);
+            mWriteCount.store(woffset, std::memory_order_release);
 
             mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
             mSamplesPos += gsl::narrow_cast<int>(rem);
             continue;
         }
 
-        if(const auto rem = std::min(nsamples, gsl::narrow_cast<size_t>(mSamplesLen-mSamplesPos)))
+        const auto rem = std::min<size_t>(gsl::narrow_cast<ALuint>(mSamplesLen-mSamplesPos),
+            std::min(nsamples, (mBufferData.size() - (woffset&buffermask))/mFrameSize));
+        if(rem > 0)
         {
-            const auto boffset = gsl::narrow_cast<ALuint>(mSamplesPos) * size_t{mFrameSize};
+            const auto boffset = gsl::narrow_cast<ALuint>(mSamplesPos) * std::size_t{mFrameSize};
             const auto nbytes = rem * mFrameSize;
 
             std::ranges::copy(mSamplesSpan | std::views::drop(boffset) | std::views::take(nbytes),
-                (mBufferData | std::views::drop(woffset)).begin());
+                std::span{mBufferData}.subspan(woffset&buffermask).begin());
             woffset += nbytes;
-            if(woffset == mBufferData.size()) woffset = 0;
-            mWritePos.store(woffset, std::memory_order_release);
+            mWriteCount.store(woffset, std::memory_order_release);
 
             mCurrentPts += nanoseconds{seconds{rem}} / mCodecCtx->sample_rate;
             mSamplesPos += gsl::narrow_cast<int>(rem);
@@ -937,27 +953,23 @@ auto AL_APIENTRY AudioState::eventCallback(ALenum eventType, ALuint object, ALui
 
 auto AudioState::bufferCallback(const std::span<ALubyte> data) noexcept -> ALsizei
 {
-    auto output = data.begin();
+    auto const buffermask = mBufferData.size() - 1;
+    auto const r = mReadCount.load(std::memory_order_relaxed);
+    auto const w = mWriteCount.load(std::memory_order_acquire);
+    auto const readable = w - r;
 
-    auto roffset = mReadPos.load(std::memory_order_acquire);
-    while(const auto rem = gsl::narrow_cast<size_t>(std::distance(output, data.end())))
-    {
-        const auto woffset = mWritePos.load(std::memory_order_relaxed);
-        if(woffset == roffset) break;
+    auto const to_read = std::min(data.size(), readable);
+    auto const read_idx = r & buffermask;
 
-        auto todo = ((woffset < roffset) ? mBufferData.size() : woffset) - roffset;
-        todo = std::min(todo, rem);
+    auto const rdend = read_idx + to_read;
+    auto const [n1, n2] = (rdend <= mBufferData.size()) ? std::array{to_read, 0_uz}
+        : std::array{mBufferData.size() - read_idx, rdend&buffermask};
 
-        output = std::ranges::copy(mBufferData | std::views::drop(roffset)
-            | std::views::take(todo), output).out;
-
-        roffset += todo;
-        if(roffset == mBufferData.size())
-            roffset = 0;
-    }
-    mReadPos.store(roffset, std::memory_order_release);
-
-    return gsl::narrow_cast<ALsizei>(std::distance(data.begin(), output));
+    auto const outiter = std::ranges::copy(mBufferData | std::views::drop(read_idx)
+        | std::views::take(n1), data.begin()).out;
+    std::ranges::copy(mBufferData | std::views::take(n2), outiter);
+    mReadCount.store(r+n1+n2, std::memory_order_release);
+    return al::saturate_cast<ALsizei>(to_read);
 }
 
 void AudioState::handler()
@@ -1375,11 +1387,11 @@ void AudioState::handler()
         {
             const auto numsamples = duration_cast<seconds>(mCodecCtx->sample_rate
                 * AudioBufferTotalTime).count();
-            mBufferData.resize(gsl::narrow_cast<size_t>(numsamples) * mFrameSize);
+            mBufferData.resize(NextPowerOf2(gsl::narrow_cast<size_t>(numsamples) * mFrameSize));
             std::ranges::fill(mBufferData, uint8_t{});
 
-            mReadPos.store(0, std::memory_order_relaxed);
-            mWritePos.store(0, std::memory_order_relaxed);
+            mReadCount.store(0, std::memory_order_relaxed);
+            mWriteCount.store(0, std::memory_order_relaxed);
 
             auto refresh = ALCint{};
             alcGetIntegerv(alcGetContextsDevice(alcGetCurrentContext()), ALC_REFRESH, 1, &refresh);

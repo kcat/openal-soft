@@ -24,6 +24,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <numbers>
 #include <ranges>
 #include <span>

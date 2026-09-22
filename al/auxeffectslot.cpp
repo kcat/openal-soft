@@ -47,7 +47,6 @@
 #include "alnumeric.h"
 #include "atomic.h"
 #include "buffer.h"
-#include "core/device.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
@@ -66,12 +65,14 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import core.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
 #include "alformattypes.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

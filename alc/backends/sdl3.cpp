@@ -34,8 +34,6 @@
 #include "alformat.hpp"
 #include "alnumeric.h"
 #include "altypes.hpp"
-#include "core/device.h"
-#include "gsl/gsl"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
 
@@ -52,9 +50,13 @@ constexpr auto DefaultCaptureDeviceID = SDL_AUDIO_DEVICE_DEFAULT_RECORDING;
 DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
+import core.device;
+import gsl;
 import logging;
 #else
+#include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

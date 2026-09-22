@@ -83,8 +83,6 @@
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/cpu_caps.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/nfc.h"
@@ -171,11 +169,13 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import core.device;
 import format.types;
 import logging;
 #else
 #include "context.hpp"
 #include "alformattypes.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #endif
 

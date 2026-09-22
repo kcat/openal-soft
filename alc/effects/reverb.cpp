@@ -34,7 +34,6 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
@@ -47,9 +46,11 @@
 #include "vector.h"
 
 #if HAVE_CXXMODULES
+import core.device;
 import cubic_tables;
 #else
 #include "core/cubic_tables.hpp"
+#include "core/device.h"
 #endif
 
 struct BufferStorage;

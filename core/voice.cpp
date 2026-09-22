@@ -24,8 +24,6 @@
 #include "buffer_storage.h"
 #include "context.h"
 #include "cpu_caps.h"
-#include "devformat.h"
-#include "device.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
@@ -40,8 +38,10 @@
 #include "uhjfilter.h"
 
 #if HAVE_CXXMODULES
+import core.device;
 import logging;
 #else
+#include "device.h"
 #include "logging.h"
 #endif
 

@@ -43,8 +43,6 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "base.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
@@ -53,11 +51,13 @@
 #include <pulse/pulseaudio.h>
 
 #if HAVE_CXXMODULES
+import core.device;
 import gsl;
 import logging;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

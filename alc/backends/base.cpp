@@ -7,8 +7,13 @@
 #include <utility>
 
 #include "alformat.hpp"
-#include "core/devformat.h"
+#include "core/mixparams.hpp"
+
+#if HAVE_CXXMODULES
+import core.device;
+#else
 #include "core/device.h"
+#endif
 
 
 namespace al {

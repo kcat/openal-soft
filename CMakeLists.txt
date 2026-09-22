@@ -865,6 +865,7 @@ if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
         core/bsinc_tables.cppm
         core/cubic_tables.cppm
+        core/device.cppm
         core/logging.cppm)
 else()
     list(APPEND CORE_HDRS core/logging.h)

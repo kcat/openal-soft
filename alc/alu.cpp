@@ -53,8 +53,6 @@
 #include "core/buffer_storage.h"
 #include "core/context.h"
 #include "core/cpu_caps.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
@@ -80,10 +78,12 @@
 
 #if HAVE_CXXMODULES
 import bsinc_tables;
+import core.device;
 import cubic_tables;
 #else
 #include "core/bsinc_tables.hpp"
 #include "core/cubic_tables.hpp"
+#include "core/device.h"
 #endif
 
 

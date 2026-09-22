@@ -28,14 +28,20 @@
 #include <string_view>
 
 #include "alnumeric.h"
-#include "core/device.h"
-#include "gsl/gsl"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 #include "SDL.h"
 DIAGNOSTIC_POP
+
+#if HAVE_CXXMODULES
+import core.device;
+import gsl;
+#else
+#include "core/device.h"
+#include "gsl/gsl"
+#endif
 
 
 namespace {

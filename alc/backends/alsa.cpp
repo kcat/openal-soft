@@ -40,7 +40,6 @@
 #include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
-#include "core/device.h"
 #include "core/helpers.h"
 #include "dlopennote.h"
 #include "dynload.h"
@@ -49,11 +48,13 @@
 #include <alsa/asoundlib.h>
 
 #if HAVE_CXXMODULES
+import core.device;
 import gsl;
 import logging;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

@@ -28,12 +28,16 @@
 
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
+
+#if HAVE_CXXMODULES
+import core.device;
+#else
+#include "core/device.h"
+#endif
 
 struct BufferStorage;
 struct ContextBase;

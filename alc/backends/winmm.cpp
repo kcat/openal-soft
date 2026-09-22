@@ -40,9 +40,7 @@
 
 #include "alnumeric.h"
 #include "althrd_setname.h"
-#include "core/device.h"
 #include "core/helpers.h"
-#include "gsl/gsl"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vector.h"
@@ -52,9 +50,13 @@
 #endif
 
 #if HAVE_CXXMODULES
+import core.device;
+import gsl;
 import logging;
 #else
+#include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

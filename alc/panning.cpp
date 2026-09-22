@@ -48,8 +48,6 @@
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/context.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effectslot.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
@@ -65,12 +63,14 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import core.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
 #include "alformattypes.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

@@ -47,9 +47,7 @@
 #include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
-#include "core/device.h"
 #include "core/helpers.h"
-#include "gsl/gsl"
 #include "ringbuffer.h"
 
 #include <sys/soundcard.h>
@@ -78,9 +76,13 @@
 #endif
 
 #if HAVE_CXXMODULES
+import core.device;
 import logging;
+import gsl;
 #else
+#include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

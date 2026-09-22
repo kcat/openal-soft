@@ -29,20 +29,25 @@
 #include "core/bufferline.h"
 #include "core/buffer_storage.h"
 #include "core/context.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
 #include "core/uhjfilter.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "pffft.h"
 #include "polyphase_resampler.h"
 #include "vecmat.h"
 #include "vector.h"
+
+#if HAVE_CXXMODULES
+import core.device;
+import gsl;
+#else
+#include "core/device.h"
+#include "gsl/gsl"
+#endif
 
 
 namespace {

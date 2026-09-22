@@ -3,14 +3,21 @@
 
 #include "bformatdec.h"
 #include "bs2b.h"
-#include "device.h"
+#include "context.h"
 #include "front_stablizer.h"
-#include "gsl/gsl"
 #include "hrtf.h"
 #include "mastering.h"
 
+#if HAVE_CXXMODULES
+import core.device;
+import gsl;
+#else
+#include "device.h"
+#include "gsl/gsl"
+#endif
 
-DeviceBase::DeviceBase(DeviceType type)
+
+DeviceBase::DeviceBase(DeviceType const type)
     : Type{type}, mContexts{al::FlexArray<ContextBase*>::Create(0)}
 {
 }

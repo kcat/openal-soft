@@ -28,8 +28,13 @@
 #include <thread>
 
 #include "althrd_setname.h"
-#include "core/device.h"
 #include "core/helpers.h"
+
+#if HAVE_CXXMODULES
+import core.device;
+#else
+#include "core/device.h"
+#endif
 
 
 namespace {

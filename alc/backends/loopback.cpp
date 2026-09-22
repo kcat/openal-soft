@@ -22,7 +22,11 @@
 
 #include "loopback.h"
 
+#if HAVE_CXXMODULES
+import core.device;
+#else
 #include "core/device.h"
+#endif
 
 
 namespace {

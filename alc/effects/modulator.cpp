@@ -34,7 +34,6 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/context.h"
-#include "core/device.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
@@ -42,6 +41,12 @@
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import core.device;
+#else
+#include "core/device.h"
+#endif
 
 struct BufferStorage;
 

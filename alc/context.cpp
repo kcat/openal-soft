@@ -23,8 +23,6 @@
 #include "altypes.hpp"
 #include "atomic.h"
 #include "core/async_event.h"
-#include "core/devformat.h"
-#include "core/device.h"
 #include "core/effectslot.h"
 #include "core/voice_change.h"
 #include "device.h"
@@ -46,12 +44,14 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import core.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
 #include "alformattypes.hpp"
+#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

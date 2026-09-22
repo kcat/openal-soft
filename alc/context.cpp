@@ -39,7 +39,9 @@
 
 #include "al/eax/api.h"
 #include "al/eax/call.h"
+#include "al/eax/exception.h"
 #include "al/eax/globals.h"
+#include "al/eax/utils.h"
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
@@ -349,6 +351,164 @@ void ForEachSource(al::Context *context, std::invocable<al::Source&> auto&& func
     });
 }
 
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+class ContextException final : public EaxException {
+public:
+    explicit ContextException(std::string_view const message)
+        : EaxException{"EAX_CONTEXT", message}
+    { }
+};
+
+[[noreturn]]
+void eax_fail(std::string_view const message) { throw ContextException{message}; }
+
+[[noreturn]]
+void eax_fail_unknown_property_set_id() { eax_fail("Unknown property ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_primary_fx_slot_id() { eax_fail("Unknown primary FX Slot ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_property_id() { eax_fail("Unknown property ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_version() { eax_fail("Unknown version."); }
+
+
+struct Eax4PrimaryFxSlotIdValidator {
+    void operator()(AL_GUID const& guidPrimaryFXSlotID) const
+    {
+        if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot2 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot3)
+        {
+            eax_fail_unknown_primary_fx_slot_id();
+        }
+    }
+};
+
+struct Eax4DistanceFactorValidator {
+    void operator()(float const flDistanceFactor) const
+    {
+        eax_validate_range<ContextException>(
+            "Distance Factor",
+            flDistanceFactor,
+            EAXCONTEXT_MINDISTANCEFACTOR,
+            EAXCONTEXT_MAXDISTANCEFACTOR);
+    }
+};
+
+struct Eax4AirAbsorptionHfValidator {
+    void operator()(float const flAirAbsorptionHF) const
+    {
+        eax_validate_range<ContextException>(
+            "Air Absorption HF",
+            flAirAbsorptionHF,
+            EAXCONTEXT_MINAIRABSORPTIONHF,
+            EAXCONTEXT_MAXAIRABSORPTIONHF);
+    }
+};
+
+struct Eax4HfReferenceValidator {
+    void operator()(float const flHFReference) const
+    {
+        eax_validate_range<ContextException>(
+            "HF Reference",
+            flHFReference,
+            EAXCONTEXT_MINHFREFERENCE,
+            EAXCONTEXT_MAXHFREFERENCE);
+    }
+};
+
+struct Eax4AllValidator {
+    void operator()(const EAX40CONTEXTPROPERTIES& all) const
+    {
+        Eax4PrimaryFxSlotIdValidator{}(all.guidPrimaryFXSlotID);
+        Eax4DistanceFactorValidator{}(all.flDistanceFactor);
+        Eax4AirAbsorptionHfValidator{}(all.flAirAbsorptionHF);
+        Eax4HfReferenceValidator{}(all.flHFReference);
+    }
+};
+
+struct Eax5PrimaryFxSlotIdValidator {
+    void operator()(AL_GUID const& guidPrimaryFXSlotID) const
+    {
+        if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot2 &&
+            guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot3)
+        {
+            eax_fail_unknown_primary_fx_slot_id();
+        }
+    }
+};
+
+struct Eax5MacroFxFactorValidator {
+    void operator()(float const flMacroFXFactor) const
+    {
+        eax_validate_range<ContextException>(
+            "Macro FX Factor",
+            flMacroFXFactor,
+            EAXCONTEXT_MINMACROFXFACTOR,
+            EAXCONTEXT_MAXMACROFXFACTOR);
+    }
+};
+
+struct Eax5AllValidator {
+    void operator()(const EAX50CONTEXTPROPERTIES& all) const
+    {
+        Eax5PrimaryFxSlotIdValidator{}(all.guidPrimaryFXSlotID);
+        Eax4DistanceFactorValidator{}(all.flDistanceFactor);
+        Eax4AirAbsorptionHfValidator{}(all.flAirAbsorptionHF);
+        Eax4HfReferenceValidator{}(all.flHFReference);
+        Eax5MacroFxFactorValidator{}(all.flMacroFXFactor);
+    }
+};
+
+struct Eax5EaxVersionValidator {
+    void operator()(eax_ulong const ulEAXVersion) const
+    {
+        eax_validate_range<ContextException>(
+            "EAX version",
+            ulEAXVersion,
+            EAXCONTEXT_MINEAXSESSION,
+            EAXCONTEXT_MAXEAXSESSION);
+    }
+};
+
+struct Eax5MaxActiveSendsValidator {
+    void operator()(eax_ulong const ulMaxActiveSends) const
+    {
+        eax_validate_range<ContextException>(
+            "Max Active Sends",
+            ulMaxActiveSends,
+            EAXCONTEXT_MINMAXACTIVESENDS,
+            EAXCONTEXT_MAXMAXACTIVESENDS);
+    }
+};
+
+struct Eax5SessionAllValidator {
+    void operator()(const EAXSESSIONPROPERTIES& all) const
+    {
+        Eax5EaxVersionValidator{}(all.ulEAXVersion);
+        Eax5MaxActiveSendsValidator{}(all.ulMaxActiveSends);
+    }
+};
+
+struct Eax5SpeakerConfigValidator {
+    void operator()(eax_ulong const ulSpeakerConfig) const
+    {
+        eax_validate_range<ContextException>(
+            "Speaker Config",
+            ulSpeakerConfig,
+            EAXCONTEXT_MINSPEAKERCONFIG,
+            EAXCONTEXT_MAXSPEAKERCONFIG);
+    }
+};
+
 } // namespace
 
 namespace al {
@@ -435,19 +595,6 @@ void Context::eaxSetLastError() noexcept
     mEaxLastError = EAXERR_INVALID_OPERATION;
 }
 
-[[noreturn]]
-void Context::eax_fail(const std::string_view message) { throw ContextException{message}; }
-
-[[noreturn]]
-void Context::eax_fail_unknown_property_set_id() { eax_fail("Unknown property ID."); }
-
-[[noreturn]]
-void Context::eax_fail_unknown_primary_fx_slot_id()
-{ eax_fail("Unknown primary FX Slot ID."); }
-
-[[noreturn]] void Context::eax_fail_unknown_property_id() { eax_fail("Unknown property ID."); }
-
-[[noreturn]] void Context::eax_fail_unknown_version() { eax_fail("Unknown version."); }
 
 void Context::eax_initialize_extensions()
 {

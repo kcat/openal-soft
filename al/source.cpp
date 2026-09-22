@@ -74,6 +74,7 @@
 #if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
+#include "eax/exception.h"
 #include "eax/fx_slot_index.h"
 #include "eax/utils.h"
 #endif
@@ -3738,6 +3739,599 @@ SourceSubList::~SourceSubList()
 
 
 #if ALSOFT_EAX
+namespace {
+
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+class EaxSourceException final : public EaxException {
+public:
+    explicit EaxSourceException(std::string_view const message)
+        : EaxException{"EAX_SOURCE", message}
+    { }
+};
+
+[[noreturn]]
+void eax_fail(std::string_view const message) { throw EaxSourceException{message}; }
+
+[[noreturn]]
+void eax_fail_unknown_property_id() { eax_fail("Unknown property id."); }
+
+[[noreturn]]
+void eax_fail_unknown_version() { eax_fail("Unknown version."); }
+
+[[noreturn]]
+void eax_fail_unknown_active_fx_slot_id() { eax_fail("Unknown active FX slot ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_receiving_fx_slot_id() {eax_fail("Unknown receiving FX slot ID.");}
+
+
+// ----------------------------------------------------------------------
+// Source validators
+
+struct Eax1SourceReverbMixValidator {
+    void operator()(float const reverb_mix) const
+    {
+        if (reverb_mix == EAX_REVERBMIX_USEDISTANCE)
+            return;
+
+        eax_validate_range<EaxSourceException>(
+            "Reverb Mix",
+            reverb_mix,
+            EAX_BUFFER_MINREVERBMIX,
+            EAX_BUFFER_MAXREVERBMIX);
+    }
+};
+
+struct Eax2SourceDirectValidator {
+    void operator()(eax_long const lDirect) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Direct",
+            lDirect,
+            EAXSOURCE_MINDIRECT,
+            EAXSOURCE_MAXDIRECT);
+    }
+};
+
+struct Eax2SourceDirectHfValidator {
+    void operator()(eax_long const lDirectHF) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Direct HF",
+            lDirectHF,
+            EAXSOURCE_MINDIRECTHF,
+            EAXSOURCE_MAXDIRECTHF);
+    }
+};
+
+struct Eax2SourceRoomValidator {
+    void operator()(eax_long const lRoom) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Room",
+            lRoom,
+            EAXSOURCE_MINROOM,
+            EAXSOURCE_MAXROOM);
+    }
+};
+
+struct Eax2SourceRoomHfValidator {
+    void operator()(eax_long const lRoomHF) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Room HF",
+            lRoomHF,
+            EAXSOURCE_MINROOMHF,
+            EAXSOURCE_MAXROOMHF);
+    }
+};
+
+struct Eax2SourceRoomRolloffFactorValidator {
+    void operator()(float const flRoomRolloffFactor) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Room Rolloff Factor",
+            flRoomRolloffFactor,
+            EAXSOURCE_MINROOMROLLOFFFACTOR,
+            EAXSOURCE_MAXROOMROLLOFFFACTOR);
+    }
+};
+
+struct Eax2SourceObstructionValidator {
+    void operator()(eax_long const lObstruction) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Obstruction",
+            lObstruction,
+            EAXSOURCE_MINOBSTRUCTION,
+            EAXSOURCE_MAXOBSTRUCTION);
+    }
+};
+
+struct Eax2SourceObstructionLfRatioValidator {
+    void operator()(float const flObstructionLFRatio) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Obstruction LF Ratio",
+            flObstructionLFRatio,
+            EAXSOURCE_MINOBSTRUCTIONLFRATIO,
+            EAXSOURCE_MAXOBSTRUCTIONLFRATIO);
+    }
+};
+
+struct Eax2SourceOcclusionValidator {
+    void operator()(eax_long const lOcclusion) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Occlusion",
+            lOcclusion,
+            EAXSOURCE_MINOCCLUSION,
+            EAXSOURCE_MAXOCCLUSION);
+    }
+};
+
+struct Eax2SourceOcclusionLfRatioValidator {
+    void operator()(float const flOcclusionLFRatio) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Occlusion LF Ratio",
+            flOcclusionLFRatio,
+            EAXSOURCE_MINOCCLUSIONLFRATIO,
+            EAXSOURCE_MAXOCCLUSIONLFRATIO);
+    }
+};
+
+struct Eax2SourceOcclusionRoomRatioValidator {
+    void operator()(float const flOcclusionRoomRatio) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Occlusion Room Ratio",
+            flOcclusionRoomRatio,
+            EAXSOURCE_MINOCCLUSIONROOMRATIO,
+            EAXSOURCE_MAXOCCLUSIONROOMRATIO);
+    }
+};
+
+struct Eax2SourceOutsideVolumeHfValidator {
+    void operator()(eax_long const lOutsideVolumeHF) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Outside Volume HF",
+            lOutsideVolumeHF,
+            EAXSOURCE_MINOUTSIDEVOLUMEHF,
+            EAXSOURCE_MAXOUTSIDEVOLUMEHF);
+    }
+};
+
+struct Eax2SourceAirAbsorptionFactorValidator {
+    void operator()(float const flAirAbsorptionFactor) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Air Absorption Factor",
+            flAirAbsorptionFactor,
+            EAXSOURCE_MINAIRABSORPTIONFACTOR,
+            EAXSOURCE_MAXAIRABSORPTIONFACTOR);
+    }
+};
+
+struct Eax2SourceFlagsValidator {
+    void operator()(eax_ulong const dwFlags) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Flags",
+            dwFlags,
+            0_eax_ulong,
+            ~EAX20SOURCEFLAGS_RESERVED);
+    }
+};
+
+struct Eax3SourceOcclusionDirectRatioValidator {
+    void operator()(float const flOcclusionDirectRatio) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Occlusion Direct Ratio",
+            flOcclusionDirectRatio,
+            EAXSOURCE_MINOCCLUSIONDIRECTRATIO,
+            EAXSOURCE_MAXOCCLUSIONDIRECTRATIO);
+    }
+};
+
+struct Eax3SourceExclusionValidator {
+    void operator()(eax_long const lExclusion) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Exclusion",
+            lExclusion,
+            EAXSOURCE_MINEXCLUSION,
+            EAXSOURCE_MAXEXCLUSION);
+    }
+};
+
+struct Eax3SourceExclusionLfRatioValidator {
+    void operator()(float const flExclusionLFRatio) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Exclusion LF Ratio",
+            flExclusionLFRatio,
+            EAXSOURCE_MINEXCLUSIONLFRATIO,
+            EAXSOURCE_MAXEXCLUSIONLFRATIO);
+    }
+};
+
+struct Eax3SourceDopplerFactorValidator {
+    void operator()(float const flDopplerFactor) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Doppler Factor",
+            flDopplerFactor,
+            EAXSOURCE_MINDOPPLERFACTOR,
+            EAXSOURCE_MAXDOPPLERFACTOR);
+    }
+};
+
+struct Eax3SourceRolloffFactorValidator {
+    void operator()(float const flRolloffFactor) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Rolloff Factor",
+            flRolloffFactor,
+            EAXSOURCE_MINROLLOFFFACTOR,
+            EAXSOURCE_MAXROLLOFFFACTOR);
+    }
+};
+
+struct Eax5SourceMacroFXFactorValidator {
+    void operator()(float const flMacroFXFactor) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Macro FX Factor",
+            flMacroFXFactor,
+            EAXSOURCE_MINMACROFXFACTOR,
+            EAXSOURCE_MAXMACROFXFACTOR);
+    }
+};
+
+struct Eax5SourceFlagsValidator {
+    void operator()(eax_ulong const dwFlags) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Flags",
+            dwFlags,
+            0_eax_ulong,
+            ~EAX50SOURCEFLAGS_RESERVED);
+    }
+};
+
+struct Eax1SourceAllValidator {
+    void operator()(const EAXBUFFER_REVERBPROPERTIES& props) const
+    {
+        Eax1SourceReverbMixValidator{}(props.fMix);
+    }
+};
+
+struct Eax2SourceAllValidator {
+    void operator()(const EAX20BUFFERPROPERTIES& props) const
+    {
+        Eax2SourceDirectValidator{}(props.lDirect);
+        Eax2SourceDirectHfValidator{}(props.lDirectHF);
+        Eax2SourceRoomValidator{}(props.lRoom);
+        Eax2SourceRoomHfValidator{}(props.lRoomHF);
+        Eax2SourceRoomRolloffFactorValidator{}(props.flRoomRolloffFactor);
+        Eax2SourceObstructionValidator{}(props.lObstruction);
+        Eax2SourceObstructionLfRatioValidator{}(props.flObstructionLFRatio);
+        Eax2SourceOcclusionValidator{}(props.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
+        Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
+        Eax2SourceAirAbsorptionFactorValidator{}(props.flAirAbsorptionFactor);
+        Eax2SourceFlagsValidator{}(props.dwFlags);
+    }
+};
+
+struct Eax3SourceAllValidator {
+    void operator()(const EAX30SOURCEPROPERTIES& props) const
+    {
+        Eax2SourceDirectValidator{}(props.lDirect);
+        Eax2SourceDirectHfValidator{}(props.lDirectHF);
+        Eax2SourceRoomValidator{}(props.lRoom);
+        Eax2SourceRoomHfValidator{}(props.lRoomHF);
+        Eax2SourceObstructionValidator{}(props.mObstruction.lObstruction);
+        Eax2SourceObstructionLfRatioValidator{}(props.mObstruction.flObstructionLFRatio);
+        Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+        Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+        Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+        Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
+        Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
+        Eax3SourceDopplerFactorValidator{}(props.flDopplerFactor);
+        Eax3SourceRolloffFactorValidator{}(props.flRolloffFactor);
+        Eax2SourceRoomRolloffFactorValidator{}(props.flRoomRolloffFactor);
+        Eax2SourceAirAbsorptionFactorValidator{}(props.flAirAbsorptionFactor);
+        Eax2SourceFlagsValidator{}(props.ulFlags);
+    }
+};
+
+struct Eax5SourceAllValidator {
+    void operator()(const EAX50SOURCEPROPERTIES& props) const
+    {
+        Eax2SourceDirectValidator{}(props.lDirect);
+        Eax2SourceDirectHfValidator{}(props.lDirectHF);
+        Eax2SourceRoomValidator{}(props.lRoom);
+        Eax2SourceRoomHfValidator{}(props.lRoomHF);
+        Eax2SourceObstructionValidator{}(props.mObstruction.lObstruction);
+        Eax2SourceObstructionLfRatioValidator{}(props.mObstruction.flObstructionLFRatio);
+        Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+        Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+        Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+        Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
+        Eax2SourceOutsideVolumeHfValidator{}(props.lOutsideVolumeHF);
+        Eax3SourceDopplerFactorValidator{}(props.flDopplerFactor);
+        Eax3SourceRolloffFactorValidator{}(props.flRolloffFactor);
+        Eax2SourceRoomRolloffFactorValidator{}(props.flRoomRolloffFactor);
+        Eax2SourceAirAbsorptionFactorValidator{}(props.flAirAbsorptionFactor);
+        Eax5SourceFlagsValidator{}(props.ulFlags);
+        Eax5SourceMacroFXFactorValidator{}(props.flMacroFXFactor);
+    }
+};
+
+struct Eax5SourceAll2dValidator {
+    void operator()(const EAXSOURCE2DPROPERTIES& props) const
+    {
+        Eax2SourceDirectValidator{}(props.lDirect);
+        Eax2SourceDirectHfValidator{}(props.lDirectHF);
+        Eax2SourceRoomValidator{}(props.lRoom);
+        Eax2SourceRoomHfValidator{}(props.lRoomHF);
+        Eax5SourceFlagsValidator{}(props.ulFlags);
+    }
+};
+
+struct Eax4ObstructionValidator {
+    void operator()(const EAXOBSTRUCTIONPROPERTIES& props) const
+    {
+        Eax2SourceObstructionValidator{}(props.lObstruction);
+        Eax2SourceObstructionLfRatioValidator{}(props.flObstructionLFRatio);
+    }
+};
+
+struct Eax4OcclusionValidator {
+    void operator()(const EAXOCCLUSIONPROPERTIES& props) const
+    {
+        Eax2SourceOcclusionValidator{}(props.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.flOcclusionRoomRatio);
+        Eax3SourceOcclusionDirectRatioValidator{}(props.flOcclusionDirectRatio);
+    }
+};
+
+struct Eax4ExclusionValidator {
+    void operator()(const EAXEXCLUSIONPROPERTIES& props) const
+    {
+        Eax3SourceExclusionValidator{}(props.lExclusion);
+        Eax3SourceExclusionLfRatioValidator{}(props.flExclusionLFRatio);
+    }
+};
+
+// Source validators
+// ----------------------------------------------------------------------
+// Send validators
+
+struct Eax4SendReceivingFxSlotIdValidator {
+    void operator()(AL_GUID const& guidReceivingFXSlotID) const
+    {
+        if (guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot2 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX40_FXSlot3)
+        {
+            eax_fail_unknown_receiving_fx_slot_id();
+        }
+    }
+};
+
+struct Eax5SendReceivingFxSlotIdValidator {
+    void operator()(AL_GUID const& guidReceivingFXSlotID) const
+    {
+        if (guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot2 &&
+            guidReceivingFXSlotID != EAXPROPERTYID_EAX50_FXSlot3)
+        {
+            eax_fail_unknown_receiving_fx_slot_id();
+        }
+    }
+};
+
+struct Eax4SendSendValidator {
+    void operator()(eax_long const lSend) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Send",
+            lSend,
+            EAXSOURCE_MINSEND,
+            EAXSOURCE_MAXSEND);
+    }
+};
+
+struct Eax4SendSendHfValidator {
+    void operator()(eax_long const lSendHF) const
+    {
+        eax_validate_range<EaxSourceException>(
+            "Send HF",
+            lSendHF,
+            EAXSOURCE_MINSENDHF,
+            EAXSOURCE_MAXSENDHF);
+    }
+};
+
+template<typename TIdValidator>
+struct EaxSendValidator {
+    void operator()(const EAXSOURCESENDPROPERTIES& props) const
+    {
+        TIdValidator{}(props.guidReceivingFXSlotID);
+        Eax4SendSendValidator{}(props.mSend.lSend);
+        Eax4SendSendHfValidator{}(props.mSend.lSendHF);
+    }
+};
+
+using Eax4SendValidator = EaxSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+using Eax5SendValidator = EaxSendValidator<Eax5SendReceivingFxSlotIdValidator>;
+
+template<typename TIdValidator>
+struct EaxOcclusionSendValidator {
+    void operator()(const EAXSOURCEOCCLUSIONSENDPROPERTIES& props) const
+    {
+        TIdValidator{}(props.guidReceivingFXSlotID);
+        Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+        Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+    }
+};
+
+using Eax4OcclusionSendValidator = EaxOcclusionSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+using Eax5OcclusionSendValidator = EaxOcclusionSendValidator<Eax5SendReceivingFxSlotIdValidator>;
+
+template<typename TIdValidator>
+struct EaxExclusionSendValidator {
+    void operator()(const EAXSOURCEEXCLUSIONSENDPROPERTIES& props) const
+    {
+        TIdValidator{}(props.guidReceivingFXSlotID);
+        Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+        Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
+    }
+};
+
+using Eax4ExclusionSendValidator = EaxExclusionSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+using Eax5ExclusionSendValidator = EaxExclusionSendValidator<Eax5SendReceivingFxSlotIdValidator>;
+
+template<typename TIdValidator>
+struct EaxAllSendValidator {
+    void operator()(const EAXSOURCEALLSENDPROPERTIES& props) const
+    {
+        TIdValidator{}(props.guidReceivingFXSlotID);
+        Eax4SendSendValidator{}(props.mSend.lSend);
+        Eax4SendSendHfValidator{}(props.mSend.lSendHF);
+        Eax2SourceOcclusionValidator{}(props.mOcclusion.lOcclusion);
+        Eax2SourceOcclusionLfRatioValidator{}(props.mOcclusion.flOcclusionLFRatio);
+        Eax2SourceOcclusionRoomRatioValidator{}(props.mOcclusion.flOcclusionRoomRatio);
+        Eax3SourceOcclusionDirectRatioValidator{}(props.mOcclusion.flOcclusionDirectRatio);
+        Eax3SourceExclusionValidator{}(props.mExclusion.lExclusion);
+        Eax3SourceExclusionLfRatioValidator{}(props.mExclusion.flExclusionLFRatio);
+    }
+};
+
+using Eax4AllSendValidator = EaxAllSendValidator<Eax4SendReceivingFxSlotIdValidator>;
+using Eax5AllSendValidator = EaxAllSendValidator<Eax5SendReceivingFxSlotIdValidator>;
+
+// Send validators
+// ----------------------------------------------------------------------
+// Active FX slot ID validators
+
+struct Eax4ActiveFxSlotIdValidator {
+    void operator()(AL_GUID const& guid) const
+    {
+        if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
+            && guid != EAXPROPERTYID_EAX40_FXSlot0 && guid != EAXPROPERTYID_EAX40_FXSlot1
+            && guid != EAXPROPERTYID_EAX40_FXSlot2 && guid != EAXPROPERTYID_EAX40_FXSlot3)
+        {
+            eax_fail_unknown_active_fx_slot_id();
+        }
+    }
+};
+
+struct Eax5ActiveFxSlotIdValidator {
+    void operator()(AL_GUID const& guid) const
+    {
+        if(guid != EAX_NULL_GUID && guid != EAX_PrimaryFXSlotID
+            && guid != EAXPROPERTYID_EAX50_FXSlot0 && guid != EAXPROPERTYID_EAX50_FXSlot1
+            && guid != EAXPROPERTYID_EAX50_FXSlot2 && guid != EAXPROPERTYID_EAX50_FXSlot3)
+        {
+            eax_fail_unknown_active_fx_slot_id();
+        }
+    }
+};
+
+// Active FX slot ID validators
+// ----------------------------------------------------------------------
+// Speaker level validators.
+
+struct Eax5SpeakerIdValidator {
+    void operator()(eax_long const lSpeakerID) const
+    {
+        switch (lSpeakerID) {
+            case EAXSPEAKER_FRONT_LEFT:
+            case EAXSPEAKER_FRONT_CENTER:
+            case EAXSPEAKER_FRONT_RIGHT:
+            case EAXSPEAKER_SIDE_RIGHT:
+            case EAXSPEAKER_REAR_RIGHT:
+            case EAXSPEAKER_REAR_CENTER:
+            case EAXSPEAKER_REAR_LEFT:
+            case EAXSPEAKER_SIDE_LEFT:
+            case EAXSPEAKER_LOW_FREQUENCY:
+                break;
+
+            default:
+                eax_fail("Unknown speaker ID.");
+        }
+    }
+};
+
+struct Eax5SpeakerLevelValidator {
+    void operator()(eax_long const lLevel) const
+    {
+        // TODO Use a range when the feature will be implemented.
+        if (lLevel != EAXSOURCE_DEFAULTSPEAKERLEVEL)
+            eax_fail("Speaker level out of range.");
+    }
+};
+
+struct Eax5SpeakerAllValidator {
+    void operator()(const EAXSPEAKERLEVELPROPERTIES& all) const
+    {
+        Eax5SpeakerIdValidator{}(all.lSpeakerID);
+        Eax5SpeakerLevelValidator{}(all.lLevel);
+    }
+};
+
+// Speaker level validators.
+// ----------------------------------------------------------------------
+
+struct Eax4SendIndexGetter {
+    EaxFxSlotIndexValue operator()(AL_GUID const &guid) const
+    {
+        if(guid == EAXPROPERTYID_EAX40_FXSlot0)
+            return 0;
+        if(guid == EAXPROPERTYID_EAX40_FXSlot1)
+            return 1;
+        if(guid == EAXPROPERTYID_EAX40_FXSlot2)
+            return 2;
+        if(guid == EAXPROPERTYID_EAX40_FXSlot3)
+            return 3;
+        eax_fail_unknown_receiving_fx_slot_id();
+    }
+};
+
+struct Eax5SendIndexGetter {
+    EaxFxSlotIndexValue operator()(AL_GUID const& guid) const
+    {
+        if(guid == EAXPROPERTYID_EAX50_FXSlot0)
+            return 0;
+        if(guid == EAXPROPERTYID_EAX50_FXSlot1)
+            return 1;
+        if(guid == EAXPROPERTYID_EAX50_FXSlot2)
+            return 2;
+        if(guid == EAXPROPERTYID_EAX50_FXSlot3)
+            return 3;
+        eax_fail_unknown_receiving_fx_slot_id();
+    }
+};
+
+
+}
+
 void al::Source::eaxInitialize(gsl::not_null<Context*> const context) noexcept
 {
     mEaxAlContext = context;
@@ -3755,21 +4349,6 @@ auto al::Source::EaxLookupSource(gsl::not_null<al::Context*> const al_context,
 {
     return LookupSource(std::nothrow, al_context, source_id);
 }
-
-[[noreturn]]
-void al::Source::eax_fail(const std::string_view message) { throw Exception{message}; }
-
-[[noreturn]]
-void al::Source::eax_fail_unknown_property_id() { eax_fail("Unknown property id."); }
-
-[[noreturn]]
-void al::Source::eax_fail_unknown_version() { eax_fail("Unknown version."); }
-
-[[noreturn]]
-void al::Source::eax_fail_unknown_active_fx_slot_id() { eax_fail("Unknown active FX slot ID."); }
-
-[[noreturn]]
-void al::Source::eax_fail_unknown_receiving_fx_slot_id() {eax_fail("Unknown receiving FX slot ID.");}
 
 void al::Source::eax_set_sends_defaults(EaxSends& sends, const EaxFxSlotIds& ids) noexcept
 {
@@ -4200,6 +4779,30 @@ void al::Source::eax_set_efx_wet_gain_hf_auto()
 {
     mWetGainHFAuto = ((mEax.source.ulFlags & EAXSOURCEFLAGS_ROOMHFAUTO) != 0);
 }
+
+
+template<typename TSrcSend>
+auto al::Source::eax4_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+    std::invocable<TSrcSend> auto validator) -> void
+{ eax_defer_sends<Eax4SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
+
+template<typename TSrcSend>
+auto al::Source::eax5_defer_sends(const EaxCall &call, EaxSends &dst_sends,
+    std::invocable<TSrcSend> auto validator) -> void
+{ eax_defer_sends<Eax5SendIndexGetter, TSrcSend>(call, dst_sends, std::move(validator)); }
+
+auto al::Source::eax4_defer_active_fx_slot_id(EaxCall const& call,
+    std::span<AL_GUID> const dst_ids) -> void
+{
+    eax_defer_active_fx_slot_id<Eax4ActiveFxSlotIdValidator>(call, dst_ids);
+}
+
+auto al::Source::eax5_defer_active_fx_slot_id(EaxCall const& call,
+    std::span<AL_GUID> const dst_ids) -> void
+{
+    eax_defer_active_fx_slot_id<Eax5ActiveFxSlotIdValidator>(call, dst_ids);
+}
+
 
 void al::Source::eax1_set(const EaxCall& call, EAXBUFFER_REVERBPROPERTIES& props)
 {

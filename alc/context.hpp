@@ -32,10 +32,8 @@
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
-#include "al/eax/exception.h"
 #include "al/eax/fx_slot_index.h"
 #include "al/eax/fx_slots.h"
-#include "al/eax/utils.h"
 
 class EaxCall;
 #endif // ALSOFT_EAX
@@ -272,147 +270,6 @@ private:
         Eax5Props d; // Deferred.
     };
 
-    /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
-    class ContextException final : public EaxException {
-    public:
-        explicit ContextException(const std::string_view message)
-            : EaxException{"EAX_CONTEXT", message}
-        { }
-    };
-
-    struct Eax4PrimaryFxSlotIdValidator {
-        void operator()(AL_GUID const& guidPrimaryFXSlotID) const
-        {
-            if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot0 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot1 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot2 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX40_FXSlot3)
-            {
-                eax_fail_unknown_primary_fx_slot_id();
-            }
-        }
-    };
-
-    struct Eax4DistanceFactorValidator {
-        void operator()(float const flDistanceFactor) const
-        {
-            eax_validate_range<ContextException>(
-                "Distance Factor",
-                flDistanceFactor,
-                EAXCONTEXT_MINDISTANCEFACTOR,
-                EAXCONTEXT_MAXDISTANCEFACTOR);
-        }
-    };
-
-    struct Eax4AirAbsorptionHfValidator {
-        void operator()(float const flAirAbsorptionHF) const
-        {
-            eax_validate_range<ContextException>(
-                "Air Absorption HF",
-                flAirAbsorptionHF,
-                EAXCONTEXT_MINAIRABSORPTIONHF,
-                EAXCONTEXT_MAXAIRABSORPTIONHF);
-        }
-    };
-
-    struct Eax4HfReferenceValidator {
-        void operator()(float const flHFReference) const
-        {
-            eax_validate_range<ContextException>(
-                "HF Reference",
-                flHFReference,
-                EAXCONTEXT_MINHFREFERENCE,
-                EAXCONTEXT_MAXHFREFERENCE);
-        }
-    };
-
-    struct Eax4AllValidator {
-        void operator()(const EAX40CONTEXTPROPERTIES& all) const
-        {
-            Eax4PrimaryFxSlotIdValidator{}(all.guidPrimaryFXSlotID);
-            Eax4DistanceFactorValidator{}(all.flDistanceFactor);
-            Eax4AirAbsorptionHfValidator{}(all.flAirAbsorptionHF);
-            Eax4HfReferenceValidator{}(all.flHFReference);
-        }
-    };
-
-    struct Eax5PrimaryFxSlotIdValidator {
-        void operator()(AL_GUID const& guidPrimaryFXSlotID) const
-        {
-            if(guidPrimaryFXSlotID != EAX_NULL_GUID &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot0 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot1 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot2 &&
-                guidPrimaryFXSlotID != EAXPROPERTYID_EAX50_FXSlot3)
-            {
-                eax_fail_unknown_primary_fx_slot_id();
-            }
-        }
-    };
-
-    struct Eax5MacroFxFactorValidator {
-        void operator()(float const flMacroFXFactor) const
-        {
-            eax_validate_range<ContextException>(
-                "Macro FX Factor",
-                flMacroFXFactor,
-                EAXCONTEXT_MINMACROFXFACTOR,
-                EAXCONTEXT_MAXMACROFXFACTOR);
-        }
-    };
-
-    struct Eax5AllValidator {
-        void operator()(const EAX50CONTEXTPROPERTIES& all) const
-        {
-            Eax5PrimaryFxSlotIdValidator{}(all.guidPrimaryFXSlotID);
-            Eax4DistanceFactorValidator{}(all.flDistanceFactor);
-            Eax4AirAbsorptionHfValidator{}(all.flAirAbsorptionHF);
-            Eax4HfReferenceValidator{}(all.flHFReference);
-            Eax5MacroFxFactorValidator{}(all.flMacroFXFactor);
-        }
-    };
-
-    struct Eax5EaxVersionValidator {
-        void operator()(eax_ulong const ulEAXVersion) const
-        {
-            eax_validate_range<ContextException>(
-                "EAX version",
-                ulEAXVersion,
-                EAXCONTEXT_MINEAXSESSION,
-                EAXCONTEXT_MAXEAXSESSION);
-        }
-    };
-
-    struct Eax5MaxActiveSendsValidator {
-        void operator()(eax_ulong const ulMaxActiveSends) const
-        {
-            eax_validate_range<ContextException>(
-                "Max Active Sends",
-                ulMaxActiveSends,
-                EAXCONTEXT_MINMAXACTIVESENDS,
-                EAXCONTEXT_MAXMAXACTIVESENDS);
-        }
-    };
-
-    struct Eax5SessionAllValidator {
-        void operator()(const EAXSESSIONPROPERTIES& all) const
-        {
-            Eax5EaxVersionValidator{}(all.ulEAXVersion);
-            Eax5MaxActiveSendsValidator{}(all.ulMaxActiveSends);
-        }
-    };
-
-    struct Eax5SpeakerConfigValidator {
-        void operator()(eax_ulong const ulSpeakerConfig) const
-        {
-            eax_validate_range<ContextException>(
-                "Speaker Config",
-                ulSpeakerConfig,
-                EAXCONTEXT_MINSPEAKERCONFIG,
-                EAXCONTEXT_MAXSPEAKERCONFIG);
-        }
-    };
 
     bool mEaxIsInitialized{};
     bool mEaxIsTried{};
@@ -431,12 +288,6 @@ private:
     Eax5State mEax5{}; // EAX5 state.
     Eax5Props mEax{}; // Current EAX state.
     EAXSESSIONPROPERTIES mEaxSession{};
-
-    [[noreturn]] static void eax_fail(std::string_view message);
-    [[noreturn]] static void eax_fail_unknown_property_set_id();
-    [[noreturn]] static void eax_fail_unknown_primary_fx_slot_id();
-    [[noreturn]] static void eax_fail_unknown_property_id();
-    [[noreturn]] static void eax_fail_unknown_version();
 
     /* Gets a value from EAX call, validates it, and updates the current value. */
     template<typename TValidator>

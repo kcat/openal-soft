@@ -59,7 +59,9 @@
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
+#include "eax/exception.h"
 #include "eax/fx_slot_index.h"
+#include "eax/utils.h"
 #endif
 
 #if HAVE_CXXMODULES
@@ -985,6 +987,150 @@ AL_API void AL_APIENTRY alAuxiliaryEffectSlotStopvSOFT(ALsizei, const ALuint*) n
 
 
 #if ALSOFT_EAX
+namespace {
+
+/* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
+class EaxFxSlotException final : public EaxException {
+public:
+    explicit EaxFxSlotException(const std::string_view message)
+        : EaxException{"EAX_FX_SLOT", message}
+    { }
+};
+
+[[noreturn]]
+void eax_fail(std::string_view const message) { throw EaxFxSlotException{message}; }
+
+[[noreturn]]
+void eax_fail_unknown_effect_id() { eax_fail("Unknown effect ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_property_id() { eax_fail("Unknown property ID."); }
+
+[[noreturn]]
+void eax_fail_unknown_version() { eax_fail("Unknown version."); }
+
+
+struct EaxRangeValidator {
+    template<typename TValue>
+    void operator()(const std::string_view name, const TValue &value, const TValue &min_value,
+        const TValue &max_value) const
+    {
+        eax_validate_range<EaxFxSlotException>(name, value, min_value, max_value);
+    }
+};
+
+struct Eax4GuidLoadEffectValidator {
+    void operator()(AL_GUID const& guidLoadEffect) const
+    {
+        if (guidLoadEffect != EAX_NULL_GUID &&
+            guidLoadEffect != EAX_REVERB_EFFECT &&
+            guidLoadEffect != EAX_AGCCOMPRESSOR_EFFECT &&
+            guidLoadEffect != EAX_AUTOWAH_EFFECT &&
+            guidLoadEffect != EAX_CHORUS_EFFECT &&
+            guidLoadEffect != EAX_DISTORTION_EFFECT &&
+            guidLoadEffect != EAX_ECHO_EFFECT &&
+            guidLoadEffect != EAX_EQUALIZER_EFFECT &&
+            guidLoadEffect != EAX_FLANGER_EFFECT &&
+            guidLoadEffect != EAX_FREQUENCYSHIFTER_EFFECT &&
+            guidLoadEffect != EAX_VOCALMORPHER_EFFECT &&
+            guidLoadEffect != EAX_PITCHSHIFTER_EFFECT &&
+            guidLoadEffect != EAX_RINGMODULATOR_EFFECT)
+        {
+            eax_fail_unknown_effect_id();
+        }
+    }
+};
+
+struct Eax4VolumeValidator {
+    void operator()(eax_long const lVolume) const
+    {
+        EaxRangeValidator{}(
+            "Volume",
+            lVolume,
+            EAXFXSLOT_MINVOLUME,
+            EAXFXSLOT_MAXVOLUME);
+    }
+};
+
+struct Eax4LockValidator {
+    void operator()(eax_long const lLock) const
+    {
+        EaxRangeValidator{}(
+            "Lock",
+            lLock,
+            EAXFXSLOT_MINLOCK,
+            EAXFXSLOT_MAXLOCK);
+    }
+};
+
+struct Eax4FlagsValidator {
+    void operator()(eax_ulong const ulFlags) const
+    {
+        EaxRangeValidator{}(
+            "Flags",
+            ulFlags,
+            0_eax_ulong,
+            ~EAX40FXSLOTFLAGS_RESERVED);
+    }
+};
+
+struct Eax4AllValidator {
+    void operator()(const EAX40FXSLOTPROPERTIES& all) const
+    {
+        Eax4GuidLoadEffectValidator{}(all.guidLoadEffect);
+        Eax4VolumeValidator{}(all.lVolume);
+        Eax4LockValidator{}(all.lLock);
+        Eax4FlagsValidator{}(all.ulFlags);
+    }
+};
+
+struct Eax5FlagsValidator {
+    void operator()(eax_ulong const ulFlags) const
+    {
+        EaxRangeValidator{}(
+            "Flags",
+            ulFlags,
+            0_eax_ulong,
+            ~EAX50FXSLOTFLAGS_RESERVED);
+    }
+};
+
+struct Eax5OcclusionValidator {
+    void operator()(eax_long const lOcclusion) const
+    {
+        EaxRangeValidator{}(
+            "Occlusion",
+            lOcclusion,
+            EAXFXSLOT_MINOCCLUSION,
+            EAXFXSLOT_MAXOCCLUSION);
+    }
+};
+
+struct Eax5OcclusionLfRatioValidator {
+    void operator()(float const flOcclusionLFRatio) const
+    {
+        EaxRangeValidator{}(
+            "Occlusion LF Ratio",
+            flOcclusionLFRatio,
+            EAXFXSLOT_MINOCCLUSIONLFRATIO,
+            EAXFXSLOT_MAXOCCLUSIONLFRATIO);
+    }
+};
+
+struct Eax5AllValidator {
+    void operator()(const EAX50FXSLOTPROPERTIES& all) const
+    {
+        Eax4GuidLoadEffectValidator{}(all.guidLoadEffect);
+        Eax4VolumeValidator{}(all.lVolume);
+        Eax4LockValidator{}(all.lLock);
+        Eax5FlagsValidator{}(all.ulFlags);
+        Eax5OcclusionValidator{}(all.lOcclusion);
+        Eax5OcclusionLfRatioValidator{}(all.flOcclusionLFRatio);
+    }
+};
+
+}
+
 void al::EffectSlot::eax_initialize(EaxFxSlotIndexValue const index)
 {
     if(index >= EAX_MAX_FXSLOTS)
@@ -1029,22 +1175,6 @@ void al::EffectSlot::eax_commit()
     if(mEaxEffect->commit(mEaxVersion))
         eax_set_efx_slot_effect(*mEaxEffect);
 }
-
-[[noreturn]]
-void al::EffectSlot::eax_fail(std::string_view const message)
-{ throw Exception{message}; }
-
-[[noreturn]]
-void al::EffectSlot::eax_fail_unknown_effect_id()
-{ eax_fail("Unknown effect ID."); }
-
-[[noreturn]]
-void al::EffectSlot::eax_fail_unknown_property_id()
-{ eax_fail("Unknown property ID."); }
-
-[[noreturn]]
-void al::EffectSlot::eax_fail_unknown_version()
-{ eax_fail("Unknown version."); }
 
 void al::EffectSlot::eax4_fx_slot_ensure_unlocked() const
 {

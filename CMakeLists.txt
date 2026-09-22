@@ -994,7 +994,9 @@ set(ALC_HDRS
     alc/export_list.h
     alc/inprogext.h)
 if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS alc/context.cppm)
+    list(APPEND CORE_MODS
+        alc/context.cppm
+        alc/device.cppm)
 endif()
 
 if(ALSOFT_EAX)

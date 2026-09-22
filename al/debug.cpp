@@ -21,7 +21,7 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alc/device.h"
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
@@ -35,11 +35,13 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import alc.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alc/device.h"
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

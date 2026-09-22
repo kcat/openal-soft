@@ -19,8 +19,8 @@
 import core.device;
 import logging;
 #else
-#include "device.h"
-#include "logging.h"
+#include "core/device.h"
+#include "core/logging.h"
 #endif
 
 

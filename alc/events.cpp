@@ -6,14 +6,16 @@
 #include <ranges>
 #include <span>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
-#include "device.h"
 #include "opthelpers.h"
 
 #if HAVE_CXXMODULES
+import alc.device;
 import gsl;
 import logging;
 #else
+#include "alc/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

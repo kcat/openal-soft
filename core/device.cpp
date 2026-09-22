@@ -12,7 +12,7 @@
 import core.device;
 import gsl;
 #else
-#include "device.h"
+#include "core/device.h"
 #include "gsl/gsl"
 #endif
 

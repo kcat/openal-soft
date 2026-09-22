@@ -15,7 +15,7 @@
 #if HAVE_CXXMODULES
 import core.device;
 #else
-#include "device.h"
+#include "core/device.h"
 #endif
 
 

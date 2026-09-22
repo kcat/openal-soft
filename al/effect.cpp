@@ -28,7 +28,7 @@
 #include <mutex>
 #include <new>
 #include <numeric>
-#include <span>
+#include <ranges>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -41,7 +41,6 @@
 #include "AL/efx.h"
 
 #include "al/effects/effects.h"
-#include "alc/device.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
@@ -52,10 +51,12 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import alc.device;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alc/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

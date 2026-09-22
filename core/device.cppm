@@ -1,6 +1,6 @@
 module;
 
-#include "device.h"
+#include "core/device.h"
 
 export module core.device;
 

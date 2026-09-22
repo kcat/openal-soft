@@ -28,14 +28,13 @@
 #include <mutex>
 #include <new>
 #include <numeric>
-#include <span>
+#include <ranges>
 #include <unordered_map>
 #include <vector>
 
 #include "AL/al.h"
-#include "AL/efx.h"
+#include "AL/alext.h"
 
-#include "alc/device.h"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "core/except.h"
@@ -44,10 +43,12 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import alc.device;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alc/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

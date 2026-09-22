@@ -25,7 +25,6 @@
 #include "core/async_event.h"
 #include "core/effectslot.h"
 #include "core/voice_change.h"
-#include "device.h"
 #include "flexarray.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -44,14 +43,14 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
-import core.device;
+import alc.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alc/device.h"
 #include "alformattypes.hpp"
-#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

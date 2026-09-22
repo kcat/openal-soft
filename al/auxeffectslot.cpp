@@ -40,7 +40,6 @@
 #include "AL/efx.h"
 
 #include "alc/alu.h"
-#include "alc/device.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
@@ -65,14 +64,14 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
-import core.device;
+import alc.device;
 import format.types;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alc/device.h"
 #include "alformattypes.hpp"
-#include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

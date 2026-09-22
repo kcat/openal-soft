@@ -4,10 +4,11 @@
 #include <atomic>
 #include <memory>
 
-#include "device.h"
 #include "effects/base.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
+#include "mixparams.hpp"
+#include "vector.h"
 
 struct EffectSlotBase;
 struct WetBuffer;

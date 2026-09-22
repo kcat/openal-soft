@@ -11,10 +11,11 @@
 
 #include "alc/events.h"
 #include "alformat.hpp"
-#include "core/device.h"
 #include "core/except.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
+
+struct DeviceBase;
 
 
 struct ClockLatency {
@@ -58,18 +59,6 @@ enum class BackendType {
     Playback,
     Capture
 };
-
-
-/* Helper to get the device latency from the backend, including any fixed
- * latency from post-processing.
- */
-inline auto GetClockLatency(DeviceBase const *const device, BackendBase *const backend)
-    -> ClockLatency
-{
-    auto ret = backend->getClockLatency();
-    ret.Latency += device->FixedLatency;
-    return ret;
-}
 
 
 struct BackendFactory {

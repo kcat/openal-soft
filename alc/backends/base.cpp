@@ -3,12 +3,12 @@
 
 #include "base.h"
 
-#include <array>
 #include <atomic>
 #include <utility>
 
 #include "alformat.hpp"
 #include "core/devformat.h"
+#include "core/device.h"
 
 
 namespace al {

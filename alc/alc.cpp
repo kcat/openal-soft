@@ -2208,6 +2208,17 @@ catch(al::base_exception&) {
 DefineAlcAlias(alcGetString)
 
 namespace {
+
+/* Helper to get the device latency from the backend, including any fixed
+ * latency from post-processing.
+ */
+auto GetClockLatency(DeviceBase const *const device, BackendBase *const backend) -> ClockLatency
+{
+    auto ret = backend->getClockLatency();
+    ret.Latency += device->FixedLatency;
+    return ret;
+}
+
 auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint> const values)
     -> std::size_t
 {
@@ -2523,6 +2534,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
     }
     return 0;
 }
+
 } // namespace
 
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size,

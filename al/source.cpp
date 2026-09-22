@@ -294,6 +294,17 @@ void UpdateSourceProps(gsl::not_null<al::Source const*> const source, Voice *con
     }
 }
 
+
+/* Helper to get the device latency from the backend, including any fixed
+ * latency from post-processing.
+ */
+auto GetClockLatency(DeviceBase const *const device, BackendBase *const backend) -> ClockLatency
+{
+    auto ret = backend->getClockLatency();
+    ret.Latency += device->FixedLatency;
+    return ret;
+}
+
 /* GetSourceSampleOffset
  *
  * Gets the current read offset for the given Source, in 32.32 fixed-point

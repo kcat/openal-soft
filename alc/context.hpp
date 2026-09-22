@@ -29,6 +29,7 @@
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+#include "zstring_view.hpp"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -176,10 +177,10 @@ struct Context final : ALCcontext, intrusive_ref<Context,ContextDeleter>, Contex
     { throw_error_impl(errorCode, fmt.get(), al::make_format_args(args...)); }
 
     void sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
-        DebugType type, ALuint id, DebugSeverity severity, std::string_view message);
+        DebugType type, ALuint id, DebugSeverity severity, al::zstring_view message);
 
     void debugMessage(DebugSource const source, DebugType const type, ALuint const id,
-        DebugSeverity const severity, std::string_view const message)
+        DebugSeverity const severity, al::zstring_view const message)
     {
         if(!mDebugEnabled.load(std::memory_order_relaxed)) [[likely]]
             return;

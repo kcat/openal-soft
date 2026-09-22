@@ -39,10 +39,12 @@ import alc.device;
 import format.types;
 import gsl;
 import logging;
+import zstring_view;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformattypes.hpp"
+#include "alformatzsv.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif
@@ -213,8 +215,9 @@ try {
     if(!message)
         context->throw_error(AL_INVALID_VALUE, "Null message pointer");
 
-    const auto msgview = (length < 0) ? std::string_view{message}
-        : std::string_view{message, gsl::narrow<std::size_t>(length)};
+    auto tmpstr = std::string{};
+    auto const msgview = (length < 0) ? al::zstring_view{message}
+        : al::zstring_view{tmpstr.assign(message, gsl::narrow<std::size_t>(length))};
     if(msgview.size() >= MaxDebugMessageLength)
         context->throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", msgview.size(),
             MaxDebugMessageLength);
@@ -610,7 +613,7 @@ catch(std::exception &e) {
 
 
 void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
-    DebugType type, ALuint id, DebugSeverity severity, std::string_view message)
+    DebugType type, ALuint id, DebugSeverity severity, al::zstring_view message)
 {
     if(!mDebugEnabled.load(std::memory_order_relaxed)) [[unlikely]]
         return;
@@ -645,7 +648,7 @@ void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debu
         debuglock.unlock();
         callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
             GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(message.size()),
-            message.data(), param); /* NOLINT(bugprone-suspicious-stringview-data-usage) */
+            message.c_str(), param);
     }
     else
     {

@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <limits>
 #include <numbers>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <variant>

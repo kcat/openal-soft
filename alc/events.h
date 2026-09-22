@@ -2,14 +2,12 @@
 #define ALC_EVENTS_H
 
 #include "inprogext.h"
-#include "opthelpers.h"
 
 #include <mutex>
 #include <optional>
-#include <string_view>
 
 #include "altypes.hpp"
-#include "bitset.hpp"
+#include "zstring_view.hpp"
 
 namespace alc {
 
@@ -38,9 +36,9 @@ inline std::mutex EventMutex;
 inline ALCEVENTPROCTYPESOFT EventCallback{};
 inline void *EventUserPtr{};
 
-void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, std::string_view message) noexcept;
+void Event(EventType eventType, DeviceType deviceType, ALCdevice *device, al::zstring_view message) noexcept;
 
-inline void Event(EventType eventType, DeviceType deviceType, std::string_view message) noexcept
+inline void Event(EventType eventType, DeviceType deviceType, al::zstring_view message) noexcept
 { Event(eventType, deviceType, nullptr, message); }
 
 } // namespace alc

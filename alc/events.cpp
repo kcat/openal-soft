@@ -8,6 +8,7 @@
 
 #include "alformat.hpp"
 #include "alnumeric.h"
+#include "bitset.hpp"
 #include "opthelpers.h"
 
 #if HAVE_CXXMODULES
@@ -59,13 +60,12 @@ auto GetEventType(ALCenum const type) -> std::optional<EventType>
 }
 
 void Event(EventType const eventType, DeviceType const deviceType, ALCdevice *const device,
-    std::string_view const message) noexcept
+    al::zstring_view const message) noexcept
 {
     auto eventlock = std::unique_lock{EventMutex};
     if(EventCallback && gEventsEnabled.test(eventType))
         EventCallback(EnumFromEventType(eventType), al::to_underlying(deviceType), device,
-            /* NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) */
-            al::saturate_cast<ALCsizei>(message.size()), message.data(), EventUserPtr);
+            al::saturate_cast<ALCsizei>(message.size()), message.c_str(), EventUserPtr);
 }
 
 } /* namespace alc */

@@ -617,7 +617,7 @@ struct DeviceNode {
     void parsePositions(const spa_pod *value, bool force_update) noexcept;
     void parseChannelCount(const spa_pod *value, bool force_update) noexcept;
 
-    void callEvent(alc::EventType const type, std::string_view const message) const
+    void callEvent(alc::EventType const type, al::zstring_view const message) const
     {
         /* Source nodes aren't recognized for playback, only Sink and Duplex
          * nodes are. All node types are recognized for capture.

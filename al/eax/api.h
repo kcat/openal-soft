@@ -13,18 +13,18 @@
 #include <compare>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
-#include "gsl/gsl"
+#include "gsl/narrow"
 
 
 using eax_long = std::conditional_t<std::cmp_greater(sizeof(long), sizeof(int)), int, long>;
 using eax_ulong = std::make_unsigned_t<eax_long>;
 
-consteval auto operator ""_eax_long(unsigned long long const x)
-{ return gsl::narrow<eax_long>(x); }
-consteval auto operator ""_eax_ulong(unsigned long long const x)
-{ return gsl::narrow<eax_ulong>(x); }
-
+[[nodiscard]] consteval
+auto operator ""_eax_long(unsigned long long const x) { return gsl::narrow<eax_long>(x); }
+[[nodiscard]] consteval
+auto operator ""_eax_ulong(unsigned long long const x) { return gsl::narrow<eax_ulong>(x); }
 
 struct AL_GUID {
     std::uint32_t Data1;

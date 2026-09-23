@@ -63,6 +63,9 @@ public:
     }
 
     constexpr
+    auto set() noexcept LIFETIMEBOUND -> bitset& { mBits = AllBits; return *this; }
+
+    constexpr
     auto reset(EnumType const e) noexcept LIFETIMEBOUND -> bitset&
     { mBits &= ~(1u << static_cast<UnderlyingType>(e)); return *this; }
 

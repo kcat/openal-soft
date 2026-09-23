@@ -35,6 +35,7 @@
 #include "al/eax/api.h"
 #include "al/eax/fx_slot_index.h"
 #include "al/eax/fx_slots.h"
+#include "bitset.hpp"
 
 class EaxCall;
 #endif // ALSOFT_EAX
@@ -248,13 +249,13 @@ public:
     void eaxCommitFxSlots() const { mEaxFxSlots.commit(); }
 
 private:
-    enum {
-        eax_primary_fx_slot_id_dirty_bit,
-        eax_distance_factor_dirty_bit,
-        eax_air_absorption_hf_dirty_bit,
-        eax_hf_reference_dirty_bit,
-        eax_macro_fx_factor_dirty_bit,
-        eax_dirty_bit_count
+    enum class EaxDirtyBit {
+        PrimaryFxSlotId,
+        DistanceFactor,
+        AirAbsorptionHf,
+        HfReference,
+        MacroFxFactor,
+        MaxValue = MacroFxFactor,
     };
 
     using Eax4Props = EAX40CONTEXTPROPERTIES;
@@ -283,7 +284,7 @@ private:
 
     int mEaxVersion{}; // Current EAX version.
     bool mEaxNeedsCommit{};
-    std::bitset<eax_dirty_bit_count> mEaxDf; // Dirty flags for the current EAX version.
+    al::bitset<EaxDirtyBit> mEaxDf; // Dirty flags for the current EAX version.
     Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
     Eax4State mEax4{}; // EAX4 state.
     Eax5State mEax5{}; // EAX5 state.
@@ -298,10 +299,10 @@ private:
      * value, and updates a dirty flag.
      */
     template<typename TValidator>
-    void eax_defer(const EaxCall &call, auto &state, std::size_t dirty_bit, auto member);
+    void eax_defer(const EaxCall &call, auto &state, EaxDirtyBit dirty_bit, auto member);
 
-    void eax_context_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
-        std::size_t const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
+    void eax_context_commit_property(auto &state, al::bitset<EaxDirtyBit> &dst_df,
+        EaxDirtyBit const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
         if(mEaxDf.test(dirty_bit))
         {
@@ -358,8 +359,8 @@ private:
     void eax5_defer(const EaxCall& call, Eax5State& state);
     void eax_set(const EaxCall& call);
 
-    void eax4_context_commit(Eax4State& state, std::bitset<eax_dirty_bit_count>& dst_df);
-    void eax5_context_commit(Eax5State& state, std::bitset<eax_dirty_bit_count>& dst_df);
+    void eax4_context_commit(Eax4State &state, al::bitset<EaxDirtyBit> &dst_df);
+    void eax5_context_commit(Eax5State &state, al::bitset<EaxDirtyBit> &dst_df);
     void eax_context_commit();
 #endif // ALSOFT_EAX
 };

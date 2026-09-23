@@ -1137,7 +1137,7 @@ auto al::EffectSlot::eax_dispatch(EaxCall const& call) -> bool
 
 
 template<typename TValidator>
-void al::EffectSlot::eax_fx_slot_set(const EaxCall &call, auto &dst, size_t dirty_bit)
+void al::EffectSlot::eax_fx_slot_set(EaxCall const &call, auto &dst, EaxDirtyBit const dirty_bit)
 {
     const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
     TValidator{}(src);
@@ -1149,7 +1149,8 @@ void al::EffectSlot::eax_fx_slot_set(const EaxCall &call, auto &dst, size_t dirt
 }
 
 template<typename TValidator>
-void al::EffectSlot::eax_fx_slot_set_dirty(const EaxCall &call, auto &dst, size_t dirty_bit)
+void al::EffectSlot::eax_fx_slot_set_dirty(EaxCall const &call, auto &dst,
+    EaxDirtyBit const dirty_bit)
 {
     const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
     TValidator{}(src);
@@ -1176,7 +1177,7 @@ void al::EffectSlot::eax_commit()
 {
     if(mEaxDf.any())
     {
-        auto df = std::bitset<eax_dirty_bit_count>{};
+        auto df = al::bitset<EaxDirtyBit>{};
         switch(mEaxVersion)
         {
         case 1:
@@ -1193,9 +1194,9 @@ void al::EffectSlot::eax_commit()
         }
         mEaxDf.reset();
 
-        if(df.test(eax_volume_dirty_bit))
+        if(df.test(EaxDirtyBit::Volume))
             eax_fx_slot_set_volume();
-        if(df.test(eax_flags_dirty_bit))
+        if(df.test(EaxDirtyBit::Flags))
             eax_fx_slot_set_flags();
     }
 
@@ -1368,10 +1369,10 @@ void al::EffectSlot::eax4_fx_slot_set_all(const EaxCall& call)
     const auto &src = call.load<const EAX40FXSLOTPROPERTIES>();
     Eax4AllValidator{}(src);
     auto &dst = mEax4.i;
-    mEaxDf.set(eax_load_effect_dirty_bit); // Always reset the effect.
-    if(dst.lVolume != src.lVolume) mEaxDf.set(eax_volume_dirty_bit);
-    if(dst.lLock != src.lLock) mEaxDf.set(eax_lock_dirty_bit);
-    if(dst.ulFlags != src.ulFlags) mEaxDf.set(eax_flags_dirty_bit);
+    mEaxDf.set(EaxDirtyBit::LoadEffect); // Always reset the effect.
+    if(dst.lVolume != src.lVolume) mEaxDf.set(EaxDirtyBit::Volume);
+    if(dst.lLock != src.lLock) mEaxDf.set(EaxDirtyBit::Lock);
+    if(dst.ulFlags != src.ulFlags) mEaxDf.set(EaxDirtyBit::Flags);
     dst = src;
 }
 
@@ -1380,22 +1381,21 @@ void al::EffectSlot::eax5_fx_slot_set_all(const EaxCall& call)
     const auto &src = call.load<const EAX50FXSLOTPROPERTIES>();
     Eax5AllValidator{}(src);
     auto &dst = mEax5.i;
-    mEaxDf.set(eax_load_effect_dirty_bit); // Always reset the effect.
-    if(dst.lVolume != src.lVolume) mEaxDf.set(eax_volume_dirty_bit);
-    if(dst.lLock != src.lLock) mEaxDf.set(eax_lock_dirty_bit);
-    if(dst.ulFlags != src.ulFlags) mEaxDf.set(eax_flags_dirty_bit);
-    if(dst.lOcclusion != src.lOcclusion) mEaxDf.set(eax_flags_dirty_bit);
-    if(dst.flOcclusionLFRatio != src.flOcclusionLFRatio) mEaxDf.set(eax_flags_dirty_bit);
+    mEaxDf.set(EaxDirtyBit::LoadEffect); // Always reset the effect.
+    if(dst.lVolume != src.lVolume) mEaxDf.set(EaxDirtyBit::Volume);
+    if(dst.lLock != src.lLock) mEaxDf.set(EaxDirtyBit::Lock);
+    if(dst.ulFlags != src.ulFlags) mEaxDf.set(EaxDirtyBit::Flags);
+    if(dst.lOcclusion != src.lOcclusion) mEaxDf.set(EaxDirtyBit::Occlusion);
+    if(dst.flOcclusionLFRatio != src.flOcclusionLFRatio) mEaxDf.set(EaxDirtyBit::OcclusionLfRatio);
     dst = src;
 }
 
 auto al::EffectSlot::eax_fx_slot_should_update_sources() const noexcept -> bool
 {
-    static constexpr auto dirty_bits = std::bitset<eax_dirty_bit_count>{
-        (1u << eax_occlusion_dirty_bit)
-        | (1u << eax_occlusion_lf_ratio_dirty_bit)
-        | (1u << eax_flags_dirty_bit)
-    };
+    static constexpr auto dirty_bits = al::bitset<EaxDirtyBit>{}
+        .set(EaxDirtyBit::Occlusion)
+        .set(EaxDirtyBit::OcclusionLfRatio)
+        .set(EaxDirtyBit::Flags);
     return (mEaxDf & dirty_bits).any();
 }
 
@@ -1410,25 +1410,25 @@ auto al::EffectSlot::eax4_fx_slot_set(const EaxCall& call) -> bool
         break;
     case EAXFXSLOT_ALLPARAMETERS:
         eax4_fx_slot_set_all(call);
-        if(mEaxDf.test(eax_load_effect_dirty_bit))
+        if(mEaxDf.test(EaxDirtyBit::LoadEffect))
             eax_fx_slot_load_effect(4, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_LOADEFFECT:
         eax4_fx_slot_ensure_unlocked();
         eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator>(call, dst.guidLoadEffect,
-            eax_load_effect_dirty_bit);
-        if(mEaxDf.test(eax_load_effect_dirty_bit))
+            EaxDirtyBit::LoadEffect);
+        if(mEaxDf.test(EaxDirtyBit::LoadEffect))
             eax_fx_slot_load_effect(4, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, eax_volume_dirty_bit);
+        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
         break;
     case EAXFXSLOT_LOCK:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, eax_lock_dirty_bit);
+        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator>(call, dst.ulFlags, eax_flags_dirty_bit);
+        eax_fx_slot_set<Eax4FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
         break;
     default:
         eax_fail_unknown_property_id();
@@ -1448,30 +1448,30 @@ auto al::EffectSlot::eax5_fx_slot_set(const EaxCall& call) -> bool
         break;
     case EAXFXSLOT_ALLPARAMETERS:
         eax5_fx_slot_set_all(call);
-        if(mEaxDf.test(eax_load_effect_dirty_bit))
+        if(mEaxDf.test(EaxDirtyBit::LoadEffect))
             eax_fx_slot_load_effect(5, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_LOADEFFECT:
         eax_fx_slot_set_dirty<Eax4GuidLoadEffectValidator>(call, dst.guidLoadEffect,
-            eax_load_effect_dirty_bit);
-        if(mEaxDf.test(eax_load_effect_dirty_bit))
+            EaxDirtyBit::LoadEffect);
+        if(mEaxDf.test(EaxDirtyBit::LoadEffect))
             eax_fx_slot_load_effect(5, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, eax_volume_dirty_bit);
+        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
         break;
     case EAXFXSLOT_LOCK:
-        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, eax_lock_dirty_bit);
+        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax5FlagsValidator>(call, dst.ulFlags, eax_flags_dirty_bit);
+        eax_fx_slot_set<Eax5FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
         break;
     case EAXFXSLOT_OCCLUSION:
-        eax_fx_slot_set<Eax5OcclusionValidator>(call, dst.lOcclusion, eax_occlusion_dirty_bit);
+        eax_fx_slot_set<Eax5OcclusionValidator>(call, dst.lOcclusion, EaxDirtyBit::Occlusion);
         break;
     case EAXFXSLOT_OCCLUSIONLFRATIO:
         eax_fx_slot_set<Eax5OcclusionLfRatioValidator>(call, dst.flOcclusionLFRatio,
-            eax_occlusion_lf_ratio_dirty_bit);
+            EaxDirtyBit::OcclusionLfRatio);
         break;
     default:
         eax_fail_unknown_property_id();
@@ -1511,44 +1511,44 @@ auto al::EffectSlot::eax_set(const EaxCall& call) -> bool
     return ret;
 }
 
-void al::EffectSlot::eax4_fx_slot_commit(std::bitset<eax_dirty_bit_count>& dst_df)
+void al::EffectSlot::eax4_fx_slot_commit(al::bitset<EaxDirtyBit> &dst_df)
 {
-    eax_fx_slot_commit_property(mEax4, dst_df, eax_load_effect_dirty_bit,
+    eax_fx_slot_commit_property(mEax4, dst_df, EaxDirtyBit::LoadEffect,
         &EAX40FXSLOTPROPERTIES::guidLoadEffect);
-    eax_fx_slot_commit_property(mEax4, dst_df, eax_volume_dirty_bit,
+    eax_fx_slot_commit_property(mEax4, dst_df, EaxDirtyBit::Volume,
         &EAX40FXSLOTPROPERTIES::lVolume);
-    eax_fx_slot_commit_property(mEax4, dst_df, eax_lock_dirty_bit, &EAX40FXSLOTPROPERTIES::lLock);
-    eax_fx_slot_commit_property(mEax4, dst_df, eax_flags_dirty_bit,
+    eax_fx_slot_commit_property(mEax4, dst_df, EaxDirtyBit::Lock, &EAX40FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property(mEax4, dst_df, EaxDirtyBit::Flags,
         &EAX40FXSLOTPROPERTIES::ulFlags);
 
     auto& dst_i = mEax;
 
     if(dst_i.lOcclusion != EAXFXSLOT_DEFAULTOCCLUSION)
     {
-        dst_df.set(eax_occlusion_dirty_bit);
+        dst_df.set(EaxDirtyBit::Occlusion);
         dst_i.lOcclusion = EAXFXSLOT_DEFAULTOCCLUSION;
     }
 
     if(dst_i.flOcclusionLFRatio != EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO)
     {
-        dst_df.set(eax_occlusion_lf_ratio_dirty_bit);
+        dst_df.set(EaxDirtyBit::OcclusionLfRatio);
         dst_i.flOcclusionLFRatio = EAXFXSLOT_DEFAULTOCCLUSIONLFRATIO;
     }
 }
 
 void al::EffectSlot::eax5_fx_slot_commit(Eax5State &state,
-    std::bitset<eax_dirty_bit_count> &dst_df)
+    al::bitset<EaxDirtyBit>& dst_df)
 {
-    eax_fx_slot_commit_property(state, dst_df, eax_load_effect_dirty_bit,
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::LoadEffect,
         &EAX50FXSLOTPROPERTIES::guidLoadEffect);
-    eax_fx_slot_commit_property(state, dst_df, eax_volume_dirty_bit,
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::Volume,
         &EAX50FXSLOTPROPERTIES::lVolume);
-    eax_fx_slot_commit_property(state, dst_df, eax_lock_dirty_bit, &EAX50FXSLOTPROPERTIES::lLock);
-    eax_fx_slot_commit_property(state, dst_df, eax_flags_dirty_bit,
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::Lock, &EAX50FXSLOTPROPERTIES::lLock);
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::Flags,
         &EAX50FXSLOTPROPERTIES::ulFlags);
-    eax_fx_slot_commit_property(state, dst_df, eax_occlusion_dirty_bit,
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::Occlusion,
         &EAX50FXSLOTPROPERTIES::lOcclusion);
-    eax_fx_slot_commit_property(state, dst_df, eax_occlusion_lf_ratio_dirty_bit,
+    eax_fx_slot_commit_property(state, dst_df, EaxDirtyBit::OcclusionLfRatio,
         &EAX50FXSLOTPROPERTIES::flOcclusionLFRatio);
 }
 

@@ -6,8 +6,10 @@
 #include <string_view>
 
 #include "AL/al.h"
-#include "api.h"
 #include "fx_slot_index.h"
+
+struct AL_GUID;
+
 
 enum class EaxCallType {
     none,
@@ -41,8 +43,8 @@ public:
     [[nodiscard]] auto get_property_al_name() const noexcept -> ALuint { return mPropertySourceId; }
     [[nodiscard]] auto get_fx_slot_index() const noexcept -> EaxFxSlotIndex { return mFxSlotIndex; }
 
-    template<typename TValue>
-    [[nodiscard]] auto load() const -> TValue&
+    template<typename TValue> [[nodiscard]]
+    auto load() const -> TValue&
     {
         if(mPropertyBufferSize < sizeof(TValue))
             fail_too_small();
@@ -50,8 +52,8 @@ public:
         return *static_cast<TValue*>(mPropertyBuffer);
     }
 
-    template<typename TValue>
-    [[nodiscard]] auto as_span(size_t const max_count=std::numeric_limits<size_t>::max()) const
+    template<typename TValue> [[nodiscard]]
+    auto as_span(size_t const max_count=std::numeric_limits<size_t>::max()) const
         -> std::span<TValue>
     {
         if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
@@ -62,10 +64,7 @@ public:
     }
 
     template<typename TValue>
-    auto store(const TValue &value) const -> void
-    {
-        load<TValue>() = value;
-    }
+    auto store(const TValue &value) const -> void { load<TValue>() = value; }
 
 private:
     const EaxCallType mCallType;
@@ -79,7 +78,7 @@ private:
     ALvoid*const mPropertyBuffer;
     const ALuint mPropertyBufferSize;
 
-    [[noreturn]] static void fail(const std::string_view message);
+    [[noreturn]] static void fail(std::string_view message);
     [[noreturn]] static void fail_too_small();
 }; // EaxCall
 

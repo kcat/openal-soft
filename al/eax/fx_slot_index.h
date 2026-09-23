@@ -6,8 +6,7 @@
 #include <optional>
 #include <string_view>
 
-#include "api.h"
-
+struct AL_GUID;
 
 using EaxFxSlotIndexValue = std::size_t;
 
@@ -21,21 +20,12 @@ public:
     void set(EaxFxSlotIndexValue index);
     void set(AL_GUID const& guid);
 
+    [[nodiscard]] friend constexpr
+    auto operator==(EaxFxSlotIndex const&, EaxFxSlotIndex const&) noexcept -> bool = default;
+
 private:
     [[noreturn]]
     static void fail(std::string_view message);
 }; // EaxFxSlotIndex
-
-inline bool operator==(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept
-{
-    if(lhs.has_value() != rhs.has_value())
-        return false;
-    if(lhs.has_value())
-        return *lhs == *rhs;
-    return true;
-}
-
-inline bool operator!=(const EaxFxSlotIndex& lhs, const EaxFxSlotIndex& rhs) noexcept
-{ return !(lhs == rhs); }
 
 #endif // !EAX_FX_SLOT_INDEX_INCLUDED

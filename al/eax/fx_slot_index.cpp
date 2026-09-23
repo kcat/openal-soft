@@ -2,11 +2,11 @@
 
 #include "fx_slot_index.h"
 
+#include "api.h"
 #include "exception.h"
 
 
-namespace
-{
+namespace {
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotIndexException final : public EaxException {
@@ -44,7 +44,7 @@ void EaxFxSlotIndex::set(AL_GUID const& guid)
 }
 
 [[noreturn]]
-void EaxFxSlotIndex::fail(const std::string_view message)
+void EaxFxSlotIndex::fail(std::string_view const message)
 {
     throw EaxFxSlotIndexException{message};
 }

@@ -4,7 +4,9 @@
 
 #include <string_view>
 
+#include "api.h"
 #include "exception.h"
+
 
 namespace {
 

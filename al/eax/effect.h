@@ -7,6 +7,8 @@
 
 #include "AL/al.h"
 #include "AL/alext.h"
+
+#include "api.h"
 #include "core/effects/base.h"
 #include "call.h"
 #include "opthelpers.h"

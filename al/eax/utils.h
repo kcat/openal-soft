@@ -6,11 +6,9 @@
 #include "alformat.hpp"
 
 
-void eax_log_exception(std::string_view message) noexcept;
-
 template<typename TException, typename TValue>
-void eax_validate_range(std::string_view value_name, const TValue& value, const TValue& min_value,
-    const TValue& max_value)
+auto eax_validate_range(std::string_view const value_name, TValue const& value,
+    TValue const& min_value, TValue const& max_value) -> void
 {
     if(value >= min_value && value <= max_value) [[likely]]
         return;

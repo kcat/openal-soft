@@ -14,14 +14,15 @@
 #include "direct_defs.h"
 #include "eax/api.h"
 #include "eax/exception.h"
-#include "eax/utils.h"
 
 #if HAVE_CXXMODULES
 import alc.context;
 import gsl;
+import logging;
 #else
 #include "alc/context.hpp"
 #include "gsl/gsl"
+#include "logging.h"
 #endif
 
 
@@ -30,6 +31,21 @@ namespace {
 #if defined(_WIN32)
 static_assert(sizeof(_GUID) == sizeof(AL_GUID));
 #endif
+
+void eax_log_exception(std::string_view const message) noexcept
+{
+    if(auto const exception_ptr = std::current_exception(); !exception_ptr) [[unlikely]]
+        ERR("{} {}", message, "No exception.");
+    else try {
+        std::rethrow_exception(exception_ptr);
+    }
+    catch(std::exception& ex) {
+        ERR("{} {}", message, ex.what());
+    }
+    catch(...) {
+        ERR("{} {}", message, "Generic exception.");
+    }
+}
 
 auto get_alguid(_GUID const *const guid, AL_GUID *store) -> AL_GUID&
 {

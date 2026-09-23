@@ -100,7 +100,10 @@ class backend_exception final : public base_exception {
 public:
     template<typename ...Args>
     backend_exception(backend_error const code, al::format_string<Args...> fmt, Args&& ...args)
-        : base_exception{make_string(fmt.get(), al::make_format_args(args...))}, mErrorCode{code}
+        : base_exception{assign_result{[&] {
+            return make_string(fmt.get(), al::make_format_args(args...));
+        }}}
+        , mErrorCode{code}
     { }
     backend_exception(const backend_exception&) = default;
     backend_exception(backend_exception&&) = default;

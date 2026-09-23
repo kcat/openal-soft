@@ -1991,7 +1991,9 @@ auto VerifyDevice(ALCdevice *device) -> gsl::not_null<DeviceRef>
         return gsl::make_not_null(DeviceRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    throw al::base_exception{al::format("Invalid device handle {}", voidp{device})};
+    throw al::base_exception{al::assign_result{[&] {
+        return al::format("Invalid device handle {}", voidp{device});
+    }}};
 }
 
 
@@ -2009,7 +2011,9 @@ auto VerifyContext(ALCcontext *context) -> gsl::not_null<ContextRef>
         return gsl::make_not_null(ContextRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-    throw al::base_exception{al::format("Invalid context handle {}", voidp{context})};
+    throw al::base_exception{al::assign_result{[&] {
+        return al::format("Invalid context handle {}", voidp{context});
+    }}};
 }
 
 } // namespace

@@ -79,8 +79,8 @@
 
 namespace al {
 
-template<typename T>
-constexpr std::underlying_type_t<T> to_underlying(T e) noexcept
+template<typename T> [[nodiscard]] constexpr
+auto to_underlying(T e) noexcept -> std::underlying_type_t<T>
 { return static_cast<std::underlying_type_t<T>>(e); }
 
 struct dereference {
@@ -88,6 +88,16 @@ struct dereference {
     auto operator()(T&& p) const noexcept(noexcept(*std::forward<T>(p))) -> decltype(auto)
     { return *std::forward<T>(p); }
 };
+
+template<typename F>
+struct assign_result {
+    using result_t = std::invoke_result_t<F>;
+    F&& mCallable;
+
+    [[nodiscard]] constexpr explicit(false)
+    operator result_t() && noexcept { return std::invoke(std::forward<F>(mCallable)); }
+};
+
 
 /**
  * Gets a not_null<T*> from a not_null<SmartPtr<T>>, hopefully avoiding ths

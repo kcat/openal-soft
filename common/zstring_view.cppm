@@ -4,6 +4,9 @@ module;
 
 #include "alformat.hpp"
 #include "zstring_view.hpp"
+#if USING_STD_FORMAT
+#include "fmt/format.h"
+#endif
 
 export module zstring_view;
 
@@ -44,5 +47,15 @@ struct al::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {
     auto format(T const &zsv, auto& ctx) const
     { return formatter<fmttype_t,CharT>::format(zsv, ctx); }
 };
+
+#if USING_STD_FORMAT
+template<al::zstring_view_type T, typename CharT>
+struct fmt::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {
+    using fmttype_t = typename T::underlying_type;
+
+    auto format(T const &zsv, auto& ctx) const
+    { return formatter<fmttype_t,CharT>::format(zsv, ctx); }
+};
+#endif
 
 } /* export */

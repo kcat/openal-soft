@@ -10,6 +10,7 @@
  */
 #if (defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 130300) \
     || !__has_include(<format>)
+#define USING_STD_FORMAT 0
 #include "fmt/format.h"
 
 namespace al {
@@ -26,6 +27,7 @@ using fmt::vformat;
 
 #else
 
+#define USING_STD_FORMAT 1
 #include <format>
 
 namespace al {

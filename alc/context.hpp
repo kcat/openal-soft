@@ -292,30 +292,13 @@ private:
 
     /* Gets a value from EAX call, validates it, and updates the current value. */
     template<typename TValidator>
-    static void eax_set(const EaxCall &call, auto &property)
-    {
-        const auto &value = call.load<const std::remove_cvref_t<decltype(property)>>();
-        TValidator{}(value);
-        property = value;
-    }
+    static void eax_set(const EaxCall &call, auto &property);
 
     /* Gets a new value from EAX call, validates it, updates the deferred
      * value, and updates a dirty flag.
      */
     template<typename TValidator>
-    void eax_defer(const EaxCall &call, auto &state, std::size_t const dirty_bit, auto member)
-    {
-        static_assert(std::invocable<decltype(member), decltype(state.i)>);
-        using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
-        const auto &src = call.load<const std::remove_cvref_t<TMemberResult>>();
-        TValidator{}(src);
-        const auto &dst_i = std::invoke(member, state.i);
-        auto &dst_d = std::invoke(member, state.d);
-        dst_d = src;
-
-        if(dst_i != dst_d)
-            mEaxDf.set(dirty_bit);
-    }
+    void eax_defer(const EaxCall &call, auto &state, std::size_t dirty_bit, auto member);
 
     void eax_context_commit_property(auto &state, std::bitset<eax_dirty_bit_count> &dst_df,
         std::size_t const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept

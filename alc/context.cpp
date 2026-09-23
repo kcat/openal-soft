@@ -512,6 +512,30 @@ struct Eax5SpeakerConfigValidator {
 
 namespace al {
 
+template<typename TValidator>
+void Context::eax_set(const EaxCall &call, auto &property)
+{
+    const auto &value = call.load<const std::remove_cvref_t<decltype(property)>>();
+    TValidator{}(value);
+    property = value;
+}
+
+template<typename TValidator>
+void Context::eax_defer(const EaxCall &call, auto &state, std::size_t const dirty_bit, auto member)
+{
+    static_assert(std::invocable<decltype(member), decltype(state.i)>);
+    using TMemberResult = std::invoke_result_t<decltype(member), decltype(state.i)>;
+    const auto &src = call.load<const std::remove_cvref_t<TMemberResult>>();
+    TValidator{}(src);
+    const auto &dst_i = std::invoke(member, state.i);
+    auto &dst_d = std::invoke(member, state.d);
+    dst_d = src;
+
+    if(dst_i != dst_d)
+        mEaxDf.set(dirty_bit);
+}
+
+
 auto Context::eaxIsCapable() const noexcept -> bool
 {
     return eax_has_enough_aux_sends();

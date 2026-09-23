@@ -21,9 +21,11 @@
 #if ALSOFT_EAX
 #include <memory>
 #include "eax/api.h"
-#include "eax/call.h"
-#include "eax/effect.h"
 #include "eax/fx_slot_index.h"
+
+class EaxCall;
+class EaxEffect;
+using EaxEffectUPtr = std::unique_ptr<EaxEffect>;
 #endif // ALSOFT_EAX
 
 
@@ -90,8 +92,7 @@ struct EffectSlot {
     auto eax_get_eax_fx_slot() const noexcept -> const EAX50FXSLOTPROPERTIES& { return mEax; }
 
     // Returns `true` if all sources should be updated, or `false` otherwise.
-    [[nodiscard]] auto eax_dispatch(const EaxCall &call) -> bool
-    { return call.is_get() ? eax_get(call) : eax_set(call); }
+    [[nodiscard]] auto eax_dispatch(const EaxCall &call) -> bool;
 
     void eax_commit();
 
@@ -128,28 +129,13 @@ private:
      * the new value differs form the old one, and assigns the new value.
      */
     template<typename TValidator>
-    void eax_fx_slot_set(const EaxCall &call, auto &dst, size_t dirty_bit)
-    {
-        const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
-        TValidator{}(src);
-        if(dst != src)
-        {
-            mEaxDf.set(dirty_bit);
-            dst = src;
-        }
-    }
+    void eax_fx_slot_set(const EaxCall &call, auto &dst, size_t dirty_bit);
 
     /* Gets a new value from EAX call, validates it, sets a dirty flag without
      * comparing the values, and assigns the new value.
      */
     template<typename TValidator>
-    void eax_fx_slot_set_dirty(const EaxCall &call, auto &dst, size_t dirty_bit)
-    {
-        const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
-        TValidator{}(src);
-        mEaxDf.set(dirty_bit);
-        dst = src;
-    }
+    void eax_fx_slot_set_dirty(const EaxCall &call, auto &dst, size_t dirty_bit);
 
     [[nodiscard]] constexpr auto eax4_fx_slot_is_legacy() const noexcept -> bool
     { return mEaxFXSlotIndex < 2; }

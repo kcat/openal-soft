@@ -69,6 +69,7 @@
 #include "al/auxeffectslot.h"
 #include "al/buffer.h"
 #include "al/debug.h"
+#include "al/eax/effect.h"
 #include "al/effect.h"
 #include "al/filter.h"
 #include "al/source.h"

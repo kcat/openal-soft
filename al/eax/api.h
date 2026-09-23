@@ -319,9 +319,8 @@ struct EAXVECTOR {
     float y;
     float z;
 
-    [[nodiscard]]
-    friend auto operator<=>(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
-        -> std::partial_ordering = default;
+    [[nodiscard]] friend
+    auto operator==(const EAXVECTOR&, const EAXVECTOR&) noexcept -> bool = default;
 };
 
 
@@ -934,9 +933,9 @@ struct EAXREVERBPROPERTIES {
     float flRoomRolloffFactor; // like DS3D flRolloffFactor but for room effect
     eax_ulong ulFlags; // modifies the behavior of properties
 
-    [[nodiscard]]
-    friend auto operator<=>(const EAXREVERBPROPERTIES& lhs, const EAXREVERBPROPERTIES& rhs)
-        noexcept -> std::partial_ordering = default;
+    [[nodiscard]] friend
+    auto operator==(const EAXREVERBPROPERTIES&, const EAXREVERBPROPERTIES&) noexcept -> bool
+        = default;
 }; // EAXREVERBPROPERTIES
 
 inline constexpr auto EAXREVERB_MINENVIRONMENT = eax_ulong{EAX_ENVIRONMENT_GENERIC};

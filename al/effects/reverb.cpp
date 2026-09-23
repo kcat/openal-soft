@@ -19,6 +19,7 @@
 #include "al/eax/call.h"
 #include "al/eax/effect.h"
 #include "al/eax/exception.h"
+#include "al/eax/presets.hpp"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
 

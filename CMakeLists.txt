@@ -1016,6 +1016,7 @@ if(ALSOFT_EAX)
         al/eax/fx_slot_index.h
         al/eax/fx_slots.h
         al/eax/globals.h
+        al/eax/presets.hpp
         al/eax/utils.h
         al/eax/x_ram.h
     )

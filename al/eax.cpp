@@ -12,6 +12,7 @@
 #include "AL/alext.h"
 
 #include "direct_defs.h"
+#include "eax/alapi.hpp"
 #include "eax/api.h"
 #include "eax/exception.h"
 

@@ -52,8 +52,8 @@
 #include "strutils.hpp"
 
 #if ALSOFT_EAX
+#include "eax/alapi.hpp"
 #include "eax/globals.h"
-#include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES

@@ -20,15 +20,16 @@
 #include "core/device.h"
 #include "intrusive_ptr.h"
 
-#if ALSOFT_EAX
-#include "al/eax/x_ram.h"
-#endif // ALSOFT_EAX
-
 struct BackendBase;
 struct BufferSubList;
 struct EffectSubList;
 struct FilterSubList;
 
+
+#if ALSOFT_EAX
+/* Simulate 64MB of X-RAM. */
+inline auto constexpr eax_x_ram_max_size = ALsizei{64 * 1'024 * 1'024};
+#endif // ALSOFT_EAX
 
 struct ALCdevice { };
 

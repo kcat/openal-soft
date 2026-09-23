@@ -1,7 +1,3 @@
-#ifndef EAX_API_INCLUDED
-#define EAX_API_INCLUDED
-
-
 //
 // EAX API.
 //
@@ -9,14 +5,14 @@
 // https://github.com/id-Software/DOOM-3/tree/master/neo/openal/include
 //
 
+#ifndef EAX_API_INCLUDED
+#define EAX_API_INCLUDED
 
 #include <array>
 #include <cfloat>
 #include <compare>
 #include <cstdint>
 #include <type_traits>
-
-#include "AL/al.h"
 
 #include "gsl/gsl"
 
@@ -1650,16 +1646,5 @@ inline constexpr auto EAXRINGMODULATOR_DEFAULTHIGHPASSCUTOFF = 800.0F;
 inline constexpr auto EAXRINGMODULATOR_MINWAVEFORM = 0_eax_ulong;
 inline constexpr auto EAXRINGMODULATOR_MAXWAVEFORM = 2_eax_ulong;
 inline constexpr auto EAXRINGMODULATOR_DEFAULTWAVEFORM = EAXRINGMODULATOR_MINWAVEFORM;
-
-
-struct _GUID; /* NOLINT(*-reserved-identifier) */
-
-extern "C" auto AL_APIENTRY EAXSet(_GUID const *property_set_id, ALuint property_id,
-    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
-extern "C" auto AL_APIENTRY EAXGet(_GUID const *property_set_id, ALuint property_id,
-    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum;
-
-using LPEAXSET = decltype(EAXSet)*;
-using LPEAXGET = decltype(EAXGet)*;
 
 #endif // !EAX_API_INCLUDED

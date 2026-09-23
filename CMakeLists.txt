@@ -1009,6 +1009,7 @@ if(ALSOFT_EAX)
         al/eax/fx_slots.cpp
     )
     list(APPEND OPENAL_HDRS
+        al/eax/alapi.hpp
         al/eax/api.h
         al/eax/call.h
         al/eax/effect.h
@@ -1018,7 +1019,6 @@ if(ALSOFT_EAX)
         al/eax/globals.h
         al/eax/presets.hpp
         al/eax/utils.h
-        al/eax/x_ram.h
     )
 endif()
 

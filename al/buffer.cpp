@@ -58,8 +58,8 @@
 #if ALSOFT_EAX
 #include <unordered_set>
 
+#include "eax/alapi.hpp"
 #include "eax/globals.h"
-#include "eax/x_ram.h"
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES

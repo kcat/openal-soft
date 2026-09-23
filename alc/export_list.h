@@ -13,8 +13,7 @@
 #include "inprogext.h"
 #include "opthelpers.h"
 #if ALSOFT_EAX
-#include "al/eax/api.h"
-#include "al/eax/x_ram.h"
+#include "al/eax/alapi.hpp"
 #endif
 
 #if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && __has_cpp_attribute(gnu::alias)

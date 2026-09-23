@@ -456,17 +456,6 @@ struct Eax5MacroFxFactorValidator {
     }
 };
 
-struct Eax5AllValidator {
-    void operator()(const EAX50CONTEXTPROPERTIES& all) const
-    {
-        Eax5PrimaryFxSlotIdValidator{}(all.guidPrimaryFXSlotID);
-        Eax4DistanceFactorValidator{}(all.flDistanceFactor);
-        Eax4AirAbsorptionHfValidator{}(all.flAirAbsorptionHF);
-        Eax4HfReferenceValidator{}(all.flHFReference);
-        Eax5MacroFxFactorValidator{}(all.flMacroFXFactor);
-    }
-};
-
 struct Eax5EaxVersionValidator {
     void operator()(eax_ulong const ulEAXVersion) const
     {

@@ -22,8 +22,8 @@ import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "core/logging.h"
 #include "gsl/gsl"
-#include "logging.h"
 #endif
 
 

@@ -634,6 +634,8 @@ public:
 
 } /* namespace al */
 
+inline namespace altypeops {
+
 /* Prefix and postfix increment and decrement operators. Only valid for
  * integral types.
  */
@@ -921,6 +923,7 @@ template<al::strict_number T> [[nodiscard]] force_inline constexpr
 auto operator==(T const &lhs, al::ConstantNum<typename T::value_t> const &rhs) noexcept -> bool
 { return (lhs <=> rhs) == 0; }
 
+}
 
 #define DECL_NUMBERTYPE(SelfType, ValueType)                                  \
 struct [[nodiscard]] SelfType : al::number_base<ValueType, SelfType> {        \

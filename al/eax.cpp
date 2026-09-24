@@ -31,16 +31,16 @@ namespace {
 
 void eax_log_exception(std::string_view const message) noexcept
 {
-    if(auto const exception_ptr = std::current_exception(); !exception_ptr) [[unlikely]]
+    if(auto exception_ptr = std::current_exception(); !exception_ptr) [[unlikely]]
         ERR("{} {}", message, "No exception.");
     else try {
-        std::rethrow_exception(exception_ptr);
+        std::rethrow_exception(std::move(exception_ptr));
     }
     catch(std::exception& ex) {
         ERR("{} {}", message, ex.what());
     }
     catch(...) {
-        ERR("{} {}", message, "Generic exception.");
+        ERR("{} {}", message, "Unknown exception.");
     }
 }
 

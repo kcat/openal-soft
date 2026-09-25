@@ -20,7 +20,6 @@
 #include "alc/alu.h"
 #include "alc/backends/base.h"
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/effectslot.h"
@@ -44,9 +43,9 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
-import format.types;
 import gsl;
 import logging;
+import types;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"

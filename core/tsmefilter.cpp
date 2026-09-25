@@ -4,12 +4,13 @@
 #include <algorithm>
 
 #include "allpass_conv.hpp"
-#include "altypes.hpp"
 #include "tsmefilter.hpp"
 
 #if HAVE_CXXMODULES
 import phase_shifter;
+import types;
 #else
+#include "altypes.hpp"
 #include "phase_shifter.hpp"
 #endif
 

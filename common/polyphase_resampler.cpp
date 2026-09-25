@@ -1,17 +1,21 @@
 
+#include "config.h"
+
 #include "polyphase_resampler.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <numbers>
 #include <numeric>
 #include <ranges>
 #include <stdexcept>
 #include <tuple>
 
-#include "altypes.hpp"
+#if HAVE_CXXMODULES
+import gsl;
+#else
 #include "gsl/gsl"
+#endif
 
 
 namespace {

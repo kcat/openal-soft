@@ -32,7 +32,6 @@
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
-#include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -70,6 +69,7 @@ struct SwsContext;
 #if HAVE_CXXMODULES
 import gsl;
 import openal;
+import types;
 
 /* AL_APIENTRY is needed, but not exported from the module. */
 #ifdef _WIN32
@@ -84,6 +84,7 @@ import openal;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

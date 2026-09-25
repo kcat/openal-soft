@@ -33,7 +33,6 @@
 
 #include "alformat.hpp"
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
 
@@ -53,7 +52,9 @@ DIAGNOSTIC_POP;
 import core.device;
 import gsl;
 import logging;
+import types;
 #else
+#include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

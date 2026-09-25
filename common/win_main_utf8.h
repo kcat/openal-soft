@@ -69,13 +69,14 @@ int my_main(int, char**);
 #include <string>
 #include <string_view>
 
-#include "altypes.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 
 #if HAVE_CXXMODULES
 import gsl;
+import types;
 #else
+#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

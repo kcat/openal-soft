@@ -65,7 +65,7 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
-import format.types;
+import types;
 import gsl;
 import logging;
 #else

@@ -16,12 +16,12 @@ module;
 #include <ranges>
 #include <span>
 
-#include "altypes.hpp"
 #include "opthelpers.h"
 
 export module phase_shifter;
 
 import gsl;
+import types;
 
 
 /* Implements a wide-band +90 degree phase-shift. Note that this should be

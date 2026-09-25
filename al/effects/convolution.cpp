@@ -10,13 +10,14 @@
 
 #include "alc/inprogext.h"
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "effects.h"
 
 #if HAVE_CXXMODULES
 import alc.context;
+import types;
 #else
 #include "alc/context.hpp"
+#include "altypes.hpp"
 #endif
 
 

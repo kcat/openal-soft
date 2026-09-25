@@ -81,9 +81,9 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
-import format.types;
 import gsl;
 import logging;
+import types;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"

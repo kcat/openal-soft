@@ -13,7 +13,6 @@
 #include "al/effect.h"
 #include "al/filter.h"
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "atomic.h"
 #include "backends/base.h"
 #include "core/hrtf.h"
@@ -23,8 +22,8 @@
 
 #if HAVE_CXXMODULES
 import alc.device;
-import format.types;
 import logging;
+import types;
 #else
 #include "alc/device.h"
 #include "alformattypes.hpp"

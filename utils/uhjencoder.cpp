@@ -39,7 +39,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -54,7 +53,9 @@
 #if HAVE_CXXMODULES
 import gsl;
 import phase_shifter;
+import types;
 #else
+#include "altypes.hpp"
 #include "gsl/gsl"
 #include "phase_shifter.hpp"
 #endif

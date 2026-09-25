@@ -55,6 +55,8 @@
  * in order to take advantage of SIMD instructions of modern CPUs.
  */
 
+#include "config.h"
+
 #include "pffft.h"
 
 #include <algorithm>
@@ -71,13 +73,18 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "altypes.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 
+#if HAVE_CXXMODULES
+import gsl;
+import types;
+#else
+#include "altypes.hpp"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

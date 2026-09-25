@@ -7,16 +7,18 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
 
 #include "alnumeric.h"
-#include "altypes.hpp"
-#include "gsl/gsl"
 #include "opthelpers.h"
 
+#if HAVE_CXXMODULES
+import types;
+#else
+#include "altypes.hpp"
+#endif
 
 /* These structures assume BufferLineSize is a power of 2. */
 static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");

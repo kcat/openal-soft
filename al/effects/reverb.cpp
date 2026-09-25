@@ -11,7 +11,6 @@
 #include "AL/efx.h"
 
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -27,8 +26,10 @@
 import alc.context;
 import logging;
 import gsl;
+import types;
 #else
 #include "alc/context.hpp"
+#include "altypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

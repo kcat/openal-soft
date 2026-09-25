@@ -135,9 +135,9 @@ DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
 import core.device;
-import format.types;
 import gsl;
 import logging;
+import types;
 import zstring_view;
 #else
 #include "alformattypes.hpp"

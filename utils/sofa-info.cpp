@@ -30,7 +30,6 @@
 #include <string_view>
 #include <vector>
 
-#include "altypes.hpp"
 #include "fmt/base.h"
 #include "sofa-support.h"
 
@@ -40,7 +39,9 @@
 
 #if HAVE_CXXMODULES
 import gsl;
+import types;
 #else
+#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

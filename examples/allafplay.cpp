@@ -80,7 +80,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
@@ -92,6 +91,7 @@
 #if HAVE_CXXMODULES
 import gsl;
 import openal;
+import types;
 
 #else
 
@@ -99,6 +99,7 @@ import openal;
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

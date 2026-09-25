@@ -32,7 +32,6 @@
 #include "AL/alext.h"
 
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "core/except.h"
 #include "direct_defs.h"
 
@@ -40,8 +39,10 @@
 import alc.context;
 import gsl;
 import logging;
+import types;
 #else
 #include "alc/context.hpp"
+#include "altypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

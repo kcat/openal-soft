@@ -1,6 +1,13 @@
 
-#include "altypes.hpp"
+#include "config.h"
+
 #include "alformat.hpp"
+
+#if HAVE_CXXMODULES
+import types;
+#else
+#include "altypes.hpp"
+#endif
 
 namespace al {
 

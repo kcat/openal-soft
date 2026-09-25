@@ -773,7 +773,7 @@ set(COMMON_HDRS
 if(HAVE_CXXMODULES)
     list(APPEND COMMON_MODS
         alsoft-modules/gsl.cppm
-        common/alformattypes.cppm
+        common/altypes.cppm
         common/hann_window.cppm
         common/phase_shifter.cppm
         common/zstring_view.cppm

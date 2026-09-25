@@ -45,7 +45,6 @@
 #include "sndfile.h"
 
 #include "alnumeric.h"
-#include "altypes.hpp"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
@@ -56,12 +55,15 @@
 #if HAVE_CXXMODULES
 import gsl;
 import openal;
+import types;
 
 #else
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
+
+#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

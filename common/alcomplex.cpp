@@ -9,8 +9,13 @@
 #include <numbers>
 #include <ranges>
 
+#if HAVE_CXXMODULES
+import gsl;
+import types;
+#else
 #include "altypes.hpp"
 #include "gsl/gsl"
+#endif
 
 
 namespace {

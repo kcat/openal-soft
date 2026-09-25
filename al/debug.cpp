@@ -36,9 +36,9 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
-import format.types;
 import gsl;
 import logging;
+import types;
 import zstring_view;
 #else
 #include "alc/context.hpp"

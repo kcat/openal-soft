@@ -15,7 +15,6 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "altypes.hpp"
 #include "alstring.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
@@ -24,6 +23,7 @@
 import alsoft.router;
 import gsl;
 import openal;
+import types;
 
 #define ALC_APIENTRY __cdecl
 
@@ -32,6 +32,8 @@ import openal;
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
+
+#include "altypes.hpp"
 #include "gsl/gsl"
 #include "router.h"
 #endif

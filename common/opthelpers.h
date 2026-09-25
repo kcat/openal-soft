@@ -91,10 +91,11 @@ struct dereference {
 
 template<typename F>
 struct assign_result {
+    using result_t = std::invoke_result_t<F>;
     F&& mCallable;
 
     [[nodiscard]] constexpr explicit(false)
-    operator decltype(auto)() && noexcept { return std::invoke(std::forward<F>(mCallable)); }
+    operator result_t() && noexcept { return std::invoke(std::forward<F>(mCallable)); }
 };
 
 

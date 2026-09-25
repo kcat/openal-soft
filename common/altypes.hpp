@@ -1131,6 +1131,7 @@ struct common_type<T, U> : common_type<al::make_strict_t<T>, U> { };
 
 } /* namespace std */
 
+inline namespace altypeops {
 
 template<al::strict_integral T> [[nodiscard]] force_inline constexpr
 auto popcount(T const &x) noexcept -> sys_uint { return x.popcount(); }
@@ -1199,5 +1200,7 @@ auto lerp(T const &a, T const &b, T const &t) noexcept -> T
 [[nodiscard]] constexpr
 auto lerpf(f32 const val1, f32 const val2, f32 const mu) noexcept -> f32
 { return val1 + (val2-val1)*mu; }
+
+}
 
 #endif /* AL_TYPES_HPP */

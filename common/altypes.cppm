@@ -70,6 +70,29 @@ export {
         using altypeops::operator>>=;
         using altypeops::operator<=>;
         using altypeops::operator==;
+
+        using altypeops::popcount;
+        using altypeops::countl_zero;
+        using altypeops::countr_zero;
+        using altypeops::abs;
+        using altypeops::ceil;
+        using altypeops::floor;
+        using altypeops::sqrt;
+        using altypeops::cbrt;
+        using altypeops::sin;
+        using altypeops::asin;
+        using altypeops::cos;
+        using altypeops::acos;
+        using altypeops::atan2;
+        using altypeops::pow;
+        using altypeops::log;
+        using altypeops::log2;
+        using altypeops::log10;
+        using altypeops::exp;
+        using altypeops::exp2;
+        using altypeops::round;
+        using altypeops::lerp;
+        using altypeops::lerpf;
     }
 
     namespace al {
@@ -85,29 +108,6 @@ export {
     namespace std {
         using std::common_type;
     }
-
-    using ::popcount;
-    using ::countl_zero;
-    using ::countr_zero;
-    using ::abs;
-    using ::ceil;
-    using ::floor;
-    using ::sqrt;
-    using ::cbrt;
-    using ::sin;
-    using ::asin;
-    using ::cos;
-    using ::acos;
-    using ::atan2;
-    using ::pow;
-    using ::log;
-    using ::log2;
-    using ::log10;
-    using ::exp;
-    using ::exp2;
-    using ::round;
-    using ::lerp;
-    using ::lerpf;
 
     template<al::strict_number SelfType, typename CharT>
     struct al::formatter<SelfType, CharT> : formatter<typename SelfType::fmttype_t, CharT> {

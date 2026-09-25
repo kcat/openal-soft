@@ -11,13 +11,13 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstddef>
 #include <numbers>
 #include <ranges>
 #include <span>
 
 #include "altypes.hpp"
+#include "cemath.hpp"
 #include "gsl/gsl"
 #include "opthelpers.h"
 
@@ -58,6 +58,7 @@ class PhaseShifterT {
 #endif
 
 public:
+    constexpr
     PhaseShifterT() noexcept
     {
         /* Every other coefficient is 0, so we only need to calculate and store
@@ -74,8 +75,8 @@ public:
              */
             const auto w = 2.0*std::numbers::pi/double{sFilterHalfSize-1}
                 * gsl::narrow_cast<double>(i);
-            const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
-                - 0.0106411*std::cos(3.0*w);
+            const auto window = 0.3635819 - 0.4891775*ce::cos(w) + 0.1365995*ce::cos(2.0*w)
+                - 0.0106411*ce::cos(3.0*w);
 
             const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
             mCoeffs[i] = gsl::narrow_cast<float>(window * 2.0 / pk);
@@ -208,6 +209,6 @@ public:
 };
 
 template<std::size_t N> inline
-auto const gPShifter = PhaseShifterT<N>{};
+auto constexpr gPShifter = PhaseShifterT<N>{};
 
 #endif /* PHASE_SHIFTER_HPP */

@@ -743,6 +743,7 @@ set(COMMON_HDRS
     common/altypes.hpp
     common/atomic.h
     common/bitset.hpp
+    common/cemath.hpp
     common/comptr.h
     common/dynload.h
     common/dlopennote.h
@@ -774,6 +775,7 @@ if(HAVE_CXXMODULES)
     list(APPEND COMMON_MODS
         alsoft-modules/gsl.cppm
         common/altypes.cppm
+        common/cemath.cppm
         common/hann_window.cppm
         common/phase_shifter.cppm
         common/zstring_view.cppm

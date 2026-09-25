@@ -78,9 +78,11 @@
 
 #if HAVE_CXXMODULES
 import bsinc_tables;
+import cemath;
 import core.device;
 import cubic_tables;
 #else
+#include "cemath.h"
 #include "core/bsinc_tables.hpp"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
@@ -747,25 +749,6 @@ struct RotatorCoeffs {
     };
     std::array<CoeffValues, CalcRotatorSize(MaxAmbiOrder)> mCoeffs{};
 
-    [[nodiscard]] static constexpr
-    auto ce_sqrt(double const x) noexcept -> double
-    {
-        if(!(x >= 0.0 && x < std::numeric_limits<double>::infinity()))
-            return std::numeric_limits<double>::quiet_NaN();
-
-        auto prev = 0.0;
-        auto curr = x;
-        while(curr != prev)
-        {
-            prev = curr;
-            curr = 0.5 * (curr + x/curr);
-        }
-        return curr;
-    }
-
-    [[nodiscard]] static constexpr
-    auto ce_abs(int const x) noexcept -> int { return x < 0 ? -x : x; }
-
     constexpr
     RotatorCoeffs() noexcept
     {
@@ -791,22 +774,22 @@ struct RotatorCoeffs {
                      *     (1.0-d) * -0.5;
                      */
 
-                    auto const denom = gsl::narrow_cast<double>((ce_abs(n) == l) ?
+                    auto const denom = gsl::narrow_cast<double>((ce::abs(n) == l) ?
                           (2*l) * (2*l - 1) : (l*l - n*n));
 
                     if(m == 0)
                     {
-                        coeffs->u = gsl::narrow_cast<float>(ce_sqrt(l * l / denom));
-                        coeffs->v = gsl::narrow_cast<float>(ce_sqrt((l-1) * l / denom) * -1.0);
+                        coeffs->u = gsl::narrow_cast<float>(ce::sqrt(l * l / denom));
+                        coeffs->v = gsl::narrow_cast<float>(ce::sqrt((l-1) * l / denom) * -1.0);
                         coeffs->w = 0.0f;
                     }
                     else
                     {
-                        const auto abs_m = ce_abs(m);
-                        coeffs->u = gsl::narrow_cast<float>(ce_sqrt((l*l - m*m) / denom));
-                        coeffs->v = gsl::narrow_cast<float>(ce_sqrt((l+abs_m-1) * (l+abs_m)
+                        const auto abs_m = ce::abs(m);
+                        coeffs->u = gsl::narrow_cast<float>(ce::sqrt((l*l - m*m) / denom));
+                        coeffs->v = gsl::narrow_cast<float>(ce::sqrt((l+abs_m-1) * (l+abs_m)
                             / denom) * 0.5);
-                        coeffs->w = gsl::narrow_cast<float>(ce_sqrt((l-abs_m-1) * (l-abs_m)
+                        coeffs->w = gsl::narrow_cast<float>(ce::sqrt((l-abs_m-1) * (l-abs_m)
                             / denom) * -0.5);
                     }
                     ++coeffs;

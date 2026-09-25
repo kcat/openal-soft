@@ -2,12 +2,11 @@
 #define CORE_CUBIC_TABLES_HPP
 
 #include <array>
-#include <concepts>
 #include <cstddef>
 #include <numbers>
 #include <ranges>
 
-
+#include "cemath.hpp"
 #include "cubic_defs.h"
 #include "gsl/gsl"
 
@@ -24,58 +23,14 @@
  */
 namespace detail_ {
 
-/* Pre-C++23 constexpr-capable cos and sin. */
-template<std::floating_point T> [[nodiscard]] constexpr
-auto cecos(T const x) noexcept -> T
-{
-    auto const nx2 = -(x*x);
-    auto fact = T{2};
-    auto acc = 3llu;
-    auto tmp = nx2;
-    auto result = T{1} + tmp/fact;
-
-    auto last_result = result;
-    do {
-        tmp *= nx2;
-        fact *= static_cast<T>(acc * (acc+1));
-        acc += 2;
-
-        last_result = result;
-        result += tmp / fact;
-    } while(result != last_result);
-    return result;
-}
-
-template<std::floating_point T> [[nodiscard]] constexpr
-auto cesin(T const x) noexcept -> T
-{
-    auto const nx2 = -(x*x);
-    auto fact = T{6};
-    auto acc = 4llu;
-    auto tmp = nx2*x;
-    auto result = x + tmp/fact;
-
-    auto last_result = result;
-    do {
-        tmp *= nx2;
-        fact *= static_cast<T>(acc * (acc+1));
-        acc += 2;
-
-        last_result = result;
-        result += tmp / fact;
-    } while(result != last_result);
-    return result;
-}
-
-
 [[nodiscard]] constexpr
 auto GetCoeff(double const idx) noexcept -> double
 {
     const auto k = 0.5 + idx;
     if(k > 512.0) return 0.0;
-    const auto s =  cesin(std::numbers::pi*1.280/1024.0 * k);
-    const auto t = (cecos(std::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50;
-    const auto u = (cecos(std::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08;
+    const auto s =  ce::sin(std::numbers::pi*1.280/1024.0 * k);
+    const auto t = (ce::cos(std::numbers::pi*2.000/1023.0 * k) - 1.0) * 0.50;
+    const auto u = (ce::cos(std::numbers::pi*4.000/1023.0 * k) - 1.0) * 0.08;
     return s * (t + u + 1.0) / k;
 }
 

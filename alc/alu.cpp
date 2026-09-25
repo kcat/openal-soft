@@ -82,7 +82,7 @@ import cemath;
 import core.device;
 import cubic_tables;
 #else
-#include "cemath.h"
+#include "cemath.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"

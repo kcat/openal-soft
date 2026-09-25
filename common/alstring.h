@@ -8,15 +8,15 @@
 
 namespace al {
 
-[[nodiscard]]
-constexpr bool contains(const std::string_view str0, const std::string_view str1) noexcept
+[[nodiscard]] constexpr
+auto contains(std::string_view const str0, std::string_view const str1) noexcept -> bool
 { return str0.find(str1) != std::string_view::npos; }
 
 [[nodiscard]]
-auto case_compare(const std::string_view str0, const std::string_view str1) noexcept -> std::weak_ordering;
+auto case_compare(std::string_view str0, std::string_view str1) noexcept -> std::weak_ordering;
 
 [[nodiscard]]
-auto case_compare(const std::wstring_view str0, const std::wstring_view str1) noexcept -> std::weak_ordering;
+auto case_compare(std::wstring_view str0, std::wstring_view str1) noexcept -> std::weak_ordering;
 
 /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
  * C++20 changes path::u8string() to return a string using a new/distinct
@@ -26,10 +26,12 @@ auto case_compare(const std::wstring_view str0, const std::wstring_view str1) no
  * strings. So these functions are used to reinterpret between char and char8_t
  * string views.
  */
-inline auto char_as_u8(const std::string_view str LIFETIMEBOUND) -> std::u8string_view
+[[nodiscard]] inline
+auto char_as_u8(std::string_view const str LIFETIMEBOUND) -> std::u8string_view
 { return std::u8string_view{reinterpret_cast<const char8_t*>(str.data()), str.size()}; }
 
-inline auto u8_as_char(const std::u8string_view str LIFETIMEBOUND) -> std::string_view
+[[nodiscard]] inline
+auto u8_as_char(std::u8string_view const str LIFETIMEBOUND) -> std::string_view
 { return std::string_view{reinterpret_cast<const char*>(str.data()), str.size()}; }
 /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 

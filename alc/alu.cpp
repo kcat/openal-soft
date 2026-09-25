@@ -743,17 +743,15 @@ constexpr auto CalcRotatorSize(std::size_t const l) noexcept -> std::size_t
     return 0;
 }
 
-struct RotatorCoeffs {
-    struct CoeffValues {
-        float u, v, w;
-    };
-    std::array<CoeffValues, CalcRotatorSize(MaxAmbiOrder)> mCoeffs{};
+struct RotatorCoeffValues {
+    float u, v, w;
+};
 
+struct RotatorCoeffs : std::array<RotatorCoeffValues, CalcRotatorSize(MaxAmbiOrder)> {
     constexpr
     RotatorCoeffs() noexcept
     {
-        auto coeffs = mCoeffs.begin();
-
+        auto coeffs = this->begin();
         for(auto const l : std::views::iota(2, int{MaxAmbiOrder+1}))
         {
             for(auto const n : std::views::iota(-l, l+1))
@@ -872,7 +870,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order) noexcept NONBLOCKING
     if(order < 2) return;
 
     // compute rotation matrix of each subsequent band recursively
-    auto coeffs = RotatorCoeffArray.mCoeffs.cbegin();
+    auto coeffs = RotatorCoeffArray.cbegin();
     auto base_idx = 4_uz;
     auto last_base = 1_uz;
     for(auto const l : std::views::iota(2_isize, isize{order}+1))

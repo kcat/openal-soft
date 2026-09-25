@@ -49,11 +49,13 @@ constexpr auto DefaultCaptureDeviceID = SDL_AUDIO_DEVICE_DEFAULT_RECORDING;
 DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
+import backends.exception;
 import core.device;
 import gsl;
 import logging;
 import types;
 #else
+#include "alc/backends/exception.hpp"
 #include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"

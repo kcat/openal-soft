@@ -1089,9 +1089,13 @@ list(APPEND ALC_SRCS
 )
 list(APPEND ALC_HDRS
     alc/backends/base.h
+    alc/backends/exception.hpp
     alc/backends/loopback.h
     alc/backends/null.h
 )
+if(HAVE_CXXMODULES)
+    list(APPEND CORE_MODS alc/backends/exception.cppm)
+endif()
 
 # Check PipeWire backend
 option(ALSOFT_BACKEND_PIPEWIRE "Enable PipeWire backend" ON)

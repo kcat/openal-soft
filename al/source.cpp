@@ -55,6 +55,7 @@
 
 #include "alc/backends/base.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"

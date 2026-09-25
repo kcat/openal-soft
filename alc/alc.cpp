@@ -86,6 +86,7 @@
 #include "core/cpu_caps.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
+#include "core/except.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
@@ -170,9 +171,11 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
+import backends.exception;
 import logging;
 import types;
 #else
+#include "alc/backends/exception.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformattypes.hpp"
@@ -2012,9 +2015,9 @@ auto VerifyContext(ALCcontext *context) -> gsl::not_null<ContextRef>
         return gsl::make_not_null(ContextRef{*iter});
     }
     al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
-    throw al::base_exception{al::assign_result{[&] {
-        return al::format("Invalid context handle {}", voidp{context});
-    }}};
+    throw al::base_exception{
+        al::assign_result{[&] { return al::format("Invalid context handle {}", voidp{context}); }}
+    };
 }
 
 } // namespace

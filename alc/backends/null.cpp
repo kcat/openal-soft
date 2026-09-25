@@ -31,8 +31,10 @@
 #include "core/helpers.h"
 
 #if HAVE_CXXMODULES
+import backends.exception;
 import core.device;
 #else
+#include "alc/backends/exception.hpp"
 #include "core/device.h"
 #endif
 

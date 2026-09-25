@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/converter.h"
@@ -52,10 +53,12 @@
 #endif
 
 #if HAVE_CXXMODULES
+import backends.exception;
 import core.device;
 import gsl;
 import logging;
 #else
+#include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

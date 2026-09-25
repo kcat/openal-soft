@@ -36,9 +36,11 @@ std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 DIAGNOSTIC_POP
 
 #if HAVE_CXXMODULES
+import backends.exception;
 import core.device;
 import gsl;
 #else
+#include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "gsl/gsl"
 #endif

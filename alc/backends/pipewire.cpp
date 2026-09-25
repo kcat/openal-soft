@@ -134,12 +134,14 @@ constexpr auto PwIdAny = PW_ID_ANY;
 DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
+import backends.exception;
 import core.device;
 import gsl;
 import logging;
 import types;
 import zstring_view;
 #else
+#include "alc/backends/exception.hpp"
 #include "alformattypes.hpp"
 #include "alformatzsv.hpp"
 #include "core/device.h"

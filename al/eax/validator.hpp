@@ -1,12 +1,12 @@
-#ifndef EAX_UTILS_INCLUDED
-#define EAX_UTILS_INCLUDED
+#ifndef EAX_VALIDATOR_HPP
+#define EAX_VALIDATOR_HPP
 
 #include <string_view>
 
 #include "alformat.hpp"
 
 
-template<typename TException, typename TValue>
+template<typename TException, typename TValue> constexpr
 auto eax_validate_range(std::string_view const value_name, TValue const& value,
     TValue const& min_value, TValue const& max_value) -> void
 {
@@ -18,4 +18,4 @@ auto eax_validate_range(std::string_view const value_name, TValue const& value,
     throw TException{message};
 }
 
-#endif // !EAX_UTILS_INCLUDED
+#endif /* EAX_VALIDATOR_HPP */

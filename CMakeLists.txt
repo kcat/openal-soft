@@ -1020,8 +1020,12 @@ if(ALSOFT_EAX)
         al/eax/fx_slots.h
         al/eax/globals.h
         al/eax/presets.hpp
-        al/eax/utils.h
     )
+    if(HAVE_CXXMODULES)
+        list(APPEND CORE_MODS al/eax/validator.cppm)
+    else()
+        list(APPEND OPENAL_HDRS al/eax/validator.hpp)
+    endif()
 endif()
 
 # Include SIMD mixers

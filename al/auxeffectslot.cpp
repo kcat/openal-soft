@@ -42,6 +42,7 @@
 #include "alc/alu.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
+#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -59,7 +60,11 @@
 #include "eax/effect.h"
 #include "eax/exception.h"
 #include "eax/fx_slot_index.h"
-#include "eax/utils.h"
+#if HAVE_CXXMODULES
+import eax.validator;
+#else
+#include "eax/validator.hpp"
+#endif
 #endif
 
 #if HAVE_CXXMODULES

@@ -75,7 +75,11 @@
 #include "eax/call.h"
 #include "eax/exception.h"
 #include "eax/fx_slot_index.h"
-#include "eax/utils.h"
+#if HAVE_CXXMODULES
+import eax.validator;
+#else
+#include "eax/validator.hpp"
+#endif
 #endif
 
 #if HAVE_CXXMODULES

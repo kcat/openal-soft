@@ -42,7 +42,6 @@
 #include "alc/alu.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
-#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "atomic.h"
@@ -70,12 +69,14 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
-import types;
+import format;
 import gsl;
 import logging;
+import types;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
+#include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

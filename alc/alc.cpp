@@ -75,7 +75,6 @@
 #include "al/source.h"
 #include "alc/events.h"
 #include "alconfig.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "alu.h"
@@ -172,12 +171,14 @@
 import alc.context;
 import alc.device;
 import backends.exception;
+import format;
 import logging;
 import types;
 #else
 #include "alc/backends/exception.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
+#include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #endif

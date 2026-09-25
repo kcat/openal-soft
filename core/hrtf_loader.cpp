@@ -11,7 +11,6 @@
 
 #include "hrtf_loader.hpp"
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -19,9 +18,11 @@
 #include "hrtf.h"
 
 #if HAVE_CXXMODULES
+import format;
 import logging;
 import types;
 #else
+#include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "logging.h"
 #endif

@@ -18,7 +18,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/async_event.h"
 #include "core/effects/base.h"
@@ -30,10 +29,12 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import format;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

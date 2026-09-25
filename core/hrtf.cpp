@@ -22,7 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include "alformat.hpp"
 #include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
@@ -37,8 +36,10 @@
 #include "polyphase_resampler.h"
 
 #if HAVE_CXXMODULES
+import format;
 import logging;
 #else
+#include "alformat.hpp"
 #include "logging.h"
 #endif
 

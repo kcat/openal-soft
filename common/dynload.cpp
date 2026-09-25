@@ -8,9 +8,15 @@
 #ifdef _WIN32
 #include <windows.h>
 
+#include "strutils.hpp"
+
+#if HAVE_CXXMODULES
+import format;
+import gsl;
+#else
 #include "alformat.hpp"
 #include "gsl/gsl"
-#include "strutils.hpp"
+#endif
 
 auto LoadLib(al::zstring_view const name) -> al::expected<LibHandle, std::string>
 {

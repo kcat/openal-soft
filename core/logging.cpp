@@ -9,7 +9,6 @@
 #include <string>
 #include <utility>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
@@ -24,9 +23,12 @@
 #endif
 
 #if HAVE_CXXMODULES
+import format;
 import logging;
 import zstring_view;
 #else
+#include "alformat.hpp"
+#include "alformatzsv.hpp"
 #include "logging.h"
 #include "zstring_view.hpp"
 #endif

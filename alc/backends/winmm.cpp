@@ -38,7 +38,6 @@
 #include <thread>
 #include <vector>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/helpers.h"
@@ -53,10 +52,12 @@
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import format;
 import gsl;
 import logging;
 #else
 #include "alc/backends/exception.hpp"
+#include "alformat.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

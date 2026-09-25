@@ -774,6 +774,7 @@ set(COMMON_HDRS
 if(HAVE_CXXMODULES)
     list(APPEND COMMON_MODS
         alsoft-modules/gsl.cppm
+        common/alformat.cppm
         common/altypes.cppm
         common/cemath.cppm
         common/hann_window.cppm
@@ -1081,6 +1082,11 @@ else()
 endif()
 
 set(BACKENDS "")
+if(HAVE_CXXMODULES)
+    list(APPEND CORE_MODS alc/backends/exception.cppm)
+else()
+    list(APPEND ALC_HDRS alc/backends/exception.hpp)
+endif()
 list(APPEND ALC_SRCS
     alc/backends/base.cpp
     # Default backends, always available
@@ -1089,13 +1095,9 @@ list(APPEND ALC_SRCS
 )
 list(APPEND ALC_HDRS
     alc/backends/base.h
-    alc/backends/exception.hpp
     alc/backends/loopback.h
     alc/backends/null.h
 )
-if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS alc/backends/exception.cppm)
-endif()
 
 # Check PipeWire backend
 option(ALSOFT_BACKEND_PIPEWIRE "Enable PipeWire backend" ON)

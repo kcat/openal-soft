@@ -7,7 +7,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "effects.h"
 
@@ -23,10 +22,12 @@ import eax.validator;
 
 #if HAVE_CXXMODULES
 import alc.context;
+import format;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

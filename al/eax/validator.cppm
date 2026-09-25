@@ -2,9 +2,9 @@ module;
 
 #include <string_view>
 
-#include "alformat.hpp"
-
 export module eax.validator;
+
+import format;
 
 export template<typename TException, typename TValue> constexpr
 auto eax_validate_range(std::string_view const value_name, TValue const& value,

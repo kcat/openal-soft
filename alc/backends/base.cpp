@@ -6,14 +6,15 @@
 #include <atomic>
 #include <utility>
 
-#include "alformat.hpp"
 #include "core/mixparams.hpp"
 
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import format;
 #else
 #include "alc/backends/exception.hpp"
+#include "alformat.hpp"
 #include "core/device.h"
 #endif
 

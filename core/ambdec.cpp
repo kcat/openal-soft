@@ -15,12 +15,17 @@
 #include <sstream>
 #include <string>
 
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "gsl/gsl"
 
+#if HAVE_CXXMODULES
+import format;
+import gsl;
+#else
+#include "alformat.hpp"
+#include "gsl/gsl"
+#endif
 
 namespace {
 

@@ -37,7 +37,6 @@
 
 #include "al/debug.h"
 #include "alc/alconfig.h"
-#include "alformat.hpp"
 #include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
@@ -45,10 +44,12 @@
 
 #if HAVE_CXXMODULES
 import alc.context;
+import format;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
+#include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

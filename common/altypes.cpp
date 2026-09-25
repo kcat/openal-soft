@@ -1,11 +1,13 @@
 
 #include "config.h"
 
-#include "alformat.hpp"
+#include <string_view>
 
 #if HAVE_CXXMODULES
+import format;
 import types;
 #else
+#include "alformat.hpp"
 #include "altypes.hpp"
 #endif
 

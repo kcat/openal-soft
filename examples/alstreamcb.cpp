@@ -47,13 +47,12 @@
 #include "alnumeric.h"
 #include "common/alhelpers.h"
 #include "common/alhelpers.hpp"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 import openal;
 
@@ -63,6 +62,8 @@ import openal;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

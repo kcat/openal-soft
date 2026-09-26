@@ -52,8 +52,6 @@
 #include "core/helpers.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "fmt/format.h"
-#include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
@@ -136,6 +134,7 @@ DIAGNOSTIC_POP;
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import fmtlib;
 import format;
 import gsl;
 import logging;
@@ -148,6 +147,8 @@ import zstring_view;
 #include "alformatzsv.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "zstring_view.hpp"
 #endif

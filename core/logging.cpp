@@ -12,7 +12,6 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/std.h"
 #include "strutils.hpp"
 
 
@@ -23,12 +22,14 @@
 #endif
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import format;
 import logging;
 import zstring_view;
 #else
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
+#include "fmt/std.h"
 #include "logging.h"
 #include "zstring_view.hpp"
 #endif

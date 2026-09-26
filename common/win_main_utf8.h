@@ -69,13 +69,14 @@ int my_main(int, char**);
 #include <string>
 #include <string_view>
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 #else
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

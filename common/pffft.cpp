@@ -73,17 +73,18 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "fmt/format.h"
-#include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 import types;
 #else
 #include "altypes.hpp"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "gsl/gsl"
 #endif
 

@@ -11,12 +11,10 @@ module;
 #include <utility>
 #include <vector>
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-
 
 export module alsoft.router;
 
+import fmtlib;
 import openal;
 
 export {

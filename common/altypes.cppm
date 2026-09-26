@@ -2,11 +2,12 @@ module;
 
 #include "alformat.hpp"
 #include "altypes.hpp"
-#if USING_STD_FORMAT
-#include "fmt/format.h"
-#endif
 
 export module types;
+
+#if USING_STD_FORMAT
+import fmtlib;
+#endif
 
 export {
 

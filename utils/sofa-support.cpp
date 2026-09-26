@@ -34,10 +34,14 @@
 #include <utility>
 #include <vector>
 
+#include "mysofa.h"
+
+#if HAVE_CXXMODULES
+import fmtlib;
+#else
 #include "fmt/base.h"
 #include "fmt/ranges.h"
-
-#include "mysofa.h"
+#endif
 
 namespace {
 

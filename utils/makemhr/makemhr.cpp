@@ -87,16 +87,17 @@
 #include "alcomplex.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "loaddef.h"
 #include "loadsofa.h"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 #else
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

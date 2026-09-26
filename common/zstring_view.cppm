@@ -4,11 +4,12 @@ module;
 
 #include "alformat.hpp"
 #include "zstring_view.hpp"
-#if USING_STD_FORMAT
-#include "fmt/format.h"
-#endif
 
 export module zstring_view;
+
+#if USING_STD_FORMAT
+import fmtlib;
+#endif
 
 namespace al {
     template<typename T, template<typename...> typename U>

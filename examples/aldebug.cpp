@@ -38,14 +38,12 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "fmt/std.h"
 
 #include "common/alhelpers.h"
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 import openal;
 
@@ -55,6 +53,9 @@ import openal;
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "fmt/base.h"
+#include "fmt/ostream.h"
+#include "fmt/std.h"
 #include "gsl/gsl"
 #endif
 

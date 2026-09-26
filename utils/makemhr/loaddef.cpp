@@ -46,8 +46,6 @@
 #include "albit.h"
 #include "alstring.h"
 #include "filesystem.h"
-#include "fmt/base.h"
-#include "fmt/ostream.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -55,8 +53,11 @@
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
+import fmtlib;
 import gsl;
 #else
+#include "fmt/base.h"
+#include "fmt/ostream.h"
 #include "gsl/gsl"
 #endif
 

@@ -25,8 +25,6 @@
 #include "core/effectslot.h"
 #include "core/voice_change.h"
 #include "flexarray.h"
-#include "fmt/format.h"
-#include "fmt/ranges.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
 
@@ -47,6 +45,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
+import fmtlib;
 import gsl;
 import logging;
 import types;
@@ -55,6 +54,8 @@ import types;
 #include "alc/device.h"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "gsl/gsl"
 #endif
 

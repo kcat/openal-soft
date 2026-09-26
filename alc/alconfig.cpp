@@ -50,8 +50,6 @@
 #include "alstring.h"
 #include "core/helpers.h"
 #include "filesystem.h"
-#include "fmt/ranges.h"
-#include "gsl/gsl"
 #include "strutils.hpp"
 
 #if ALSOFT_UWP
@@ -63,9 +61,14 @@ using namespace winrt;
 #endif
 
 #if HAVE_CXXMODULES
+import fmtlib;
+import gsl;
 import logging;
 #else
 #include "core/logging.h"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
+#include "gsl/gsl"
 #endif
 
 namespace {

@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <string_view>
 
 #include "AL/al.h"

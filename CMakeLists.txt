@@ -1773,7 +1773,7 @@ else()
                 "ALC_API=${EXPORT_DECL}" "AL_API=${EXPORT_DECL}" ${CPP_DEFS})
             target_compile_options(alsoft.router-modules PRIVATE ${C_FLAGS})
             target_link_libraries(alsoft.router-modules PRIVATE Threads::Threads alsoft::fmt
-                PUBLIC alsoft::buildapi-modules)
+                PUBLIC alsoft::buildapi-modules alsoft::common)
             set_target_properties(alsoft.router-modules PROPERTIES ${ALSOFT_STD_VERSION_PROPS}
                 POSITION_INDEPENDENT_CODE TRUE)
             set(ROUTER_MODULES_TARGET alsoft.router-modules)

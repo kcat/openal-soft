@@ -148,7 +148,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<DistortionProps>(*props_));
-    auto const device = al::get_not_null(context->mDevice);
+    auto const &device = context->mDevice;
 
     /* Store waveshaper edge settings. */
     const auto edge = std::min(std::sin(std::numbers::pi_v<float>*0.5f * props.Edge), 0.99f);
@@ -160,7 +160,7 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
     /* Divide normalized frequency by the amount of oversampling done during
      * processing.
      */
-    auto frequency = static_cast<float>(device->mSampleRate);
+    auto const frequency = static_cast<float>(device.mSampleRate);
     mChans[0].mLowpass.setParamsFromBandwidth(BiquadType::LowPass, cutoff/frequency*0.25f, 1.0f,
         bandwidth);
 

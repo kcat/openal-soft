@@ -1439,8 +1439,8 @@ void aluInitRenderer(al::Device *const device, int const hrtf_id,
 
 void aluInitEffectPanning(EffectSlotBase *slot, al::Context *context)
 {
-    auto const device = al::get_not_null(context->mDevice);
-    auto const count = AmbiChannelsFromOrder(device->mAmbiOrder);
+    auto &device = context->mDevice;
+    auto const count = AmbiChannelsFromOrder(device.mAmbiOrder);
 
     slot->mWetBuffer.resize(count);
 

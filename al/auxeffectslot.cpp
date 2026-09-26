@@ -223,7 +223,7 @@ void AddActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> const 
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
-    std::ignore = context->mDevice->waitForMix();
+    std::ignore = context->mDevice.waitForMix();
 }
 
 void RemoveActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> const auxslots,
@@ -247,7 +247,7 @@ void RemoveActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> con
 
     auto oldarray = context->mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
-    std::ignore = context->mDevice->waitForMix();
+    std::ignore = context->mDevice.waitForMix();
 }
 
 
@@ -822,7 +822,7 @@ DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSlotf, ALuint,effectslot, ALenum,par
 DECL_FUNC(AL_API, void, alGetAuxiliaryEffectSlotfv, ALuint,effectslot, ALenum,param, ALfloat*,values)
 
 
-al::EffectSlot::EffectSlot(gsl::not_null<al::Context*> context) : mSlot{context->getEffectSlot()}
+al::EffectSlot::EffectSlot(gsl::not_null<al::Context*> context) : mSlot{&context->getEffectSlot()}
 #if ALSOFT_EAX
     , mEaxALContext{context}
 #endif

@@ -113,8 +113,8 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<ModulatorProps>(*props_));
-    auto const device = al::get_not_null(context->mDevice);
-    auto const samplerate = static_cast<float>(device->mSampleRate);
+    auto const &device = context->mDevice;
+    auto const samplerate = static_cast<float>(device.mSampleRate);
 
     /* The effective frequency will be adjusted to have a whole number of
      * samples per cycle (at 48khz, that allows 8000, 6857.14, 6000, 5333.33,

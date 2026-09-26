@@ -116,8 +116,8 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<AutowahProps>(*props_));
-    auto const device = al::get_not_null(context->mDevice);
-    auto const frequency = static_cast<float>(device->mSampleRate);
+    auto const &device = context->mDevice;
+    auto const frequency = static_cast<float>(device.mSampleRate);
 
     const auto ReleaseTime = std::clamp(props.ReleaseTime, 0.001f, 1.0f);
 

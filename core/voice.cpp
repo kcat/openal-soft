@@ -990,7 +990,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
 {
     ASSUME(samplesToDo > 0);
 
-    auto &device = *context->mDevice;
+    auto &device = context->mDevice;
     auto const numSends = device.NumAuxSends;
 
     /* Get voice info */

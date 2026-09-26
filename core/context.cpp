@@ -12,9 +12,9 @@
 #include "effectslot.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
-#include "zudl.hpp"
 #include "voice.h"
 #include "voice_change.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;
@@ -29,7 +29,7 @@ import logging;
 static_assert(std::atomic<ContextBase::AsyncEventBitset>::is_always_lock_free, "atomic<bitset> isn't lock-free");
 #endif
 
-ContextBase::ContextBase(gsl::not_null<DeviceBase*> device) : mDevice{device}
+ContextBase::ContextBase(DeviceBase &device) : mDevice{device}
 { Expects(mEnabledEvts.is_lock_free()); }
 
 ContextBase::~ContextBase()
@@ -112,7 +112,7 @@ void ContextBase::allocVoices(size_t addcount)
             [](Voice &voice) noexcept -> Voice* { return std::addressof(voice); }).out;
 
     if(auto oldvoices = mVoices.exchange(std::move(newarray), std::memory_order_acq_rel))
-        std::ignore = mDevice->waitForMix();
+        std::ignore = mDevice.waitForMix();
 }
 
 
@@ -136,14 +136,14 @@ void ContextBase::allocEffectSlotProps()
         std::memory_order_acq_rel, std::memory_order_acquire) == false);
 }
 
-auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlotBase*>
+auto ContextBase::getEffectSlot() -> EffectSlotBase&
 {
     for(auto &clusterptr : mEffectSlotClusters)
     {
         const auto cluster = std::span{*clusterptr};
         if(const auto iter = std::ranges::find_if_not(cluster, &EffectSlotBase::InUse);
             iter != cluster.end())
-            return gsl::make_not_null(std::to_address(iter));
+            return *iter;
     }
 
     auto clusterptr = std::make_unique<EffectSlotCluster::element_type>();
@@ -153,7 +153,7 @@ auto ContextBase::getEffectSlot() -> gsl::not_null<EffectSlotBase*>
     TRACE("Increasing allocated effect slots to {}", totalcount);
 
     mEffectSlotClusters.emplace_back(std::move(clusterptr));
-    return gsl::make_not_null(mEffectSlotClusters.back()->data());
+    return mEffectSlotClusters.back()->front();
 }
 
 

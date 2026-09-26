@@ -124,8 +124,8 @@ void EqualizerState::update(const ContextBase *context, const EffectSlotBase *sl
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<EqualizerProps>(*props_));
-    auto const device = al::get_not_null(context->mDevice);
-    auto const frequency = static_cast<float>(device->mSampleRate);
+    auto const &device = context->mDevice;
+    auto const frequency = static_cast<float>(device.mSampleRate);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * and peaking filters' gain is for the centerpoint of the transition band,

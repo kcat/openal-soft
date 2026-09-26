@@ -177,9 +177,9 @@ void FshifterState::update(const ContextBase *context, const EffectSlotBase *slo
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<FshifterProps>(*props_));
-    auto const device = al::get_not_null(context->mDevice);
+    auto const &device = context->mDevice;
 
-    const auto step = props.Frequency / static_cast<float>(device->mSampleRate);
+    const auto step = props.Frequency / static_cast<float>(device.mSampleRate);
     std::ranges::fill(mChans | std::views::transform(&ProcessParams::mPhaseStep),
         fastf2u(std::min(step, 1.0f) * MixerFracOne));
 

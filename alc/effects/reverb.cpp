@@ -1231,8 +1231,8 @@ void ReverbState::update(ContextBase const *const context, EffectSlotBase const 
     EffectProps const *const props, EffectTarget const target) noexcept NONBLOCKING
 {
     auto &reverbprops = IGNORE_FUNCTION_EFFECTS(std::get<ReverbProps>(*props));
-    const auto device = al::get_not_null(context->mDevice);
-    const auto frequency = static_cast<float>(device->mSampleRate);
+    const auto &device = context->mDevice;
+    const auto frequency = static_cast<float>(device.mSampleRate);
 
     /* If the HF limit parameter is flagged, calculate an appropriate limit
      * based on the air absorption parameter.

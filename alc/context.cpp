@@ -166,7 +166,7 @@ auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device,
 
 
 Context::Context(gsl::not_null<intrusive_ptr<Device>> const &device, ContextFlagBitset const flags)
-    : ContextBase{get_not_null(device)}, mALDevice{device}, mContextFlags{flags}
+    : ContextBase{*device}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
     , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
 {
@@ -204,7 +204,7 @@ Context::~Context()
 
 void Context::init()
 {
-    if(sDefaultEffect.mType != AL_EFFECT_NULL && mDevice->Type == DeviceType::Playback)
+    if(sDefaultEffect.mType != AL_EFFECT_NULL && mDevice.Type == DeviceType::Playback)
     {
         mDefaultSlot = std::make_unique<EffectSlot>(gsl::make_not_null(this));
         aluInitEffectPanning(mDefaultSlot->mSlot, this);
@@ -680,16 +680,16 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
 {
 #define EAX_PREFIX "[EAX_DETECT_SPEAKER_CONFIG]"
 
-    switch(mDevice->FmtChans)
+    switch(mDevice.FmtChans)
     {
     case DevFmtMono: return SPEAKERS_2;
     case DevFmtStereo:
         /* Pretend 7.1 if using UHJ output, since they both provide full
          * horizontal surround.
          */
-        if(std::holds_alternative<UhjPostProcess>(mDevice->mPostProcess))
+        if(std::holds_alternative<UhjPostProcess>(mDevice.mPostProcess))
             return SPEAKERS_7;
-        if(mDevice->mFlags.test(DeviceFlag::DirectEar))
+        if(mDevice.mFlags.test(DeviceFlag::DirectEar))
             return HEADPHONES;
         return SPEAKERS_2;
     case DevFmtQuad: return SPEAKERS_4;
@@ -712,7 +712,7 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
     case DevFmtAmbi3D: return SPEAKERS_7;
     }
     ERR(EAX_PREFIX "Unexpected device channel format {:#x}.",
-        unsigned{al::to_underlying(mDevice->FmtChans)});
+        unsigned{al::to_underlying(mDevice.FmtChans)});
     return HEADPHONES;
 
 #undef EAX_PREFIX

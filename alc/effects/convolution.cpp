@@ -491,8 +491,8 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
     const float gain{slot->Gain};
     if(IsAmbisonic(mChannels))
     {
-        auto const device = al::get_not_null(context->mDevice);
-        if(mChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device->mPostProcess))
+        auto const &device = context->mDevice;
+        if(mChannels == FmtUHJ2 && !std::holds_alternative<UhjPostProcess>(device.mPostProcess))
         {
             mMix = &ConvolutionState::UpsampleMix;
             mChans[0].mHfScale = 1.0f;
@@ -502,11 +502,11 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
             mChans[2].mHfScale = 1.0f;
             mChans[2].mLfScale = DecoderBase::sXYLFScale;
         }
-        else if(device->mAmbiOrder > mAmbiOrder)
+        else if(device.mAmbiOrder > mAmbiOrder)
         {
             mMix = &ConvolutionState::UpsampleMix;
-            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device->mAmbiOrder,
-                device->m2DMixing);
+            const auto scales = AmbiScale::GetHFOrderScales(mAmbiOrder, device.mAmbiOrder,
+                device.m2DMixing);
             mChans[0].mHfScale = scales[0];
             mChans[0].mLfScale = 1.0f;
             for(size_t i{1};i < mChans.size();++i)
@@ -551,7 +551,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
     }
     else
     {
-        auto const device = al::get_not_null(context->mDevice);
+        auto const &device = context->mDevice;
         auto chanmap = std::span<const ChanPosMap>{};
         switch(mChannels)
         {
@@ -572,7 +572,7 @@ void ConvolutionState::update(const ContextBase *context, const EffectSlotBase *
         }
 
         mOutTarget = target.Main->Buffer;
-        if(device->mRenderMode == RenderMode::Pairwise)
+        if(device.mRenderMode == RenderMode::Pairwise)
         {
             /* Scales the azimuth of the given vector by 3 if it's in front.
              * Effectively scales +/-30 degrees to +/-90 degrees, leaving > +90

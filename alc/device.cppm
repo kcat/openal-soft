@@ -7,7 +7,7 @@ export module alc.device;
 export import core.device;
 
 export {
-#if HAVE_CXXMODULES
+#if ALSOFT_EAX
     using ::eax_x_ram_max_size;
 #endif
     using ::ALCdevice;

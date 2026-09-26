@@ -42,7 +42,6 @@
 #include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "atomic.h"
-#include "core/context.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"

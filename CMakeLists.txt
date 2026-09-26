@@ -868,6 +868,7 @@ set(CORE_HDRS
 if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
         core/bsinc_tables.cppm
+        core/context.cppm
         core/cubic_tables.cppm
         core/device.cppm
         core/logging.cppm)

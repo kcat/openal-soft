@@ -28,7 +28,6 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/buffer_storage.h"
-#include "core/context.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/filters/splitter.h"
@@ -43,9 +42,11 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import core.context;
 import core.device;
 import gsl;
 #else
+#include "core/context.h"
 #include "core/device.h"
 #include "gsl/gsl"
 #endif

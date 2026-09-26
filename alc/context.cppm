@@ -4,6 +4,8 @@ module;
 
 export module alc.context;
 
+export import core.context;
+
 export {
 
 using ::ContextFlags;

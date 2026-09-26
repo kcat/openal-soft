@@ -51,7 +51,6 @@
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
 #include "core/buffer_storage.h"
-#include "core/context.h"
 #include "core/cpu_caps.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
@@ -80,6 +79,7 @@
 #if HAVE_CXXMODULES
 import bsinc_tables;
 import cemath;
+import core.context;
 import core.device;
 import cubic_tables;
 import types;
@@ -87,6 +87,7 @@ import types;
 #include "altypes.hpp"
 #include "cemath.hpp"
 #include "core/bsinc_tables.hpp"
+#include "core/context.h"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
 #endif

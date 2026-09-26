@@ -46,7 +46,6 @@
 #include "alnumeric.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
-#include "core/context.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "core/mixer.h"
@@ -54,8 +53,10 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import core.context;
 import core.device;
 #else
+#include "core/context.h"
 #include "core/device.h"
 #endif
 

@@ -47,7 +47,6 @@
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
-#include "core/context.h"
 #include "core/effectslot.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"

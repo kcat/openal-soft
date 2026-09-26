@@ -12,6 +12,7 @@
 
 #include "alnumeric.h"
 #include "effects.h"
+#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -30,10 +31,8 @@ import eax.validator;
 import alc.context;
 import logging;
 import gsl;
-import types;
 #else
 #include "alc/context.hpp"
-#include "altypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

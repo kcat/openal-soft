@@ -44,6 +44,7 @@
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vector.h"
+#include "zudl.hpp"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003

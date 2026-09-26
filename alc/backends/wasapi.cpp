@@ -72,6 +72,7 @@
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!

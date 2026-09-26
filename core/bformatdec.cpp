@@ -13,6 +13,7 @@
 #include "filters/splitter.h"
 #include "mixer.h"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 
 namespace {

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
 #include <exception>
 #include <memory>
@@ -357,7 +358,7 @@ auto probe_devices(snd_pcm_stream_t stream) -> std::vector<DevMap>
                 ERR("snd_ctl_pcm_next_device failed");
             if(dev < 0) break;
 
-            snd_pcm_info_set_device(pcminfo.get(), gsl::narrow_cast<unsigned>(dev));
+            snd_pcm_info_set_device(pcminfo.get(), gsl::narrow<unsigned>(dev));
             snd_pcm_info_set_subdevice(pcminfo.get(), 0);
             snd_pcm_info_set_stream(pcminfo.get(), stream);
             err = snd_ctl_pcm_info(handle.get(), pcminfo.get());
@@ -682,9 +683,9 @@ auto AlsaPlayback::reset() -> bool
     }
 
     auto allowmmap = GetConfigValueBool(mDevice->mDeviceName, "alsa"sv, "mmap"sv, true);
-    auto periodLen = gsl::narrow_cast<unsigned>(mDevice->mUpdateSize * u64::value_t{1000000}
+    auto periodLen = gsl::narrow<unsigned>(mDevice->mUpdateSize * std::uint64_t{1000000}
         / mDevice->mSampleRate);
-    auto bufferLen = gsl::narrow_cast<unsigned>(mDevice->mBufferSize * u64::value_t{1000000}
+    auto bufferLen = gsl::narrow<unsigned>(mDevice->mBufferSize * std::uint64_t{1000000}
         / mDevice->mSampleRate);
     auto rate = mDevice->mSampleRate;
 

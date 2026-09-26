@@ -12,6 +12,7 @@
 #include "altypes.hpp"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
+#include "zudl.hpp"
 
 struct HrtfChannelState;
 struct HrtfFilter;

@@ -40,6 +40,7 @@
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "intrusive_ptr.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

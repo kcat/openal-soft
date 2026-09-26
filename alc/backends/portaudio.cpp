@@ -31,6 +31,7 @@
 #include "dlopennote.h"
 #include "dynload.h"
 #include "ringbuffer.h"
+#include "zudl.hpp"
 
 #include <portaudio.h>
 

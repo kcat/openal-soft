@@ -106,6 +106,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #include "backends/base.h"
 #include "backends/null.h"

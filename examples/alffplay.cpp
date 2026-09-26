@@ -37,6 +37,7 @@
 #include "fmt/ostream.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
+#include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wconversion\"")
@@ -69,7 +70,6 @@ struct SwsContext;
 #if HAVE_CXXMODULES
 import gsl;
 import openal;
-import types;
 
 /* AL_APIENTRY is needed, but not exported from the module. */
 #ifdef _WIN32
@@ -84,7 +84,6 @@ import types;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

@@ -1049,16 +1049,6 @@ auto operator ""_isize(unsigned long long const n) noexcept NONBLOCKING
 auto operator ""_usize(unsigned long long const n) noexcept NONBLOCKING
 { return IGNORE_FUNCTION_EFFECTS(usize::from(n)); }
 
-[[nodiscard]] consteval
-auto operator ""_z(unsigned long long const n) noexcept NONBLOCKING
-{ return IGNORE_FUNCTION_EFFECTS(al::convert_to<isize::value_t>(n)); }
-[[nodiscard]] consteval
-auto operator ""_uz(unsigned long long const n) noexcept NONBLOCKING
-{ return IGNORE_FUNCTION_EFFECTS(al::convert_to<std::size_t>(n)); }
-[[nodiscard]] consteval
-auto operator ""_zu(unsigned long long const n) noexcept NONBLOCKING
-{ return IGNORE_FUNCTION_EFFECTS(al::convert_to<std::size_t>(n)); }
-
 
 namespace std {
 

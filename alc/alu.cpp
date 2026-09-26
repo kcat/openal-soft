@@ -75,13 +75,16 @@
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vecmat.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import bsinc_tables;
 import cemath;
 import core.device;
 import cubic_tables;
+import types;
 #else
+#include "altypes.hpp"
 #include "cemath.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/cubic_tables.hpp"

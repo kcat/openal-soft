@@ -85,6 +85,7 @@
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/std.h"
+#include "zudl.hpp"
 
 #include "win_main_utf8.h"
 

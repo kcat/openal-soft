@@ -13,6 +13,7 @@
 #include "bsinc_defs.h"
 #include "gsl/gsl"
 #include "resampler_limits.hpp"
+#include "zudl.hpp"
 
 
 namespace ce {

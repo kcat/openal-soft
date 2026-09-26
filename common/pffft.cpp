@@ -77,6 +77,7 @@
 #include "fmt/ranges.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;

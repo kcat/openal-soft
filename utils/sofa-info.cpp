@@ -32,6 +32,7 @@
 
 #include "fmt/base.h"
 #include "sofa-support.h"
+#include "zudl.hpp"
 
 #include "mysofa.h"
 
@@ -39,9 +40,7 @@
 
 #if HAVE_CXXMODULES
 import gsl;
-import types;
 #else
-#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

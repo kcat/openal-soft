@@ -47,6 +47,7 @@
 #include "dynload.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #include <pulse/pulseaudio.h>
 

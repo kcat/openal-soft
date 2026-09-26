@@ -59,6 +59,7 @@
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;

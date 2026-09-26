@@ -9,6 +9,8 @@
 #include <numbers>
 #include <ranges>
 
+#include "zudl.hpp"
+
 #if HAVE_CXXMODULES
 import gsl;
 import types;

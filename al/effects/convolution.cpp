@@ -11,13 +11,12 @@
 #include "alc/inprogext.h"
 #include "alnumeric.h"
 #include "effects.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;
-import types;
 #else
 #include "alc/context.hpp"
-#include "altypes.hpp"
 #endif
 
 

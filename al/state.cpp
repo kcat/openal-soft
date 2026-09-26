@@ -49,6 +49,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "eax/alapi.hpp"

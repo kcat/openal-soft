@@ -18,12 +18,12 @@
 #include "alstring.h"
 #include "opthelpers.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alsoft.router;
 import gsl;
 import openal;
-import types;
 
 #define ALC_APIENTRY __cdecl
 
@@ -33,7 +33,6 @@ import types;
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "altypes.hpp"
 #include "gsl/gsl"
 #include "router.h"
 #endif

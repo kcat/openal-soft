@@ -53,6 +53,7 @@
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include <unordered_set>

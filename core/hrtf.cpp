@@ -18,6 +18,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -34,6 +35,7 @@
 #include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
 #include "polyphase_resampler.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import format;
@@ -489,7 +491,7 @@ try {
 
     auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](LoadedHrtf const &hrtf, std::string const &filename) -> bool
+        [devrate](LoadedHrtf const &hrtf, std::string_view const filename) -> bool
     {
         return hrtf.mSampleRate < devrate
             || (hrtf.mSampleRate == devrate && hrtf.mFilename < filename);

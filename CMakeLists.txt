@@ -760,6 +760,7 @@ set(COMMON_HDRS
     common/vecmat.h
     common/vector.h
     common/zstring_view.hpp
+    common/zudl.hpp
     gsl/include/gsl/algorithm
     gsl/include/gsl/assert
     gsl/include/gsl/byte

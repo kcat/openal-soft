@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "alcomplex.h"
-#include "altypes.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
 #include "vector.h"
+#include "zudl.hpp"
 
 /* Convolution is implemented using a segmented overlap-add method. The filter
  * response is broken up into multiple segments of 128 samples, and each

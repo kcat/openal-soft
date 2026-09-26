@@ -36,6 +36,7 @@
 #include "resampler_limits.hpp"
 #include "ringbuffer.h"
 #include "uhjfilter.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

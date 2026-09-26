@@ -40,6 +40,7 @@
 #include "polyphase_resampler.h"
 #include "vecmat.h"
 #include "vector.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

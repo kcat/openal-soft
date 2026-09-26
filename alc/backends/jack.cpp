@@ -39,6 +39,7 @@
 #include "dynload.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
+#include "zudl.hpp"
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>

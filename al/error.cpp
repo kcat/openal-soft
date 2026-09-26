@@ -41,6 +41,7 @@
 #include "core/except.h"
 #include "direct_defs.h"
 #include "strutils.hpp"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;

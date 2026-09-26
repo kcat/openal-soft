@@ -16,12 +16,12 @@ module;
 #include <span>
 
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 export module phase_shifter;
 
 import cemath;
 import gsl;
-import types;
 
 
 /* Implements a wide-band +90 degree phase-shift. Note that this should be

@@ -6,6 +6,7 @@
 
 #include "altypes.hpp"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 
 /* The maximum number of Ambisonics channels. For a given order (o), the size

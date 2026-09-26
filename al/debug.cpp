@@ -31,6 +31,7 @@
 #include "filter.h"
 #include "opthelpers.h"
 #include "source.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;
@@ -324,13 +325,13 @@ try {
         /* C++23 has std::views::cartesian(srcIdxs, typeIdxs, svrIdxs) for a
          * range that gives all value combinations of the given ranges.
          */
-        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](u8::value_t const srcidx)
+        std::ranges::for_each(srcIdxs, [enable,typeIdxs,svrIdxs,&debug](u8 const srcidx)
         {
             const auto srcfilt = 1_u32<<srcidx;
-            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](u8::value_t const typeidx)
+            std::ranges::for_each(typeIdxs, [enable,srcfilt,svrIdxs,&debug](u8 const typeidx)
             {
                 const auto srctype = srcfilt | (1_u32<<typeidx);
-                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](u8::value_t const svridx)
+                std::ranges::for_each(svrIdxs, [enable,srctype,&debug](u8 const svridx)
                 {
                     const auto filter = srctype | (1_u32<<svridx);
                     auto iter = std::ranges::lower_bound(debug.mFilters, filter);
@@ -442,7 +443,7 @@ try {
             std::ignore = std::ranges::find_if(context->mDebugLog | std::views::take(count),
                 [logSpan,&counter,&todo](const DebugLogEntry &entry) noexcept -> bool
             {
-                const auto tocopy = size_t{entry.mMessage.size() + 1};
+                const auto tocopy = std::size_t{entry.mMessage.size() + 1};
                 if(tocopy > logSpan.size()-counter)
                     return true;
                 counter += tocopy;

@@ -18,16 +18,17 @@
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "flexarray.h"
-#include "gsl/gsl"
 
 #if HAVE_CXXMODULES
 import alc.device;
+import gsl;
 import logging;
 import types;
 #else
 #include "alc/device.h"
 #include "alformattypes.hpp"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

@@ -16,6 +16,7 @@
 #include "alnumeric.h"
 #include "fpu_ctrl.h"
 #include "gsl/gsl"
+#include "zudl.hpp"
 
 
 namespace {

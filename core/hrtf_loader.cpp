@@ -16,6 +16,7 @@
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "hrtf.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import format;

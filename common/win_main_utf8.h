@@ -71,12 +71,11 @@ int my_main(int, char**);
 
 #include "fmt/base.h"
 #include "fmt/ostream.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;
-import types;
 #else
-#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 

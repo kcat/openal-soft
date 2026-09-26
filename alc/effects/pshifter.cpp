@@ -42,6 +42,7 @@
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 #include "pffft.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

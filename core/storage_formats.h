@@ -1,12 +1,11 @@
 #ifndef CORE_STORAGE_FORMATS_H
 #define CORE_STORAGE_FORMATS_H
 
+#include <cstdint>
 #include <string_view>
 
-#include "altypes.hpp"
-
 /* Storable formats */
-enum FmtType : u8::value_t {
+enum FmtType : std::uint8_t {
     FmtUByte,
     FmtShort,
     FmtInt,
@@ -17,7 +16,7 @@ enum FmtType : u8::value_t {
     FmtIMA4,
     FmtMSADPCM,
 };
-enum FmtChannels : u8::value_t {
+enum FmtChannels : std::uint8_t {
     FmtMono,
     FmtStereo,
     FmtRear,
@@ -33,11 +32,11 @@ enum FmtChannels : u8::value_t {
     FmtSuperStereo, /* Stereo processed with Super Stereo. */
 };
 
-enum class AmbiLayout : u8::value_t {
+enum class AmbiLayout : std::uint8_t {
     FuMa,
     ACN,
 };
-enum class AmbiScaling : u8::value_t {
+enum class AmbiScaling : std::uint8_t {
     FuMa,
     SN3D,
     N3D,

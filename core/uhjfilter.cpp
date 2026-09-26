@@ -14,6 +14,7 @@
 #include "allpass_conv.hpp"
 #include "gsl/gsl"
 #include "pffft.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import phase_shifter;

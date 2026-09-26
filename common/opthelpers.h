@@ -4,7 +4,7 @@
 #include <memory>
 #include <type_traits>
 
-#include "gsl/gsl"
+#include "gsl/pointers"
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin

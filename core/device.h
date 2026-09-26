@@ -27,6 +27,7 @@
 #include "mixparams.hpp"
 #include "resampler_limits.hpp"
 #include "vector.h"
+#include "zudl.hpp"
 
 class BFormatDec;
 namespace Bs2b {

@@ -40,6 +40,7 @@
 #include "alstring.h"
 #include "core/converter.h"
 #include "ringbuffer.h"
+#include "zudl.hpp"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>

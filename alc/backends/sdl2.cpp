@@ -29,6 +29,7 @@
 
 #include "alnumeric.h"
 #include "pragmadefs.h"
+#include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")

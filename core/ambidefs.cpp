@@ -10,7 +10,13 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "zudl.hpp"
+
+#if HAVE_CXXMODULES
+import gsl;
+#else
 #include "gsl/gsl"
+#endif
 
 namespace {
 

@@ -1,11 +1,10 @@
 #ifndef CORE_DEVFORMAT_H
 #define CORE_DEVFORMAT_H
 
-#include <cstdint>
-#include <cstddef>
 #include <string_view>
 
 #include "altypes.hpp"
+#include "zudl.hpp"
 
 enum Channel : u8::value_t {
     FrontLeft = 0,

@@ -1,17 +1,17 @@
 #ifndef CORE_EVENT_H
 #define CORE_EVENT_H
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <variant>
 
-#include "altypes.hpp"
 #include "opthelpers.h"
 
 struct EffectState;
 
 
-enum class AsyncEnableBits : u8::value_t {
+enum class AsyncEnableBits : std::uint8_t {
     SourceState,
     BufferCompleted,
     Disconnected,
@@ -20,14 +20,14 @@ enum class AsyncEnableBits : u8::value_t {
 };
 
 
-enum class AsyncSrcState : u8::value_t {
+enum class AsyncSrcState : std::uint8_t {
     Reset,
     Stop,
     Play,
     Pause
 };
 
-using AsyncKillThread = std::monostate;
+struct AsyncKillThread { };
 
 struct AsyncSourceStateEvent {
     unsigned mId;
@@ -48,10 +48,10 @@ struct AsyncEffectReleaseEvent {
 };
 
 using AsyncEvent = std::variant<AsyncKillThread,
-        AsyncSourceStateEvent,
-        AsyncBufferCompleteEvent,
-        AsyncEffectReleaseEvent,
-        AsyncDisconnectEvent>;
+    AsyncSourceStateEvent,
+    AsyncBufferCompleteEvent,
+    AsyncEffectReleaseEvent,
+    AsyncDisconnectEvent>;
 
 template<typename T, typename ...Args>
 auto &InitAsyncEvent(AsyncEvent &event, Args&& ...args) noexcept NONBLOCKING

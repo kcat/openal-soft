@@ -44,6 +44,7 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vector.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

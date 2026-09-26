@@ -4,7 +4,6 @@
 #include <atomic>
 #include <memory>
 
-#include "altypes.hpp"
 #include "gsl/gsl"
 
 #ifdef __APPLE__
@@ -16,6 +15,7 @@
  * need to use custom methods.
  */
 
+#include <cstdint>
 #include <mutex>
 #include <condition_variable>
 
@@ -107,7 +107,7 @@ auto atomic_wait(std::atomic<T> &aval, T const value,
 
 #else
 
-        static_assert(dependent_false<T>, "No atomic wait function available");
+        static_assert(requires { aval.wait(value, order); }, "No atomic wait function available");
 #endif
     }
 }
@@ -146,7 +146,7 @@ auto atomic_notify_one(std::atomic<T> &aval) noexcept -> void
 
 #else
 
-        static_assert(dependent_false<T>, "No atomic notify_one function available");
+        static_assert(requires { aval.notify_one(); }, "No atomic notify_one function available");
 #endif
     }
 }
@@ -178,7 +178,7 @@ auto atomic_notify_all(std::atomic<T> &aval) noexcept -> void
 
 #else
 
-        static_assert(dependent_false<T>, "No atomic notify_all function available");
+        static_assert(requires { aval.notify_all(); }, "No atomic notify_all function available");
 #endif
     }
 }

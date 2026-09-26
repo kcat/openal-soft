@@ -49,6 +49,7 @@
 #include "fmt/std.h"
 #include "opthelpers.h"
 #include "vector.h"
+#include "zudl.hpp"
 
 #include "sndfile.h"
 

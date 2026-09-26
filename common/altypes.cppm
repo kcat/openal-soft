@@ -22,6 +22,8 @@ export {
     using ::f64;
     using ::isize;
     using ::usize;
+    using ::sys_int;
+    using ::sys_uint;
 
     using ::operator""_i8;
     using ::operator""_u8;
@@ -35,9 +37,6 @@ export {
     using ::operator""_f64;
     using ::operator""_isize;
     using ::operator""_usize;
-    using ::operator""_z;
-    using ::operator""_uz;
-    using ::operator""_zu;
 
     inline namespace altypeops {
         using altypeops::operator++;

@@ -18,6 +18,7 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "filesystem.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import format;

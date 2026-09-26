@@ -41,6 +41,7 @@
 #include "althrd_setname.h"
 #include "core/ambidefs.h"
 #include "filesystem.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import backends.exception;

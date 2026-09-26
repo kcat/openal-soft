@@ -2,18 +2,18 @@
 #define CORE_UHJFILTER_H
 
 #include <array>
-#include <cstddef>
+#include <cstdint>
 #include <span>
 #include <string_view>
 
 #include "allpass_iir.hpp"
-#include "altypes.hpp"
 #include "bufferline.h"
 #include "decoderbase.hpp"
 #include "encoderbase.hpp"
+#include "zudl.hpp"
 
 
-enum class UhjQualityType : u8::value_t {
+enum class UhjQualityType : std::uint8_t {
     IIR = 0,
     FIR256,
     FIR512,

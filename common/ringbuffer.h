@@ -18,6 +18,7 @@
 #include "flexarray.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 
 /* NOTE: This lockless ringbuffer implementation is copied from JACK, extended

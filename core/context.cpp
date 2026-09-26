@@ -12,6 +12,7 @@
 #include "effectslot.h"
 #include "gsl/gsl"
 #include "ringbuffer.h"
+#include "zudl.hpp"
 #include "voice.h"
 #include "voice_change.h"
 

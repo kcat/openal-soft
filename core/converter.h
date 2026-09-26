@@ -6,7 +6,6 @@
 #include <chrono>
 #include <memory>
 
-#include "almalloc.h"
 #include "devformat.h"
 #include "flexarray.h"
 #include "mixer/defs.h"

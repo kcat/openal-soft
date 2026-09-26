@@ -10,7 +10,6 @@
 #include <string_view>
 #include <vector>
 
-#include "almalloc.h"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "flexarray.h"
@@ -52,9 +51,9 @@ struct HrtfStore {
     auto operator new[](std::size_t) -> void* = delete;
     void operator delete[](void*) noexcept = delete;
 
-    void operator delete(gsl::owner<void*> block, void*) noexcept
+    void operator delete(gsl::owner<void*> const block, void*) noexcept
     { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
-    void operator delete(gsl::owner<void*> block) noexcept
+    void operator delete(gsl::owner<void*> const block) noexcept
     { ::operator delete[](block, std::align_val_t{alignof(HrtfStore)}); }
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;

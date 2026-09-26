@@ -13,8 +13,6 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "almalloc.h"
-#include "alnumeric.h"
 #include "flexarray.h"
 #include "gsl/gsl"
 #include "opthelpers.h"
@@ -250,7 +248,7 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(size_t) > sizeof(std::uint32_t))
+            if constexpr(sizeof(std::size_t) > sizeof(std::uint32_t))
                 power_of_two |= (power_of_two>>16) >> 16;
         }
         ++power_of_two;
@@ -544,7 +542,7 @@ public:
             power_of_two |= power_of_two>>4;
             power_of_two |= power_of_two>>8;
             power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(size_t) > sizeof(std::uint32_t))
+            if constexpr(sizeof(std::size_t) > sizeof(std::uint32_t))
                 power_of_two |= (power_of_two>>16) >> 16;
         }
         ++power_of_two;

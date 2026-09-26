@@ -47,6 +47,7 @@
 
 #include "alc/alconfig.h"
 #include "alc/backends/base.h"
+#include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
 #include "dlopennote.h"

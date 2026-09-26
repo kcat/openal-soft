@@ -17,32 +17,6 @@
     auto operator delete(void*) noexcept -> void = delete;                    \
     auto operator delete[](void*) noexcept -> void = delete;
 
-
-enum FamCount : size_t { };
-
-#define DEF_FAM_NEWDEL(T, FamMem)                                             \
-    static constexpr auto Sizeof(std::size_t count) noexcept -> std::size_t   \
-    {                                                                         \
-        static_assert(&Sizeof == &T::Sizeof,                                  \
-            "Incorrect container type specified");                            \
-        return std::max(decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)), \
-            sizeof(T));                                                       \
-    }                                                                         \
-                                                                              \
-    auto operator new(std::size_t /*size*/, FamCount count)                   \
-        -> gsl::owner<void*>                                                  \
-    {                                                                         \
-        const auto alignment = std::align_val_t{alignof(T)};                  \
-        return ::operator new[](T::Sizeof(count), alignment);                 \
-    }                                                                         \
-    auto operator delete(gsl::owner<void*> block, FamCount) noexcept -> void  \
-    { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
-    auto operator delete(gsl::owner<void*> block) noexcept -> void            \
-    { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
-    auto operator new[](std::size_t /*size*/) -> void* = delete;              \
-    auto operator delete[](void* /*block*/) -> void = delete;
-
-
 namespace al {
 
 template<typename T, std::size_t AlignV=alignof(T)>
@@ -61,7 +35,7 @@ struct allocator {
 
     template<typename U> requires(alignof(U) <= Alignment)
     struct rebind {
-        using other = allocator<U,Alignment>;
+        using other = allocator<U, Alignment>;
     };
 
     constexpr explicit allocator() noexcept = default;
@@ -69,20 +43,18 @@ struct allocator {
     constexpr explicit allocator(const allocator<U,N>&) noexcept
     { static_assert(Alignment == allocator<U,N>::Alignment); }
 
-    static constexpr auto allocate(std::size_t n) -> gsl::owner<T*>
+    static constexpr auto allocate(std::size_t const n) -> gsl::owner<T*>
     {
         if(n > std::numeric_limits<std::size_t>::max()/sizeof(T)) throw std::bad_alloc();
         return static_cast<gsl::owner<T*>>(::operator new[](n*sizeof(T), AlignVal));
     }
-    static constexpr void deallocate(gsl::owner<T*> p, std::size_t) noexcept
+    static constexpr void deallocate(gsl::owner<T*> const p, std::size_t) noexcept
     { ::operator delete[](gsl::owner<void*>{p}, AlignVal); }
+
+    template<typename U, std::size_t M> [[nodiscard]] friend constexpr
+    auto operator==(const allocator&, const allocator<U,M>&) noexcept -> bool
+    { return Alignment == allocator<U,M>::Alignment; }
 };
-template<typename T, std::size_t N, typename U, std::size_t M>
-constexpr bool operator==(const allocator<T,N>&, const allocator<U,M>&) noexcept
-{ return allocator<T,N>::Alignment == allocator<U,M>::Alignment; }
-template<typename T, std::size_t N, typename U, std::size_t M>
-constexpr bool operator!=(const allocator<T,N>&, const allocator<U,M>&) noexcept
-{ return allocator<T,N>::Alignment != allocator<U,M>::Alignment; }
 
 
 template<typename SP, typename PT, typename...>

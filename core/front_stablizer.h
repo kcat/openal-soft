@@ -2,16 +2,16 @@
 #define CORE_FRONT_STABLIZER_H
 
 #include <array>
+#include <cstddef>
 #include <memory>
 
-#include "almalloc.h"
 #include "bufferline.h"
 #include "filters/splitter.h"
 #include "flexarray.h"
 
 
 class FrontStablizer {
-    explicit FrontStablizer(const size_t numchans) : ChannelFilters{numchans} { }
+    explicit FrontStablizer(std::size_t const numchans) : ChannelFilters{numchans} { }
 
 public:
     alignas(16) std::array<float,BufferLineSize> MidDirect{};
@@ -24,7 +24,7 @@ public:
 
     al::FlexArray<BandSplitter,16> ChannelFilters;
 
-    static auto Create(size_t numchans) -> std::unique_ptr<FrontStablizer>
+    static auto Create(std::size_t const numchans) -> std::unique_ptr<FrontStablizer>
     { return std::unique_ptr<FrontStablizer>{new(FamCount{numchans}) FrontStablizer{numchans}}; }
 
     DEF_FAM_NEWDEL(FrontStablizer, ChannelFilters)

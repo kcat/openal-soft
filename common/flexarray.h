@@ -8,21 +8,44 @@
 #include <span>
 #include <type_traits>
 
-#include "almalloc.h"
 
+enum FamCount : std::size_t { };
+
+#define DEF_FAM_NEWDEL(T, FamMem)                                             \
+    static constexpr auto Sizeof(std::size_t count) noexcept -> std::size_t   \
+    {                                                                         \
+        static_assert(&Sizeof == &T::Sizeof,                                  \
+            "Incorrect container type specified");                            \
+        return std::max(decltype(FamMem)::Sizeof(count, offsetof(T, FamMem)), \
+            sizeof(T));                                                       \
+    }                                                                         \
+                                                                              \
+    auto operator new(std::size_t /*size*/, FamCount count)                   \
+        -> gsl::owner<void*>                                                  \
+    {                                                                         \
+        const auto alignment = std::align_val_t{alignof(T)};                  \
+        return ::operator new[](T::Sizeof(count), alignment);                 \
+    }                                                                         \
+    auto operator delete(gsl::owner<void*> block, FamCount) noexcept -> void  \
+    { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
+    auto operator delete(gsl::owner<void*> block) noexcept -> void            \
+    { ::operator delete[](block, std::align_val_t{alignof(T)}); }             \
+    auto operator new[](std::size_t /*size*/) -> void* = delete;              \
+    auto operator delete[](void* /*block*/) -> void = delete;
 
 namespace al {
 
 /* Storage for flexible array data. This is trivially destructible if type T is
  * trivially destructible.
  */
-template<typename T, size_t alignment>
+template<typename T, std::size_t alignment>
 struct alignas(alignment) FlexArrayStorage : std::span<T> {
     /* NOLINTBEGIN(bugprone-sizeof-expression) clang-tidy warns about the
      * sizeof(T) being suspicious when T is a pointer type, which it will be
      * for flexible arrays of pointers.
      */
-    static constexpr size_t Sizeof(size_t count, size_t base=0u) noexcept
+    static constexpr
+    auto Sizeof(std::size_t const count, std::size_t const base=0u) noexcept -> std::size_t
     { return sizeof(FlexArrayStorage) + sizeof(T)*count + base; }
     /* NOLINTEND(bugprone-sizeof-expression) */
 
@@ -30,7 +53,7 @@ struct alignas(alignment) FlexArrayStorage : std::span<T> {
      * arrays store their payloads after the end of the object, which must be
      * the last in the whole parent chain.
      */
-    explicit FlexArrayStorage(size_t size) noexcept(std::is_nothrow_constructible_v<T>)
+    explicit FlexArrayStorage(std::size_t size) noexcept(std::is_nothrow_constructible_v<T>)
         : std::span<T>{::new(static_cast<void*>(this+1)) T[size], size}
     { }
     /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
@@ -44,12 +67,12 @@ struct alignas(alignment) FlexArrayStorage : std::span<T> {
  * be used delicately, ensuring there's no additional data after the FlexArray
  * member.
  */
-template<typename T, size_t Align=alignof(T)>
+template<typename T, std::size_t Align=alignof(T)>
 struct FlexArray {
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
-    using index_type = size_t;
-    using difference_type = ptrdiff_t;
+    using index_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
     using pointer = T*;
     using const_pointer = const T*;
@@ -119,15 +142,15 @@ struct FlexArray {
     [[nodiscard]] auto rend() const noexcept -> reverse_iterator { return mStore.rend(); }
 #endif
 
-    gsl::owner<void*> operator new(size_t, FamCount count)
+    auto operator new(std::size_t, FamCount const count) -> gsl::owner<void*>
     { return ::operator new[](Sizeof(count), std::align_val_t{alignof(FlexArray)}); }
-    void operator delete(gsl::owner<void*> block, FamCount) noexcept
+    void operator delete(gsl::owner<void*> const block, FamCount) noexcept
     { ::operator delete[](block, std::align_val_t{alignof(FlexArray)}); }
-    void operator delete(gsl::owner<void*> block) noexcept
+    void operator delete(gsl::owner<void*> const block) noexcept
     { ::operator delete[](block, std::align_val_t{alignof(FlexArray)}); }
 
-    void *operator new(size_t size) = delete;
-    void *operator new[](size_t size) = delete;
+    void *operator new(std::size_t size) = delete;
+    void *operator new[](std::size_t size) = delete;
     void operator delete[](void *block) = delete;
 };
 

@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -45,7 +44,6 @@
 
 #include "albit.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -53,9 +51,11 @@
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import gsl;
 #else
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"

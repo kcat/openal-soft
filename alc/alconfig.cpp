@@ -36,7 +36,6 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
-#include <fstream>
 #include <istream>
 #include <limits>
 #include <ranges>
@@ -49,7 +48,6 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
-#include "filesystem.h"
 #include "strutils.hpp"
 
 #if ALSOFT_UWP
@@ -61,11 +59,13 @@ using namespace winrt;
 #endif
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import gsl;
 import logging;
 #else
 #include "core/logging.h"
+#include "filesystem.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
@@ -483,7 +483,7 @@ void ReadALConfig()
         auto fileName = std::array<unsigned char,PATH_MAX>{};
         if(configURL && CFURLGetFileSystemRepresentation(configURL, true, fileName.data(), fileName.size()))
         {
-            if(auto f = std::ifstream{reinterpret_cast<char*>(fileName.data())}; f.is_open())
+            if(auto f = fs::ifstream{reinterpret_cast<char*>(fileName.data())}; f.is_open())
                 LoadConfigFromFile(f);
         }
     }
@@ -495,7 +495,7 @@ void ReadALConfig()
         path /= ".alsoftrc";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(auto f = fs::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -516,7 +516,7 @@ void ReadALConfig()
     if(!path.empty())
     {
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(auto f = fs::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
@@ -526,14 +526,14 @@ void ReadALConfig()
         path /= "alsoft.conf";
 
         TRACE("Loading config {}...", al::u8_as_char(path.u8string()));
-        if(auto f = std::ifstream{path}; f.is_open())
+        if(auto f = fs::ifstream{path}; f.is_open())
             LoadConfigFromFile(f);
     }
 
     if(auto confname = al::getenv("ALSOFT_CONF"))
     {
         TRACE("Loading config {}...", *confname);
-        if(auto f = std::ifstream{*confname}; f.is_open())
+        if(auto f = fs::ifstream{*confname}; f.is_open())
             LoadConfigFromFile(f);
     }
 }

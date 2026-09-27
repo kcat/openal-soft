@@ -1,7 +1,7 @@
 #ifndef CORE_HRTF_LOADER_HPP
 #define CORE_HRTF_LOADER_HPP
 
-#include <istream>
+#include <iosfwd>
 #include <memory>
 
 struct HrtfStore;

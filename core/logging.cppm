@@ -3,12 +3,12 @@ module;
 #include <cstdint>
 #include <string_view>
 
-#include "filesystem.h"
 #include "opthelpers.h"
 
 
 export module logging;
 
+import filesystem;
 import format;
 import gsl;
 

@@ -15,6 +15,7 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 
@@ -193,7 +194,7 @@ enum class eLogLevel {
     Trace = 3,
 };
 inline auto LogLevel = eLogLevel::Error;
-inline auto LogFile = std::ofstream{}; /* NOLINT(cert-err58-cpp) */
+inline auto LogFile = fs::ofstream{}; /* NOLINT(cert-err58-cpp) */
 
 template<typename ...Args>
 void TRACE(fmt::format_string<Args...> const fmt, Args&& ...args)

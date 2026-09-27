@@ -1,7 +1,7 @@
 #ifndef LOADDEF_H
 #define LOADDEF_H
 
-#include <istream>
+#include <iosfwd>
 #include <span>
 #include <string_view>
 

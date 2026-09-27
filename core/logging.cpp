@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <optional>
@@ -11,7 +10,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "strutils.hpp"
 
 
@@ -22,6 +20,7 @@
 #endif
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import format;
 import logging;
@@ -29,6 +28,7 @@ import zstring_view;
 #else
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
+#include "filesystem.h"
 #include "fmt/std.h"
 #include "logging.h"
 #include "zstring_view.hpp"
@@ -56,7 +56,7 @@ enum class LogState : std::uint8_t {
 auto LogCallbackMutex = std::mutex{};
 auto gLogState = LogState::FirstRun;
 
-auto gLogFile = std::ofstream{}; /* NOLINT(cert-err58-cpp) */
+auto gLogFile = fs::ofstream{}; /* NOLINT(cert-err58-cpp) */
 
 
 auto gLogCallback = LogCallbackFunc{};

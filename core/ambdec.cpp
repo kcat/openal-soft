@@ -9,7 +9,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
-#include <fstream>
+#include <istream>
 #include <iterator>
 #include <span>
 #include <sstream>
@@ -17,14 +17,15 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import filesystem;
 import format;
 import gsl;
 #else
 #include "alformat.hpp"
+#include "filesystem.h"
 #include "gsl/gsl"
 #endif
 

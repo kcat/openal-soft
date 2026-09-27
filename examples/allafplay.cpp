@@ -58,7 +58,6 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -81,12 +80,12 @@
 #include "alnumeric.h"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
-#include "filesystem.h"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import gsl;
 import openal;
@@ -99,6 +98,7 @@ import types;
 #include "AL/alext.h"
 
 #include "altypes.hpp"
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/std.h"
@@ -319,7 +319,7 @@ struct Channel {
 };
 
 struct LafStream {
-    std::ifstream mInFile;
+    fs::ifstream mInFile;
 
     Quality mQuality{};
     Mode mMode{};
@@ -800,7 +800,7 @@ try {
             throw std::runtime_error{fmt::format("OpenAL error: {}", alGetString(err))};
     });
 
-    auto renderFile = std::ofstream{};
+    auto renderFile = fs::ofstream{};
     auto renderStart = std::streamoff{};
     auto leadIn = 0_isize;
     auto leadOut = 0_isize;

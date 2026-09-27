@@ -39,7 +39,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -48,10 +47,12 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import gsl;
 import phase_shifter;
 #else
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/ranges.h"

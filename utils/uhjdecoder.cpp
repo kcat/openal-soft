@@ -30,7 +30,6 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <numbers>
@@ -43,7 +42,6 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "filesystem.h"
 #include "opthelpers.h"
 #include "vector.h"
 #include "zudl.hpp"
@@ -53,12 +51,14 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import filesystem;
 import fmtlib;
 import gsl;
 import phase_shifter;
 import types;
 #else
 #include "altypes.hpp"
+#include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "fmt/std.h"
@@ -413,7 +413,7 @@ auto main(std::span<std::string_view> args) -> int
             (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
-        auto outfile = std::ofstream{outname, std::ios_base::binary};
+        auto outfile = fs::ofstream{outname, std::ios_base::binary};
         if(!outfile.is_open())
         {
             fmt::println(std::cerr, "Failed to create {}", outname);

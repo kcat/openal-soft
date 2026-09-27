@@ -750,6 +750,7 @@ set(COMMON_HDRS
     common/expected.hpp
     common/filesystem.h
     common/flexarray.h
+    common/ghc_filesystem.h
     common/intrusive_ptr.h
     common/opthelpers.h
     common/pffft.h
@@ -779,6 +780,7 @@ if(HAVE_CXXMODULES)
         common/alformat.cppm
         common/altypes.cppm
         common/cemath.cppm
+        common/filesystem.cppm
         common/hann_window.cppm
         common/phase_shifter.cppm
         common/zstring_view.cppm

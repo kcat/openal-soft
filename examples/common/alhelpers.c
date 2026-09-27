@@ -24,9 +24,9 @@
 
 /* This file contains routines to help with some menial OpenAL-related tasks,
  * such as opening a device and setting up a context, closing the device and
- * destroying its context, converting between frame counts and byte lengths,
- * finding an appropriate buffer format, and getting readable strings for
- * channel configs and sample types. */
+ * destroying its context, loading extension functions, and getting readable
+ * strings for channel configs and sample types.
+ */
 
 #include "alhelpers.h"
 

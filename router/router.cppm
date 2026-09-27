@@ -4,6 +4,7 @@ module;
 #include <winnt.h>
 
 #include <atomic>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <mutex>

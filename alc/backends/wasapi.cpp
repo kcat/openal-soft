@@ -63,6 +63,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"

@@ -40,6 +40,7 @@
 #include <thread>
 #include <vector>
 
+#include "almalloc.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"

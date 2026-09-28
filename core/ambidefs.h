@@ -2,9 +2,9 @@
 #define CORE_AMBIDEFS_H
 
 #include <array>
+#include <cstdint>
 #include <numbers>
 
-#include "altypes.hpp"
 #include "opthelpers.h"
 #include "zudl.hpp"
 
@@ -142,64 +142,64 @@ namespace AmbiScale {
 } /* namespace AmbiScale */
 
 namespace AmbiIndex {
-    inline constexpr auto FromFuMa = std::to_array<u8>({
-        0_u8,  /* W */
-        3_u8,  /* X */
-        1_u8,  /* Y */
-        2_u8,  /* Z */
-        6_u8,  /* R */
-        7_u8,  /* S */
-        5_u8,  /* T */
-        8_u8,  /* U */
-        4_u8,  /* V */
-        12_u8, /* K */
-        13_u8, /* L */
-        11_u8, /* M */
-        14_u8, /* N */
-        10_u8, /* O */
-        15_u8, /* P */
-        9_u8,  /* Q */
+    inline constexpr auto FromFuMa = std::to_array<std::uint8_t>({
+        0,  /* W */
+        3,  /* X */
+        1,  /* Y */
+        2,  /* Z */
+        6,  /* R */
+        7,  /* S */
+        5,  /* T */
+        8,  /* U */
+        4,  /* V */
+        12, /* K */
+        13, /* L */
+        11, /* M */
+        14, /* N */
+        10, /* O */
+        15, /* P */
+        9,  /* Q */
         /* Higher orders not relevant for FuMa. The previous orders form a
          * pattern suggesting 20,21,19,22,18,23,17,24,16, but as above, unless
          * I hear otherwise, I don't want to make assumptions here.
          */
-        0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8, 0_u8,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
     });
-    inline constexpr auto FromFuMa2D = std::to_array<u8>({
-        0_u8,  /* W */
-        3_u8,  /* X */
-        1_u8,  /* Y */
-        8_u8,  /* U */
-        4_u8,  /* V */
-        15_u8, /* P */
-        9_u8,  /* Q */
+    inline constexpr auto FromFuMa2D = std::to_array<std::uint8_t>({
+        0,  /* W */
+        3,  /* X */
+        1,  /* Y */
+        8,  /* U */
+        4,  /* V */
+        15, /* P */
+        9,  /* Q */
         /* Higher orders not relevant for FuMa. Though the previous orders form
          * a pattern suggesting 24,16.
          */
-        0_u8, 0_u8,
+        0, 0,
     });
 
-    inline constexpr auto FromACN = std::array<u8, MaxAmbiChannels>{
-        0_u8,
-        1_u8, 2_u8, 3_u8,
-        4_u8, 5_u8, 6_u8, 7_u8, 8_u8,
-        9_u8, 10_u8, 11_u8, 12_u8, 13_u8, 14_u8, 15_u8,
-        16_u8, 17_u8, 18_u8, 19_u8, 20_u8, 21_u8, 22_u8, 23_u8, 24_u8,
+    inline constexpr auto FromACN = std::array<std::uint8_t, MaxAmbiChannels>{
+        0,
+        1, 2, 3,
+        4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24,
     };
-    inline constexpr auto FromACN2D = std::array<u8, MaxAmbi2DChannels>{
-        0_u8, 1_u8,3_u8, 4_u8,8_u8, 9_u8,15_u8, 16_u8,24_u8,
+    inline constexpr auto FromACN2D = std::array<std::uint8_t, MaxAmbi2DChannels>{
+        0, 1,3, 4,8, 9,15, 16,24,
     };
 
 
-    inline constexpr auto OrderFromChannel = std::array<u8, MaxAmbiChannels>{
-        0_u8,
-        1_u8,1_u8,1_u8,
-        2_u8,2_u8,2_u8,2_u8,2_u8,
-        3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,3_u8,
-        4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,4_u8,
+    inline constexpr auto OrderFromChannel = std::array<std::uint8_t, MaxAmbiChannels>{
+        0,
+        1,1,1,
+        2,2,2,2,2,
+        3,3,3,3,3,3,3,
+        4,4,4,4,4,4,4,4,4,
     };
-    inline constexpr auto OrderFrom2DChannel = std::array<u8, MaxAmbi2DChannels>{
-        0_u8, 1_u8,1_u8, 2_u8,2_u8, 3_u8,3_u8, 4_u8,4_u8,
+    inline constexpr auto OrderFrom2DChannel = std::array<std::uint8_t, MaxAmbi2DChannels>{
+        0, 1,1, 2,2, 3,3, 4,4,
     };
 } /* namespace AmbiIndex */
 

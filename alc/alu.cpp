@@ -1070,7 +1070,7 @@ void CalcAmbisonicPanning(Voice *const voice, float const xpos, float const ypos
 
     for(const auto c : std::views::iota(0_uz, index_map.size()))
     {
-        auto const acn = std::size_t{index_map[c].c_val};
+        auto const acn = std::size_t{index_map[c]};
         auto const scale = scales[acn] * coverage;
 
         /* For channel 0, combine the B-Format signal (scaled according to the

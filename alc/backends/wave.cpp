@@ -48,8 +48,10 @@ import core.device;
 import filesystem;
 import gsl;
 import logging;
+import types;
 #else
 #include "alc/backends/exception.hpp"
+#include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "filesystem.h"

@@ -286,10 +286,7 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, unsigned const irSize,
     std::ranges::transform(std::views::iota(0_uz, mChannels.size()), (mChannels
         | std::views::transform(&HrtfChannelState::mHfScale)).begin(),
         [AmbiOrderHFGain](std::size_t const idx)
-    {
-        auto const order = AmbiIndex::OrderFromChannel[idx];
-        return AmbiOrderHFGain[order.c_val];
-    });
+    { return AmbiOrderHFGain[AmbiIndex::OrderFromChannel[idx]]; });
 
     auto min_delay = unsigned{HrtfHistoryLength * HrirDelayFracOne};
     auto max_delay = 0u;

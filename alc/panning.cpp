@@ -418,8 +418,8 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
     const auto num_coeffs = (decoder.m3DMode==Periphonic) ? AmbiChannelsFromOrder(decoder.mOrder.c_val)
         : Ambi2DChannelsFromOrder(decoder.mOrder.c_val);
     const auto idx_map = (decoder.m3DMode == Periphonic)
-        ? std::span<u8 const>{AmbiIndex::FromACN}
-        : std::span<u8 const>{AmbiIndex::FromACN2D};
+        ? std::span<std::uint8_t const>{AmbiIndex::FromACN}
+        : std::span<std::uint8_t const>{AmbiIndex::FromACN2D};
     const auto hfmatrix = conf->HFMatrix;
     const auto lfmatrix = conf->LFMatrix;
 
@@ -505,18 +505,12 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
         }
 
         decoder.mChannels[chan_count] = ch;
-        for(auto dst = 0_uz;dst < num_coeffs;++dst)
-        {
-            auto const src = idx_map[dst];
-            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][src.c_val];
-        }
+        for(auto const dst : std::views::iota(0_uz, num_coeffs))
+            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][idx_map[dst]];
         if(conf->FreqBands > 1)
         {
-            for(auto dst = 0_uz;dst < num_coeffs;++dst)
-            {
-                auto const src = idx_map[dst];
-                decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][src.c_val];
-            }
+            for(auto const dst : std::views::iota(0_uz, num_coeffs))
+                decoder.mCoeffsLF[chan_count][dst] = lfmatrix[chan_count][idx_map[dst]];
         }
         ++chan_count;
     }
@@ -777,8 +771,8 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
         }
 
         const auto ordermap = (decoder.m3DMode == Periphonic)
-            ? std::span<u8 const>{AmbiIndex::OrderFromChannel}
-            : std::span<u8 const>{AmbiIndex::OrderFrom2DChannel};
+            ? std::span<std::uint8_t const>{AmbiIndex::OrderFromChannel}
+            : std::span<std::uint8_t const>{AmbiIndex::OrderFrom2DChannel};
 
         chancoeffs.resize(std::max(chancoeffs.size(), idx+1_zu), ChannelDec{});
         std::ranges::transform(decoder.mCoeffs[i] | std::views::take(ambicount), ordermap,

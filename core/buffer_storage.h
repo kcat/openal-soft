@@ -4,7 +4,7 @@
 #include <span>
 #include <variant>
 
-#include "alnumeric.h"
+#include "altypes.hpp"
 #include "fmt_traits.h"
 #include "opthelpers.h"
 #include "storage_formats.h"

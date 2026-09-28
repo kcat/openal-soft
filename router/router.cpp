@@ -366,7 +366,7 @@ void LoadDriverList()
         TRACE("Got DLL path {}", wstr_to_utf8(dll_path));
 
     auto cwd_path = std::wstring{};
-    if(auto const curpath = std::filesystem::current_path(); !curpath.empty())
+    if(auto const curpath = fs::current_path(); !curpath.empty())
     {
         if constexpr(std::same_as<decltype(curpath)::string_type, std::wstring>)
             cwd_path = curpath.native();

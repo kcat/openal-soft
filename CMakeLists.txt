@@ -2148,14 +2148,23 @@ endif()
 
 
 # Add a static library with common functions used by multiple example targets
-add_library(alsoft.excommon STATIC EXCLUDE_FROM_ALL
-    examples/common/alhelpers.c
-    examples/common/alhelpers.h
-    examples/common/alhelpers.hpp)
+add_library(alsoft.excommon STATIC EXCLUDE_FROM_ALL)
+if(CMAKE_VERSION GREATER_EQUAL 3.23)
+    target_sources(alsoft.excommon PRIVATE examples/common/alhelpers.c
+        PUBLIC FILE_SET HEADERS FILES examples/common/alhelpers.h examples/common/alhelpers.hpp)
+    if(HAVE_CXXMODULES)
+        target_sources(alsoft.excommon
+            PUBLIC FILE_SET CXX_MODULES FILES examples/common/alhelpers.cppm)
+    endif()
+else()
+    target_sources(alsoft.excommon PRIVATE examples/common/alhelpers.c
+        PUBLIC examples/common/alhelpers.h examples/common/alhelpers.hpp)
+endif()
 target_compile_definitions(alsoft.excommon PUBLIC ${CPP_DEFS})
 target_include_directories(alsoft.excommon PUBLIC ${OpenAL_BINARY_DIR} ${OpenAL_SOURCE_DIR}/common)
 target_compile_options(alsoft.excommon PUBLIC ${C_FLAGS})
-target_link_libraries(alsoft.excommon PUBLIC Threads::Threads OpenAL PRIVATE ${RT_LIB})
+target_link_libraries(alsoft.excommon PUBLIC Threads::Threads OpenAL
+    PRIVATE ${RT_LIB} ${MODULES_TARGET} alsoft::common)
 set_target_properties(alsoft.excommon PROPERTIES ${ALSOFT_STD_VERSION_PROPS})
 
 if(ALSOFT_EXAMPLES)

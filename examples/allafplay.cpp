@@ -79,12 +79,12 @@
 
 #include "alnumeric.h"
 #include "alstring.h"
-#include "common/alhelpers.hpp"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alhelpers;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -98,6 +98,7 @@ import types;
 #include "AL/alext.h"
 
 #include "altypes.hpp"
+#include "common/alhelpers.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

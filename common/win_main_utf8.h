@@ -64,7 +64,7 @@ int my_main(int, char**);
 
 #ifdef __cplusplus
 #include <algorithm>
-#include <iostream>
+#include <cstdlib>
 #include <stdexcept>
 #include <span>
 #include <string>
@@ -111,7 +111,7 @@ auto wmain(int argc, wchar_t **wargv) -> int
         }
     }
     catch(std::exception& e) {
-        fmt::println(std::cerr, "Failed to convert command line to UTF-8: {}", e.what());
+        fmt::println(stderr, "Failed to convert command line to UTF-8: {}", e.what());
         return -1;
     }
 

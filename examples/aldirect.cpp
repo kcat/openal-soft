@@ -29,6 +29,7 @@
 #include "config.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <limits>
 #include <iostream>
@@ -38,16 +39,16 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <variant>
 #include <vector>
 
 #include "sndfile.h"
 
-#include "common/alhelpers.h"
-
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alhelpers;
 import fmtlib;
 import gsl;
 import openal;
@@ -58,6 +59,7 @@ import openal;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
@@ -469,7 +471,7 @@ auto main(std::span<std::string_view> args) -> int
     alSourcePlayDirect(context, source);
     auto state = ALenum{};
     do {
-        al_nssleep(10000000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         alGetSourceiDirect(context, source, AL_SOURCE_STATE, &state);
 
         /* Get the source offset. */

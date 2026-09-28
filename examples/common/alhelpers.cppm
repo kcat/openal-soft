@@ -1,22 +1,17 @@
-#ifndef ALHELPERS_HPP
-#define ALHELPERS_HPP
+module;
 
 #include <iostream>
 #include <span>
 #include <stdexcept>
-#include <string>
-#include <string_view>
 #include <utility>
 
-#include "AL/alc.h"
-#include "AL/alext.h"
+export module alhelpers;
 
-#include "fmt/base.h"
-#include "fmt/ostream.h"
-#include "gsl/gsl"
+import openal;
+import fmtlib;
+import gsl;
 
-
-extern "C" {
+export extern "C" {
 
 /* ALC_EXT_EFX */
 extern LPALGENFILTERS palGenFilters;
@@ -87,16 +82,17 @@ extern LPALEVENTCALLBACKSOFT palEventCallbackSOFT;
 extern LPALBUFFERCALLBACKSOFT palBufferCallbackSOFT;
 
 /* Load AL extension functions for the current context. */
-void LoadALExtensions();
+auto LoadALExtensions() -> void;
 
 /* Get the name from a format enum. */
 auto FormatName(ALenum format) -> const char*;
 
-} /* extern "C" */
+}
 
+export {
 
-[[nodiscard]]
-inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
+[[nodiscard]] inline
+auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
 {
     struct Handle {
         ALCdevice *mDevice{};
@@ -166,4 +162,4 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
     return hdl;
 }
 
-#endif /* ALHELPERS_HPP */
+}

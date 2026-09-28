@@ -78,7 +78,7 @@ extern LPALEVENTCALLBACKSOFT palEventCallbackSOFT;
 extern LPALBUFFERCALLBACKSOFT palBufferCallbackSOFT;
 
 
-/* Some helper functions to get the name from the format enums. */
+/* Get the name from a format enum. */
 const char *FormatName(ALenum format);
 
 /* Easy device init/deinit functions. InitAL returns 0 on success. */

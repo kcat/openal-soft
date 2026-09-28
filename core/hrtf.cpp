@@ -40,8 +40,10 @@
 import filesystem;
 import format;
 import logging;
+import types;
 #else
 #include "alformat.hpp"
+#include "alformattypes.hpp"
 #include "filesystem.h"
 #include "logging.h"
 #endif
@@ -205,26 +207,26 @@ void HrtfStore::getCoeffs(float const elevation, float const azimuth, float cons
     {
         if(distance >= fd.distance)
             return true;
-        ebase += fd.evCount.c_val;
+        ebase += fd.evCount;
         return false;
     });
 
     /* Calculate the elevation indices. */
-    auto const elev0 = CalcEvIndex(field->evCount.c_val, elevation);
-    auto const elev1_idx = std::size_t{std::min(elev0.idx+1u, field->evCount.c_val-1u)};
-    auto const ir0offset = mElev[ebase + elev0.idx].irOffset.as<usize>().c_val;
-    auto const ir1offset = mElev[ebase + elev1_idx].irOffset.as<usize>().c_val;
+    auto const elev0 = CalcEvIndex(field->evCount, elevation);
+    auto const elev1_idx = std::size_t{std::min(elev0.idx+1u, field->evCount-1u)};
+    auto const ir0offset = std::size_t{mElev[ebase + elev0.idx].irOffset};
+    auto const ir1offset = std::size_t{mElev[ebase + elev1_idx].irOffset};
 
     /* Calculate azimuth indices. */
-    auto const az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount.c_val, azimuth);
-    auto const az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount.c_val, azimuth);
+    auto const az0 = CalcAzIndex(mElev[ebase + elev0.idx].azCount, azimuth);
+    auto const az1 = CalcAzIndex(mElev[ebase + elev1_idx].azCount, azimuth);
 
     /* Calculate the HRIR indices to blend. */
     auto const idx = std::array{
         ir0offset + az0.idx,
-        ir0offset + ((az0.idx+1) % mElev[ebase + elev0.idx].azCount.c_val),
+        ir0offset + ((az0.idx+1) % mElev[ebase + elev0.idx].azCount),
         ir1offset + az1.idx,
-        ir1offset + ((az1.idx+1) % mElev[ebase + elev1_idx].azCount.c_val)};
+        ir1offset + ((az1.idx+1) % mElev[ebase + elev1_idx].azCount)};
 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
@@ -236,16 +238,16 @@ void HrtfStore::getCoeffs(float const elevation, float const azimuth, float cons
         (     elev0.blend) * (     az1.blend) * dirfact};
 
     /* Calculate the blended HRIR delays. */
-    auto d = (mDelays[idx[0]][0].as<f32>()*blend[0]
-        + mDelays[idx[1]][0].as<f32>()*blend[1]
-        + mDelays[idx[2]][0].as<f32>()*blend[2]
-        + mDelays[idx[3]][0].as<f32>()*blend[3]).c_val;
+    auto d = mDelays[idx[0]][0]*blend[0]
+        + mDelays[idx[1]][0]*blend[1]
+        + mDelays[idx[2]][0]*blend[2]
+        + mDelays[idx[3]][0]*blend[3];
     delays[0] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
-    d = (mDelays[idx[0]][1].as<f32>()*blend[0]
-        + mDelays[idx[1]][1].as<f32>()*blend[1]
-        + mDelays[idx[2]][1].as<f32>()*blend[2]
-        + mDelays[idx[3]][1].as<f32>()*blend[3]).c_val;
+    d = mDelays[idx[0]][1]*blend[0]
+        + mDelays[idx[1]][1]*blend[1]
+        + mDelays[idx[2]][1]*blend[2]
+        + mDelays[idx[3]][1]*blend[3];
     delays[1] = fastf2u(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
@@ -296,24 +298,24 @@ void DirectHrtfState::build(HrtfStore const *const Hrtf, unsigned const irSize,
         [Hrtf,&max_delay,&min_delay](AngularPoint const &pt) -> ImpulseResponse
     {
         auto const &field = Hrtf->mFields[0];
-        auto const elev0 = CalcEvIndex(field.evCount.c_val, pt.Elev.value);
-        auto const elev1_idx = std::min(elev0.idx+1_uz, field.evCount.c_val-1_uz);
-        auto const ir0offset = Hrtf->mElev[elev0.idx].irOffset.c_val;
-        auto const ir1offset = Hrtf->mElev[elev1_idx].irOffset.c_val;
+        auto const elev0 = CalcEvIndex(field.evCount, pt.Elev.value);
+        auto const elev1_idx = std::min(elev0.idx+1_uz, field.evCount-1_uz);
+        auto const ir0offset = Hrtf->mElev[elev0.idx].irOffset;
+        auto const ir1offset = Hrtf->mElev[elev1_idx].irOffset;
 
-        auto const az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount.c_val, pt.Azim.value);
-        auto const az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount.c_val, pt.Azim.value);
+        auto const az0 = CalcAzIndex(Hrtf->mElev[elev0.idx].azCount, pt.Azim.value);
+        auto const az1 = CalcAzIndex(Hrtf->mElev[elev1_idx].azCount, pt.Azim.value);
 
         auto const idx = std::array{
             ir0offset + az0.idx,
-            ir0offset + ((az0.idx+1) % Hrtf->mElev[elev0.idx].azCount.c_val),
+            ir0offset + ((az0.idx+1) % Hrtf->mElev[elev0.idx].azCount),
             ir1offset + az1.idx,
-            ir1offset + ((az1.idx+1) % Hrtf->mElev[elev1_idx].azCount.c_val)};
+            ir1offset + ((az1.idx+1) % Hrtf->mElev[elev1_idx].azCount)};
 
         /* The largest blend factor serves as the closest HRIR. */
         const auto irOffset = idx[(elev0.blend >= 0.5f)*2_uz + (az1.blend >= 0.5f)];
         const auto res = ImpulseResponse{.hrir=Hrtf->mCoeffs[irOffset],
-            .ldelay=Hrtf->mDelays[irOffset][0].c_val, .rdelay=Hrtf->mDelays[irOffset][1].c_val};
+            .ldelay=Hrtf->mDelays[irOffset][0], .rdelay=Hrtf->mDelays[irOffset][1]};
 
         min_delay = std::min(min_delay, std::min(res.ldelay, res.rdelay));
         max_delay = std::max(max_delay, std::max(res.ldelay, res.rdelay));
@@ -593,9 +595,9 @@ try {
         auto const delays = std::span{const_cast<u8x2*>(hrtf->mDelays.data()),
             hrtf->mDelays.size()};
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
-            [delay_scale](float const fdelay) -> u8
+            [delay_scale](float const fdelay) -> std::uint8_t
         {
-            return u8::from(al::saturate_cast<u8::value_t>(float2int(fdelay*delay_scale + 0.5f)));
+            return al::saturate_cast<std::uint8_t>(float2int(fdelay*delay_scale + 0.5f));
         });
 
         /* Scale the IR size for the new sample rate and update the stored

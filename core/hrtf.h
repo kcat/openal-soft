@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <span>
@@ -26,7 +27,7 @@ struct HrtfStore {
 
     struct Field {
         float distance;
-        u8 evCount;
+        std::uint8_t evCount;
     };
     /* NOTE: Fields are stored *backwards*. mFields.front() is the farthest
      * field, and mFields.back() is the nearest.
@@ -34,8 +35,8 @@ struct HrtfStore {
     std::span<Field const> mFields;
 
     struct Elevation {
-        u16 azCount;
-        u16 irOffset;
+        std::uint16_t azCount;
+        std::uint16_t irOffset;
     };
     std::span<Elevation> mElev;
     std::span<HrirArray const> mCoeffs;

@@ -2,14 +2,14 @@
 #define CORE_MIXER_HRTFDEFS_H
 
 #include <array>
+#include <cstdint>
 #include <span>
 
-#include "altypes.hpp"
 #include "core/filters/splitter.h"
 
 
-using u8x2 = std::array<u8, 2>;
-using u32x2 = std::array<unsigned, 2>;
+using u8x2 = std::array<std::uint8_t, 2>;
+using u32x2 = std::array<std::uint32_t, 2>;
 using f32x2 = std::array<float, 2>;
 
 constexpr auto HrtfHistoryBits = 6u;

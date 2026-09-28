@@ -401,14 +401,15 @@ auto LafStream::readChunk() -> u32
         * mNumEnabled).c_val);
     if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
-        const auto framesize = BytesFromQuality(mQuality).as<u64>() * mNumEnabled;
+        const auto framesize = BytesFromQuality(mQuality) * mNumEnabled;
         const auto samplesread = i64{infile.gcount()}.saturate_as<u64>() / framesize;
         mCurrentSample += samplesread;
         if(mSampleCount < ~0_u64)
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)",
                 mCurrentSample.c_val, mSampleCount.c_val);
         mSampleCount = mCurrentSample;
-        std::ranges::fill(mSampleChunk | std::views::drop((numsamples*framesize).c_val), char{});
+        auto const byteoffset = (numsamples * framesize).cast_to<isize>();
+        std::ranges::fill(mSampleChunk | std::views::drop(byteoffset.c_val), char{});
         return samplesread.cast_to<u32>();
     }
     std::ranges::fill(mSampleChunk | std::views::drop(toread), char{});

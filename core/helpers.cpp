@@ -21,6 +21,7 @@
 
 #ifdef _WIN32
 #include <cctype>
+#include <filesystem> // HACK: For MSVC?
 #include <shlobj.h>
 
 #include "almalloc.h"

@@ -407,7 +407,7 @@ else()
     if(ALSOFT_WERROR)
         list(APPEND C_FLAGS -Werror)
     else()
-        list(APPEND C_FLAGS -Werror=undef -Werror=format-security
+        list(APPEND C_FLAGS -Werror=undef -Werror=format-security -Werror=sign-conversion
             $<$<COMPILE_LANGUAGE:C>:-Werror=implicit -Werror=incompatible-pointer-types
                 -Werror=int-conversion>)
     endif()

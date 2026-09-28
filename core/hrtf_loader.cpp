@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <algorithm>
+#include <istream>
 #include <iterator>
 #include <numeric>
 #include <ranges>

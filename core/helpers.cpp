@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <cstring>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -18,8 +17,42 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
+
+#ifdef _WIN32
+#include <cctype>
+#include <shlobj.h>
 
 #include "almalloc.h"
+
+#else
+
+#include <cerrno>
+#include <dirent.h>
+#include <unistd.h>
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+#ifdef __HAIKU__
+#include <FindDirectory.h>
+#endif
+#ifdef HAVE_PROC_PIDPATH
+#include <libproc.h>
+#endif
+#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
+#include <pthread.h>
+#include <sched.h>
+#endif
+#if HAVE_RTKIT
+#include <sys/resource.h>
+
+#include "rtkit.h"
+#ifndef RLIMIT_RTTIME
+#define RLIMIT_RTTIME 15
+#endif
+#endif
+#endif
+
 #include "alnumeric.h"
 #include "alstring.h"
 #include "strutils.hpp"
@@ -45,7 +78,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
     const auto base = results->size();
 
     try {
-        auto fpath = path.lexically_normal();
+        auto const fpath = path.lexically_normal();
         if(!fs::exists(fpath))
             return;
 
@@ -76,13 +109,12 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
 } // namespace
 
 #ifdef _WIN32
-#include <cctype>
-#include <shlobj.h>
-
 auto GetProcBinary() -> const PathNamePair&
 {
     static const auto procbin = std::invoke([]() -> PathNamePair
     {
+        auto res = PathNamePair{};
+
 #if !ALSOFT_UWP
         auto pathlen = DWORD{256};
         auto fullpath = std::wstring(pathlen, L'\0');
@@ -102,7 +134,7 @@ auto GetProcBinary() -> const PathNamePair&
         if(len == 0)
         {
             ERR("Failed to get process name: error {}", GetLastError());
-            return PathNamePair{};
+            return res;
         }
 
         fullpath.resize(len);
@@ -111,19 +143,18 @@ auto GetProcBinary() -> const PathNamePair&
         {
             ERR("Failed to get process name: __argc = {}, __wargv = {}", __argc,
                 static_cast<void*>(__wargv));
-            return PathNamePair{};
+            return res;
         }
         const auto *exePath = __wargv[0];
         if(!exePath)
         {
             ERR("Failed to get process name: __wargv[0] == nullptr");
-            return PathNamePair{};
+            return res;
         }
         auto fullpath = std::wstring{exePath};
 #endif
         std::ranges::replace(fullpath, L'/', L'\\');
 
-        auto res = PathNamePair{};
         if(auto seppos = fullpath.rfind(L'\\'); seppos < fullpath.size())
         {
             res.path = wstr_to_utf8(std::wstring_view{fullpath}.substr(0, seppos));
@@ -205,31 +236,6 @@ void SetRTPriority()
 }
 
 #else
-
-#include <cerrno>
-#include <dirent.h>
-#include <unistd.h>
-#ifdef __FreeBSD__
-#include <sys/sysctl.h>
-#endif
-#ifdef __HAIKU__
-#include <FindDirectory.h>
-#endif
-#ifdef HAVE_PROC_PIDPATH
-#include <libproc.h>
-#endif
-#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-#include <pthread.h>
-#include <sched.h>
-#endif
-#if HAVE_RTKIT
-#include <sys/resource.h>
-
-#include "rtkit.h"
-#ifndef RLIMIT_RTTIME
-#define RLIMIT_RTTIME 15
-#endif
-#endif
 
 auto GetProcBinary() -> const PathNamePair&
 {
@@ -318,9 +324,9 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
 
     /* Search the app-local directory. */
     auto results = std::vector<std::string>{};
-    if(auto localpath = al::getenv("ALSOFT_LOCAL_PATH"))
+    if(auto const localpath = al::getenv("ALSOFT_LOCAL_PATH"))
         DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = fs::current_path(); !curpath.empty())
+    else if(auto const curpath = fs::current_path(); !curpath.empty())
         DirectorySearch(curpath, ext, &results);
 
     return results;
@@ -340,9 +346,9 @@ auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
     }
 
     /* Search local data dir */
-    if(auto datapath = al::getenv("XDG_DATA_HOME"))
+    if(auto const datapath = al::getenv("XDG_DATA_HOME"))
         DirectorySearch(fs::path{*datapath}/path, ext, &results);
-    else if(auto homepath = al::getenv("HOME"))
+    else if(auto const homepath = al::getenv("HOME"))
         DirectorySearch(fs::path{*homepath}/".local/share"/path, ext, &results);
 
     /* Search global data dirs */

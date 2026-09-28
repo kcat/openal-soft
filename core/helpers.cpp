@@ -24,38 +24,6 @@
 #include "alstring.h"
 #include "strutils.hpp"
 
-#ifdef _WIN32
-#include <cctype>
-#include <shlobj.h>
-
-#else
-
-#include <cerrno>
-#include <dirent.h>
-#include <unistd.h>
-#ifdef __FreeBSD__
-#include <sys/sysctl.h>
-#endif
-#ifdef __HAIKU__
-#include <FindDirectory.h>
-#endif
-#ifdef HAVE_PROC_PIDPATH
-#include <libproc.h>
-#endif
-#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
-#include <pthread.h>
-#include <sched.h>
-#endif
-#if HAVE_RTKIT
-#include <sys/resource.h>
-
-#include "rtkit.h"
-#ifndef RLIMIT_RTTIME
-#define RLIMIT_RTTIME 15
-#endif
-#endif
-#endif
-
 #if HAVE_CXXMODULES
 import filesystem;
 import logging;
@@ -108,6 +76,9 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
 } // namespace
 
 #ifdef _WIN32
+#include <cctype>
+#include <shlobj.h>
+
 auto GetProcBinary() -> const PathNamePair&
 {
     static const auto procbin = std::invoke([]() -> PathNamePair
@@ -234,6 +205,31 @@ void SetRTPriority()
 }
 
 #else
+
+#include <cerrno>
+#include <dirent.h>
+#include <unistd.h>
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+#ifdef __HAIKU__
+#include <FindDirectory.h>
+#endif
+#ifdef HAVE_PROC_PIDPATH
+#include <libproc.h>
+#endif
+#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
+#include <pthread.h>
+#include <sched.h>
+#endif
+#if HAVE_RTKIT
+#include <sys/resource.h>
+
+#include "rtkit.h"
+#ifndef RLIMIT_RTTIME
+#define RLIMIT_RTTIME 15
+#endif
+#endif
 
 auto GetProcBinary() -> const PathNamePair&
 {

@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <string_view>
 #include <variant>
 
@@ -19,7 +20,7 @@
 #include "vector.h"
 
 #if ALSOFT_EAX
-enum class EaxStorage : u8::value_t {
+enum class EaxStorage : std::uint8_t {
     Automatic,
     Accessible,
     Hardware
@@ -33,11 +34,11 @@ struct Context;
 struct Buffer : BufferStorage {
     ALbitfieldSOFT mAccess{0u};
 
-    std::variant<al::vector<u8, 16>,
-        al::vector<i16, 16>,
-        al::vector<i32, 16>,
-        al::vector<f32, 16>,
-        al::vector<f64, 16>,
+    std::variant<al::vector<std::uint8_t, 16>,
+        al::vector<std::int16_t, 16>,
+        al::vector<std::int32_t, 16>,
+        al::vector<float, 16>,
+        al::vector<double, 16>,
         al::vector<MulawSample, 16>,
         al::vector<AlawSample, 16>,
         al::vector<IMA4Data, 16>,

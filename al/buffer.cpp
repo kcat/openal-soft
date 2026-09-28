@@ -402,11 +402,11 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
         };
         switch(DstType)
         {
-        case FmtUByte: do_realloc(SampleInfo<u8>::silence()); break;
-        case FmtShort: do_realloc(SampleInfo<i16>::silence()); break;
-        case FmtInt: do_realloc(SampleInfo<i32>::silence()); break;
-        case FmtFloat: do_realloc(SampleInfo<f32>::silence()); break;
-        case FmtDouble: do_realloc(SampleInfo<f64>::silence()); break;
+        case FmtUByte: do_realloc(SampleInfo<std::uint8_t>::silence()); break;
+        case FmtShort: do_realloc(SampleInfo<std::int16_t>::silence()); break;
+        case FmtInt: do_realloc(SampleInfo<std::int32_t>::silence()); break;
+        case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+        case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
         case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
         case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
         case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;
@@ -485,11 +485,11 @@ void PrepareCallback(gsl::not_null<al::Context*> const context,
     };
     switch(DstType)
     {
-    case FmtUByte: do_realloc(SampleInfo<u8>::silence()); break;
-    case FmtShort: do_realloc(SampleInfo<i16>::silence()); break;
-    case FmtInt: do_realloc(SampleInfo<i32>::silence()); break;
-    case FmtFloat: do_realloc(SampleInfo<f32>::silence()); break;
-    case FmtDouble: do_realloc(SampleInfo<f64>::silence()); break;
+    case FmtUByte: do_realloc(SampleInfo<std::uint8_t>::silence()); break;
+    case FmtShort: do_realloc(SampleInfo<std::int16_t>::silence()); break;
+    case FmtInt: do_realloc(SampleInfo<std::int32_t>::silence()); break;
+    case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+    case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
     case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
     case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
     case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;
@@ -599,11 +599,11 @@ void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
     };
     switch(DstType)
     {
-    case FmtUByte: do_realloc(SampleInfo<u8>::silence()); break;
-    case FmtShort: do_realloc(SampleInfo<i16>::silence()); break;
-    case FmtInt: do_realloc(SampleInfo<i32>::silence()); break;
-    case FmtFloat: do_realloc(SampleInfo<f32>::silence()); break;
-    case FmtDouble: do_realloc(SampleInfo<f64>::silence()); break;
+    case FmtUByte: do_realloc(SampleInfo<std::uint8_t>::silence()); break;
+    case FmtShort: do_realloc(SampleInfo<std::int16_t>::silence()); break;
+    case FmtInt: do_realloc(SampleInfo<std::int32_t>::silence()); break;
+    case FmtFloat: do_realloc(SampleInfo<float>::silence()); break;
+    case FmtDouble: do_realloc(SampleInfo<double>::silence()); break;
     case FmtMulaw: do_realloc(SampleInfo<MulawSample>::silence()); break;
     case FmtAlaw: do_realloc(SampleInfo<AlawSample>::silence()); break;
     case FmtIMA4: do_realloc(SampleInfo<IMA4Data>::silence()); break;

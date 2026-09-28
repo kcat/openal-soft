@@ -1,10 +1,10 @@
 #ifndef CORE_BUFFER_STORAGE_H
 #define CORE_BUFFER_STORAGE_H
 
+#include <cstdint>
 #include <span>
 #include <variant>
 
-#include "altypes.hpp"
 #include "fmt_traits.h"
 #include "opthelpers.h"
 #include "storage_formats.h"
@@ -34,11 +34,11 @@ constexpr auto Is2DAmbisonic(FmtChannels const chans) noexcept -> bool
 
 using CallbackType = auto(*)(void*, void*, int) noexcept NONBLOCKING -> int;
 
-using SampleVariant = std::variant<std::span<u8>,
-    std::span<i16>,
-    std::span<i32>,
-    std::span<f32>,
-    std::span<f64>,
+using SampleVariant = std::variant<std::span<std::uint8_t>,
+    std::span<std::int16_t>,
+    std::span<std::int32_t>,
+    std::span<float>,
+    std::span<double>,
     std::span<MulawSample>,
     std::span<AlawSample>,
     std::span<IMA4Data>,

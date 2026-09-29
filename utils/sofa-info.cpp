@@ -26,8 +26,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <string>
-#include <string_view>
 #include <vector>
 
 #include "sofa-support.h"
@@ -40,16 +38,18 @@
 #if HAVE_CXXMODULES
 import fmtlib;
 import gsl;
+import zstring_view;
 #else
+#include "alformatzsv.hpp"
 #include "fmt/base.h"
 #include "gsl/gsl"
 #endif
 
 namespace {
 
-using namespace std::string_view_literals;
+using namespace al::zstring_view_literals;
 
-void PrintSofaAttributes(const std::string_view prefix, MYSOFA_ATTRIBUTE *attribute)
+void PrintSofaAttributes(al::zstring_view const prefix, MYSOFA_ATTRIBUTE *attribute)
 {
     while(attribute)
     {
@@ -59,7 +59,7 @@ void PrintSofaAttributes(const std::string_view prefix, MYSOFA_ATTRIBUTE *attrib
     }
 }
 
-void PrintSofaArray(const std::string_view prefix, MYSOFA_ARRAY *array, bool showValues=true)
+void PrintSofaArray(al::zstring_view const prefix, MYSOFA_ARRAY *array, bool showValues=true)
 {
     PrintSofaAttributes(prefix, array->attributes);
     if(showValues)
@@ -114,7 +114,7 @@ void PrintCompatibleLayout(const std::span<const float> xyzs)
 }
 
 // Load and inspect the given SOFA file.
-void SofaInfo(const std::string &filename)
+void SofaInfo(al::zstring_view const filename)
 {
     int err;
     MySofaHrtfPtr sofa{mysofa_load(filename.c_str(), &err)};
@@ -140,14 +140,14 @@ void SofaInfo(const std::string &filename)
     fmt::println("Emitters: {}", sofa->E);
     fmt::println("Samples: {}", sofa->N);
 
-    PrintSofaArray("SampleRate"sv, &sofa->DataSamplingRate);
-    PrintSofaArray("DataDelay"sv, &sofa->DataDelay);
-    PrintSofaArray("SourcePosition"sv, &sofa->SourcePosition, false);
+    PrintSofaArray("SampleRate"_zsv, &sofa->DataSamplingRate);
+    PrintSofaArray("DataDelay"_zsv, &sofa->DataDelay);
+    PrintSofaArray("SourcePosition"_zsv, &sofa->SourcePosition, false);
 
     PrintCompatibleLayout(std::span{sofa->SourcePosition.values, sofa->M*3_uz});
 }
 
-int main(std::span<std::string_view> args)
+int main(std::span<al::zstring_view> args)
 {
     if(args.size() != 2)
     {
@@ -155,7 +155,7 @@ int main(std::span<std::string_view> args)
         return 0;
     }
 
-    SofaInfo(std::string{args[1]});
+    SofaInfo(args[1]);
 
     return 0;
 }
@@ -164,7 +164,7 @@ int main(std::span<std::string_view> args)
 
 int main(int argc, char **argv)
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

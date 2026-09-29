@@ -10,6 +10,7 @@ export module alhelpers;
 import openal;
 import fmtlib;
 import gsl;
+import zstring_view;
 
 export extern "C" {
 
@@ -92,7 +93,7 @@ auto FormatName(ALenum format) -> const char*;
 export {
 
 [[nodiscard]] inline
-auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
+auto InitAL(std::span<al::zstring_view> &args, const ALCint *attribs=nullptr)
 {
     struct Handle {
         ALCdevice *mDevice{};
@@ -139,7 +140,7 @@ auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
     /* Open and initialize a device */
     if(args.size() > 1 && args[0] == "-device")
     {
-        hdl.mDevice = alcOpenDevice(std::string{args[1]}.c_str());
+        hdl.mDevice = alcOpenDevice(args[1].c_str());
         if(!hdl.mDevice)
             fmt::println(std::cerr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);

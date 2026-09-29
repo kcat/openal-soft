@@ -36,8 +36,6 @@
 #include <ranges>
 #include <span>
 #include <stdexcept>
-#include <string>
-#include <string_view>
 #include <thread>
 #include <variant>
 #include <vector>
@@ -54,6 +52,7 @@ import alhelpers;
 import fmtlib;
 import gsl;
 import openal;
+import zstring_view;
 
 #else
 
@@ -61,6 +60,7 @@ import openal;
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alformatzsv.hpp"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -121,14 +121,14 @@ struct StreamPlayer {
     StreamPlayer(const StreamPlayer&) = delete;
     auto operator=(const StreamPlayer&) -> StreamPlayer& = delete;
 
-    auto open(const std::string &filename) -> bool;
+    auto open(al::zstring_view const filename) -> bool;
     void close();
-    auto bufferCallback(const std::span<std::byte> output) noexcept -> ALsizei;
+    auto bufferCallback(std::span<std::byte> output) noexcept -> ALsizei;
     auto prepare() -> bool;
     auto update() -> bool;
 };
 
-auto StreamPlayer::open(const std::string &filename) -> bool
+auto StreamPlayer::open(al::zstring_view const filename) -> bool
 {
     close();
 
@@ -326,7 +326,7 @@ void StreamPlayer::close()
     }
 }
 
-auto StreamPlayer::bufferCallback(const std::span<std::byte> output) noexcept -> ALsizei
+auto StreamPlayer::bufferCallback(std::span<std::byte> const output) noexcept -> ALsizei
 {
     auto dst = output.begin();
 
@@ -519,7 +519,7 @@ auto StreamPlayer::update() -> bool
 }
 
 
-auto main(std::span<std::string_view> args) -> int
+auto main(std::span<al::zstring_view> args) -> int
 {
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
@@ -546,13 +546,13 @@ auto main(std::span<std::string_view> args) -> int
     auto player = std::make_unique<StreamPlayer>();
 
     /* Play each file listed on the command line */
-    std::ranges::for_each(args, [refresh,&player](const std::string_view fname)
+    std::ranges::for_each(args, [refresh,&player](al::zstring_view const fname)
     {
-        if(!player->open(std::string{fname}))
+        if(!player->open(fname))
             return;
 
         /* Get the name portion, without the path, for display. */
-        const auto namepart = fname.substr(std::max(fname.rfind('/')+1, fname.rfind('\\')+1));
+        const auto namepart = fname.suffix(std::max(fname.rfind('/')+1, fname.rfind('\\')+1));
 
         fmt::println("Playing: {} ({}, {}hz)", namepart, FormatName(player->mFormat),
             player->mSfInfo.samplerate);
@@ -581,7 +581,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

@@ -35,8 +35,6 @@
 #include <numbers>
 #include <ranges>
 #include <span>
-#include <string>
-#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -56,7 +54,9 @@ import fmtlib;
 import gsl;
 import phase_shifter;
 import types;
+import zstring_view;
 #else
+#include "alformatzsv.hpp"
 #include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
@@ -69,7 +69,7 @@ import types;
 
 namespace {
 
-using namespace std::string_view_literals;
+using namespace al::zstring_view_literals;
 
 using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
@@ -351,7 +351,7 @@ void UhjDecoder::decode2(std::span<float const> const InSamples,
 }
 
 
-auto main(std::span<std::string_view> args) -> int
+auto main(std::span<al::zstring_view> args) -> int
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
@@ -371,14 +371,14 @@ auto main(std::span<std::string_view> args) -> int
     auto num_files = 0_uz;
     auto num_decoded = 0_uz;
     auto use_general = true;
-    std::ranges::for_each(args, [&num_files,&num_decoded,&use_general](std::string_view const arg)
+    std::ranges::for_each(args, [&num_files,&num_decoded,&use_general](al::zstring_view const arg)
     {
-        if(arg == "--general"sv)
+        if(arg == "--general"_zsv)
         {
             use_general = true;
             return;
         }
-        if(arg == "--alternative"sv)
+        if(arg == "--alternative"_zsv)
         {
             use_general = false;
             return;
@@ -386,7 +386,7 @@ auto main(std::span<std::string_view> args) -> int
         ++num_files;
 
         auto ininfo = SF_INFO{};
-        auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
+        auto infile = SndFilePtr{sf_open(arg.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
             fmt::println(std::cerr, "Failed to open {}", arg);
@@ -537,7 +537,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int const argc, char **const argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

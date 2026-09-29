@@ -90,6 +90,7 @@ import fmtlib;
 import gsl;
 import openal;
 import types;
+import zstring_view;
 
 #else
 
@@ -97,6 +98,7 @@ import types;
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "alformatzsv.hpp"
 #include "altypes.hpp"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
@@ -1198,7 +1200,7 @@ catch(std::exception& e) {
     fmt::println(std::cerr, "Error playing {}:\n  {}", fname, e.what());
 }
 
-auto main(std::span<std::string_view> args) -> int
+auto main(std::span<al::zstring_view> args) -> int
 {
     /* Print out usage if no arguments were specified */
     if(args.size() < 2)
@@ -1406,7 +1408,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int const argc, char **const argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

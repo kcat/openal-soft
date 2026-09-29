@@ -94,7 +94,9 @@
 import filesystem;
 import fmtlib;
 import gsl;
+import zstring_view;
 #else
+#include "alformatzsv.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -1261,7 +1263,7 @@ void PrintHelp(const std::string_view argv0, std::ostream &ofile)
 }
 
 // Standard command line dispatch.
-auto main(std::span<std::string_view> args) -> int
+auto main(std::span<al::zstring_view> args) -> int
 {
     if(args.size() < 2)
     {
@@ -1496,7 +1498,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned int>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::copy_n(argv, args.size(), args.begin());
     return main(std::span{args});
 }

@@ -4,13 +4,12 @@
 #include <iostream>
 #include <span>
 #include <stdexcept>
-#include <string>
-#include <string_view>
 #include <utility>
 
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "alformatzsv.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
@@ -96,7 +95,7 @@ auto FormatName(ALenum format) -> const char*;
 
 
 [[nodiscard]]
-inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=nullptr)
+inline auto InitAL(std::span<al::zstring_view> &args, const ALCint *attribs=nullptr)
 {
     struct Handle {
         ALCdevice *mDevice{};
@@ -143,7 +142,7 @@ inline auto InitAL(std::span<std::string_view> &args, const ALCint *attribs=null
     /* Open and initialize a device */
     if(args.size() > 1 && args[0] == "-device")
     {
-        hdl.mDevice = alcOpenDevice(std::string{args[1]}.c_str());
+        hdl.mDevice = alcOpenDevice(args[1].c_str());
         if(!hdl.mDevice)
             fmt::println(std::cerr, "Failed to open \"{}\", trying default", args[1]);
         args = args.subspan(2);

@@ -33,8 +33,6 @@
 #include <numbers>
 #include <ranges>
 #include <span>
-#include <string>
-#include <string_view>
 #include <vector>
 
 #include "alnumeric.h"
@@ -51,7 +49,9 @@ import filesystem;
 import fmtlib;
 import gsl;
 import phase_shifter;
+import zstring_view;
 #else
+#include "alformatzsv.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -63,7 +63,7 @@ import phase_shifter;
 
 namespace {
 
-using namespace std::string_view_literals;
+using namespace al::zstring_view_literals;
 
 using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_close(sndfile); })>;
 
@@ -258,7 +258,7 @@ constexpr auto GenCoeffs(double x /*+front*/, double y /*+left*/, double z /*+up
 }
 
 
-auto main(std::span<std::string_view> args) -> int
+auto main(std::span<al::zstring_view> args) -> int
 {
     if(args.size() < 2 || args[1] == "-h" || args[1] == "--help")
     {
@@ -284,19 +284,19 @@ auto main(std::span<std::string_view> args) -> int
     auto uhjchans = 2u;
     auto num_files = 0_uz;
     auto num_encoded = 0_uz;
-    std::ranges::for_each(args, [&uhjchans,&num_files,&num_encoded](std::string_view arg) -> void
+    std::ranges::for_each(args, [&uhjchans,&num_files,&num_encoded](al::zstring_view arg) -> void
     {
-        if(arg == "-bhj"sv)
+        if(arg == "-bhj"_zsv)
         {
             uhjchans = 2;
             return;
         }
-        if(arg == "-thj"sv)
+        if(arg == "-thj"_zsv)
         {
             uhjchans = 3;
             return;
         }
-        if(arg == "-phj"sv)
+        if(arg == "-phj"_zsv)
         {
             uhjchans = 4;
             return;
@@ -306,7 +306,7 @@ auto main(std::span<std::string_view> args) -> int
         auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".uhj.flac");
 
         auto ininfo = SF_INFO{};
-        auto infile = SndFilePtr{sf_open(std::string{arg}.c_str(), SFM_READ, &ininfo)};
+        auto infile = SndFilePtr{sf_open(arg.c_str(), SFM_READ, &ininfo)};
         if(!infile)
         {
             fmt::println(std::cerr, "Failed to open {}", arg);
@@ -588,7 +588,7 @@ auto main(std::span<std::string_view> args) -> int
 
 auto main(int argc, char **argv) -> int
 {
-    auto args = std::vector<std::string_view>(gsl::narrow<unsigned>(argc));
+    auto args = std::vector<al::zstring_view>(gsl::narrow<unsigned>(argc));
     std::ranges::copy(std::views::counted(argv, argc), args.begin());
     return main(std::span{args});
 }

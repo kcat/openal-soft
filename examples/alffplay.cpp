@@ -801,7 +801,7 @@ void sample_dup(std::span<uint8_t> out, std::span<const uint8_t> in, size_t coun
 
 auto AudioState::readAudio(std::span<uint8_t> samples, int &sample_skip) -> bool
 {
-    auto audio_size = 0u;
+    auto audio_size = 0_uz;
 
     /* Read the next chunk of data, refill the buffer, and queue it
      * on the source.

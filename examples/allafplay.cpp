@@ -73,7 +73,7 @@
 #include <variant>
 #include <vector>
 #ifdef _WIN32
-#ifdef _MSVC_STL_UPDATE && __has_include(<xfilesystem_abi.h>)
+#if defined(_MSVC_STL_UPDATE) && __has_include(<xfilesystem_abi.h>)
 #include <xfilesystem_abi.h> // HACK: For MSVC?
 #endif
 #include <io.h>

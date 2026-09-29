@@ -21,8 +21,8 @@
 
 #ifdef _WIN32
 #include <cctype>
-#ifdef _MSVC_STL_UPDATE
-#include <filesystem> // HACK: For MSVC?
+#ifdef _MSVC_STL_UPDATE && __has_include(<xfilesystem_abi.h>)
+#include <xfilesystem_abi.h> // HACK: For MSVC?
 #endif
 #include <shlobj.h>
 

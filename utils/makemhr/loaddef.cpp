@@ -40,6 +40,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "albit.h"
@@ -611,7 +612,7 @@ auto ReadBin8(std::istream &istream, const std::string_view filename, const std:
 {
     auto in = std::array<char,8>{};
     istream.read(in.data(), in.size());
-    if(istream.gcount() != in.size())
+    if(std::cmp_not_equal(istream.gcount(), in.size()))
     {
         fmt::println(std::cerr, "\nError: Bad read from file '{}'.", filename);
         return false;

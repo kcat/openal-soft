@@ -81,6 +81,7 @@
 #include <span>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "alcomplex.h"
@@ -1168,7 +1169,7 @@ auto ProcessDefinition(std::string_view inName, unsigned const outRate,
 
         std::array<char,4> startbytes{};
         input->read(startbytes.data(), startbytes.size());
-        if(input->gcount() != startbytes.size() || !input->good())
+        if(std::cmp_not_equal(input->gcount(), startbytes.size()) || !input->good())
         {
             fmt::println(std::cerr, "Error: Could not read input file '{}'", inName);
             return false;

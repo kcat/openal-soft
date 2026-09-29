@@ -5,11 +5,11 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <ranges>
 #include <span>
 #include <variant>
 
-#include "altypes.hpp"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
 #include "zudl.hpp"
@@ -29,7 +29,7 @@ inline constexpr auto MixerFracHalf = MixerFracOne >> 1;
 inline constexpr auto GainSilenceThreshold = 0.00001f; /* -100dB */
 
 
-enum class Resampler : u8::value_t {
+enum class Resampler : std::uint8_t {
     Point,
     Linear,
     Spline,
@@ -50,8 +50,8 @@ enum class Resampler : u8::value_t {
  */
 struct BsincState {
     float sf; /* Scale interpolation factor. */
-    u32 m; /* Coefficient count. */
-    u32 l; /* Left coefficient offset. */
+    std::uint32_t m; /* Coefficient count. */
+    std::uint32_t l; /* Left coefficient offset. */
     /* Filter coefficients, followed by the phase, scale, and scale-phase
      * delta coefficients. Starting at phase index 0, each subsequent phase
      * index follows contiguously.

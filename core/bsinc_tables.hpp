@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <numbers>
 #include <ranges>
 #include <span>
@@ -115,7 +116,7 @@ struct BSincHeader {
     f64 scaleLimit{};
 
     std::array<f64, BSincScaleCount> a{};
-    std::array<u32, BSincScaleCount> m{};
+    std::array<std::uint32_t, BSincScaleCount> m{};
     usize total_size{};
 
     consteval
@@ -133,7 +134,7 @@ struct BSincHeader {
              */
             auto a_ = a[si].reinterpret_as<u32>();
             a_ += (a_.as<f64>() != a[si]) ? 1_u32 : 0_u32;
-            m[si] = a_ * 2_u32;
+            m[si] = (a_ * 2u).c_val;
 
             total_size += 4_usize * BSincPhaseCount * ((m[si]+3_u32) & ~3_u32);
         }
@@ -154,7 +155,7 @@ inline constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 template<const BSincHeader &hdr>
 struct BSincFilterArray {
-    static constexpr auto BSincPointsMax = (hdr.m[0]+3u).c_val & ~3u;
+    static constexpr auto BSincPointsMax = (hdr.m[0]+3_uz) & ~3_uz;
     static constexpr auto besseli_0_beta = ce::cyl_bessel_i(0, hdr.beta);
     static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 
@@ -266,7 +267,7 @@ struct BSincFilterArray {
         auto idx = 0_uz;
         for(const auto si : std::views::iota(0_uz, BSincScaleCount))
         {
-            const auto m = (hdr.m[si].c_val+3_uz) & ~3_uz;
+            const auto m = (hdr.m[si]+3_uz) & ~3_uz;
             const auto o = std::size_t{BSincPointsMax-m} / 2u;
 
             /* Write out each phase index's filter and phase delta for this
@@ -363,9 +364,9 @@ inline auto const bsinc48_filter = BSincFilterArray<bsinc48_hdr>{};
 
 
 struct BSincTable {
-    f32 scaleBase, scaleRange;
-    std::array<u32, BSincScaleCount> m;
-    std::array<u32, BSincScaleCount> filterOffset;
+    float scaleBase, scaleRange;
+    std::array<std::uint32_t, BSincScaleCount> m;
+    std::array<std::uint32_t, BSincScaleCount> filterOffset;
     std::span<float const> Tab;
 };
 
@@ -374,8 +375,8 @@ constexpr auto GenerateBSincTable(const T &filter) noexcept -> BSincTable
 {
     auto ret = BSincTable{};
     const BSincHeader &hdr = filter.getHeader();
-    ret.scaleBase = hdr.scaleBase.cast_to<f32>();
-    ret.scaleRange = (1.0 / (1.0 - hdr.scaleBase)).cast_to<f32>();
+    ret.scaleBase = hdr.scaleBase.cast_to<f32>().c_val;
+    ret.scaleRange = (1.0 / (1.0 - hdr.scaleBase)).cast_to<f32>().c_val;
     for(const auto i : std::views::iota(0_uz, BSincScaleCount))
         ret.m[i] = (hdr.m[i]+3u) & ~3u;
     ret.filterOffset[0] = 0;

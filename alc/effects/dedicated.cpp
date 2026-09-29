@@ -20,9 +20,8 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
-#include <cstdlib>
+#include <cstdint>
 #include <span>
 #include <variant>
 
@@ -85,7 +84,7 @@ void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
             : InvalidChannelIndex; idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
-            mTargetGains[idx.c_val] = Gain;
+            mTargetGains[idx] = Gain;
         }
         else
         {
@@ -100,7 +99,7 @@ void DedicatedState::update(const ContextBase*, const EffectSlotBase *slot,
             idx != InvalidChannelIndex)
         {
             mOutTarget = target.RealOut->Buffer;
-            mTargetGains[idx.c_val] = Gain;
+            mTargetGains[idx] = Gain;
         }
     }
 }
@@ -114,7 +113,7 @@ void DedicatedState::process(const size_t samplesToDo,
 }
 
 
-struct DedicatedStateFactory final : public EffectStateFactory {
+struct DedicatedStateFactory final : EffectStateFactory {
     al::intrusive_ptr<EffectState> create() override
     { return al::intrusive_ptr<EffectState>{new DedicatedState{}}; }
 };

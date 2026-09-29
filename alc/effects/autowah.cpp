@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdlib>
+#include <cstdint>
 #include <numbers>
 #include <ranges>
 #include <span>
@@ -55,7 +55,7 @@ constexpr auto MinFreq = 20.0f;
 constexpr auto MaxFreq = 2500.0f;
 constexpr auto QFactor = 5.0f;
 
-struct AutowahState final : public EffectState {
+struct AutowahState final : EffectState {
     /* Effect parameters */
     float mAttackRate{};
     float mReleaseRate{};
@@ -73,7 +73,7 @@ struct AutowahState final : public EffectState {
     std::array<FilterParam,BufferLineSize> mEnv;
 
     struct ChannelData {
-        unsigned mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex};
 
         struct FilterHistory {
             float z1{}, z2{};
@@ -131,9 +131,9 @@ void AutowahState::update(const ContextBase *context, const EffectSlotBase *slot
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](std::size_t const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, std::uint8_t const outchan, float const outgain)
     {
-        mChans[idx].mTargetChannel = outchan.c_val;
+        mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;
     });
 }

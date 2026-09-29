@@ -35,7 +35,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdlib>
+#include <cstdint>
 #include <ranges>
 #include <span>
 #include <variant>
@@ -71,7 +71,7 @@ constexpr auto ReleaseTime = 0.2f; /* 200ms to drop from max to min */
 struct CompressorState final : EffectState {
     /* Effect gains for each channel */
     struct TargetGain {
-        unsigned mTarget{InvalidChannelIndex.c_val};
+        unsigned mTarget{InvalidChannelIndex};
         float mGain{0.0f};
     };
     std::array<TargetGain,MaxAmbiChannels> mChans;
@@ -114,9 +114,9 @@ void CompressorState::update(const ContextBase*, const EffectSlotBase *slot,
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](std::size_t const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, std::uint8_t const outchan, float const outgain)
     {
-        mChans[idx].mTarget = outchan.c_val;
+        mChans[idx].mTarget = outchan;
         mChans[idx].mGain = outgain;
     });
 }

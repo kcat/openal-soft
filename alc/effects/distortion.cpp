@@ -24,6 +24,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <numbers>
 #include <ranges>
@@ -80,7 +81,7 @@ alignas(16) constexpr std::array<std::array<float, NumLines>, NumLines> A2B{{
 
 struct DistortionState final : EffectState {
     struct OutParams {
-        unsigned mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
         BiquadFilter mLowpass;
@@ -178,11 +179,11 @@ void DistortionState::update(const ContextBase *context, const EffectSlotBase *s
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain*props.Gain,
-        [this](std::size_t const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, std::uint8_t const outchan, float const outgain)
     {
         if(idx < mChans.size())
         {
-            mChans[idx].mTargetChannel = outchan.c_val;
+            mChans[idx].mTargetChannel = outchan;
             mChans[idx].mTargetGain = outgain;
         }
     });

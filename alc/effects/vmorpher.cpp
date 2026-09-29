@@ -35,7 +35,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <cstdlib>
+#include <cstdint>
 #include <functional>
 #include <numbers>
 #include <ranges>
@@ -155,7 +155,7 @@ struct FormantFilter {
 
 struct VmorpherState final : EffectState {
     struct OutParams {
-        unsigned mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex};
 
         /* Effect parameters */
         std::array<std::array<FormantFilter,NumFormants>,NumFilters> mFormants;
@@ -276,9 +276,9 @@ void VmorpherState::update(const ContextBase *context, const EffectSlotBase *slo
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](std::size_t const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, std::uint8_t const outchan, float const outgain)
     {
-        mChans[idx].mTargetChannel = outchan.c_val;
+        mChans[idx].mTargetChannel = outchan;
         mChans[idx].mTargetGain = outgain;
     });
 }

@@ -4,16 +4,16 @@
 #include <array>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <ranges>
 #include <span>
 
-#include "altypes.hpp"
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "devformat.h"
 
 
-inline constexpr auto InvalidChannelIndex = ~0_u8;
+inline constexpr auto InvalidChannelIndex = static_cast<std::uint8_t>(~0u);
 
 struct BFChannelConfig {
     float Scale;
@@ -34,7 +34,7 @@ struct MixParams {
      * destination channel is InvalidChannelIndex, the given source channel is
      * not used for output.
      */
-    template<std::invocable<std::size_t, u8, float> F>
+    template<std::invocable<std::size_t, std::uint8_t, float> F>
     void setAmbiMixParams(MixParams const &inmix, float const gainbase, F func) const
     {
         auto const numIn = inmix.Buffer.size();
@@ -48,7 +48,7 @@ struct MixParams {
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {
-                    idx = u8{static_cast<u8::value_t>(j)};
+                    idx = static_cast<std::uint8_t>(j);
                     gain = AmbiMap[j].Scale * gainbase;
                     break;
                 }
@@ -69,7 +69,7 @@ struct InputRemixMap {
 
 struct RealMixParams {
     std::span<InputRemixMap const> RemixMap;
-    std::array<u8, MaxChannels> ChannelIndex{};
+    std::array<std::uint8_t, MaxChannels> ChannelIndex{};
 
     std::span<FloatBufferLine> Buffer;
 };

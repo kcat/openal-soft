@@ -24,7 +24,7 @@
 #include <array>
 #include <cmath>
 #include <complex>
-#include <cstdlib>
+#include <cstdint>
 #include <numbers>
 #include <optional>
 #include <ranges>
@@ -107,7 +107,7 @@ struct PshifterState final : EffectState {
         std::array<float, StftSize> mFIFO{};
         std::array<float, StftSize> mOutputAccum{};
 
-        unsigned mTargetChannel{InvalidChannelIndex.c_val};
+        unsigned mTargetChannel{InvalidChannelIndex};
 
         /* Current and target gain for this channel. */
         float mCurrentGain{};
@@ -186,11 +186,11 @@ void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
 
     mOutTarget = target.Main->Buffer;
     target.Main->setAmbiMixParams(slot->Wet, slot->Gain,
-        [this](std::size_t const idx, u8 const outchan, float const outgain)
+        [this](std::size_t const idx, std::uint8_t const outchan, float const outgain)
     {
         if(idx < mChans.size())
         {
-            mChans[idx].mTargetChannel = outchan.c_val;
+            mChans[idx].mTargetChannel = outchan;
             mChans[idx].mTargetGain = outgain;
         }
     });

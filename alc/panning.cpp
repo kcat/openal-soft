@@ -316,7 +316,7 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
     for(auto chidx = 0_uz;chidx < channels.size();++chidx)
     {
         const auto ch = channels[chidx];
-        const auto idx = device->RealOut.ChannelIndex[ch].as<usize>().c_val;
+        const auto idx = std::size_t{device->RealOut.ChannelIndex[ch]};
         if(idx == InvalidChannelIndex)
             continue;
 
@@ -762,7 +762,7 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
     auto chancoeffslf = std::vector<ChannelDec>{};
     for(const auto i : std::views::iota(0_uz, decoder.mChannels.size()))
     {
-        const auto idx = device->RealOut.ChannelIndex[decoder.mChannels[i]].as<usize>().c_val;
+        const auto idx = std::size_t{device->RealOut.ChannelIndex[decoder.mChannels[i]]};
         if(idx == InvalidChannelIndex)
         {
             ERR("Failed to find {} channel in device",
@@ -807,7 +807,7 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
         /* Only enable the stablizer if the decoder does not output to the
          * front-center channel.
          */
-        const auto cidx = device->RealOut.ChannelIndex[FrontCenter].as<usize>().c_val;
+        const auto cidx = std::size_t{device->RealOut.ChannelIndex[FrontCenter]};
         auto hasfc = false;
         if(cidx < chancoeffs.size())
         {

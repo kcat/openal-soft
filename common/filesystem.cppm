@@ -76,6 +76,14 @@ export namespace fs {
 export namespace std::filesystem {
     using std::filesystem::begin;
     using std::filesystem::end;
+
+    using std::filesystem::operator~;
+    using std::filesystem::operator&;
+    using std::filesystem::operator|;
+    using std::filesystem::operator^;
+    using std::filesystem::operator&=;
+    using std::filesystem::operator|=;
+    using std::filesystem::operator^=;
 }
 
 #else
@@ -86,6 +94,14 @@ export namespace ghc::filesystem {
 
     using ghc::filesystem::swap;
     using ghc::filesystem::hash_value;
+
+    using ghc::filesystem::operator~;
+    using ghc::filesystem::operator&;
+    using ghc::filesystem::operator|;
+    using ghc::filesystem::operator^;
+    using ghc::filesystem::operator&=;
+    using ghc::filesystem::operator|=;
+    using ghc::filesystem::operator^=;
 
     using ghc::filesystem::operator<=>;
     using ghc::filesystem::operator==;

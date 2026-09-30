@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -182,24 +183,6 @@ using SwrContextPtr = std::unique_ptr<SwrContext,decltype([](SwrContext *ptr){ s
 
 using SwsContextPtr = std::unique_ptr<SwsContext, decltype([](SwsContext *ptr)
     { sws_freeContext(ptr); })>;
-
-
-[[nodiscard]] constexpr
-auto NextPowerOf2(std::size_t value) noexcept -> std::size_t
-{
-    if(value > 0)
-    {
-        --value;
-        value |= value>>1;
-        value |= value>>2;
-        value |= value>>4;
-        value |= value>>8;
-        value |= value>>16;
-        if constexpr(sizeof(std::size_t) > 4)
-            value |= (value>>16)>>16;
-    }
-    return value+1;
-}
 
 
 struct SDLProps {
@@ -1392,7 +1375,7 @@ void AudioState::handler()
         {
             const auto numsamples = duration_cast<seconds>(mCodecCtx->sample_rate
                 * AudioBufferTotalTime).count();
-            mBufferData.resize(NextPowerOf2(gsl::narrow_cast<size_t>(numsamples) * mFrameSize));
+            mBufferData.resize(std::bit_ceil(gsl::narrow<size_t>(numsamples) * mFrameSize));
             std::ranges::fill(mBufferData, uint8_t{});
 
             mReadCount.store(0, std::memory_order_relaxed);

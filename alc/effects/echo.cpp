@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <span>
 #include <variant>
@@ -86,7 +87,7 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    auto const maxlen = NextPowerOf2(float2uint(EchoMaxDelay*frequency + 0.5f) +
+    auto const maxlen = std::bit_ceil(float2uint(EchoMaxDelay*frequency + 0.5f) +
         float2uint(EchoMaxLRDelay*frequency + 0.5f));
     if(maxlen != mSampleBuffer.size())
         decltype(mSampleBuffer)(maxlen).swap(mSampleBuffer);

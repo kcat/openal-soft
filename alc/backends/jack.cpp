@@ -23,6 +23,7 @@
 #include "jack.h"
 
 #include <array>
+#include <bit>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -520,7 +521,7 @@ bool JackPlayback::reset()
         const auto devname = std::string_view{mDevice->mDeviceName};
         auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
             .value_or(mDevice->mUpdateSize);
-        bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize);
+        bufsize = std::max(std::bit_ceil(bufsize), mDevice->mUpdateSize);
         mDevice->mBufferSize = bufsize + mDevice->mUpdateSize;
     }
 
@@ -616,7 +617,7 @@ void JackPlayback::start()
     {
         auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
             .value_or(mDevice->mUpdateSize);
-        bufsize = std::max(NextPowerOf2(bufsize), mDevice->mUpdateSize) / mDevice->mUpdateSize;
+        bufsize = std::max(std::bit_ceil(bufsize), mDevice->mUpdateSize) / mDevice->mUpdateSize;
         mDevice->mBufferSize = (bufsize+1) * mDevice->mUpdateSize;
 
         mRing = RingBuffer<float>::Create(bufsize,

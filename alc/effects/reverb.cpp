@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <iterator>
 #include <numbers>
@@ -285,7 +286,7 @@ struct DelayLineI {
          * seconds, rounded up.
          */
         auto samples = float2uint(std::ceil(length*frequency));
-        samples = NextPowerOf2(samples + extra);
+        samples = std::bit_ceil(samples + extra);
 
         /* Return the sample count for accumulation. */
         return samples*NUM_LINES;
@@ -305,7 +306,7 @@ struct DelayLineU {
         -> std::size_t
     {
         auto samples = float2uint(std::ceil(length*frequency));
-        samples = NextPowerOf2(samples + extra);
+        samples = std::bit_ceil(samples + extra);
 
         return samples*NUM_LINES;
     }

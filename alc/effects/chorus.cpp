@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -148,7 +149,7 @@ void ChorusState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
     static constexpr auto MaxDelay = std::max(ChorusMaxDelay, FlangerMaxDelay);
     const auto frequency = static_cast<float>(device->mSampleRate);
 
-    const auto maxlen = std::size_t{NextPowerOf2(float2uint(MaxDelay*2.0f*frequency) + 1u)}
+    const auto maxlen = std::size_t{std::bit_ceil(float2uint(MaxDelay*2.0f*frequency) + 1u)}
         * NumLines;
     if(maxlen != mDelayBuffers.size())
         decltype(mDelayBuffers)(maxlen).swap(mDelayBuffers);

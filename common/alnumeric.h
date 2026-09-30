@@ -116,22 +116,6 @@ auto lerpf(float const val1, float const val2, float const mu) noexcept -> float
 { return val1 + (val2-val1)*mu; }
 
 
-/** Find the next power-of-2 for non-power-of-2 numbers. */
-[[nodiscard]] constexpr
-auto NextPowerOf2(unsigned value) noexcept -> unsigned
-{
-    if(value > 0)
-    {
-        value--;
-        value |= value>>1;
-        value |= value>>2;
-        value |= value>>4;
-        value |= value>>8;
-        value |= value>>16;
-    }
-    return value+1;
-}
-
 /**
  * If the value is not already a multiple of r, round toward zero to the next
  * multiple.

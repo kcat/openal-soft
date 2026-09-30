@@ -2,7 +2,10 @@
 #define COMMON_BITSET_HPP
 
 #include <bit>
+#include <cstdint>
+#include <functional>
 #include <type_traits>
+#include <utility>
 
 #include "opthelpers.h"
 
@@ -19,9 +22,7 @@ concept scoped_enum = std::is_enum_v<T> and requires(T t) { detail_::test_int_co
 
 template<scoped_enum EnumType>
 class bitset {
-    [[nodiscard]] static consteval
-    auto get_count() noexcept
-    {
+    static constexpr auto num_bits = std::invoke([] {
         /* The given enum type's "MaxValue" enumeration specifies the largest
          * index that will be used for the bitset. Or the "Count" enumeration
          * specifies the number of indices (it's undefined to access the
@@ -34,21 +35,30 @@ class bitset {
         }
         else if constexpr(requires { EnumType::Count; })
             return unsigned{al::to_underlying(EnumType::Count)};
-    }
+        else
+        {
+            static_assert(requires { EnumType::Count; } or requires { EnumType::MaxValue; });
+            return 1u;
+        }
+    });
+
+    static_assert(num_bits > 0 and num_bits <= 64);
+    using integer_t = std::conditional_t<std::cmp_less_equal(num_bits, 32), std::uint32_t,
+        std::uint64_t>;
 
     using UnderlyingType = std::make_unsigned_t<std::underlying_type_t<EnumType>>;
-    static_assert(get_count() < 32);
 
-    static constexpr auto AllBits = unsigned{(1u << get_count()) - 1u};
+    static constexpr auto AllBits = integer_t{(((integer_t{1u} << (num_bits-1)) - 1u)<<1u) | 1u};
 
-    unsigned mBits{0u};
+    integer_t mBits{0u};
 
 public:
     constexpr bitset() noexcept = default;
     constexpr bitset(bitset const &rhs) noexcept = default;
     constexpr ~bitset() noexcept = default;
 
-    explicit constexpr bitset(unsigned const arg) noexcept : mBits{arg&AllBits} { }
+    explicit constexpr
+    bitset(unsigned long long const arg) noexcept : mBits{static_cast<integer_t>(arg&AllBits)} { }
 
     [[nodiscard]] explicit constexpr
     operator bool() const noexcept { return mBits != 0u; }
@@ -57,8 +67,8 @@ public:
     constexpr
     auto set(EnumType const e, bool const s=true) noexcept LIFETIMEBOUND -> bitset&
     {
-        if(s) mBits |= 1u << static_cast<UnderlyingType>(e);
-        else mBits &= ~(1u << static_cast<UnderlyingType>(e));
+        if(s) mBits |= integer_t{1u} << static_cast<UnderlyingType>(e);
+        else mBits &= ~(integer_t{1u} << static_cast<UnderlyingType>(e));
         return *this;
     }
 
@@ -74,7 +84,7 @@ public:
 
     [[nodiscard]] constexpr
     auto test(EnumType const e) const noexcept -> bool
-    { return (mBits & (1u << static_cast<UnderlyingType>(e))) != 0u; }
+    { return (mBits & (integer_t{1u} << static_cast<UnderlyingType>(e))) != 0u; }
 
     [[nodiscard]] constexpr
     auto any() const noexcept -> bool { return mBits != 0u; }
@@ -87,13 +97,13 @@ public:
     auto flip() noexcept LIFETIMEBOUND -> bitset& { mBits ^= AllBits; return *this; }
     [[nodiscard]] constexpr
     auto flip(EnumType const e) noexcept LIFETIMEBOUND -> bitset&
-    { mBits ^= 1u << static_cast<UnderlyingType>(e); return *this; }
+    { mBits ^= integer_t{1u} << static_cast<UnderlyingType>(e); return *this; }
 
     [[nodiscard]] constexpr
     auto count() const noexcept -> std::size_t
     { return static_cast<std::size_t>(std::popcount(mBits)); }
     [[nodiscard]] static constexpr
-    auto size() noexcept -> std::size_t { return get_count(); }
+    auto size() noexcept -> std::size_t { return num_bits; }
 
     [[nodiscard]] constexpr
     auto operator~() const noexcept -> bitset { return bitset{~mBits}; }

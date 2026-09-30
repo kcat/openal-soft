@@ -31,23 +31,19 @@ constexpr auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::s
     /* Some magic math that calculates the number of swaps needed for a
      * sequence of bit-reversed indices when index < reversed_index.
      */
-    return (1_zu<<(log2_size-1)) - (1_zu<<((log2_size-1_zu)/2_zu));
+    return (1_zu<<(log2_size-1)) - (1_zu<<((log2_size-1)/2));
 }
 
 
-template<std::size_t N>
-struct BitReverser {
-    static_assert(N <= sizeof(u16)*8, "Too many bits for the bit-reversal table.");
-
-    std::array<u16x2, BitReverseCounter(N)> mData{};
-
+template<std::size_t N> requires(N <= sizeof(u16)*8)
+struct BitReverser : std::array<u16x2, BitReverseCounter(N)> {
     constexpr BitReverser()
     {
-        auto const fftsize = 1_uz << N;
-        auto ret_i = 0_uz;
+        auto const fftsize = 1_usize << N;
+        auto iter = this->begin();
 
         /* Bit-reversal permutation applied to a sequence of fftsize items. */
-        for(auto const idx : std::views::iota(1_uz, fftsize-1_uz))
+        for(auto const idx : std::views::iota(1_usize, fftsize-1u))
         {
             auto revidx = idx;
             revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
@@ -59,12 +55,12 @@ struct BitReverser {
 
             if(idx < revidx)
             {
-                mData[ret_i][0] = u16::from(idx);
-                mData[ret_i][1] = u16::from(revidx);
-                ++ret_i;
+                (*iter)[0] = idx.cast_to<u16>();
+                (*iter)[1] = revidx.cast_to<u16>();
+                ++iter;
             }
         }
-        Ensures(ret_i == std::size(mData));
+        Ensures(iter == this->end());
     }
 };
 
@@ -84,16 +80,16 @@ constexpr auto BitReverser10 = BitReverser<10>{};
 constexpr auto BitReverser11 = BitReverser<11>{};
 constexpr auto gBitReverses = std::array<std::span<u16x2 const>, 12>{{
     {}, {},
-    BitReverser2.mData,
-    BitReverser3.mData,
-    BitReverser4.mData,
-    BitReverser5.mData,
-    BitReverser6.mData,
-    BitReverser7.mData,
-    BitReverser8.mData,
-    BitReverser9.mData,
-    BitReverser10.mData,
-    BitReverser11.mData
+    BitReverser2,
+    BitReverser3,
+    BitReverser4,
+    BitReverser5,
+    BitReverser6,
+    BitReverser7,
+    BitReverser8,
+    BitReverser9,
+    BitReverser10,
+    BitReverser11
 }};
 
 /* Lookup table for std::polar(1, pi / (1<<index)); */

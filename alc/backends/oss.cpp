@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <cerrno>
 #include <cstring>
 #include <exception>
@@ -256,15 +257,11 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int const type_flag)
 
 #endif
 
-constexpr auto log2i(unsigned x) -> unsigned
+[[nodiscard]] constexpr auto log2i(unsigned const x) -> unsigned
 {
-    auto y = 0u;
-    while(x > 1)
-    {
-        x >>= 1;
-        y++;
-    }
-    return y;
+    if(x > 0)
+        return as_unsigned(std::bit_width(x) - 1);
+    return 0u;
 }
 
 

@@ -198,17 +198,6 @@ constexpr auto HasBuffer(al::BufferQueueItem const &item) noexcept -> bool
 { return item.mBuffer != nullptr; }
 
 
-[[nodiscard]] consteval
-auto SendArrayInit() noexcept
-{
-    auto ret = decltype(al::Source::mSend){};
-    ret.fill(al::Source::SendData{.mSlot={}, .mGain=1.0f,
-        .mGainHF=1.0f, .mHFReference=LowPassFreqRef,
-        .mGainLF=1.0f, .mLFReference=HighPassFreqRef});
-    return ret;
-}
-
-
 auto GetSourceVoice(gsl::not_null<al::Source*> const source,
     gsl::not_null<al::Context*> const context) -> Voice*
 {
@@ -3710,8 +3699,12 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint, ALsizei, const ALu
 al::Source::Source() noexcept
     : mDirect{.mGain=1.0f, .mGainHF=1.0f, .mHFReference=LowPassFreqRef, .mGainLF=1.0f,
         .mLFReference=HighPassFreqRef}
-    , mSend{SendArrayInit()}
-{ }
+    , mSend{}
+{
+    mSend.fill(SendData{.mSlot={}, .mGain=1.0f,
+        .mGainHF=1.0f, .mHFReference=LowPassFreqRef,
+        .mGainLF=1.0f, .mLFReference=HighPassFreqRef});
+}
 
 al::Source::~Source() = default;
 

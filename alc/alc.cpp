@@ -2897,6 +2897,7 @@ try {
         try {
             slot->initEffect(0, al::Context::sDefaultEffect.mType,
                 al::Context::sDefaultEffect.mProps, gsl::make_not_null(context.get()));
+            slot->updateProps(context.get());
         }
         catch(std::exception& e) {
             ERR("Exception initializing the default effect: {}", e.what());

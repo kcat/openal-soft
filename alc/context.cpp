@@ -274,10 +274,8 @@ void Context::init()
     mParams.SourceDistanceModel = mSourceDistanceModel;
     mParams.mDistanceModel = mDistanceModel;
 
-
     mAsyncEvents = FifoBuffer<AsyncEvent>::Create(1024, false);
     StartEventThrd(this);
-
 
     allocVoices(256);
     mActiveVoiceCount.store(64, std::memory_order_relaxed);

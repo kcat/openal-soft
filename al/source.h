@@ -112,21 +112,21 @@ struct Source {
 
     /** Direct filter and auxiliary send info. */
     struct DirectData {
-        float mGain{};
-        float mGainHF{};
-        float mHFReference{};
-        float mGainLF{};
-        float mLFReference{};
+        float mGain;
+        float mGainHF;
+        float mHFReference;
+        float mGainLF;
+        float mLFReference;
     };
     DirectData mDirect;
 
     struct SendData {
         intrusive_ptr<EffectSlot> mSlot;
-        float mGain{};
-        float mGainHF{};
-        float mHFReference{};
-        float mGainLF{};
-        float mLFReference{};
+        float mGain;
+        float mGainHF;
+        float mHFReference;
+        float mGainLF;
+        float mLFReference;
     };
     std::array<SendData, MaxSendCount> mSend;
 

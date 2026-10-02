@@ -5,7 +5,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
 
 namespace al {
@@ -39,32 +38,33 @@ namespace detail {
                 or requires { typename std::pointer_traits<SP>::element_type; });
     }
 
+
+    template<typename T, template<typename...> typename U>
+    inline constexpr auto is_instance_of_v = false;
+
+    template<template<typename...> typename U, typename... Vs>
+    inline constexpr auto is_instance_of_v<U<Vs...>, U> = true;
+
+    template<typename T>
+    concept shared_ptr_type = is_instance_of_v<std::remove_cvref_t<T>, std::shared_ptr>;
+
 }
 
 template<typename SP, typename PT, typename ...Args>
 class out_ptr_t {
     SP &mRes;
-    std::variant<PT, void*> mPtr;
+    PT mPtr;
     [[no_unique_address]] std::tuple<Args...> mArgs;
 
     static_assert(detail::can_reset<SP, PT, Args...> or detail::can_assign<SP, PT, Args...>,
         "Smart pointer type can't be reset or assigned with the given argument types");
 
-    constexpr auto finish(PT const& ptr) -> decltype(auto)
-    {
-        return std::apply([&]<typename ...Args_>(Args_&& ...args) -> decltype(auto)
-        {
-            if constexpr(detail::can_reset<SP, PT, Args...>)
-                return mRes.reset(ptr, std::forward<Args_>(args)...);
-            else if constexpr(detail::can_assign<SP, PT, Args...>)
-                return mRes = SP(ptr, std::forward<Args_>(args)...);
-        }, std::move(mArgs));
-    }
+    static_assert(not detail::shared_ptr_type<SP> or sizeof...(Args) > 0,
+        "std::shared_ptr must have a deleter argument");
 
 public:
     constexpr explicit
-    out_ptr_t(SP &res, Args ...args)
-        : mRes{res}, mPtr{std::in_place_index<0>, PT{}}, mArgs{std::forward<Args>(args)...}
+    out_ptr_t(SP &res, Args ...args) : mRes{res}, mPtr{}, mArgs{std::forward<Args>(args)...}
     {
         if constexpr(requires { mRes.reset(); })
             mRes.reset();
@@ -73,78 +73,86 @@ public:
     }
 
     constexpr
-    ~out_ptr_t() { std::visit([&](auto &ptr) { finish(static_cast<PT>(ptr)); }, mPtr); }
+    ~out_ptr_t()
+    {
+        std::apply([&]<typename ...Args_>(Args_&& ...args)
+        {
+            if constexpr(detail::can_reset<SP, PT, Args...>)
+                mRes.reset(mPtr, std::forward<Args_>(args)...);
+            else if constexpr(detail::can_assign<SP, PT, Args...>)
+                mRes = SP(mPtr, std::forward<Args_>(args)...);
+        }, std::move(mArgs));
+    }
 
     out_ptr_t() = delete;
     out_ptr_t(const out_ptr_t&) = delete;
     out_ptr_t& operator=(const out_ptr_t&) = delete;
 
-    constexpr operator PT*() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &std::get<0>(mPtr); }
+    explicit(false) constexpr /* NOLINTNEXTLINE(google-explicit-constructor) */
+    operator PT*() noexcept { return &mPtr; }
 
-    constexpr operator void**() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &mPtr.template emplace<1>(); }
+    explicit(false) constexpr /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, google-explicit-constructor) */
+    operator void**() noexcept { return reinterpret_cast<void**>(&mPtr); }
 };
 
 template<typename T=void, typename SP, typename ...Args> [[nodiscard]] constexpr
 auto out_ptr(SP &res, Args&& ...args)
 {
     using ptr_t = decltype(detail::pointer_type_for<T, SP>());
-    static_assert(not std::is_void_v<ptr_t>);
     if constexpr(not std::is_void_v<ptr_t>)
         return out_ptr_t<SP, ptr_t, Args&&...>{res, std::forward<Args>(args)...};
+    else
+        static_assert(not std::is_void_v<ptr_t>);
 }
 
 
 template<typename SP, typename PT, typename ...Args>
 class inout_ptr_t {
     SP &mRes;
-    std::variant<PT, void*> mPtr;
+    PT mPtr;
     [[no_unique_address]] std::tuple<Args...> mArgs;
 
     static_assert(detail::can_reset<SP, PT, Args...> or detail::can_assign<SP, PT, Args...>,
         "Smart pointer type can't be reset or assigned with the given argument types");
 
-    constexpr auto finish(PT const& ptr) -> decltype(auto)
-    {
-        return std::apply([&]<typename ...Args_>(Args_&& ...args) -> decltype(auto)
-        {
-            if constexpr(detail::can_reset<SP, PT, Args...>)
-                return mRes.reset(ptr, std::forward<Args_>(args)...);
-            else if constexpr(detail::can_assign<SP, PT, Args...>)
-                return mRes = SP(ptr, std::forward<Args_>(args)...);
-        }, std::move(mArgs));
-    }
+    static_assert(not detail::shared_ptr_type<SP> or sizeof...(Args) > 0,
+        "std::shared_ptr must have a deleter argument");
 
 public:
     constexpr explicit
     inout_ptr_t(SP &res, Args ...args)
-        : mRes{res}, mPtr{std::in_place_index<0>, res.get()}, mArgs{std::forward<Args>(args)...}
+        : mRes{res}, mPtr{mRes.release()}, mArgs{std::forward<Args>(args)...}
     { }
     constexpr ~inout_ptr_t()
     {
-        mRes.release();
-        std::visit([&](auto &ptr) { finish(static_cast<PT>(ptr)); }, mPtr);
+        std::apply([&]<typename ...Args_>(Args_&& ...args)
+        {
+            if constexpr(detail::can_reset<SP, PT, Args...>)
+                mRes.reset(mPtr, std::forward<Args_>(args)...);
+            else if constexpr(detail::can_assign<SP, PT, Args...>)
+                mRes = SP(mPtr, std::forward<Args_>(args)...);
+        }, std::move(mArgs));
     }
 
     inout_ptr_t() = delete;
     inout_ptr_t(const inout_ptr_t&) = delete;
     inout_ptr_t& operator=(const inout_ptr_t&) = delete;
 
-    constexpr operator PT*() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &std::get<0>(mPtr); }
+    explicit(false) constexpr /* NOLINTNEXTLINE(google-explicit-constructor) */
+    operator PT*() noexcept { return &mPtr; }
 
-    constexpr operator void**() noexcept /* NOLINT(google-explicit-constructor) */
-    { return &mPtr.template emplace<1>(mRes.get()); }
+    explicit(false) constexpr /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, google-explicit-constructor) */
+    operator void**() noexcept { return reinterpret_cast<void**>(&mPtr); }
 };
 
 template<typename T=void, typename SP, typename ...Args> [[nodiscard]] constexpr
 auto inout_ptr(SP &res, Args&& ...args)
 {
     using ptr_t = decltype(detail::pointer_type_for<T, SP>());
-    static_assert(not std::is_void_v<ptr_t>);
     if constexpr(not std::is_void_v<ptr_t>)
         return inout_ptr_t<SP, ptr_t, Args&&...>{res, std::forward<Args>(args)...};
+    else
+        static_assert(not std::is_void_v<ptr_t>);
 }
 
 }

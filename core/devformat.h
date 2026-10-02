@@ -1,12 +1,13 @@
 #ifndef CORE_DEVFORMAT_H
 #define CORE_DEVFORMAT_H
 
+#include <cstdint>
 #include <string_view>
 
-#include "altypes.hpp"
 #include "zudl.hpp"
 
-enum Channel : u8::value_t {
+
+enum Channel : std::uint8_t {
     FrontLeft = 0,
     FrontRight,
     FrontCenter,
@@ -47,12 +48,11 @@ enum Channel : u8::value_t {
     Aux14,
     Aux15,
 
-    MaxChannels
+    NumChannels
 };
 
-
 /* Device formats */
-enum DevFmtType : u8::value_t {
+enum DevFmtType : std::uint8_t {
     DevFmtByte,
     DevFmtUByte,
     DevFmtShort,
@@ -63,7 +63,7 @@ enum DevFmtType : u8::value_t {
 
     DevFmtTypeDefault = DevFmtFloat
 };
-enum DevFmtChannels : u8::value_t {
+enum DevFmtChannels : std::uint8_t {
     DevFmtMono,
     DevFmtStereo,
     DevFmtQuad,
@@ -79,35 +79,13 @@ enum DevFmtChannels : u8::value_t {
 };
 inline constexpr auto MaxOutputChannels = 32_uz;
 
-/* DevFmtType traits, providing the type, etc given a DevFmtType. */
-template<DevFmtType>
-struct DevFmtTypeTraits { };
-
-template<>
-struct DevFmtTypeTraits<DevFmtByte> { using Type = i8; };
-template<>
-struct DevFmtTypeTraits<DevFmtUByte> { using Type = u8; };
-template<>
-struct DevFmtTypeTraits<DevFmtShort> { using Type = i16; };
-template<>
-struct DevFmtTypeTraits<DevFmtUShort> { using Type = u16; };
-template<>
-struct DevFmtTypeTraits<DevFmtInt> { using Type = i32; };
-template<>
-struct DevFmtTypeTraits<DevFmtUInt> { using Type = u32; };
-template<>
-struct DevFmtTypeTraits<DevFmtFloat> { using Type = f32; };
-
-template<DevFmtType T>
-using DevFmtType_t = typename DevFmtTypeTraits<T>::Type;
-
 
 [[nodiscard]]
 auto BytesFromDevFmt(DevFmtType type) noexcept -> unsigned;
 [[nodiscard]]
 auto ChannelsFromDevFmt(DevFmtChannels chans, unsigned ambiorder) noexcept -> unsigned;
-[[nodiscard]]
-inline auto FrameSizeFromDevFmt(DevFmtChannels const chans, DevFmtType const type,
+[[nodiscard]] inline
+auto FrameSizeFromDevFmt(DevFmtChannels const chans, DevFmtType const type,
     unsigned const ambiorder) noexcept -> unsigned
 { return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
@@ -123,7 +101,7 @@ enum class DevAmbiLayout : bool {
     Default = ACN
 };
 
-enum class DevAmbiScaling : u8::value_t {
+enum class DevAmbiScaling : std::uint8_t {
     FuMa,
     SN3D,
     N3D,

@@ -18,6 +18,14 @@
 #include "gsl/gsl"
 #include "zudl.hpp"
 
+#if HAVE_CXXMODULES
+import core.device;
+import types;
+#else
+#include "altypes.hpp"
+#include "core/devfmttraits.hpp"
+#endif
+
 
 namespace {
 

@@ -41,7 +41,9 @@
 #if HAVE_CXXMODULES
 import core.device;
 import logging;
+import types;
 #else
+#include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #endif

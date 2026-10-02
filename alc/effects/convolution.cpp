@@ -7,6 +7,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -366,7 +367,7 @@ void ConvolutionState::deviceUpdate(const DeviceBase *device, const BufferStorag
     if(device->mSampleRate != buffer->mSampleRate)
         resampler.init(buffer->mSampleRate, device->mSampleRate);
     const auto resampledCount = static_cast<unsigned>(
-        (u64::value_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
+        (std::uint64_t{buffer->mSampleLen}*device->mSampleRate+(buffer->mSampleRate-1)) /
         buffer->mSampleRate);
 
     const auto splitter = BandSplitter{device->mXOverFreq/static_cast<float>(device->mSampleRate)};

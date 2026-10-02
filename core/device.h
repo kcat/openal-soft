@@ -11,6 +11,7 @@
 #include <variant>
 
 #include "alformat.hpp"
+#include "altypes.hpp"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bitset.hpp"

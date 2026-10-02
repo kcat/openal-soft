@@ -845,6 +845,7 @@ set(CORE_HDRS
     core/cubic_defs.h
     core/cubic_tables.hpp
     core/decoderbase.hpp
+    core/devfmttraits.hpp
     core/devformat.h
     core/device.h
     core/effects/base.h

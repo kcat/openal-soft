@@ -1,6 +1,7 @@
 module;
 
 #include "core/device.h"
+#include "core/devfmttraits.hpp"
 
 export module core.device;
 
@@ -43,7 +44,6 @@ export {
     using ::DevFmtChannels;
     using ::MaxOutputChannels;
 
-    using ::DevFmtTypeTraits;
     using ::DevFmtType_t;
 
     using ::BytesFromDevFmt;

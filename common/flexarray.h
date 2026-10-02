@@ -8,6 +8,8 @@
 #include <span>
 #include <type_traits>
 
+#include "gsl/pointers"
+
 
 enum FamCount : std::size_t { };
 

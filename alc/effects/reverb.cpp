@@ -24,6 +24,7 @@
 #include <array>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <iterator>
 #include <numbers>
 #include <numeric>
@@ -595,7 +596,7 @@ struct ReverbState final : EffectState {
     };
     Params mParams;
 
-    enum PipelineState : u8::value_t {
+    enum PipelineState : std::uint8_t {
         DeviceClear,
         StartFade,
         Fading,

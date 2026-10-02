@@ -90,6 +90,7 @@ import types;
 #include "core/context.h"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
+#include "core/devfmttraits.hpp"
 #endif
 
 
@@ -1126,7 +1127,7 @@ auto GetPanGainSelector(VoiceProps const &props) noexcept NONBLOCKING
         case BottomBackRight: return rgain;
         case Aux0: case Aux1: case Aux2: case Aux3: case Aux4: case Aux5: case Aux6: case Aux7:
         case Aux8: case Aux9: case Aux10: case Aux11: case Aux12: case Aux13: case Aux14:
-        case Aux15: case MaxChannels: break;
+        case Aux15: case NumChannels: break;
         }
         return mingain;
     };

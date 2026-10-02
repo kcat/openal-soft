@@ -37,7 +37,6 @@
 #include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "zudl.hpp"
@@ -45,9 +44,11 @@
 #if HAVE_CXXMODULES
 import core.context;
 import core.device;
+import gsl;
 #else
 #include "core/context.h"
 #include "core/device.h"
+#include "gsl/gsl"
 #endif
 
 struct BufferStorage;
@@ -125,8 +126,8 @@ void ModulatorState::update(const ContextBase *context, const EffectSlotBase *sl
      */
     const auto samplesPerCycle = props.Frequency > 0.0f
         ? samplerate/props.Frequency + 0.5f : 1.0f;
-    const auto range = static_cast<unsigned>(std::clamp(samplesPerCycle, 1.0f, samplerate));
-    mIndex = static_cast<unsigned>((u64{mIndex} * u64{range} / u64{mRange}).c_val);
+    const auto range = gsl::narrow_cast<unsigned>(std::clamp(samplesPerCycle, 1.0f, samplerate));
+    mIndex = gsl::narrow_cast<unsigned>(std::uint64_t{mIndex} * range / mRange);
     mRange = range;
 
     if(mRange == 1)

@@ -126,7 +126,7 @@ auto GetLabelFromChannel(Channel const channel) -> std::string_view
     case Aux14: return "Aux14"sv;
     case Aux15: return "Aux15"sv;
 
-    case MaxChannels: break;
+    case NumChannels: break;
     }
     return "(unknown)"sv;
 }
@@ -496,7 +496,7 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
                     idx = std::numeric_limits<unsigned>::max();
             }
 
-            if(idx >= unsigned{MaxChannels-Aux0})
+            if(idx >= unsigned{NumChannels-Aux0})
             {
                 ERR("AmbDec speaker label \"{}\" not recognized", speaker.Name);
                 continue;

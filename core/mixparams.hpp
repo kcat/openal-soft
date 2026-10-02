@@ -69,7 +69,7 @@ struct InputRemixMap {
 
 struct RealMixParams {
     std::span<InputRemixMap const> RemixMap;
-    std::array<std::uint8_t, MaxChannels> ChannelIndex{};
+    std::array<std::uint8_t, NumChannels> ChannelIndex{};
 
     std::span<FloatBufferLine> Buffer;
 };

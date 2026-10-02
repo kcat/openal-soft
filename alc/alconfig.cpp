@@ -44,10 +44,10 @@
 #include <utility>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"
+#include "inout_ptr.hpp"
 #include "strutils.hpp"
 
 #if ALSOFT_UWP

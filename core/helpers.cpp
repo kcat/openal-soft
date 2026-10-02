@@ -26,7 +26,7 @@
 #endif
 #include <shlobj.h>
 
-#include "almalloc.h"
+#include "inout_ptr.hpp"
 
 #else
 

@@ -63,13 +63,13 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
 #include "gsl/gsl"
+#include "inout_ptr.hpp"
 #include "opthelpers.h"
 #include "ringbuffer.h"
 #include "strutils.hpp"

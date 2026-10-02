@@ -30,9 +30,9 @@
 #include <utility>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "alstring.h"
+#include "inout_ptr.hpp"
 #include "opthelpers.h"
 #include "pragmadefs.h"
 #include "zudl.hpp"

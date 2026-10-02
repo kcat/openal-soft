@@ -24,8 +24,8 @@
 #include <shlobj.h>
 #endif
 
-#include "almalloc.h"
 #include "gsl/gsl"
+#include "inout_ptr.hpp"
 
 namespace {
 

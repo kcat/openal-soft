@@ -40,12 +40,12 @@
 #include <thread>
 #include <vector>
 
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/helpers.h"
 #include "dynload.h"
+#include "inout_ptr.hpp"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 

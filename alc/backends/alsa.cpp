@@ -38,12 +38,12 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "almalloc.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "core/helpers.h"
 #include "dlopennote.h"
 #include "dynload.h"
+#include "inout_ptr.hpp"
 #include "ringbuffer.h"
 
 #include <alsa/asoundlib.h>

@@ -751,6 +751,7 @@ set(COMMON_HDRS
     common/filesystem.h
     common/flexarray.h
     common/ghc_filesystem.h
+    common/inout_ptr.hpp
     common/intrusive_ptr.h
     common/opthelpers.h
     common/pffft.h

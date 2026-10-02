@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
@@ -46,20 +47,20 @@ inline constexpr auto DefaultUpdateSize = 512_uz; /* ~10.7ms */
 inline constexpr auto DefaultNumUpdates = 3_uz;
 
 
-enum class DeviceType : u8::value_t {
+enum class DeviceType : std::uint8_t {
     Playback,
     Capture,
     Loopback
 };
 
 
-enum class RenderMode : u8::value_t {
+enum class RenderMode : std::uint8_t {
     Normal,
     Pairwise,
     Hrtf
 };
 
-enum class StereoEncoding : u8::value_t {
+enum class StereoEncoding : std::uint8_t {
     Basic,
     Uhj,
     Hrtf,
@@ -129,7 +130,7 @@ using PostProcess = std::variant<std::monostate,
     Bs2bPostProcess>;
 
 
-enum class DeviceFlag : u8::value_t {
+enum class DeviceFlag : std::uint8_t {
     // Frequency was requested by the app or config file
     FrequencyRequest,
     // Channel configuration was requested by the app or config file
@@ -152,7 +153,7 @@ enum class DeviceFlag : u8::value_t {
     MaxValue = Virtualization
 };
 
-enum class DeviceState : u8::value_t {
+enum class DeviceState : std::uint8_t {
     Unprepared,
     Configured,
     Playing

@@ -5,12 +5,12 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <thread>
 #include <vector>
 
-#include "altypes.hpp"
 #include "async_event.h"
 #include "atomic.h"
 #include "bitset.hpp"
@@ -31,7 +31,7 @@ inline constexpr auto SpeedOfSoundMetersPerSec = 343.3f;
 
 inline constexpr auto AirAbsorbGainHF = 0.99426f; /* -0.05dB */
 
-enum class DistanceModel : u8::value_t {
+enum class DistanceModel : std::uint8_t {
     Disable,
     Inverse, InverseClamped,
     Linear, LinearClamped,

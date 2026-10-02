@@ -3,6 +3,7 @@ module;
 #include <type_traits>
 
 #include "alformat.hpp"
+#include "instance_of.hpp"
 #include "zstring_view.hpp"
 
 export module zstring_view;
@@ -10,17 +11,6 @@ export module zstring_view;
 #if USING_STD_FORMAT
 import fmtlib;
 #endif
-
-namespace al {
-    template<typename T, template<typename...> typename U>
-    inline constexpr auto is_instance_of_v = false;
-
-    template<template<typename...> typename U, typename... Vs>
-    inline constexpr auto is_instance_of_v<U<Vs...>, U> = true;
-
-    template<typename T>
-    concept zstring_view_type = is_instance_of_v<std::remove_cvref_t<T>, basic_zstring_view>;
-}
 
 export namespace al {
     using al::basic_zstring_view;
@@ -41,7 +31,7 @@ export namespace al {
 
 export {
 
-template<al::zstring_view_type T, typename CharT>
+template<al::instance_of<al::basic_zstring_view> T, typename CharT>
 struct al::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {
     using fmttype_t = typename T::underlying_type;
 
@@ -50,7 +40,7 @@ struct al::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {
 };
 
 #if USING_STD_FORMAT
-template<al::zstring_view_type T, typename CharT>
+template<al::instance_of<al::basic_zstring_view> T, typename CharT>
 struct fmt::formatter<T, CharT> : formatter<typename T::underlying_type, CharT> {
     using fmttype_t = typename T::underlying_type;
 

@@ -6,6 +6,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "instance_of.hpp"
+
 
 namespace al {
 
@@ -38,16 +40,6 @@ namespace detail {
                 or requires { typename std::pointer_traits<SP>::element_type; });
     }
 
-
-    template<typename T, template<typename...> typename U>
-    inline constexpr auto is_instance_of_v = false;
-
-    template<template<typename...> typename U, typename... Vs>
-    inline constexpr auto is_instance_of_v<U<Vs...>, U> = true;
-
-    template<typename T>
-    concept shared_ptr_type = is_instance_of_v<std::remove_cvref_t<T>, std::shared_ptr>;
-
 }
 
 template<typename SP, typename PT, typename ...Args>
@@ -59,7 +51,7 @@ class out_ptr_t {
     static_assert(detail::can_reset<SP, PT, Args...> or detail::can_assign<SP, PT, Args...>,
         "Smart pointer type can't be reset or assigned with the given argument types");
 
-    static_assert(not detail::shared_ptr_type<SP> or sizeof...(Args) > 0,
+    static_assert(not instance_of<SP, std::shared_ptr> or sizeof...(Args) > 0,
         "std::shared_ptr must have a deleter argument");
 
 public:
@@ -115,7 +107,7 @@ class inout_ptr_t {
     static_assert(detail::can_reset<SP, PT, Args...> or detail::can_assign<SP, PT, Args...>,
         "Smart pointer type can't be reset or assigned with the given argument types");
 
-    static_assert(not detail::shared_ptr_type<SP> or sizeof...(Args) > 0,
+    static_assert(not instance_of<SP, std::shared_ptr> or sizeof...(Args) > 0,
         "std::shared_ptr must have a deleter argument");
 
 public:

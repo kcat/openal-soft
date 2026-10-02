@@ -83,7 +83,7 @@
 #include <iterator>
 #include <memory>
 
-#include "almalloc.h"
+#include "gsl/gsl"
 #include "opthelpers.h"
 
 

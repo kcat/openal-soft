@@ -5,7 +5,7 @@
 
 #include "AL/efx.h"
 
-#include "almalloc.h"
+#include "disable_alloc.hpp"
 
 namespace al {
 

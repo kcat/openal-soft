@@ -17,10 +17,10 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "almalloc.h"
 #include "altypes.hpp"
 #include "core/context.h"
 #include "core/voice.h"
+#include "disable_alloc.hpp"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 

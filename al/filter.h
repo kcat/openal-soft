@@ -9,8 +9,8 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "almalloc.h"
 #include "altypes.hpp"
+#include "disable_alloc.hpp"
 #include "gsl/gsl"
 
 namespace al {

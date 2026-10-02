@@ -12,9 +12,9 @@
 #include "AL/al.h"
 
 #include "alc/inprogext.h"
-#include "almalloc.h"
 #include "altypes.hpp"
 #include "core/buffer_storage.h"
+#include "disable_alloc.hpp"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "vector.h"

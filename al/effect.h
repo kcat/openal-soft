@@ -10,9 +10,9 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "almalloc.h"
 #include "altypes.hpp"
 #include "core/effects/base.h"
+#include "disable_alloc.hpp"
 #include "effects/effects.h"
 #include "gsl/gsl"
 

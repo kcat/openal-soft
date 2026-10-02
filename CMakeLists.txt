@@ -745,6 +745,7 @@ set(COMMON_HDRS
     common/bitset.hpp
     common/cemath.hpp
     common/comptr.h
+    common/disable_alloc.hpp
     common/dynload.h
     common/dlopennote.h
     common/expected.hpp

@@ -50,6 +50,8 @@
 #include <bit>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <future>
@@ -1205,7 +1207,7 @@ struct WasapiPlayback final : BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : u8::value_t {
+    enum class ThreadState : std::uint8_t {
         Initializing,
         Waiting,
         Playing,
@@ -1213,7 +1215,7 @@ struct WasapiPlayback final : BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : u8::value_t {
+    enum class ThreadAction : std::uint8_t {
         Nothing,
         Configure,
         Play,
@@ -2395,7 +2397,7 @@ struct WasapiCapture final : BackendBase {
     std::condition_variable mProcCond;
     HRESULT mProcResult{E_FAIL};
 
-    enum class ThreadState : u8::value_t {
+    enum class ThreadState : std::uint8_t {
         Initializing,
         Waiting,
         Recording,
@@ -2403,7 +2405,7 @@ struct WasapiCapture final : BackendBase {
     };
     ThreadState mState{ThreadState::Initializing};
 
-    enum class ThreadAction : u8::value_t {
+    enum class ThreadAction : std::uint8_t {
         Nothing,
         Record,
         Quit
@@ -2480,7 +2482,8 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                 auto dstframes = std::size_t{};
                 if(mSampleConv)
                 {
-                    static constexpr auto lenlimit = i32::max().as<usize>().c_val;
+                    static constexpr auto lenlimit = std::size_t{
+                        std::numeric_limits<std::int32_t>::max()};
                     auto *srcdata = LPCVOID{rdata};
                     auto srcframes = unsigned{numsamples};
 

@@ -105,8 +105,12 @@ public:
     [[nodiscard]] static constexpr
     auto size() noexcept -> std::size_t { return num_bits; }
 
+    /* Cast to ull before bit flipping to passify MSVC. The constructor input
+     * will have invalid bits masked out to get the same result regardless.
+     */
     [[nodiscard]] constexpr
-    auto operator~() const noexcept -> bitset { return bitset{~mBits}; }
+    auto operator~() const noexcept -> bitset
+    { return bitset{~static_cast<unsigned long long>(mBits)}; }
 
     constexpr
     auto operator|=(bitset const &rhs) noexcept LIFETIMEBOUND -> bitset&

@@ -3091,8 +3091,7 @@ try {
     device->NumAuxSends = DefaultSends;
 
     try {
-        auto backend = PlaybackFactory->createBackend(gsl::make_not_null(device.get()),
-            BackendType::Playback);
+        auto backend = PlaybackFactory->createBackend(*device, BackendType::Playback);
         auto listlock = std::lock_guard{ListLock};
         backend->open(devname);
         device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
@@ -3266,8 +3265,7 @@ try {
         device->mSampleRate, device->mUpdateSize, device->mBufferSize);
 
     try {
-        auto backend = CaptureFactory->createBackend(gsl::make_not_null(device.get()),
-            BackendType::Capture);
+        auto backend = CaptureFactory->createBackend(*device, BackendType::Capture);
         auto listlock = std::lock_guard{ListLock};
         backend->open(devname);
         device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
@@ -3462,8 +3460,8 @@ try {
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
     try {
-        auto backend = LoopbackBackendFactory::getFactory().createBackend(
-            gsl::make_not_null(device.get()), BackendType::Playback);
+        auto backend = LoopbackBackendFactory::getFactory().createBackend(*device,
+            BackendType::Playback);
         backend->open("Loopback");
         device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
         device->Backend = std::move(backend);
@@ -3726,7 +3724,7 @@ try {
 
     auto newbackend = BackendPtr{};
     try {
-        newbackend = PlaybackFactory->createBackend(al::get_not_null(dev), BackendType::Playback);
+        newbackend = PlaybackFactory->createBackend(*dev, BackendType::Playback);
         newbackend->open(devname);
     }
     catch(al::backend_exception &e) {

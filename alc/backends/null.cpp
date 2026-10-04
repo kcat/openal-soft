@@ -52,8 +52,7 @@ using namespace std::string_view_literals;
 
 
 struct NullBackend final : BackendBase {
-    explicit NullBackend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
 
     void mixerProc() const;
 
@@ -68,7 +67,7 @@ struct NullBackend final : BackendBase {
 
 void NullBackend::mixerProc() const
 {
-    auto const restTime = milliseconds{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
+    auto const restTime = milliseconds{mDevice.mUpdateSize*1000/mDevice.mSampleRate / 2};
 
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
@@ -76,22 +75,22 @@ void NullBackend::mixerProc() const
     auto done = 0_i64;
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire)
-        && mDevice->Connected.load(std::memory_order_acquire))
+        && mDevice.Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
         const auto avail = i64{std::chrono::duration_cast<seconds>((now-start)
-            * mDevice->mSampleRate).count()};
-        if(avail-done < mDevice->mUpdateSize)
+            * mDevice.mSampleRate).count()};
+        if(avail-done < mDevice.mUpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= mDevice->mUpdateSize)
+        while(avail-done >= mDevice.mUpdateSize)
         {
-            mDevice->renderSamples(nullptr, mDevice->mUpdateSize, 0u);
-            done += i64{mDevice->mUpdateSize};
+            mDevice.renderSamples(nullptr, mDevice.mUpdateSize, 0u);
+            done += i64{mDevice.mUpdateSize};
         }
 
         /* For every completed second, increment the start time and reduce the
@@ -99,11 +98,11 @@ void NullBackend::mixerProc() const
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= mDevice->mSampleRate)
+        if(done >= mDevice.mSampleRate)
         {
-            const auto s = seconds{(done/i64{mDevice->mSampleRate}).c_val};
+            const auto s = seconds{(done/i64{mDevice.mSampleRate}).c_val};
             start += s;
-            done -= i64{mDevice->mSampleRate*s.count()};
+            done -= i64{mDevice.mSampleRate * s.count()};
         }
     }
 }
@@ -167,8 +166,7 @@ auto NullBackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return {};
 }
 
-auto NullBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto NullBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new NullBackend{device}};

@@ -120,8 +120,7 @@ void EnumerateDevices()
 struct StreamParamsExt : PaStreamParameters { unsigned updateSize; };
 
 struct PortPlayback final : BackendBase {
-    explicit PortPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~PortPlayback() override;
 
     auto writeCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -152,7 +151,7 @@ auto PortPlayback::writeCallback(const void*, void *const outputBuffer,
     unsigned long const framesPerBuffer, PaStreamCallbackTimeInfo const*, PaStreamCallbackFlags)
     noexcept -> int
 {
-    mDevice->renderSamples(outputBuffer, gsl::narrow_cast<unsigned>(framesPerBuffer),
+    mDevice.renderSamples(outputBuffer, gsl::narrow_cast<unsigned>(framesPerBuffer),
         gsl::narrow_cast<unsigned>(mParams.channelCount));
     return 0;
 }
@@ -164,12 +163,12 @@ void PortPlayback::createStream(PaDeviceIndex const deviceid)
 
     auto params = StreamParamsExt{};
     params.device = deviceid;
-    params.suggestedLatency = mDevice->mBufferSize
-        / gsl::narrow_cast<double>(mDevice->mSampleRate);
+    params.suggestedLatency = mDevice.mBufferSize
+        / gsl::narrow_cast<double>(mDevice.mSampleRate);
     params.hostApiSpecificStreamInfo = nullptr;
     params.channelCount = gsl::narrow_cast<int>(std::min(devinfo.mPlaybackChannels,
-        mDevice->channelsFromFmt()));
-    switch(mDevice->FmtType)
+        mDevice.channelsFromFmt()));
+    switch(mDevice.FmtType)
     {
     case DevFmtByte: params.sampleFormat = paInt8; break;
     case DevFmtUByte: params.sampleFormat = paUInt8; break;
@@ -179,9 +178,9 @@ void PortPlayback::createStream(PaDeviceIndex const deviceid)
     case DevFmtInt: params.sampleFormat = paInt32; break;
     case DevFmtFloat: params.sampleFormat = paFloat32; break;
     }
-    params.updateSize = mDevice->mUpdateSize;
+    params.updateSize = mDevice.mUpdateSize;
 
-    auto srate = mDevice->mSampleRate;
+    auto srate = mDevice.mSampleRate;
 
     static constexpr auto writeCallback = [](void const *const inputBuffer,
         void *const outputBuffer, unsigned long const framesPerBuffer,
@@ -253,37 +252,37 @@ bool PortPlayback::reset()
 
     switch(mParams.sampleFormat)
     {
-    case paFloat32: mDevice->FmtType = DevFmtFloat; break;
-    case paInt32: mDevice->FmtType = DevFmtInt; break;
-    case paInt16: mDevice->FmtType = DevFmtShort; break;
-    case paInt8: mDevice->FmtType = DevFmtByte; break;
-    case paUInt8: mDevice->FmtType = DevFmtUByte; break;
+    case paFloat32: mDevice.FmtType = DevFmtFloat; break;
+    case paInt32: mDevice.FmtType = DevFmtInt; break;
+    case paInt16: mDevice.FmtType = DevFmtShort; break;
+    case paInt8: mDevice.FmtType = DevFmtByte; break;
+    case paUInt8: mDevice.FmtType = DevFmtUByte; break;
     default:
         ERR("Unexpected PortAudio sample format: {}", mParams.sampleFormat);
         throw al::backend_exception{al::backend_error::NoDevice, "Invalid sample format: {}",
             mParams.sampleFormat};
     }
 
-    if(mParams.channelCount != gsl::narrow_cast<int>(mDevice->channelsFromFmt()))
+    if(std::cmp_not_equal(mParams.channelCount, mDevice.channelsFromFmt()))
     {
         if(mParams.channelCount >= 2)
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(mParams.channelCount == 1)
-            mDevice->FmtChans = DevFmtMono;
-        mDevice->mAmbiOrder = 0;
+            mDevice.FmtChans = DevFmtMono;
+        mDevice.mAmbiOrder = 0;
     }
 
     const auto *streamInfo = Pa_GetStreamInfo(mStream);
-    mDevice->mSampleRate = gsl::narrow_cast<unsigned>(std::lround(streamInfo->sampleRate));
-    mDevice->mUpdateSize = mParams.updateSize;
-    mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
+    mDevice.mSampleRate = gsl::narrow_cast<unsigned>(std::lround(streamInfo->sampleRate));
+    mDevice.mUpdateSize = mParams.updateSize;
+    mDevice.mBufferSize = mDevice.mUpdateSize * 2u;
     if(streamInfo->outputLatency > 0.0f)
     {
         const auto sampleLatency = streamInfo->outputLatency * streamInfo->sampleRate;
         TRACE("Reported stream latency: {:f} sec ({:f} samples)", streamInfo->outputLatency,
             sampleLatency);
-        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(std::clamp(sampleLatency,
-            gsl::narrow_cast<double>(mDevice->mBufferSize),
+        mDevice.mBufferSize = gsl::narrow_cast<unsigned>(std::clamp(sampleLatency,
+            gsl::narrow_cast<double>(mDevice.mBufferSize),
             double{std::numeric_limits<int>::max()}));
     }
 
@@ -307,7 +306,7 @@ void PortPlayback::stop()
 
 
 struct PortCapture final : public BackendBase {
-    explicit PortCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+    using BackendBase::BackendBase;
     ~PortCapture() override;
 
     auto readCallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,
@@ -368,8 +367,8 @@ void PortCapture::open(std::string_view name)
         deviceid = gsl::narrow_cast<PaDeviceIndex>(std::distance(DeviceNames.begin(), iter));
     }
 
-    const auto samples = std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u);
-    const auto frame_size = mDevice->frameSizeFromFmt();
+    const auto samples = std::max(mDevice.mBufferSize, mDevice.mSampleRate/10u);
+    const auto frame_size = mDevice.frameSizeFromFmt();
 
     mRing = RingBuffer<std::byte>::Create(samples, frame_size, false);
 
@@ -377,7 +376,7 @@ void PortCapture::open(std::string_view name)
     mParams.suggestedLatency = 0.0f;
     mParams.hostApiSpecificStreamInfo = nullptr;
 
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte: mParams.sampleFormat = paInt8; break;
     case DevFmtUByte: mParams.sampleFormat = paUInt8; break;
@@ -387,9 +386,9 @@ void PortCapture::open(std::string_view name)
     case DevFmtUInt:
     case DevFmtUShort:
         throw al::backend_exception{al::backend_error::DeviceError, "{} samples not supported",
-            DevFmtTypeString(mDevice->FmtType)};
+            DevFmtTypeString(mDevice.FmtType)};
     }
-    mParams.channelCount = gsl::narrow_cast<int>(mDevice->channelsFromFmt());
+    mParams.channelCount = gsl::narrow_cast<int>(mDevice.channelsFromFmt());
 
     static constexpr auto readCallback = [](const void *inputBuffer, void *outputBuffer,
         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
@@ -398,7 +397,7 @@ void PortCapture::open(std::string_view name)
         return static_cast<PortCapture*>(userData)->readCallback(inputBuffer, outputBuffer,
             framesPerBuffer, timeInfo, statusFlags);
     };
-    const auto err = Pa_OpenStream(&mStream, &mParams, nullptr, mDevice->mSampleRate,
+    const auto err = Pa_OpenStream(&mStream, &mParams, nullptr, mDevice.mSampleRate,
         paFramesPerBufferUnspecified, paNoFlag, readCallback, this);
     if(err != paNoError)
         throw al::backend_exception{al::backend_error::NoDevice, "Failed to open stream: {}",
@@ -567,8 +566,7 @@ auto PortBackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return devices;
 }
 
-auto PortBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto PortBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PortPlayback{device}};

@@ -370,9 +370,8 @@ static constexpr char ca_device[] = "CoreAudio Default";
 #endif
 
 
-struct CoreAudioPlayback final : public BackendBase {
-    explicit CoreAudioPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device}
-    { }
+struct CoreAudioPlayback final : BackendBase {
+    using BackendBase::BackendBase;
     ~CoreAudioPlayback() override;
 
     OSStatus MixerProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -403,7 +402,7 @@ OSStatus CoreAudioPlayback::MixerProc(AudioUnitRenderActionFlags*, const AudioTi
     for(auto i=0_uz;i < ioData->mNumberBuffers;++i)
     {
         auto &buffer = ioData->mBuffers[i];
-        mDevice->renderSamples(buffer.mData, buffer.mDataByteSize/mFrameSize,
+        mDevice.renderSamples(buffer.mData, buffer.mDataByteSize/mFrameSize,
             buffer.mNumberChannels);
     }
     return noErr;
@@ -506,7 +505,7 @@ void CoreAudioPlayback::open(std::string_view name)
         else
         {
             TRACE("Got device type '{}'", FourCCPrinter{type}.c_str());
-            mDevice->mFlags.set(DeviceFlag::DirectEar,
+            mDevice.mFlags.set(DeviceFlag::DirectEar,
                (type == kIOAudioOutputPortSubTypeHeadphones));
         }
     }
@@ -537,11 +536,11 @@ bool CoreAudioPlayback::reset()
     /* Use the sample rate from the output unit's current parameters, but reset
      * everything else.
      */
-    if(mDevice->mSampleRate != streamFormat.mSampleRate)
+    if(mDevice.mSampleRate != streamFormat.mSampleRate)
     {
-        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(mDevice->mBufferSize
-            *streamFormat.mSampleRate/mDevice->mSampleRate + 0.5);
-        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(streamFormat.mSampleRate);
+        mDevice.mBufferSize = gsl::narrow_cast<unsigned>(mDevice.mBufferSize
+            *streamFormat.mSampleRate/mDevice.mSampleRate + 0.5);
+        mDevice.mSampleRate = gsl::narrow_cast<unsigned>(streamFormat.mSampleRate);
     }
 
     struct ChannelMap {
@@ -561,7 +560,7 @@ bool CoreAudioPlayback::reset()
         { DevFmtMono, MonoChanMap, false }
     }};
 
-    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
+    if(!mDevice.mFlags.test(DeviceFlag::ChannelsRequest))
     {
         auto propSize = UInt32{};
         auto writable = Boolean{};
@@ -590,7 +589,7 @@ bool CoreAudioPlayback::reset()
                 { return std::ranges::includes(labels, chanmap.map); };
                 auto chaniter = std::ranges::find_if(chanmaps, check_labels);
                 if(chaniter != chanmaps.end())
-                    mDevice->FmtChans = chaniter->fmt;
+                    mDevice.FmtChans = chaniter->fmt;
             }
         }
     }
@@ -598,29 +597,29 @@ bool CoreAudioPlayback::reset()
     /* TODO: Also set kAudioUnitProperty_AudioChannelLayout according to the AL
      * device's channel configuration.
      */
-    streamFormat.mChannelsPerFrame = mDevice->channelsFromFmt();
+    streamFormat.mChannelsPerFrame = mDevice.channelsFromFmt();
 
     streamFormat.mFramesPerPacket = 1;
     streamFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
     streamFormat.mFormatID = kAudioFormatLinearPCM;
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtUByte:
-        mDevice->FmtType = DevFmtByte;
+        mDevice.FmtType = DevFmtByte;
         [[fallthrough]];
     case DevFmtByte:
         streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
         streamFormat.mBitsPerChannel = 8;
         break;
     case DevFmtUShort:
-        mDevice->FmtType = DevFmtShort;
+        mDevice.FmtType = DevFmtShort;
         [[fallthrough]];
     case DevFmtShort:
         streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
         streamFormat.mBitsPerChannel = 16;
         break;
     case DevFmtUInt:
-        mDevice->FmtType = DevFmtInt;
+        mDevice.FmtType = DevFmtInt;
         [[fallthrough]];
     case DevFmtInt:
         streamFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
@@ -646,7 +645,7 @@ bool CoreAudioPlayback::reset()
     setDefaultWFXChannelOrder();
 
     /* setup callback */
-    mFrameSize = mDevice->frameSizeFromFmt();
+    mFrameSize = mDevice.frameSizeFromFmt();
     auto input = AURenderCallbackStruct{};
     input.inputProc = [](void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags,
         const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
@@ -693,8 +692,8 @@ void CoreAudioPlayback::stop()
 }
 
 
-struct CoreAudioCapture final : public BackendBase {
-    explicit CoreAudioCapture(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+struct CoreAudioCapture final : BackendBase {
+    using BackendBase::BackendBase;
     ~CoreAudioCapture() override;
 
     OSStatus RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
@@ -868,7 +867,7 @@ void CoreAudioCapture::open(std::string_view name)
     // Set up the requested format description
     auto requestedFormat = AudioStreamBasicDescription{};
     requestedFormat.mFormatFlags = kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked;
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte:
         requestedFormat.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
@@ -894,7 +893,7 @@ void CoreAudioCapture::open(std::string_view name)
         break;
     }
 
-    switch(mDevice->FmtChans)
+    switch(mDevice.FmtChans)
     {
     case DevFmtMono:
         requestedFormat.mChannelsPerFrame = 1;
@@ -912,19 +911,19 @@ void CoreAudioCapture::open(std::string_view name)
     case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "{} not supported",
-            DevFmtChannelsString(mDevice->FmtChans)};
+            DevFmtChannelsString(mDevice.FmtChans)};
     }
 
     requestedFormat.mBytesPerFrame = requestedFormat.mChannelsPerFrame * requestedFormat.mBitsPerChannel / 8;
     requestedFormat.mBytesPerPacket = requestedFormat.mBytesPerFrame;
-    requestedFormat.mSampleRate = mDevice->mSampleRate;
+    requestedFormat.mSampleRate = mDevice.mSampleRate;
     requestedFormat.mFormatID = kAudioFormatLinearPCM;
     requestedFormat.mReserved = 0;
     requestedFormat.mFramesPerPacket = 1;
 
     // save requested format description for later use
     mFormat = requestedFormat;
-    mFrameSize = mDevice->frameSizeFromFmt();
+    mFrameSize = mDevice.frameSizeFromFmt();
 
     // Use intermediate format for sample rate conversion (outputFormat)
     // Set sample rate to the same as hardware for resampling later
@@ -942,9 +941,9 @@ void CoreAudioCapture::open(std::string_view name)
     /* Calculate the minimum AudioUnit output format frame count for the pre-
      * conversion ring buffer. Ensure at least 100ms for the total buffer.
      */
-    double srateScale{outputFormat.mSampleRate / mDevice->mSampleRate};
+    double srateScale{outputFormat.mSampleRate / mDevice.mSampleRate};
     auto FrameCount64 = std::max(
-        gsl::narrow_cast<u64::value_t>(std::ceil(mDevice->mBufferSize*srateScale)),
+        gsl::narrow_cast<u64::value_t>(std::ceil(mDevice.mBufferSize*srateScale)),
         gsl::narrow_cast<UInt32>(outputFormat.mSampleRate)/u64::value_t{10});
     FrameCount64 += MaxResamplerPadding;
     if(FrameCount64 > std::numeric_limits<int>::max())
@@ -965,10 +964,10 @@ void CoreAudioCapture::open(std::string_view name)
     mRing = RingBuffer<std::byte>::Create(outputFrameCount, mFrameSize, false);
 
     /* Set up sample converter if needed */
-    if(outputFormat.mSampleRate != mDevice->mSampleRate)
-        mConverter = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
+    if(outputFormat.mSampleRate != mDevice.mSampleRate)
+        mConverter = SampleConverter::Create(mDevice.FmtType, mDevice.FmtType,
             mFormat.mChannelsPerFrame, gsl::narrow_cast<unsigned>(hardwareFormat.mSampleRate),
-            mDevice->mSampleRate, Resampler::FastBSinc24);
+            mDevice.mSampleRate, Resampler::FastBSinc24);
 
 #if CAN_ENUMERATE
     if(!name.empty())
@@ -1091,8 +1090,7 @@ auto CoreAudioBackendFactory::enumerate(BackendType type) -> std::vector<std::st
     return outnames;
 }
 
-auto CoreAudioBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
-    -> BackendPtr
+auto CoreAudioBackendFactory::createBackend(DeviceBase &device, BackendType type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new CoreAudioPlayback{device}};

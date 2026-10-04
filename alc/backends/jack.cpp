@@ -294,15 +294,15 @@ void EnumerateDevices(jack_client_t *client, std::vector<DeviceEntry> &list)
 
 
 struct JackPlayback final : public BackendBase {
-    explicit JackPlayback(gsl::not_null<DeviceBase*> device) noexcept : BackendBase{device} { }
+    using BackendBase::BackendBase;
     ~JackPlayback() override;
 
-    int processRt(jack_nframes_t numframes) noexcept;
-    static int processRtC(jack_nframes_t numframes, void *arg) noexcept
+    auto processRt(jack_nframes_t numframes) noexcept -> int;
+    static auto processRtC(jack_nframes_t const numframes, void *const arg) noexcept -> int
     { return static_cast<JackPlayback*>(arg)->processRt(numframes); }
 
-    int process(jack_nframes_t numframes) noexcept;
-    static int processC(jack_nframes_t numframes, void *arg) noexcept
+    auto process(jack_nframes_t numframes) noexcept -> int;
+    static auto processC(jack_nframes_t const numframes, void *const arg) noexcept -> int
     { return static_cast<JackPlayback*>(arg)->process(numframes); }
 
     int mixerProc();
@@ -350,7 +350,7 @@ int JackPlayback::processRt(jack_nframes_t numframes) noexcept
 
     const auto dst = std::span{outptrs}.first(mPort.size());
     if(mPlaying.load(std::memory_order_acquire)) [[likely]]
-        mDevice->renderSamples(dst, gsl::narrow_cast<unsigned>(numframes));
+        mDevice.renderSamples(dst, gsl::narrow_cast<unsigned>(numframes));
     else
     {
         std::ranges::for_each(dst, [numframes](void *outbuf) -> void
@@ -375,7 +375,7 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
     {
         auto const data = mRing->getReadVector();
 
-        const auto outlen = std::size_t{numframes / mDevice->mUpdateSize};
+        const auto outlen = std::size_t{numframes / mDevice.mUpdateSize};
         const auto updates1 = std::min(data[0].size() / mRing->getElemSize(), outlen);
         const auto updates2 = std::min(data[1].size() / mRing->getElemSize(), outlen - updates1);
 
@@ -384,9 +384,9 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         {
             for(auto c = 0_uz;c < numchans;++c)
             {
-                std::ranges::copy(src.first(mDevice->mUpdateSize), out[c].begin());
-                out[c] = out[c].subspan(mDevice->mUpdateSize);
-                src = src.subspan(mDevice->mUpdateSize);
+                std::ranges::copy(src.first(mDevice.mUpdateSize), out[c].begin());
+                out[c] = out[c].subspan(mDevice.mUpdateSize);
+                src = src.subspan(mDevice.mUpdateSize);
             }
         }
 
@@ -395,9 +395,9 @@ int JackPlayback::process(jack_nframes_t numframes) noexcept
         {
             for(auto c = 0_uz;c < numchans;++c)
             {
-                std::ranges::copy(src.first(mDevice->mUpdateSize), out[c].begin());
-                out[c] = out[c].subspan(mDevice->mUpdateSize);
-                src = src.subspan(mDevice->mUpdateSize);
+                std::ranges::copy(src.first(mDevice.mUpdateSize), out[c].begin());
+                out[c] = out[c].subspan(mDevice.mUpdateSize);
+                src = src.subspan(mDevice.mUpdateSize);
             }
         }
 
@@ -415,11 +415,11 @@ int JackPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const auto update_size = mDevice->mUpdateSize;
+    const auto update_size = mDevice.mUpdateSize;
     auto outptrs = std::vector<void*>(mPort.size());
 
     while(!mKillNow.load(std::memory_order_acquire)
-        && mDevice->Connected.load(std::memory_order_acquire))
+        && mDevice.Connected.load(std::memory_order_acquire))
     {
         if(mRing->writeSpace() == 0)
         {
@@ -442,7 +442,7 @@ int JackPlayback::mixerProc()
                     std::advance(bufiter, update_size);
                     return ret;
                 });
-                mDevice->renderSamples(outptrs, update_size);
+                mDevice.renderSamples(outptrs, update_size);
             }
             mRing->writeAdvance(updates);
         });
@@ -500,36 +500,36 @@ bool JackPlayback::reset()
     { jack_port_unregister(mClient, port); });
     decltype(mPort){}.swap(mPort);
 
-    mRTMixing = GetConfigValueBool(mDevice->mDeviceName, "jack", "rt-mix", true);
+    mRTMixing = GetConfigValueBool(mDevice.mDeviceName, "jack", "rt-mix", true);
     jack_set_process_callback(mClient,
         mRTMixing ? &JackPlayback::processRtC : &JackPlayback::processC, this);
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
      * ready for when requested.
      */
-    mDevice->mSampleRate = jack_get_sample_rate(mClient);
-    mDevice->mUpdateSize = jack_get_buffer_size(mClient);
+    mDevice.mSampleRate = jack_get_sample_rate(mClient);
+    mDevice.mUpdateSize = jack_get_buffer_size(mClient);
     if(mRTMixing)
     {
         /* Assume only two periods when directly mixing. Should try to query
          * the total port latency when connected.
          */
-        mDevice->mBufferSize = mDevice->mUpdateSize * 2;
+        mDevice.mBufferSize = mDevice.mUpdateSize * 2;
     }
     else
     {
-        const auto devname = std::string_view{mDevice->mDeviceName};
+        const auto devname = std::string_view{mDevice.mDeviceName};
         auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
-            .value_or(mDevice->mUpdateSize);
-        bufsize = std::max(std::bit_ceil(bufsize), mDevice->mUpdateSize);
-        mDevice->mBufferSize = bufsize + mDevice->mUpdateSize;
+            .value_or(mDevice.mUpdateSize);
+        bufsize = std::max(std::bit_ceil(bufsize), mDevice.mUpdateSize);
+        mDevice.mBufferSize = bufsize + mDevice.mUpdateSize;
     }
 
     /* Force 32-bit float output. */
-    mDevice->FmtType = DevFmtFloat;
+    mDevice.FmtType = DevFmtFloat;
 
     try {
-        const auto numchans = std::size_t{mDevice->channelsFromFmt()};
+        const auto numchans = std::size_t{mDevice.channelsFromFmt()};
         std::ranges::for_each(std::views::iota(0_uz, numchans), [this](std::size_t const idx)
         {
             auto const name = al::format("channel_{}", idx);
@@ -541,7 +541,7 @@ bool JackPlayback::reset()
                 mPort.pop_back();
                 throw std::runtime_error{al::format(
                     "Failed to register enough JACK ports for {} output",
-                    DevFmtChannelsString(mDevice->FmtChans))};
+                    DevFmtChannelsString(mDevice.FmtChans))};
             }
         });
     }
@@ -553,10 +553,10 @@ bool JackPlayback::reset()
             { jack_port_unregister(mClient, port); });
             mPort.resize(2_uz);
             mPort.shrink_to_fit();
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         }
         else if(mPort.size() == 1)
-            mDevice->FmtChans = DevFmtMono;
+            mDevice.FmtChans = DevFmtMono;
         else
             throw;
     }
@@ -571,7 +571,7 @@ void JackPlayback::start()
     if(jack_activate(mClient))
         throw al::backend_exception{al::backend_error::DeviceError, "Failed to activate client"};
 
-    const auto devname = std::string_view{mDevice->mDeviceName};
+    const auto devname = std::string_view{mDevice.mDeviceName};
     if(ConfigValueBool(devname, "jack", "connect-ports").value_or(true))
     {
         auto pnamesptr = JackPortsPtr{jack_get_ports(mClient, mPortPattern.c_str(),
@@ -606,9 +606,9 @@ void JackPlayback::start()
      * (it won't change again after jack_activate), then allocate the ring
      * buffer with the appropriate size.
      */
-    mDevice->mSampleRate = jack_get_sample_rate(mClient);
-    mDevice->mUpdateSize = jack_get_buffer_size(mClient);
-    mDevice->mBufferSize = mDevice->mUpdateSize * 2;
+    mDevice.mSampleRate = jack_get_sample_rate(mClient);
+    mDevice.mUpdateSize = jack_get_buffer_size(mClient);
+    mDevice.mBufferSize = mDevice.mUpdateSize * 2;
 
     mRing = nullptr;
     if(mRTMixing)
@@ -616,12 +616,12 @@ void JackPlayback::start()
     else
     {
         auto bufsize = ConfigValueU32(devname, "jack", "buffer-size")
-            .value_or(mDevice->mUpdateSize);
-        bufsize = std::max(std::bit_ceil(bufsize), mDevice->mUpdateSize) / mDevice->mUpdateSize;
-        mDevice->mBufferSize = (bufsize+1) * mDevice->mUpdateSize;
+            .value_or(mDevice.mUpdateSize);
+        bufsize = std::max(std::bit_ceil(bufsize), mDevice.mUpdateSize) / mDevice.mUpdateSize;
+        mDevice.mBufferSize = (bufsize+1) * mDevice.mUpdateSize;
 
         mRing = RingBuffer<float>::Create(bufsize,
-            std::size_t{mDevice->mUpdateSize} * mDevice->channelsFromFmt(), true);
+            std::size_t{mDevice.mUpdateSize} * mDevice.channelsFromFmt(), true);
 
         try {
             mPlaying.store(true, std::memory_order_release);
@@ -660,9 +660,9 @@ ClockLatency JackPlayback::getClockLatency()
     auto dlock = std::lock_guard{mMutex};
 
     auto ret = ClockLatency{};
-    ret.ClockTime = mDevice->getClockTime();
-    ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : 1_uz} * mDevice->mUpdateSize;
-    ret.Latency /= mDevice->mSampleRate;
+    ret.ClockTime = mDevice.getClockTime();
+    ret.Latency  = std::chrono::seconds{mRing ? mRing->readSpace() : 1_uz} * mDevice.mUpdateSize;
+    ret.Latency /= mDevice.mSampleRate;
 
     return ret;
 }
@@ -735,8 +735,7 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
     return outnames;
 }
 
-auto JackBackendFactory::createBackend(gsl::not_null<DeviceBase*> device, BackendType type)
-    -> BackendPtr
+auto JackBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new JackPlayback{device}};

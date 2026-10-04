@@ -18,7 +18,7 @@ struct PipeWireBackendFactory final : BackendFactory {
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
-    auto createBackend(gsl::not_null<DeviceBase*> device, BackendType type) -> BackendPtr final;
+    auto createBackend(DeviceBase &device, BackendType type) -> BackendPtr final;
 
     static auto getFactory() -> BackendFactory&;
 };

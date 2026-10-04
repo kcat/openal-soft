@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "alc/events.h"
-#include "gsl/gsl"
 
 struct DeviceBase;
 
@@ -32,13 +31,13 @@ struct BackendBase {
 
     virtual auto getClockLatency() -> ClockLatency;
 
-    gsl::not_null<DeviceBase*> const mDevice;
+    DeviceBase &mDevice;
     std::string mDeviceName;
 
     BackendBase() = delete;
     BackendBase(const BackendBase&) = delete;
     BackendBase(BackendBase&&) = delete;
-    explicit BackendBase(gsl::not_null<DeviceBase*> const device) noexcept : mDevice{device} { }
+    explicit BackendBase(DeviceBase &device) noexcept : mDevice{device} { }
     virtual ~BackendBase() = default;
 
     void operator=(const BackendBase&) = delete;
@@ -76,8 +75,7 @@ struct BackendFactory {
 
     virtual auto enumerate(BackendType type) -> std::vector<std::string> = 0;
 
-    virtual auto createBackend(gsl::not_null<DeviceBase*> device, BackendType type) -> BackendPtr
-        = 0;
+    virtual auto createBackend(DeviceBase &device, BackendType type) -> BackendPtr = 0;
 };
 
 #endif /* ALC_BACKENDS_BASE_H */

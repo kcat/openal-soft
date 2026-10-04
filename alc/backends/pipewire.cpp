@@ -1453,16 +1453,16 @@ void EventManager::coreCallback(uint32_t const id, int const seq) noexcept
 
 
 enum use_f32p_e : bool { UseDevType=false, ForceF32Planar=true };
-auto make_spa_info(DeviceBase *const device, bool const is51rear, use_f32p_e const use_f32p)
+auto make_spa_info(DeviceBase &device, bool const is51rear, use_f32p_e const use_f32p)
     -> spa_audio_info_raw
 {
     auto info = spa_audio_info_raw{};
     if(use_f32p)
     {
-        device->FmtType = DevFmtFloat;
+        device.FmtType = DevFmtFloat;
         info.format = SPA_AUDIO_FORMAT_F32P;
     }
-    else switch(device->FmtType)
+    else switch(device.FmtType)
     {
     case DevFmtByte: info.format = SPA_AUDIO_FORMAT_S8; break;
     case DevFmtUByte: info.format = SPA_AUDIO_FORMAT_U8; break;
@@ -1473,10 +1473,10 @@ auto make_spa_info(DeviceBase *const device, bool const is51rear, use_f32p_e con
     case DevFmtFloat: info.format = SPA_AUDIO_FORMAT_F32; break;
     }
 
-    info.rate = device->mSampleRate;
+    info.rate = device.mSampleRate;
 
     auto map = std::span<const spa_audio_channel>{};
-    switch(device->FmtChans)
+    switch(device.FmtChans)
     {
     case DevFmtMono: map = MonoMap; break;
     case DevFmtStereo: map = StereoMap; break;
@@ -1492,7 +1492,7 @@ auto make_spa_info(DeviceBase *const device, bool const is51rear, use_f32p_e con
     case DevFmtX7144:
     case DevFmtAmbi3D:
         info.flags |= SPA_AUDIO_FLAG_UNPOSITIONED;
-        info.channels = device->channelsFromFmt();
+        info.channels = device.channelsFromFmt();
         break;
     }
     if(!map.empty())
@@ -1521,9 +1521,7 @@ class PipeWirePlayback final : public BackendBase {
     auto outputCallback() noexcept NONBLOCKING -> void;
 
 public:
-    explicit PipeWirePlayback(gsl::not_null<DeviceBase*> const device) noexcept
-        : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~PipeWirePlayback() override
     {
         /* Stop the mainloop so the stream can be properly destroyed. */
@@ -1575,7 +1573,7 @@ void PipeWirePlayback::outputCallback() noexcept NONBLOCKING
     auto length = mRateMatch ? uint32_t{mRateMatch->size} : uint32_t{0};
 #endif
     /* If no length is specified, use the device's update size as a fallback. */
-    if(!length) [[unlikely]] length = mDevice->mUpdateSize;
+    if(!length) [[unlikely]] length = mDevice.mUpdateSize;
 
     /* For planar formats, each datas[] seems to contain one channel, so store
      * the pointers in an array. Limit the render length in case the available
@@ -1594,7 +1592,7 @@ void PipeWirePlayback::outputCallback() noexcept NONBLOCKING
         data.chunk->size   = length * uint32_t{sizeof(float)};
     }
 
-    mDevice->renderSamples(mChannelPtrs, length);
+    mDevice.renderSamples(mChannelPtrs, length);
 
     pw_buf->size = length;
     IGNORE_FUNCTION_EFFECTS( pw_stream_queue_buffer(mStream.get(), pw_buf); )
@@ -1685,13 +1683,13 @@ auto PipeWirePlayback::reset() -> bool
         mStream = nullptr;
     }
     mRateMatch = nullptr;
-    mTimeBase = mDevice->getClockTime();
+    mTimeBase = mDevice.getClockTime();
 
     /* If connecting to a specific device, update various device parameters to
      * match its format.
      */
     auto is51rear = false;
-    mDevice->mFlags.reset(DeviceFlag::DirectEar);
+    mDevice.mFlags.reset(DeviceFlag::DirectEar);
     if(mTargetId != PwIdAny)
     {
         const auto evtlock = EventWatcherLockGuard{gEventHandler};
@@ -1700,11 +1698,11 @@ auto PipeWirePlayback::reset() -> bool
         const auto match = std::ranges::find(devlist, mTargetId, &DeviceNode::mSerial);
         if(match != devlist.end())
         {
-            if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest) && match->mSampleRate > 0)
+            if(!mDevice.mFlags.test(DeviceFlag::FrequencyRequest) && match->mSampleRate > 0)
             {
                 /* Scale the update size if the sample rate changes. */
                 const auto scale = gsl::narrow_cast<double>(match->mSampleRate)
-                    / mDevice->mSampleRate;
+                    / mDevice.mSampleRate;
 
                 /* Don't scale down power-of-two sizes unless it would be more
                  * than halfway to the next lower power-of-two. PipeWire uses
@@ -1715,22 +1713,22 @@ auto PipeWirePlayback::reset() -> bool
                  * be scaled to 470 samples, which gets rounded down to 256
                  * when 512 would be closer to the requested size.
                  */
-                if(scale < 0.75 && std::popcount(mDevice->mUpdateSize) == 1)
+                if(scale < 0.75 && std::popcount(mDevice.mUpdateSize) == 1)
                 {
-                    const auto updatesize = std::round(mDevice->mUpdateSize * scale);
-                    const auto buffersize = std::round(mDevice->mBufferSize * scale);
+                    const auto updatesize = std::round(mDevice.mUpdateSize * scale);
+                    const auto buffersize = std::round(mDevice.mBufferSize * scale);
 
-                    mDevice->mUpdateSize = gsl::narrow_cast<uint32_t>(std::clamp(updatesize, 64.0,
+                    mDevice.mUpdateSize = gsl::narrow_cast<uint32_t>(std::clamp(updatesize, 64.0,
                         8192.0));
-                    mDevice->mBufferSize = gsl::narrow_cast<uint32_t>(std::max(buffersize, 128.0));
+                    mDevice.mBufferSize = gsl::narrow_cast<uint32_t>(std::max(buffersize, 128.0));
                 }
-                mDevice->mSampleRate = match->mSampleRate;
+                mDevice.mSampleRate = match->mSampleRate;
             }
-            if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest)
+            if(!mDevice.mFlags.test(DeviceFlag::ChannelsRequest)
                 && match->mChannels != InvalidChannelConfig)
-                mDevice->FmtChans = match->mChannels;
+                mDevice.FmtChans = match->mChannels;
             if(match->mChannels == DevFmtStereo && match->mIsHeadphones)
-                mDevice->mFlags.set(DeviceFlag::DirectEar);
+                mDevice.mFlags.set(DeviceFlag::DirectEar);
             is51rear = match->mIs51Rear;
         }
     }
@@ -1761,9 +1759,9 @@ auto PipeWirePlayback::reset() -> bool
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to create PipeWire stream properties (errno: {})", errno};
 
-    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice->mUpdateSize,
-        mDevice->mSampleRate);
-    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", mDevice.mUpdateSize,
+        mDevice.mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice.mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
     pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
 #else
@@ -1794,7 +1792,7 @@ auto PipeWirePlayback::reset() -> bool
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
     auto flags = PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE | PW_STREAM_FLAG_MAP_BUFFERS;
-    if(GetConfigValueBool(mDevice->mDeviceName, "pipewire", "rt-mix", false))
+    if(GetConfigValueBool(mDevice.mDeviceName, "pipewire", "rt-mix", false))
         flags |= PW_STREAM_FLAG_RT_PROCESS;
     if(const auto res = pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, PwIdAny, flags,
         &params, 1))
@@ -1812,15 +1810,15 @@ auto PipeWirePlayback::reset() -> bool
         return state == PW_STREAM_STATE_PAUSED;
     });
 
-    /* TODO: Update mDevice->mUpdateSize with the stream's quantum, and
-     * mDevice->mBufferSize with the total known buffering delay from the head
+    /* TODO: Update mDevice.mUpdateSize with the stream's quantum, and
+     * mDevice.mBufferSize with the total known buffering delay from the head
      * of this playback stream to the tail of the device output.
      *
      * This info is apparently not available until after the stream starts.
      */
     plock.unlock();
 
-    mChannelPtrs.resize(mDevice->channelsFromFmt());
+    mChannelPtrs.resize(mDevice.channelsFromFmt());
 
     setDefaultWFXChannelOrder();
 
@@ -1873,11 +1871,11 @@ void PipeWirePlayback::start()
             const auto totalbuffers = ptime.avail_buffers + ptime.queued_buffers;
 
             /* Ensure the delay is in sample frames. */
-            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
+            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice.mSampleRate *
                 ptime.rate.num / ptime.rate.denom;
 
-            mDevice->mUpdateSize = updatesize;
-            mDevice->mBufferSize = gsl::narrow_cast<uint32_t>(ptime.buffered + delay +
+            mDevice.mUpdateSize = updatesize;
+            mDevice.mBufferSize = gsl::narrow_cast<uint32_t>(ptime.buffered + delay +
                 uint64_t{totalbuffers}*updatesize);
             break;
         }
@@ -1888,11 +1886,11 @@ void PipeWirePlayback::start()
         if(ptime.rate.denom > 0 && updatesize > 0)
         {
             /* Ensure the delay is in sample frames. */
-            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice->mSampleRate *
+            const auto delay = gsl::narrow_cast<uint64_t>(ptime.delay) * mDevice.mSampleRate *
                 ptime.rate.num / ptime.rate.denom;
 
-            mDevice->mUpdateSize = updatesize;
-            mDevice->mBufferSize = gsl::narrow_cast<uint32_t>(delay + updatesize);
+            mDevice.mUpdateSize = updatesize;
+            mDevice.mBufferSize = gsl::narrow_cast<uint32_t>(delay + updatesize);
             break;
         }
 #endif
@@ -1943,11 +1941,11 @@ auto PipeWirePlayback::getClockLatency() -> ClockLatency
     auto tspec = timespec{};
     auto refcount = unsigned{};
     do {
-        refcount = mDevice->waitForMix();
-        mixtime = mDevice->getClockTime();
+        refcount = mDevice.waitForMix();
+        mixtime = mDevice.getClockTime();
         clock_gettime(CLOCK_MONOTONIC, &tspec);
         std::atomic_thread_fence(std::memory_order_acquire);
-    } while(refcount != mDevice->mMixCount.load(std::memory_order_relaxed));
+    } while(refcount != mDevice.mMixCount.load(std::memory_order_relaxed));
 
     /* Convert the monotonic clock, stream ticks, and stream delay to
      * nanoseconds.
@@ -1962,7 +1960,7 @@ auto PipeWirePlayback::getClockLatency() -> ClockLatency
          */
         ptime.now = monoclock.count();
         curtic = mixtime;
-        delay = nanoseconds{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
+        delay = nanoseconds{seconds{mDevice.mBufferSize}} / mDevice.mSampleRate;
     }
     else
     {
@@ -2020,9 +2018,7 @@ class PipeWireCapture final : public BackendBase {
     auto inputCallback() const noexcept -> void;
 
 public:
-    explicit PipeWireCapture(gsl::not_null<DeviceBase*> const device) noexcept
-        : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~PipeWireCapture() override { if(mLoop) mLoop.stop(); }
 
     auto open(std::string_view name) -> void override;
@@ -2183,9 +2179,9 @@ void PipeWireCapture::open(std::string_view name)
      * reasonable. Unfortunately, when unspecified PipeWire seems to default to
      * around 40ms, which isn't great. So request 20ms instead.
      */
-    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice->mSampleRate+25) / 50,
-        mDevice->mSampleRate);
-    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice->mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_LATENCY, "%u/%u", (mDevice.mSampleRate+25) / 50,
+        mDevice.mSampleRate);
+    pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice.mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
     pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
 #else
@@ -2234,7 +2230,7 @@ void PipeWireCapture::open(std::string_view name)
 
     /* Ensure at least a 100ms capture buffer. */
     mRing = RingBuffer<std::byte>::Create(
-        std::max(mDevice->mSampleRate/10u, mDevice->mBufferSize), mDevice->frameSizeFromFmt(),
+        std::max(mDevice.mSampleRate/10u, mDevice.mBufferSize), mDevice.frameSizeFromFmt(),
         false);
 }
 
@@ -2358,8 +2354,8 @@ auto PipeWireBackendFactory::enumerate(BackendType const type) -> std::vector<st
 }
 
 
-auto PipeWireBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto PipeWireBackendFactory::createBackend(DeviceBase &device, BackendType const type)
+    -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new PipeWirePlayback{device}};

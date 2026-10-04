@@ -134,9 +134,8 @@ void fwrite64be(u64 const val, std::ostream &f)
 }
 
 
-struct WaveBackend final : public BackendBase {
-    explicit WaveBackend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+struct WaveBackend final : BackendBase {
+    using BackendBase::BackendBase;
     ~WaveBackend() override;
 
     void mixerProc();
@@ -160,38 +159,38 @@ WaveBackend::~WaveBackend() = default;
 
 void WaveBackend::mixerProc()
 {
-    auto const restTime = milliseconds{mDevice->mUpdateSize*1000/mDevice->mSampleRate / 2};
+    auto const restTime = milliseconds{mDevice.mUpdateSize*1000/mDevice.mSampleRate / 2};
 
     althrd_setname(GetMixerThreadName());
 
-    auto const frameStep = std::size_t{mDevice->channelsFromFmt()};
-    auto const frameSize = std::size_t{mDevice->frameSizeFromFmt()};
+    auto const frameStep = std::size_t{mDevice.channelsFromFmt()};
+    auto const frameSize = std::size_t{mDevice.frameSizeFromFmt()};
 
     auto done = 0_i64;
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire)
-        && mDevice->Connected.load(std::memory_order_acquire))
+        && mDevice.Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
         auto const avail = i64{std::chrono::duration_cast<seconds>((now-start)
-            * mDevice->mSampleRate).count()};
-        if(avail-done < mDevice->mUpdateSize)
+            * mDevice.mSampleRate).count()};
+        if(avail-done < mDevice.mUpdateSize)
         {
             std::this_thread::sleep_for(restTime);
             continue;
         }
-        while(avail-done >= mDevice->mUpdateSize)
+        while(avail-done >= mDevice.mUpdateSize)
         {
-            mDevice->renderSamples(mBuffer.data(), mDevice->mUpdateSize, frameStep);
-            done += i64{mDevice->mUpdateSize};
+            mDevice.renderSamples(mBuffer.data(), mDevice.mUpdateSize, frameStep);
+            done += i64{mDevice.mUpdateSize};
 
             if constexpr(std::endian::native != std::endian::little)
             {
                 if(!mCAFOutput)
                 {
-                    auto const bytesize = mDevice->bytesFromFmt();
+                    auto const bytesize = mDevice.bytesFromFmt();
 
                     if(bytesize == 2)
                     {
@@ -211,11 +210,11 @@ void WaveBackend::mixerProc()
                 }
             }
 
-            auto const buffer = std::span{mBuffer}.first(mDevice->mUpdateSize*frameSize);
+            auto const buffer = std::span{mBuffer}.first(mDevice.mUpdateSize*frameSize);
             if(!mFile.write(buffer.data(), std::ssize(buffer)))
             {
                 ERR("Error writing to file");
-                mDevice->handleDisconnect("Failed to write playback samples");
+                mDevice.handleDisconnect("Failed to write playback samples");
                 break;
             }
         }
@@ -225,10 +224,10 @@ void WaveBackend::mixerProc()
          * and current time from growing too large, while maintaining the
          * correct number of samples to render.
          */
-        if(done >= mDevice->mSampleRate)
+        if(done >= mDevice.mSampleRate)
         {
-            auto const s = seconds{(done/i64{mDevice->mSampleRate}).c_val};
-            done %= i64{mDevice->mSampleRate};
+            auto const s = seconds{(done/i64{mDevice.mSampleRate}).c_val};
+            done %= i64{mDevice.mSampleRate};
             start += s;
         }
     }
@@ -267,24 +266,24 @@ auto WaveBackend::reset() -> bool
 
     if(GetConfigValueBool({}, "wave", "bformat", false))
     {
-        mDevice->FmtChans = DevFmtAmbi3D;
-        mDevice->mAmbiOrder = std::max(mDevice->mAmbiOrder, 1u);
+        mDevice.FmtChans = DevFmtAmbi3D;
+        mDevice.mAmbiOrder = std::max(mDevice.mAmbiOrder, 1u);
     }
 
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte:
     case DevFmtUByte:
         if(!mCAFOutput)
-            mDevice->FmtType = DevFmtUByte;
+            mDevice.FmtType = DevFmtUByte;
         else
-            mDevice->FmtType = DevFmtByte;
+            mDevice.FmtType = DevFmtByte;
         break;
     case DevFmtUShort:
-        mDevice->FmtType = DevFmtShort;
+        mDevice.FmtType = DevFmtShort;
         break;
     case DevFmtUInt:
-        mDevice->FmtType = DevFmtInt;
+        mDevice.FmtType = DevFmtInt;
         break;
     case DevFmtShort:
     case DevFmtInt:
@@ -293,7 +292,7 @@ auto WaveBackend::reset() -> bool
     }
     auto chanmask = 0u;
     auto isbformat = false;
-    switch(mDevice->FmtChans)
+    switch(mDevice.FmtChans)
     {
     case DevFmtMono:   chanmask = MonoChannels; break;
     case DevFmtStereo: chanmask = StereoChannels; break;
@@ -302,7 +301,7 @@ auto WaveBackend::reset() -> bool
     case DevFmtX61: chanmask = X61Channels; break;
     case DevFmtX71: chanmask = X71Channels; break;
     case DevFmtX7144:
-        mDevice->FmtChans = DevFmtX714;
+        mDevice.FmtChans = DevFmtX714;
         [[fallthrough]];
     case DevFmtX714:
         chanmask = X714Channels;
@@ -315,22 +314,22 @@ auto WaveBackend::reset() -> bool
         if(!mCAFOutput)
         {
             /* .amb output requires FuMa */
-            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, 3u);
-            mDevice->mAmbiLayout = DevAmbiLayout::FuMa;
-            mDevice->mAmbiScale = DevAmbiScaling::FuMa;
+            mDevice.mAmbiOrder = std::min(mDevice.mAmbiOrder, 3u);
+            mDevice.mAmbiLayout = DevAmbiLayout::FuMa;
+            mDevice.mAmbiScale = DevAmbiScaling::FuMa;
         }
         else
         {
             /* .ambix output requires ACN+SN3D */
-            mDevice->mAmbiOrder = std::min(mDevice->mAmbiOrder, unsigned{MaxAmbiOrder});
-            mDevice->mAmbiLayout = DevAmbiLayout::ACN;
-            mDevice->mAmbiScale = DevAmbiScaling::SN3D;
+            mDevice.mAmbiOrder = std::min(mDevice.mAmbiOrder, unsigned{MaxAmbiOrder});
+            mDevice.mAmbiLayout = DevAmbiLayout::ACN;
+            mDevice.mAmbiScale = DevAmbiScaling::SN3D;
         }
         isbformat = true;
         break;
     }
-    const auto bytes = mDevice->bytesFromFmt();
-    const auto channels = mDevice->channelsFromFmt();
+    const auto bytes = mDevice.bytesFromFmt();
+    const auto channels = mDevice.channelsFromFmt();
 
     mFile.seekp(0);
     mFile.clear();
@@ -349,9 +348,9 @@ auto WaveBackend::reset() -> bool
         // 16-bit val, channel count
         fwrite16le(u16::from(channels), mFile);
         // 32-bit val, frequency
-        fwrite32le(u32{mDevice->mSampleRate}, mFile);
+        fwrite32le(u32{mDevice.mSampleRate}, mFile);
         // 32-bit val, bytes per second
-        fwrite32le(u32{mDevice->mSampleRate * channels * bytes}, mFile);
+        fwrite32le(u32{mDevice.mSampleRate * channels * bytes}, mFile);
         // 16-bit val, frame size
         fwrite16le(u16::from(channels * bytes), mFile);
         // 16-bit val, bits per sample
@@ -363,7 +362,7 @@ auto WaveBackend::reset() -> bool
         // 32-bit val, channel mask
         fwrite32le(u32{chanmask}, mFile);
         // 16 byte GUID, sub-type format
-        mFile.write((mDevice->FmtType == DevFmtFloat) ?
+        mFile.write((mDevice.FmtType == DevFmtFloat) ?
             (isbformat ? SUBTYPE_BFORMAT_FLOAT.data() : SUBTYPE_FLOAT.data()) :
             (isbformat ? SUBTYPE_BFORMAT_PCM.data() : SUBTYPE_PCM.data()), 16);
 
@@ -385,13 +384,13 @@ auto WaveBackend::reset() -> bool
         mFile.write("desc", 4);
         fwrite64be(32_u64, mFile);
         /* 64-bit double, mSampleRate */
-        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<double>(mDevice->mSampleRate)), mFile);
+        fwrite64be(std::bit_cast<u64>(gsl::narrow_cast<double>(mDevice.mSampleRate)), mFile);
         /* 32-bit uint, mFormatID */
         mFile.write("lpcm", 4);
 
         const auto flags = std::invoke([this]() -> u32
         {
-            switch(mDevice->FmtType)
+            switch(mDevice.FmtType)
             {
             case DevFmtByte:
             case DevFmtUByte:
@@ -455,7 +454,7 @@ auto WaveBackend::reset() -> bool
 
     setDefaultWFXChannelOrder();
 
-    mBuffer.resize(std::size_t{mDevice->frameSizeFromFmt()} * mDevice->mUpdateSize);
+    mBuffer.resize(std::size_t{mDevice.frameSizeFromFmt()} * mDevice.mUpdateSize);
 
     return true;
 }
@@ -522,8 +521,7 @@ auto WaveBackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return {};
 }
 
-auto WaveBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto WaveBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WaveBackend{device}};

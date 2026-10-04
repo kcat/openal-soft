@@ -158,8 +158,7 @@ auto gCaptureDevices = std::vector<DeviceEntry>{};
 
 
 struct Sdl3Playback final : BackendBase {
-    explicit Sdl3Playback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~Sdl3Playback() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
@@ -195,10 +194,10 @@ void Sdl3Playback::audioCallback(SDL_AudioStream *stream, int additional_amount,
     if(ulen > mBuffer.size())
     {
         mBuffer.resize(ulen);
-        std::ranges::fill(mBuffer, (mDevice->FmtType==DevFmtUByte) ? std::byte{0x80}:std::byte{});
+        std::ranges::fill(mBuffer, (mDevice.FmtType==DevFmtUByte) ? std::byte{0x80} : std::byte{});
     }
 
-    mDevice->renderSamples(mBuffer.data(), ulen / mFrameSize, mNumChannels);
+    mDevice.renderSamples(mBuffer.data(), ulen / mFrameSize, mNumChannels);
     SDL_PutAudioStreamData(stream, mBuffer.data(), additional_amount);
 }
 
@@ -231,7 +230,7 @@ void Sdl3Playback::open(std::string_view name)
     auto update_size = int{};
     if(SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(mStream), &have, &update_size))
     {
-        auto devtype = mDevice->FmtType;
+        auto devtype = mDevice.FmtType;
         switch(have.format)
         {
         case SDL_AUDIO_U8:  devtype = DevFmtUByte; break;
@@ -241,36 +240,36 @@ void Sdl3Playback::open(std::string_view name)
         case SDL_AUDIO_F32: devtype = DevFmtFloat; break;
         default: break;
         }
-        mDevice->FmtType = devtype;
+        mDevice.FmtType = devtype;
 
         if(have.freq >= int{MinOutputRate} && have.freq <= int{MaxOutputRate})
-            mDevice->mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
+            mDevice.mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
 
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
-            mDevice->FmtChans = DevFmtX71;
+            mDevice.FmtChans = DevFmtX71;
         else if(have.channels == 7)
-            mDevice->FmtChans = DevFmtX61;
+            mDevice.FmtChans = DevFmtX61;
         else if(have.channels == 6)
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
         else if(have.channels == 4)
-            mDevice->FmtChans = DevFmtQuad;
+            mDevice.FmtChans = DevFmtQuad;
         else if(have.channels >= 2)
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(have.channels == 1)
-            mDevice->FmtChans = DevFmtMono;
-        mDevice->mAmbiOrder = 0;
+            mDevice.FmtChans = DevFmtMono;
+        mDevice.mAmbiOrder = 0;
 
         mNumChannels = gsl::narrow_cast<unsigned>(have.channels);
-        mFrameSize = mDevice->bytesFromFmt() * mNumChannels;
+        mFrameSize = mDevice.bytesFromFmt() * mNumChannels;
 
         if(update_size >= 64)
         {
             /* We have to assume the total buffer size is just twice the update
              * size. SDL doesn't tell us the full end-to-end buffer latency.
              */
-            mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
-            mDevice->mBufferSize = mDevice->mUpdateSize*2u;
+            mDevice.mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
+            mDevice.mBufferSize = mDevice.mUpdateSize*2u;
         }
         else
             ERR("Invalid update size from SDL stream: {}", update_size);
@@ -301,14 +300,14 @@ auto Sdl3Playback::reset() -> bool
     if(!SDL_GetAudioDeviceFormat(mDeviceID, &want, nullptr))
         ERR("Failed to get device format: {}", SDL_GetError());
 
-    if(mDevice->mFlags.test(DeviceFlag::FrequencyRequest) || want.freq < int{MinOutputRate})
-        want.freq = gsl::narrow_cast<int>(mDevice->mSampleRate);
-    if(mDevice->mFlags.test(DeviceFlag::SampleTypeRequest)
+    if(mDevice.mFlags.test(DeviceFlag::FrequencyRequest) || want.freq < int{MinOutputRate})
+        want.freq = gsl::narrow_cast<int>(mDevice.mSampleRate);
+    if(mDevice.mFlags.test(DeviceFlag::SampleTypeRequest)
         || !(want.format == SDL_AUDIO_U8 || want.format == SDL_AUDIO_S8
              || want.format == SDL_AUDIO_S16 || want.format == SDL_AUDIO_S32
              || want.format == SDL_AUDIO_F32))
     {
-        switch(mDevice->FmtType)
+        switch(mDevice.FmtType)
         {
         case DevFmtUByte:  want.format = SDL_AUDIO_U8;  break;
         case DevFmtByte:   want.format = SDL_AUDIO_S8;  break;
@@ -319,8 +318,8 @@ auto Sdl3Playback::reset() -> bool
         case DevFmtFloat:  want.format = SDL_AUDIO_F32; break;
         }
     }
-    if(mDevice->mFlags.test(DeviceFlag::ChannelsRequest) || want.channels < 1)
-        want.channels = al::saturate_cast<int>(mDevice->channelsFromFmt());
+    if(mDevice.mFlags.test(DeviceFlag::ChannelsRequest) || want.channels < 1)
+        want.channels = al::saturate_cast<int>(mDevice.channelsFromFmt());
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
     if(!mStream)
@@ -341,56 +340,56 @@ auto Sdl3Playback::reset() -> bool
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to get stream format: {}", SDL_GetError()};
 
-    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest)
-        || (std::cmp_not_equal(have.channels, mDevice->channelsFromFmt())
-            && !(mDevice->FmtChans == DevFmtStereo && have.channels >= 2)))
+    if(!mDevice.mFlags.test(DeviceFlag::ChannelsRequest)
+        || (std::cmp_not_equal(have.channels, mDevice.channelsFromFmt())
+            && !(mDevice.FmtChans == DevFmtStereo && have.channels >= 2)))
     {
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
-            mDevice->FmtChans = DevFmtX71;
+            mDevice.FmtChans = DevFmtX71;
         else if(have.channels == 7)
-            mDevice->FmtChans = DevFmtX61;
+            mDevice.FmtChans = DevFmtX61;
         else if(have.channels == 6)
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
         else if(have.channels == 4)
-            mDevice->FmtChans = DevFmtQuad;
+            mDevice.FmtChans = DevFmtQuad;
         else if(have.channels >= 2)
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(have.channels == 1)
-            mDevice->FmtChans = DevFmtMono;
+            mDevice.FmtChans = DevFmtMono;
         else
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Unhandled SDL channel count: {}", have.channels};
-        mDevice->mAmbiOrder = 0;
+        mDevice.mAmbiOrder = 0;
     }
     mNumChannels = gsl::narrow_cast<unsigned>(have.channels);
 
     switch(have.format)
     {
-    case SDL_AUDIO_U8:  mDevice->FmtType = DevFmtUByte; break;
-    case SDL_AUDIO_S8:  mDevice->FmtType = DevFmtByte;  break;
-    case SDL_AUDIO_S16: mDevice->FmtType = DevFmtShort; break;
-    case SDL_AUDIO_S32: mDevice->FmtType = DevFmtInt;   break;
-    case SDL_AUDIO_F32: mDevice->FmtType = DevFmtFloat; break;
+    case SDL_AUDIO_U8:  mDevice.FmtType = DevFmtUByte; break;
+    case SDL_AUDIO_S8:  mDevice.FmtType = DevFmtByte;  break;
+    case SDL_AUDIO_S16: mDevice.FmtType = DevFmtShort; break;
+    case SDL_AUDIO_S32: mDevice.FmtType = DevFmtInt;   break;
+    case SDL_AUDIO_F32: mDevice.FmtType = DevFmtFloat; break;
     default:
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL format: {:#04x}", al::to_underlying(have.format)};
     }
 
-    mFrameSize = mDevice->bytesFromFmt() * mNumChannels;
+    mFrameSize = mDevice.bytesFromFmt() * mNumChannels;
 
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
-    mDevice->mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
+    mDevice.mSampleRate = gsl::narrow_cast<unsigned>(have.freq);
 
     if(update_size >= 64)
     {
-        mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
-        mDevice->mBufferSize = mDevice->mUpdateSize * 2u;
+        mDevice.mUpdateSize = gsl::narrow_cast<unsigned>(update_size);
+        mDevice.mBufferSize = mDevice.mUpdateSize * 2u;
 
-        mBuffer.resize(std::size_t{mDevice->mUpdateSize} * mFrameSize);
-        std::ranges::fill(mBuffer, mDevice->FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});
+        mBuffer.resize(std::size_t{mDevice.mUpdateSize} * mFrameSize);
+        std::ranges::fill(mBuffer, mDevice.FmtType==DevFmtUByte ? std::byte{0x80} : std::byte{});
     }
     else
         ERR("Invalid update size from SDL stream: {}", update_size);
@@ -408,7 +407,7 @@ void Sdl3Playback::stop()
 
 
 struct Sdl3Capture final : BackendBase {
-    explicit Sdl3Capture(gsl::not_null<DeviceBase*> const device) : BackendBase{device} { }
+    using BackendBase::BackendBase;
     ~Sdl3Capture() final;
 
     void audioCallback(SDL_AudioStream *stream, int additional_amount, int total_amount) noexcept;
@@ -473,8 +472,8 @@ auto Sdl3Capture::open(std::string_view name) -> void
     }
 
     auto want = SDL_AudioSpec{};
-    want.freq = gsl::narrow<int>(mDevice->mSampleRate);
-    switch(mDevice->FmtType)
+    want.freq = gsl::narrow<int>(mDevice.mSampleRate);
+    switch(mDevice.FmtType)
     {
     case DevFmtUByte:  want.format = SDL_AUDIO_U8;  break;
     case DevFmtByte:   want.format = SDL_AUDIO_S8;  break;
@@ -484,9 +483,9 @@ auto Sdl3Capture::open(std::string_view name) -> void
     case DevFmtUShort:
     case DevFmtUInt:
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Format not supported for capture: {}", DevFmtTypeString(mDevice->FmtType)};
+            "Format not supported for capture: {}", DevFmtTypeString(mDevice.FmtType)};
     }
-    want.channels = gsl::narrow<int>(mDevice->channelsFromFmt());
+    want.channels = gsl::narrow<int>(mDevice.channelsFromFmt());
 
     static constexpr auto callback = [](void *ptr, SDL_AudioStream *stream, int additional_amount,
         int total_amount) noexcept
@@ -502,8 +501,8 @@ auto Sdl3Capture::open(std::string_view name) -> void
     setDefaultWFXChannelOrder();
 
     /* Ensure a minimum ringbuffer size of 100ms. */
-    mRing = RingBuffer<std::byte>::Create(std::max(mDevice->mBufferSize, mDevice->mSampleRate/10u),
-        mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer<std::byte>::Create(std::max(mDevice.mBufferSize, mDevice.mSampleRate/10u),
+        mDevice.frameSizeFromFmt(), false);
 
     mDeviceName = name;
 }
@@ -593,8 +592,7 @@ auto SDL3BackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return outnames;
 }
 
-auto SDL3BackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto SDL3BackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl3Playback{device}};

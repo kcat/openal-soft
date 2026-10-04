@@ -55,8 +55,7 @@ using namespace std::string_view_literals;
 { return "Default Device"sv; }
 
 struct Sdl2Backend final : BackendBase {
-    explicit Sdl2Backend(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~Sdl2Backend() override;
 
     void audioCallback(Uint8 *stream, int len) noexcept;
@@ -81,14 +80,14 @@ Sdl2Backend::~Sdl2Backend()
 void Sdl2Backend::audioCallback(Uint8 *const stream, int const len) noexcept
 {
     const auto ulen = gsl::narrow_cast<unsigned>(len);
-    mDevice->renderSamples(stream, ulen / mFrameSize, mDevice->channelsFromFmt());
+    mDevice.renderSamples(stream, ulen / mFrameSize, mDevice.channelsFromFmt());
 }
 
 void Sdl2Backend::open(std::string_view name)
 {
     auto want = SDL_AudioSpec{};
-    want.freq = static_cast<int>(mDevice->mSampleRate);
-    switch(mDevice->FmtType)
+    want.freq = static_cast<int>(mDevice.mSampleRate);
+    switch(mDevice.FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
     case DevFmtByte: want.format = AUDIO_S8; break;
@@ -98,8 +97,8 @@ void Sdl2Backend::open(std::string_view name)
     case DevFmtInt: want.format = AUDIO_S32SYS; break;
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
-    want.channels = al::saturate_cast<Uint8>(mDevice->channelsFromFmt());
-    want.samples = static_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
+    want.channels = al::saturate_cast<Uint8>(mDevice.channelsFromFmt());
+    want.samples = static_cast<Uint16>(std::min(mDevice.mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -151,8 +150,8 @@ auto Sdl2Backend::reset() -> bool
     mDeviceID = 0;
 
     auto want = SDL_AudioSpec{};
-    want.freq = al::saturate_cast<int>(mDevice->mSampleRate);
-    switch(mDevice->FmtType)
+    want.freq = al::saturate_cast<int>(mDevice.mSampleRate);
+    switch(mDevice.FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
     case DevFmtByte: want.format = AUDIO_S8; break;
@@ -162,8 +161,8 @@ auto Sdl2Backend::reset() -> bool
     case DevFmtInt: want.format = AUDIO_S32SYS; break;
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
-    want.channels = al::saturate_cast<Uint8>(mDevice->channelsFromFmt());
-    want.samples = al::saturate_cast<Uint16>(std::min(mDevice->mUpdateSize, 8192u));
+    want.channels = al::saturate_cast<Uint8>(mDevice.channelsFromFmt());
+    want.samples = al::saturate_cast<Uint16>(std::min(mDevice.mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;
@@ -182,49 +181,49 @@ auto Sdl2Backend::reset() -> bool
     if(!mDeviceID)
         throw al::backend_exception{al::backend_error::NoDevice, "{}", SDL_GetError()};
 
-    if(have.channels != mDevice->channelsFromFmt())
+    if(have.channels != mDevice.channelsFromFmt())
     {
         /* SDL guarantees these layouts for the given channel count. */
         if(have.channels == 8)
-            mDevice->FmtChans = DevFmtX71;
+            mDevice.FmtChans = DevFmtX71;
         else if(have.channels == 7)
-            mDevice->FmtChans = DevFmtX61;
+            mDevice.FmtChans = DevFmtX61;
         else if(have.channels == 6)
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
         else if(have.channels == 4)
-            mDevice->FmtChans = DevFmtQuad;
+            mDevice.FmtChans = DevFmtQuad;
         else if(have.channels >= 2)
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(have.channels == 1)
-            mDevice->FmtChans = DevFmtMono;
+            mDevice.FmtChans = DevFmtMono;
         else
             throw al::backend_exception{al::backend_error::DeviceError,
                 "Unhandled SDL channel count: {}", int{have.channels}};
-        mDevice->mAmbiOrder = 0;
+        mDevice.mAmbiOrder = 0;
     }
 
     switch(have.format)
     {
-    case AUDIO_U8:     mDevice->FmtType = DevFmtUByte;  break;
-    case AUDIO_S8:     mDevice->FmtType = DevFmtByte;   break;
-    case AUDIO_U16SYS: mDevice->FmtType = DevFmtUShort; break;
-    case AUDIO_S16SYS: mDevice->FmtType = DevFmtShort;  break;
-    case AUDIO_S32SYS: mDevice->FmtType = DevFmtInt;    break;
-    case AUDIO_F32SYS: mDevice->FmtType = DevFmtFloat;  break;
+    case AUDIO_U8:     mDevice.FmtType = DevFmtUByte;  break;
+    case AUDIO_S8:     mDevice.FmtType = DevFmtByte;   break;
+    case AUDIO_U16SYS: mDevice.FmtType = DevFmtUShort; break;
+    case AUDIO_S16SYS: mDevice.FmtType = DevFmtShort;  break;
+    case AUDIO_S32SYS: mDevice.FmtType = DevFmtInt;    break;
+    case AUDIO_F32SYS: mDevice.FmtType = DevFmtFloat;  break;
     default:
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL format: {:#04x}", have.format};
     }
 
-    mFrameSize = BytesFromDevFmt(mDevice->FmtType) * have.channels;
+    mFrameSize = BytesFromDevFmt(mDevice.FmtType) * have.channels;
 
     if(have.freq < int{MinOutputRate})
         throw al::backend_exception{al::backend_error::DeviceError,
             "Unhandled SDL sample rate: {}", have.freq};
 
-    mDevice->mSampleRate = static_cast<unsigned>(have.freq);
-    mDevice->mUpdateSize = have.samples;
-    mDevice->mBufferSize = std::max(have.size/mFrameSize, mDevice->mUpdateSize*2u);
+    mDevice.mSampleRate = static_cast<unsigned>(have.freq);
+    mDevice.mUpdateSize = have.samples;
+    mDevice.mBufferSize = std::max(have.size/mFrameSize, mDevice.mUpdateSize*2u);
 
     setDefaultWFXChannelOrder();
 
@@ -274,8 +273,7 @@ auto SDL2BackendFactory::enumerate(BackendType const type) -> std::vector<std::s
     return outnames;
 }
 
-auto SDL2BackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto SDL2BackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new Sdl2Backend{device}};

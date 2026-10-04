@@ -1161,8 +1161,7 @@ void DuplicateSamples(std::span<BYTE> const insamples, DevFmtType const samplety
 
 
 struct WasapiPlayback final : BackendBase {
-    explicit WasapiPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~WasapiPlayback() override;
 
     struct PlainDevice {
@@ -1294,7 +1293,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             if(auto const hr = audio.mClient->GetCurrentPadding(&written); FAILED(hr))
             {
                 ERR("Failed to get padding: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Failed to retrieve buffer padding: {:#x}",
+                mDevice.handleDisconnect("Failed to retrieve buffer padding: {:#x}",
                     as_unsigned(hr));
                 break;
             }
@@ -1315,10 +1314,10 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
                     {
                         if(mBufferFilled == 0)
                         {
-                            mDevice->renderSamples(mResampleBuffer.data(), mDevice->mUpdateSize,
+                            mDevice.renderSamples(mResampleBuffer.data(), mDevice.mUpdateSize,
                                 mFormat.Format.nChannels);
                             resbufferptr = mResampleBuffer.data();
-                            mBufferFilled = mDevice->mUpdateSize;
+                            mBufferFilled = mDevice.mUpdateSize;
                         }
 
                         const auto got = mResampler->convert(&resbufferptr, &mBufferFilled,
@@ -1331,14 +1330,14 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
                 else
                 {
                     auto dlock = std::lock_guard{mMutex};
-                    mDevice->renderSamples(buffer, len, mFormat.Format.nChannels);
+                    mDevice.renderSamples(buffer, len, mFormat.Format.nChannels);
                     mPadding.store(written + len, std::memory_order_relaxed);
                 }
 
                 if(mMonoUpsample)
                 {
                     DuplicateSamples(std::span{buffer, std::size_t{len}*frame_size},
-                        mDevice->FmtType, mFormat.Format.nChannels);
+                        mDevice.FmtType, mFormat.Format.nChannels);
                 }
 
                 hr = audio.mRender->ReleaseBuffer(len, 0);
@@ -1346,7 +1345,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             if(FAILED(hr))
             {
                 ERR("Failed to buffer data: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Failed to send playback samples: {:#x}",
+                mDevice.handleDisconnect("Failed to send playback samples: {:#x}",
                     as_unsigned(hr));
                 break;
             }
@@ -1359,7 +1358,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(PlainDevice const &audio)
             if(auto const hr = audio.mClient->Start(); FAILED(hr))
             {
                 ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Failed to start audio client: {:#x}",
+                mDevice.handleDisconnect("Failed to start audio client: {:#x}",
                     as_unsigned(hr));
                 break;
             }
@@ -1426,7 +1425,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
                     for(auto i=0_uz;i < tmpbuffers.size();++i)
                     {
                         resbuffers[i] = std::to_address(bufptr);
-                        std::advance(bufptr, mDevice->mUpdateSize*sizeof(float));
+                        std::advance(bufptr, mDevice.mUpdateSize*sizeof(float));
                     }
                 }
             }
@@ -1443,7 +1442,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
             }, al::dereference{});
 
             if(!mResampler)
-                mDevice->renderSamples(buffers, framesToDo);
+                mDevice.renderSamples(buffers, framesToDo);
             else
             {
                 auto dlock = std::lock_guard{mMutex};
@@ -1451,9 +1450,9 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
                 {
                     if(mBufferFilled == 0)
                     {
-                        mDevice->renderSamples(resbuffers, mDevice->mUpdateSize);
+                        mDevice.renderSamples(resbuffers, mDevice.mUpdateSize);
                         std::ranges::copy(resbuffers, tmpbuffers.begin());
-                        mBufferFilled = mDevice->mUpdateSize;
+                        mBufferFilled = mDevice.mUpdateSize;
                     }
 
                     const auto got = mResampler->convertPlanar(tmpbuffers.data(), &mBufferFilled,
@@ -1475,7 +1474,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
             if(FAILED(hr))
             {
                 ERR("Failed to start spatial audio stream: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Failed to start spatial audio stream: {:#x}",
+                mDevice.handleDisconnect("Failed to start spatial audio stream: {:#x}",
                     as_unsigned(hr));
                 return;
             }
@@ -1489,7 +1488,7 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
             if(FAILED(hr))
             {
                 ERR("ISpatialAudioObjectRenderStream::Reset failed: {:#x}", as_unsigned(hr));
-                mDevice->handleDisconnect("Device lost: {:#x}", as_unsigned(hr));
+                mDevice.handleDisconnect("Device lost: {:#x}", as_unsigned(hr));
                 break;
             }
             firstupdate = true;
@@ -1511,7 +1510,7 @@ try {
     {
         const auto hr = as_unsigned(com.status());
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: {:#x}", hr);
-        mDevice->handleDisconnect("COM init failed: {:#x}", hr);
+        mDevice.handleDisconnect("COM init failed: {:#x}", hr);
 
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = com.status();
@@ -1525,7 +1524,7 @@ try {
     auto helper = DeviceHelper{};
     if(const auto hr = helper.init(); FAILED(hr))
     {
-        mDevice->handleDisconnect("Helper init failed: {:#x}", as_unsigned(hr));
+        mDevice.handleDisconnect("Helper init failed: {:#x}", as_unsigned(hr));
 
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
@@ -1668,10 +1667,10 @@ auto WasapiPlayback::openProxy(std::string_view const name, DeviceHelper const &
 
 void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
 {
-    if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
+    if(!GetConfigValueBool(mDevice.mDeviceName, "wasapi", "allow-resampler", true))
+        mDevice.mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
     else
-        mDevice->mSampleRate = std::min(mDevice->mSampleRate,
+        mDevice.mSampleRate = std::min(mDevice.mSampleRate,
             gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec));
 
     const auto chancount = unsigned{OutputType.Format.nChannels};
@@ -1680,13 +1679,13 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
      * supported.
      */
     auto chansok = false;
-    if(mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
+    if(mDevice.mFlags.test(DeviceFlag::ChannelsRequest))
     {
         /* When requesting a channel configuration, make sure it fits the
          * mask's lsb (to ensure no gaps in the output channels). If there's no
          * mask, assume the request fits with enough channels.
          */
-        switch(mDevice->FmtChans)
+        switch(mDevice.FmtChans)
         {
         case DevFmtMono:
             chansok = (chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask));
@@ -1724,25 +1723,25 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
     if(!chansok)
     {
         if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
-            mDevice->FmtChans = DevFmtX714;
+            mDevice.FmtChans = DevFmtX714;
         else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-            mDevice->FmtChans = DevFmtX71;
+            mDevice.FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
+            mDevice.FmtChans = DevFmtX61;
         else if(chancount >= 6 && ((chanmask&X51Mask) == X5DOT1
             || (chanmask&X51RearMask) == X5DOT1REAR))
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
+            mDevice.FmtChans = DevFmtQuad;
         else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
-            mDevice->FmtChans = DevFmtMono;
+            mDevice.FmtChans = DevFmtMono;
         else
         {
             ERR("Unhandled extensible channels: {} -- {:#08x}", OutputType.Format.nChannels,
                 OutputType.dwChannelMask);
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
             OutputType.Format.nChannels = 2;
             OutputType.dwChannelMask = STEREO;
         }
@@ -1751,26 +1750,26 @@ void WasapiPlayback::finalizeFormat(WAVEFORMATEXTENSIBLE &OutputType)
     if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
     {
         if(OutputType.Format.wBitsPerSample == 8)
-            mDevice->FmtType = DevFmtUByte;
+            mDevice.FmtType = DevFmtUByte;
         else if(OutputType.Format.wBitsPerSample == 16)
-            mDevice->FmtType = DevFmtShort;
+            mDevice.FmtType = DevFmtShort;
         else if(OutputType.Format.wBitsPerSample == 32)
-            mDevice->FmtType = DevFmtInt;
+            mDevice.FmtType = DevFmtInt;
         else
         {
-            mDevice->FmtType = DevFmtShort;
+            mDevice.FmtType = DevFmtShort;
             OutputType.Format.wBitsPerSample = 16;
         }
     }
     else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
     {
-        mDevice->FmtType = DevFmtFloat;
+        mDevice.FmtType = DevFmtFloat;
         OutputType.Format.wBitsPerSample = 32;
     }
     else
     {
         ERR("Unhandled format sub-type: {}", GuidPrinter{OutputType.SubFormat}.str());
-        mDevice->FmtType = DevFmtShort;
+        mDevice.FmtType = DevFmtShort;
         if(OutputType.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
             OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
         OutputType.Format.wBitsPerSample = 16;
@@ -1871,8 +1870,8 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
 
     /* Match the output rate if not requesting anything specific. */
-    if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
-        mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
+    if(!mDevice.mFlags.test(DeviceFlag::FrequencyRequest))
+        mDevice.mSampleRate = OutputType.Format.nSamplesPerSec;
 
     auto getTypeMask = [](DevFmtChannels const chans) noexcept
     {
@@ -1895,7 +1894,7 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
 
     auto streamParams = SpatialAudioObjectRenderStreamActivationParams{};
     streamParams.ObjectFormat = &OutputType.Format;
-    streamParams.StaticObjectTypeMask = getTypeMask(mDevice->FmtChans);
+    streamParams.StaticObjectTypeMask = getTypeMask(mDevice.FmtChans);
     streamParams.Category = AudioCategory_Media;
     streamParams.EventHandle = mNotifyEvent;
 
@@ -1913,14 +1912,14 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     audio.mStaticMask = streamParams.StaticObjectTypeMask;
     mFormat = OutputType;
 
-    mDevice->FmtType = DevFmtFloat;
-    mDevice->mFlags.reset(DeviceFlag::DirectEar).set(DeviceFlag::Virtualization);
+    mDevice.FmtType = DevFmtFloat;
+    mDevice.mFlags.reset(DeviceFlag::DirectEar).set(DeviceFlag::Virtualization);
     if(streamParams.StaticObjectTypeMask == ChannelMask_Stereo)
-        mDevice->FmtChans = DevFmtStereo;
-    if(!GetConfigValueBool(mDevice->mDeviceName, "wasapi", "allow-resampler", true))
-        mDevice->mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
+        mDevice.FmtChans = DevFmtStereo;
+    if(!GetConfigValueBool(mDevice.mDeviceName, "wasapi", "allow-resampler", true))
+        mDevice.mSampleRate = gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec);
     else
-        mDevice->mSampleRate = std::min(mDevice->mSampleRate,
+        mDevice.mSampleRate = std::min(mDevice.mSampleRate,
             gsl::narrow_cast<unsigned>(OutputType.Format.nSamplesPerSec));
 
     setDefaultWFXChannelOrder();
@@ -1935,28 +1934,28 @@ auto WasapiPlayback::initSpatial(DeviceHelper &helper, DeviceHandle &mmdev, Spat
     mOutUpdateSize = maxFrames;
     mOutBufferSize = mOutUpdateSize*2;
 
-    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>((std::uint64_t{mOutUpdateSize}
-        *mDevice->mSampleRate + (mFormat.Format.nSamplesPerSec-1))
+    mDevice.mUpdateSize = gsl::narrow_cast<unsigned>((std::uint64_t{mOutUpdateSize}
+        *mDevice.mSampleRate + (mFormat.Format.nSamplesPerSec-1))
         / mFormat.Format.nSamplesPerSec);
-    mDevice->mBufferSize = mDevice->mUpdateSize*2;
+    mDevice.mBufferSize = mDevice.mUpdateSize*2;
 
     mResampler = nullptr;
     mResampleBuffer.clear();
     mResampleBuffer.shrink_to_fit();
     mBufferFilled = 0;
-    if(mDevice->mSampleRate != mFormat.Format.nSamplesPerSec)
+    if(mDevice.mSampleRate != mFormat.Format.nSamplesPerSec)
     {
         const auto flags = as_unsigned(al::to_underlying(streamParams.StaticObjectTypeMask));
         const auto channelCount = as_unsigned(std::popcount(flags));
-        mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType, channelCount,
-            mDevice->mSampleRate, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
-        mResampleBuffer.resize(std::size_t{mDevice->mUpdateSize} * channelCount *
+        mResampler = SampleConverter::Create(mDevice.FmtType, mDevice.FmtType, channelCount,
+            mDevice.mSampleRate, mFormat.Format.nSamplesPerSec, Resampler::FastBSinc24);
+        mResampleBuffer.resize(std::size_t{mDevice.mUpdateSize} * channelCount *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
-            DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->mSampleRate,
-            mDevice->mUpdateSize);
+            DevFmtChannelsString(mDevice.FmtChans), DevFmtTypeString(mDevice.FmtType),
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice.mSampleRate,
+            mDevice.mUpdateSize);
     }
 
     return true;
@@ -1982,13 +1981,13 @@ auto WasapiPlayback::reset() -> bool
 auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     std::variant<PlainDevice,SpatialDevice> &audiodev) -> HRESULT
 {
-    if(GetConfigValueBool(mDevice->mDeviceName, "wasapi", "spatial-api", false))
+    if(GetConfigValueBool(mDevice.mDeviceName, "wasapi", "spatial-api", false))
     {
         if(initSpatial(helper, mmdev, audiodev.emplace<SpatialDevice>()))
             return S_OK;
     }
 
-    mDevice->mFlags.reset(DeviceFlag::Virtualization);
+    mDevice.mFlags.reset(DeviceFlag::Virtualization);
     mMonoUpsample = false;
     mExclusiveMode = false;
 
@@ -2018,14 +2017,14 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     /* Get the buffer and update sizes as a ReferenceTime before potentially
      * altering the sample rate.
      */
-    const auto buf_time = ReferenceTime{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
-    const auto per_time = ReferenceTime{seconds{mDevice->mUpdateSize}} / mDevice->mSampleRate;
+    const auto buf_time = ReferenceTime{seconds{mDevice.mBufferSize}} / mDevice.mSampleRate;
+    const auto per_time = ReferenceTime{seconds{mDevice.mUpdateSize}} / mDevice.mSampleRate;
 
     /* Update the mDevice format for non-requested properties. */
     auto isRear51 = false;
-    if(!mDevice->mFlags.test(DeviceFlag::FrequencyRequest))
-        mDevice->mSampleRate = OutputType.Format.nSamplesPerSec;
-    if(!mDevice->mFlags.test(DeviceFlag::ChannelsRequest))
+    if(!mDevice.mFlags.test(DeviceFlag::FrequencyRequest))
+        mDevice.mSampleRate = OutputType.Format.nSamplesPerSec;
+    if(!mDevice.mFlags.test(DeviceFlag::ChannelsRequest))
     {
         /* If not requesting a channel configuration, auto-select given what
          * fits the mask's lsb (to ensure no gaps in the output channels). If
@@ -2034,24 +2033,24 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         const auto chancount = OutputType.Format.nChannels;
         const auto chanmask = OutputType.dwChannelMask;
         if(chancount >= 12 && (chanmask&X714Mask) == X7DOT1DOT4)
-            mDevice->FmtChans = DevFmtX714;
+            mDevice.FmtChans = DevFmtX714;
         else if(chancount >= 8 && (chanmask&X71Mask) == X7DOT1)
-            mDevice->FmtChans = DevFmtX71;
+            mDevice.FmtChans = DevFmtX71;
         else if(chancount >= 7 && (chanmask&X61Mask) == X6DOT1)
-            mDevice->FmtChans = DevFmtX61;
+            mDevice.FmtChans = DevFmtX61;
         else if(chancount >= 6 && (chanmask&X51Mask) == X5DOT1)
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
         else if(chancount >= 6 && (chanmask&X51RearMask) == X5DOT1REAR)
         {
-            mDevice->FmtChans = DevFmtX51;
+            mDevice.FmtChans = DevFmtX51;
             isRear51 = true;
         }
         else if(chancount >= 4 && (chanmask&QuadMask) == QUAD)
-            mDevice->FmtChans = DevFmtQuad;
+            mDevice.FmtChans = DevFmtQuad;
         else if(chancount >= 2 && ((chanmask&StereoMask) == STEREO || !chanmask))
-            mDevice->FmtChans = DevFmtStereo;
+            mDevice.FmtChans = DevFmtStereo;
         else if(chancount >= 1 && ((chanmask&MonoMask) == MONO || !chanmask))
-            mDevice->FmtChans = DevFmtMono;
+            mDevice.FmtChans = DevFmtMono;
         else
             ERR("Unhandled channel config: {} -- {:#08x}", chancount, chanmask);
     }
@@ -2064,14 +2063,14 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
     /* Request a format matching the mDevice. */
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    switch(mDevice->FmtChans)
+    switch(mDevice.FmtChans)
     {
     case DevFmtMono:
         OutputType.Format.nChannels = 1;
         OutputType.dwChannelMask = MONO;
         break;
     case DevFmtAmbi3D:
-        mDevice->FmtChans = DevFmtStereo;
+        mDevice.FmtChans = DevFmtStereo;
         [[fallthrough]];
     case DevFmtStereo:
         OutputType.Format.nChannels = 2;
@@ -2095,31 +2094,31 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         OutputType.dwChannelMask = X7DOT1;
         break;
     case DevFmtX7144:
-        mDevice->FmtChans = DevFmtX714;
+        mDevice.FmtChans = DevFmtX714;
         [[fallthrough]];
     case DevFmtX714:
         OutputType.Format.nChannels = 12;
         OutputType.dwChannelMask = X7DOT1DOT4;
         break;
     }
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte:
-        mDevice->FmtType = DevFmtUByte;
+        mDevice.FmtType = DevFmtUByte;
         [[fallthrough]];
     case DevFmtUByte:
         OutputType.Format.wBitsPerSample = 8;
         OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         break;
     case DevFmtUShort:
-        mDevice->FmtType = DevFmtShort;
+        mDevice.FmtType = DevFmtShort;
         [[fallthrough]];
     case DevFmtShort:
         OutputType.Format.wBitsPerSample = 16;
         OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
         break;
     case DevFmtUInt:
-        mDevice->FmtType = DevFmtInt;
+        mDevice.FmtType = DevFmtInt;
         [[fallthrough]];
     case DevFmtInt:
         OutputType.Format.wBitsPerSample = 32;
@@ -2132,14 +2131,14 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     }
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
-    OutputType.Format.nSamplesPerSec = mDevice->mSampleRate;
+    OutputType.Format.nSamplesPerSec = mDevice.mSampleRate;
     OutputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(OutputType.Format.nChannels
         * OutputType.Format.wBitsPerSample / 8);
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec
         * OutputType.Format.nBlockAlign;
 
     const auto sharemode =
-        GetConfigValueBool(mDevice->mDeviceName, "wasapi", "exclusive-mode", false)
+        GetConfigValueBool(mDevice.mDeviceName, "wasapi", "exclusive-mode", false)
         ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
     mExclusiveMode = (sharemode == AUDCLNT_SHAREMODE_EXCLUSIVE);
 
@@ -2153,9 +2152,9 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
              * back a supported format. However, a common failure is an
              * unsupported sample type, so try a fallback to 16-bit int.
              */
-            if(hr == AUDCLNT_E_UNSUPPORTED_FORMAT && mDevice->FmtType != DevFmtShort)
+            if(hr == AUDCLNT_E_UNSUPPORTED_FORMAT && mDevice.FmtType != DevFmtShort)
             {
-                mDevice->FmtType = DevFmtShort;
+                mDevice.FmtType = DevFmtShort;
 
                 OutputType.Format.wBitsPerSample = 16;
                 OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
@@ -2195,9 +2194,9 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
 
 #if !ALSOFT_UWP
     const auto formfactor = GetDeviceFormfactor(mmdev.get());
-    mDevice->mFlags.set(DeviceFlag::DirectEar, (formfactor==Headphones || formfactor==Headset));
+    mDevice.mFlags.set(DeviceFlag::DirectEar, (formfactor==Headphones || formfactor==Headset));
 #else
-    mDevice->mFlags.set(DeviceFlag::DirectEar, false);
+    mDevice.mFlags.set(DeviceFlag::DirectEar, false);
 #endif
     setDefaultWFXChannelOrder();
 
@@ -2284,36 +2283,36 @@ auto WasapiPlayback::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
          * implicitly two update periods on the device.
          */
         mOutUpdateSize = buffer_len;
-        mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(std::uint64_t{buffer_len}
-            * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
-        mDevice->mBufferSize = mDevice->mUpdateSize * 2;
+        mDevice.mUpdateSize = gsl::narrow_cast<unsigned>(std::uint64_t{buffer_len}
+            * mDevice.mSampleRate / mFormat.Format.nSamplesPerSec);
+        mDevice.mBufferSize = mDevice.mUpdateSize * 2;
     }
     else
     {
         mOutUpdateSize = RefTime2Samples(period_time, mFormat.Format.nSamplesPerSec);
 
-        mDevice->mBufferSize = gsl::narrow_cast<unsigned>(std::uint64_t{buffer_len}
-            * mDevice->mSampleRate / mFormat.Format.nSamplesPerSec);
-        mDevice->mUpdateSize = std::min(RefTime2Samples(period_time, mDevice->mSampleRate),
-            mDevice->mBufferSize/2u);
+        mDevice.mBufferSize = gsl::narrow_cast<unsigned>(std::uint64_t{buffer_len}
+            * mDevice.mSampleRate / mFormat.Format.nSamplesPerSec);
+        mDevice.mUpdateSize = std::min(RefTime2Samples(period_time, mDevice.mSampleRate),
+            mDevice.mBufferSize/2u);
     }
 
     mResampler = nullptr;
     mResampleBuffer.clear();
     mResampleBuffer.shrink_to_fit();
     mBufferFilled = 0;
-    if(mDevice->mSampleRate != mFormat.Format.nSamplesPerSec)
+    if(mDevice.mSampleRate != mFormat.Format.nSamplesPerSec)
     {
-        mResampler = SampleConverter::Create(mDevice->FmtType, mDevice->FmtType,
-            mFormat.Format.nChannels, mDevice->mSampleRate, mFormat.Format.nSamplesPerSec,
+        mResampler = SampleConverter::Create(mDevice.FmtType, mDevice.FmtType,
+            mFormat.Format.nChannels, mDevice.mSampleRate, mFormat.Format.nSamplesPerSec,
             Resampler::FastBSinc24);
-        mResampleBuffer.resize(std::size_t{mDevice->mUpdateSize} * mFormat.Format.nChannels *
+        mResampleBuffer.resize(std::size_t{mDevice.mUpdateSize} * mFormat.Format.nChannels *
             mFormat.Format.wBitsPerSample / 8);
 
         TRACE("Created converter for {}/{} format, dst: {}hz ({}), src: {}hz ({})",
-            DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice->mSampleRate,
-            mDevice->mUpdateSize);
+            DevFmtChannelsString(mDevice.FmtChans), DevFmtTypeString(mDevice.FmtType),
+            mFormat.Format.nSamplesPerSec, mOutUpdateSize, mDevice.mSampleRate,
+            mDevice.mUpdateSize);
     }
 
     return hr;
@@ -2351,14 +2350,14 @@ ClockLatency WasapiPlayback::getClockLatency()
 {
     auto dlock = std::lock_guard{mMutex};
     auto ret = ClockLatency{};
-    ret.ClockTime = mDevice->getClockTime();
+    ret.ClockTime = mDevice.getClockTime();
     ret.Latency  = seconds{mPadding.load(std::memory_order_relaxed)};
     ret.Latency /= mFormat.Format.nSamplesPerSec;
     if(mResampler)
     {
         auto extra = mResampler->currentInputDelay();
-        ret.Latency += std::chrono::duration_cast<nanoseconds>(extra) / mDevice->mSampleRate;
-        ret.Latency += nanoseconds{seconds{mBufferFilled}} / mDevice->mSampleRate;
+        ret.Latency += std::chrono::duration_cast<nanoseconds>(extra) / mDevice.mSampleRate;
+        ret.Latency += nanoseconds{seconds{mBufferFilled}} / mDevice.mSampleRate;
     }
 
     return ret;
@@ -2366,8 +2365,7 @@ ClockLatency WasapiPlayback::getClockLatency()
 
 
 struct WasapiCapture final : BackendBase {
-    explicit WasapiCapture(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~WasapiCapture() override;
 
     void recordProc(IAudioClient *client, IAudioCaptureClient *capture) const;
@@ -2441,7 +2439,7 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
     if(const auto hr = client->Start(); FAILED(hr))
     {
         ERR("Failed to start audio client: {:#x}", as_unsigned(hr));
-        mDevice->handleDisconnect("Failed to start audio client: {:#x}", as_unsigned(hr));
+        mDevice.handleDisconnect("Failed to start audio client: {:#x}", as_unsigned(hr));
         return;
     }
 
@@ -2497,7 +2495,7 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
                 }
                 else
                 {
-                    const auto framesize = mDevice->frameSizeFromFmt();
+                    const auto framesize = mDevice.frameSizeFromFmt();
                     auto dst = std::span{rdata, std::size_t{numsamples}*framesize};
                     auto len1 = data[0].size() / mRing->getElemSize();
                     auto len2 = data[1].size() / mRing->getElemSize();
@@ -2522,7 +2520,7 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
 
         if(FAILED(hr))
         {
-            mDevice->handleDisconnect("Failed to capture samples: {:#x}", as_unsigned(hr));
+            mDevice.handleDisconnect("Failed to capture samples: {:#x}", as_unsigned(hr));
             break;
         }
 
@@ -2542,7 +2540,7 @@ try {
     {
         const auto hr = as_unsigned(com.status());
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: {:#x}", hr);
-        mDevice->handleDisconnect("COM init failed: {:#x}", hr);
+        mDevice.handleDisconnect("COM init failed: {:#x}", hr);
 
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = com.status();
@@ -2556,7 +2554,7 @@ try {
     auto helper = DeviceHelper{};
     if(const auto hr = helper.init(); FAILED(hr))
     {
-        mDevice->handleDisconnect("Helper init failed: {:#x}", as_unsigned(hr));
+        mDevice.handleDisconnect("Helper init failed: {:#x}", as_unsigned(hr));
 
         auto plock = std::lock_guard{mProcMutex};
         mProcResult = hr;
@@ -2729,12 +2727,12 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         && (InputType.dwChannelMask&X51RearMask) == X5DOT1REAR;
 
     // Make sure buffer is at least 100ms in size
-    auto buf_time = ReferenceTime{seconds{mDevice->mBufferSize}} / mDevice->mSampleRate;
+    auto buf_time = ReferenceTime{seconds{mDevice.mBufferSize}} / mDevice.mSampleRate;
     buf_time = std::max(buf_time, ReferenceTime{milliseconds{100}});
 
     InputType = {};
     InputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-    switch(mDevice->FmtChans)
+    switch(mDevice.FmtChans)
     {
     case DevFmtMono:
         InputType.Format.nChannels = 1;
@@ -2770,7 +2768,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     case DevFmtAmbi3D:
         return E_FAIL;
     }
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     /* NOTE: Signedness doesn't matter, the converter will handle it. */
     case DevFmtByte:
@@ -2795,7 +2793,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
     }
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access) */
     InputType.Samples.wValidBitsPerSample = InputType.Format.wBitsPerSample;
-    InputType.Format.nSamplesPerSec = mDevice->mSampleRate;
+    InputType.Format.nSamplesPerSec = mDevice.mSampleRate;
 
     InputType.Format.nBlockAlign = gsl::narrow_cast<WORD>(InputType.Format.nChannels *
         InputType.Format.wBitsPerSample / 8);
@@ -2826,10 +2824,10 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
             return E_FAIL;
         wfx = nullptr;
 
-        static constexpr auto validate_fmt = [](DeviceBase const *const device,
-            unsigned const chancount, unsigned const chanmask) noexcept -> bool
+        static constexpr auto validate_fmt = [](DeviceBase const &device, unsigned const chancount,
+            unsigned const chanmask) noexcept -> bool
         {
-            switch(device->FmtChans)
+            switch(device.FmtChans)
             {
             /* If the device wants mono, we can handle any input. */
             case DevFmtMono:
@@ -2855,15 +2853,15 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
             case DevFmtX7144:
                 return (chancount == 16 && chanmask == 0);
             case DevFmtAmbi3D:
-                return (chanmask == 0 && chancount == device->channelsFromFmt());
+                return (chanmask == 0 && chancount == device.channelsFromFmt());
             }
             return false;
         };
         if(!validate_fmt(mDevice, InputType.Format.nChannels, InputType.dwChannelMask))
         {
             ERR("Failed to match format, wanted: {} {} {}hz, got: {:#08x} mask {} channel{} {}-bit {}hz",
-                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-                mDevice->mSampleRate, InputType.dwChannelMask, InputType.Format.nChannels,
+                DevFmtChannelsString(mDevice.FmtChans), DevFmtTypeString(mDevice.FmtType),
+                mDevice.mSampleRate, InputType.dwChannelMask, InputType.Format.nChannels,
                 (InputType.Format.nChannels==1)?"":"s", InputType.Format.wBitsPerSample,
                 InputType.Format.nSamplesPerSec);
             return E_FAIL;
@@ -2901,7 +2899,7 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         return E_FAIL;
     }
 
-    if(mDevice->FmtChans == DevFmtMono && InputType.Format.nChannels != 1)
+    if(mDevice.FmtChans == DevFmtMono && InputType.Format.nChannels != 1)
     {
         auto chanmask = (1u<<InputType.Format.nChannels) - 1u;
         /* Exclude LFE from the downmix. */
@@ -2913,35 +2911,35 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         }
 
         mChannelConv = ChannelConverter{srcType, InputType.Format.nChannels, chanmask,
-            mDevice->FmtChans};
+            mDevice.FmtChans};
         TRACE("Created {} multichannel-to-mono converter", DevFmtTypeString(srcType));
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
          */
         srcType = DevFmtFloat;
     }
-    else if(mDevice->FmtChans == DevFmtStereo && InputType.Format.nChannels == 1)
+    else if(mDevice.FmtChans == DevFmtStereo && InputType.Format.nChannels == 1)
     {
-        mChannelConv = ChannelConverter{srcType, 1, 0x1, mDevice->FmtChans};
+        mChannelConv = ChannelConverter{srcType, 1, 0x1, mDevice.FmtChans};
         TRACE("Created {} mono-to-stereo converter", DevFmtTypeString(srcType));
         srcType = DevFmtFloat;
     }
 
-    if(mDevice->mSampleRate != InputType.Format.nSamplesPerSec || mDevice->FmtType != srcType)
+    if(mDevice.mSampleRate != InputType.Format.nSamplesPerSec || mDevice.FmtType != srcType)
     {
-        mSampleConv = SampleConverter::Create(srcType, mDevice->FmtType,
-            mDevice->channelsFromFmt(), InputType.Format.nSamplesPerSec, mDevice->mSampleRate,
+        mSampleConv = SampleConverter::Create(srcType, mDevice.FmtType,
+            mDevice.channelsFromFmt(), InputType.Format.nSamplesPerSec, mDevice.mSampleRate,
             Resampler::FastBSinc24);
         if(!mSampleConv)
         {
             ERR("Failed to create converter for {} format, dst: {} {}hz, src: {} {}hz",
-                DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-                mDevice->mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
+                DevFmtChannelsString(mDevice.FmtChans), DevFmtTypeString(mDevice.FmtType),
+                mDevice.mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
         TRACE("Created converter for {} format, dst: {} {}hz, src: {} {}hz",
-            DevFmtChannelsString(mDevice->FmtChans), DevFmtTypeString(mDevice->FmtType),
-            mDevice->mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
+            DevFmtChannelsString(mDevice.FmtChans), DevFmtTypeString(mDevice.FmtType),
+            mDevice.mSampleRate, DevFmtTypeString(srcType), InputType.Format.nSamplesPerSec);
     }
 
     hr = client->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -2973,10 +2971,10 @@ auto WasapiCapture::resetProxy(DeviceHelper &helper, DeviceHandle &mmdev,
         ERR("Failed to get buffer size: {:#x}", as_unsigned(hr));
         return hr;
     }
-    mDevice->mUpdateSize = RefTime2Samples(min_per, mDevice->mSampleRate);
-    mDevice->mBufferSize = buffer_len;
+    mDevice.mUpdateSize = RefTime2Samples(min_per, mDevice.mSampleRate);
+    mDevice.mBufferSize = buffer_len;
 
-    mRing = RingBuffer<std::byte>::Create(buffer_len, mDevice->frameSizeFromFmt(), false);
+    mRing = RingBuffer<std::byte>::Create(buffer_len, mDevice.frameSizeFromFmt(), false);
 
     hr = client->SetEventHandle(mNotifyEvent);
     if(FAILED(hr))
@@ -3092,8 +3090,7 @@ auto WasapiBackendFactory::enumerate(BackendType const type) -> std::vector<std:
     return outnames;
 }
 
-auto WasapiBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto WasapiBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new WasapiPlayback{device}};

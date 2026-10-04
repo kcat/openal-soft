@@ -32,9 +32,7 @@ import core.device;
 namespace {
 
 struct LoopbackBackend final : BackendBase {
-    explicit LoopbackBackend(gsl::not_null<DeviceBase*> const device) noexcept
-        : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
 
     void open(std::string_view name) override;
     auto reset() -> bool override;
@@ -72,8 +70,7 @@ auto LoopbackBackendFactory::querySupport(BackendType) -> bool
 auto LoopbackBackendFactory::enumerate(BackendType) -> std::vector<std::string>
 { return {}; }
 
-auto LoopbackBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device, BackendType)
-    -> BackendPtr
+auto LoopbackBackendFactory::createBackend(DeviceBase &device, BackendType) -> BackendPtr
 { return BackendPtr{new LoopbackBackend{device}}; }
 
 auto LoopbackBackendFactory::getFactory() -> BackendFactory&

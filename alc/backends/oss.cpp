@@ -266,8 +266,7 @@ void ALCossListPopulate(std::vector<DevMap> &devlist, int const type_flag)
 
 
 struct OSSPlayback final : BackendBase {
-    explicit OSSPlayback(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device}
-    { }
+    using BackendBase::BackendBase;
     ~OSSPlayback() override;
 
     void mixerProc();
@@ -293,11 +292,11 @@ void OSSPlayback::mixerProc()
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    const auto frame_step = std::size_t{mDevice->channelsFromFmt()};
-    const auto frame_size = std::size_t{mDevice->frameSizeFromFmt()};
+    const auto frame_step = std::size_t{mDevice.channelsFromFmt()};
+    const auto frame_size = std::size_t{mDevice.frameSizeFromFmt()};
 
     while(!mKillNow.load(std::memory_order_acquire)
-        && mDevice->Connected.load(std::memory_order_acquire))
+        && mDevice.Connected.load(std::memory_order_acquire))
     {
         auto pollitem = pollfd{};
         pollitem.fd = mFd.get();
@@ -309,7 +308,7 @@ void OSSPlayback::mixerProc()
                 continue;
             const auto errstr = std::generic_category().message(errno);
             ERR("poll failed: {}", errstr);
-            mDevice->handleDisconnect("Failed waiting for playback buffer: {}", errstr);
+            mDevice.handleDisconnect("Failed waiting for playback buffer: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
@@ -319,7 +318,7 @@ void OSSPlayback::mixerProc()
         }
 
         auto write_buf = std::span{mMixData};
-        mDevice->renderSamples(write_buf.data(),
+        mDevice.renderSamples(write_buf.data(),
             gsl::narrow_cast<unsigned>(write_buf.size()/frame_size), frame_step);
         while(!write_buf.empty() && !mKillNow.load(std::memory_order_acquire))
         {
@@ -330,7 +329,7 @@ void OSSPlayback::mixerProc()
                     continue;
                 const auto errstr = std::generic_category().message(errno);
                 ERR("write failed: {}", errstr);
-                mDevice->handleDisconnect("Failed writing playback samples: {}", errstr);
+                mDevice.handleDisconnect("Failed writing playback samples: {}", errstr);
                 break;
             }
 
@@ -367,7 +366,7 @@ void OSSPlayback::open(std::string_view name)
 auto OSSPlayback::reset() -> bool
 {
     auto ossFormat = int{};
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte:
         ossFormat = AFMT_S8;
@@ -379,21 +378,21 @@ auto OSSPlayback::reset() -> bool
     case DevFmtInt:
     case DevFmtUInt:
     case DevFmtFloat:
-        mDevice->FmtType = DevFmtShort;
+        mDevice.FmtType = DevFmtShort;
         [[fallthrough]];
     case DevFmtShort:
         ossFormat = AFMT_S16_NE;
         break;
     }
 
-    auto numChannels = mDevice->channelsFromFmt();
-    auto ossSpeed = mDevice->mSampleRate;
-    auto frameSize = numChannels * mDevice->bytesFromFmt();
+    auto numChannels = mDevice.channelsFromFmt();
+    auto ossSpeed = mDevice.mSampleRate;
+    auto frameSize = numChannels * mDevice.bytesFromFmt();
     /* Number of periods in the upper 16 bits. */
-    auto numFragmentsLogSize = ((mDevice->mBufferSize + mDevice->mUpdateSize/2)
-        / mDevice->mUpdateSize) << 16u;
+    auto numFragmentsLogSize = ((mDevice.mBufferSize + mDevice.mUpdateSize/2)
+        / mDevice.mUpdateSize) << 16u;
     /* According to the OSS spec, 16 bytes is the minimum period size. */
-    numFragmentsLogSize |= std::max(log2i(mDevice->mUpdateSize * frameSize), 4u);
+    numFragmentsLogSize |= std::max(log2i(mDevice.mUpdateSize * frameSize), 4u);
 
     auto info = audio_buf_info{};
 #define CHECKERR(func) if((func) < 0)                                         \
@@ -409,29 +408,29 @@ auto OSSPlayback::reset() -> bool
     CHECKERR(mFd.ioctl(SNDCTL_DSP_GETOSPACE, &info));
 #undef CHECKERR
 
-    if(mDevice->channelsFromFmt() != numChannels)
+    if(mDevice.channelsFromFmt() != numChannels)
     {
-        ERR("Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice->FmtChans),
+        ERR("Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice.FmtChans),
             numChannels);
         return false;
     }
 
-    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte) ||
-         (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte) ||
-         (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
+    if(!((ossFormat == AFMT_S8 && mDevice.FmtType == DevFmtByte) ||
+         (ossFormat == AFMT_U8 && mDevice.FmtType == DevFmtUByte) ||
+         (ossFormat == AFMT_S16_NE && mDevice.FmtType == DevFmtShort)))
     {
-        ERR("Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
+        ERR("Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice.FmtType),
             as_unsigned(ossFormat));
         return false;
     }
 
-    mDevice->mSampleRate = ossSpeed;
-    mDevice->mUpdateSize = gsl::narrow_cast<unsigned>(info.fragsize) / frameSize;
-    mDevice->mBufferSize = gsl::narrow_cast<unsigned>(info.fragments) * mDevice->mUpdateSize;
+    mDevice.mSampleRate = ossSpeed;
+    mDevice.mUpdateSize = gsl::narrow_cast<unsigned>(info.fragsize) / frameSize;
+    mDevice.mBufferSize = gsl::narrow_cast<unsigned>(info.fragments) * mDevice.mUpdateSize;
 
     setDefaultChannelOrder();
 
-    mMixData.resize(std::size_t{mDevice->mUpdateSize} * mDevice->frameSizeFromFmt());
+    mMixData.resize(std::size_t{mDevice.mUpdateSize} * mDevice.frameSizeFromFmt());
 
     return true;
 }
@@ -460,7 +459,7 @@ void OSSPlayback::stop()
 
 
 struct OSSCapture final : BackendBase {
-    explicit OSSCapture(gsl::not_null<DeviceBase*> const device) noexcept : BackendBase{device} { }
+    using BackendBase::BackendBase;
     ~OSSCapture() override;
 
     void recordProc() const;
@@ -487,7 +486,7 @@ void OSSCapture::recordProc() const
     SetRTPriority();
     althrd_setname(GetRecordThreadName());
 
-    auto const frame_size = std::size_t{mDevice->frameSizeFromFmt()};
+    auto const frame_size = std::size_t{mDevice.frameSizeFromFmt()};
     while(!mKillNow.load(std::memory_order_acquire))
     {
         auto pollitem = pollfd{};
@@ -500,7 +499,7 @@ void OSSCapture::recordProc() const
                 continue;
             auto const errstr = std::generic_category().message(errno);
             ERR("poll failed: {}", errstr);
-            mDevice->handleDisconnect("Failed to check capture samples: {}", errstr);
+            mDevice.handleDisconnect("Failed to check capture samples: {}", errstr);
             break;
         }
         else if(pret == 0) /* NOLINT(*-else-after-return) 'pret' is local to the if/else blocks */
@@ -516,7 +515,7 @@ void OSSCapture::recordProc() const
             {
                 auto const errstr = std::generic_category().message(errno);
                 ERR("read failed: {}", errstr);
-                mDevice->handleDisconnect("Failed reading capture samples: {}", errstr);
+                mDevice.handleDisconnect("Failed reading capture samples: {}", errstr);
                 break;
             }
             mRing->writeAdvance(gsl::narrow_cast<std::size_t>(amt) / frame_size);
@@ -547,7 +546,7 @@ void OSSCapture::open(std::string_view name)
             std::generic_category().message(errno)};
 
     auto ossFormat = int{};
-    switch(mDevice->FmtType)
+    switch(mDevice.FmtType)
     {
     case DevFmtByte:
         ossFormat = AFMT_S8;
@@ -563,15 +562,15 @@ void OSSCapture::open(std::string_view name)
     case DevFmtUInt:
     case DevFmtFloat:
         throw al::backend_exception{al::backend_error::DeviceError,
-            "{} capture samples not supported", DevFmtTypeString(mDevice->FmtType)};
+            "{} capture samples not supported", DevFmtTypeString(mDevice.FmtType)};
     }
 
-    auto numChannels = mDevice->channelsFromFmt();
-    auto frameSize = numChannels * mDevice->bytesFromFmt();
-    auto ossSpeed = mDevice->mSampleRate;
+    auto numChannels = mDevice.channelsFromFmt();
+    auto frameSize = numChannels * mDevice.bytesFromFmt();
+    auto ossSpeed = mDevice.mSampleRate;
     /* according to the OSS spec, 16 bytes are the minimum */
     constexpr auto periods = 4u;
-    const auto log2FragmentSize = std::max(log2i(mDevice->mBufferSize * frameSize / periods), 4u);
+    const auto log2FragmentSize = std::max(log2i(mDevice.mBufferSize * frameSize / periods), 4u);
     auto numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
     auto info = audio_buf_info{};
@@ -586,19 +585,19 @@ void OSSCapture::open(std::string_view name)
     CHECKERR(mFd.ioctl(SNDCTL_DSP_GETISPACE, &info));
 #undef CHECKERR
 
-    if(mDevice->channelsFromFmt() != numChannels)
+    if(mDevice.channelsFromFmt() != numChannels)
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice->FmtChans),
+            "Failed to set {}, got {} channels instead", DevFmtChannelsString(mDevice.FmtChans),
             numChannels};
 
-    if(!((ossFormat == AFMT_S8 && mDevice->FmtType == DevFmtByte)
-        || (ossFormat == AFMT_U8 && mDevice->FmtType == DevFmtUByte)
-        || (ossFormat == AFMT_S16_NE && mDevice->FmtType == DevFmtShort)))
+    if(!((ossFormat == AFMT_S8 && mDevice.FmtType == DevFmtByte)
+        || (ossFormat == AFMT_U8 && mDevice.FmtType == DevFmtUByte)
+        || (ossFormat == AFMT_S16_NE && mDevice.FmtType == DevFmtShort)))
         throw al::backend_exception{al::backend_error::DeviceError,
-            "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice->FmtType),
+            "Failed to set {} samples, got OSS format {:#x}", DevFmtTypeString(mDevice.FmtType),
             as_unsigned(ossFormat)};
 
-    mRing = RingBuffer<std::byte>::Create(mDevice->mBufferSize, frameSize, false);
+    mRing = RingBuffer<std::byte>::Create(mDevice.mBufferSize, frameSize, false);
 
     mDeviceName = name;
 }
@@ -675,8 +674,7 @@ auto OSSBackendFactory::enumerate(BackendType const type) -> std::vector<std::st
     return outnames;
 }
 
-auto OSSBackendFactory::createBackend(gsl::not_null<DeviceBase*> const device,
-    BackendType const type) -> BackendPtr
+auto OSSBackendFactory::createBackend(DeviceBase &device, BackendType const type) -> BackendPtr
 {
     if(type == BackendType::Playback)
         return BackendPtr{new OSSPlayback{device}};

@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <ranges>
@@ -14,10 +15,14 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.hpp"
 #include "defs.h"
-#include "gsl/gsl"
 #include "hrtfbase.h"
 #include "opthelpers.h"
 
+#if HAVE_CXXMODULES
+import gsl;
+#else
+#include "gsl/gsl"
+#endif
 
 namespace {
 

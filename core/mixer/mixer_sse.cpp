@@ -16,9 +16,14 @@
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.hpp"
 #include "defs.h"
-#include "gsl/gsl"
 #include "hrtfbase.h"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import gsl;
+#else
+#include "gsl/gsl"
+#endif
 
 
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__SSE__) && !defined(__powerpc64__)

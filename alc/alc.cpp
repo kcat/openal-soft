@@ -220,14 +220,14 @@ using std::chrono::nanoseconds;
 using voidp = void*;
 
 
-auto gProcessRunning = true;
+[[gnu::used, maybe_unused]] auto gProcessRunning = true;
 struct ProcessWatcher {
     ProcessWatcher() = default;
     ProcessWatcher(const ProcessWatcher&) = delete;
-    ProcessWatcher& operator=(const ProcessWatcher&) = delete;
     ~ProcessWatcher() { gProcessRunning = false; }
+    auto operator=(const ProcessWatcher&) -> ProcessWatcher& = delete;
 };
-ProcessWatcher gProcessWatcher;
+[[gnu::used, maybe_unused]] auto gProcessWatcher = ProcessWatcher{};
 
 /************************************************
  * Backends

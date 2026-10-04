@@ -144,15 +144,9 @@ using ReferenceTime = std::chrono::duration<REFERENCE_TIME,std::ratio<1,10'000'0
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1DOT4 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT|SPEAKER_TOP_FRONT_LEFT|SPEAKER_TOP_FRONT_RIGHT|SPEAKER_TOP_BACK_LEFT|SPEAKER_TOP_BACK_RIGHT)
 
-constexpr auto MaskFromTopBits(DWORD b) noexcept -> DWORD
-{
-    b |= b>>1;
-    b |= b>>2;
-    b |= b>>4;
-    b |= b>>8;
-    b |= b>>16;
-    return b;
-}
+[[nodiscard]] constexpr
+auto MaskFromTopBits(DWORD const b) noexcept -> DWORD { return (DWORD{1}<<std::bit_width(b)) - 1; }
+
 constexpr auto MonoMask = MaskFromTopBits(MONO);
 constexpr auto StereoMask = MaskFromTopBits(STEREO);
 constexpr auto QuadMask = MaskFromTopBits(QUAD);

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -234,24 +235,12 @@ public:
      * elements regardless of the rounded size.
      */
     [[nodiscard]] NOINLINE static
-    auto Create(std::size_t sz, std::size_t elem_sz, bool limit_writes)
+    auto Create(std::size_t const sz, std::size_t const elem_sz, bool const limit_writes)
         -> std::unique_ptr<RingBuffer>
     {
         if(sz > std::numeric_limits<std::size_t>::max()>>1)
             throw std::overflow_error{"Ring buffer size too large"};
-        auto power_of_two = 0_uz;
-        if(sz > 0)
-        {
-            power_of_two = sz - 1;
-            power_of_two |= power_of_two>>1;
-            power_of_two |= power_of_two>>2;
-            power_of_two |= power_of_two>>4;
-            power_of_two |= power_of_two>>8;
-            power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(std::size_t) > sizeof(std::uint32_t))
-                power_of_two |= (power_of_two>>16) >> 16;
-        }
-        ++power_of_two;
+        auto const power_of_two = std::bit_ceil(sz);
         if(power_of_two > std::numeric_limits<std::size_t>::max()/elem_sz)
             throw std::overflow_error{"Ring buffer size overflow"};
 
@@ -529,23 +518,12 @@ public:
      * elements regardless of the rounded size.
      */
     [[nodiscard]] NOINLINE static
-    auto Create(std::size_t count, bool limit_writes) -> std::unique_ptr<FifoBuffer,Deleter>
+    auto Create(std::size_t const count, bool const limit_writes)
+        -> std::unique_ptr<FifoBuffer, Deleter>
     {
         if(count > std::numeric_limits<std::size_t>::max()>>1)
             throw std::overflow_error{"FIFO buffer size too large"};
-        auto power_of_two = 0_uz;
-        if(count > 0)
-        {
-            power_of_two = count - 1;
-            power_of_two |= power_of_two>>1;
-            power_of_two |= power_of_two>>2;
-            power_of_two |= power_of_two>>4;
-            power_of_two |= power_of_two>>8;
-            power_of_two |= power_of_two>>16;
-            if constexpr(sizeof(std::size_t) > sizeof(std::uint32_t))
-                power_of_two |= (power_of_two>>16) >> 16;
-        }
-        ++power_of_two;
+        auto const power_of_two = std::bit_ceil(count);
         if(power_of_two > std::numeric_limits<std::size_t>::max()/sizeof(T) - sizeof(FifoBuffer))
             throw std::overflow_error{"FIFO buffer size overflow"};
 

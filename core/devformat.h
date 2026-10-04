@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <string_view>
 
-#include "zudl.hpp"
-
 
 enum Channel : std::uint8_t {
     FrontLeft = 0,
@@ -77,7 +75,7 @@ enum DevFmtChannels : std::uint8_t {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-inline constexpr auto MaxOutputChannels = 32_uz;
+inline constexpr auto MaxOutputChannels = 32u;
 
 
 [[nodiscard]]

@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-01-28 02:29:27.129945+00:00
+ * Last regenerated: 2026-10-05 19:29:55.449282+00:00
  */
 
 module;
@@ -1021,5 +1021,9 @@ auto AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, ALin
 
 /*** AL_SOFT_bformat_hoa ***/
 ENUMDCL AL_UNPACK_AMBISONIC_ORDER_SOFT =         0x199D;
+
+/*** AL_SOFT_source_panning ***/
+ENUMDCL AL_PANNING_ENABLED_SOFT =                0x19EC;
+ENUMDCL AL_PAN_SOFT =                            0x19ED;
 
 } /* extern "C" */

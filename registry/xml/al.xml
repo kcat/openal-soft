@@ -1314,6 +1314,12 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x199D" name="AL_UNPACK_AMBISONIC_ORDER_SOFT" group="BufferInteger,BufferPName">
             <property on="buffer" type="ALint" range="1..=14" default="1"/>
         </enum>
+        <enum value="0x19EC" name="AL_PANNING_ENABLED_SOFT" group="SourceBoolean,SourcePName">
+            <property on="source" type="ALboolean" group="Boolean" default="AL_FALSE"/>
+        </enum>
+        <enum value="0x19ED" name="AL_PAN_SOFT" group="SourceFloat,SourcePName">
+            <property on="source" type="ALfloat" range="-1.0..=1.0" default="0.0"/>
+        </enum>
     </enums>
 
     <enums namespace="ALC">
@@ -5463,6 +5469,12 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <extension name="AL_SOFT_bformat_hoa" supported="al">
             <require>
                 <enum name="AL_UNPACK_AMBISONIC_ORDER_SOFT"/>
+            </require>
+        </extension>
+        <extension name="AL_SOFT_source_panning" supported="al">
+            <require>
+                <enum name="AL_PANNING_ENABLED_SOFT"/>
+                <enum name="AL_PAN_SOFT"/>
             </require>
         </extension>
     </extensions>

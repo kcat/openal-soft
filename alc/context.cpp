@@ -105,7 +105,7 @@ auto getContextExtensions() noexcept -> std::vector<std::string_view>
         "AL_SOFT_MSADPCM"sv,
         "AL_SOFT_source_latency"sv,
         "AL_SOFT_source_length"sv,
-        "AL_SOFTX_source_panning"sv,
+        "AL_SOFT_source_panning"sv,
         "AL_SOFT_source_resampler"sv,
         "AL_SOFT_source_spatialize"sv,
         "AL_SOFT_source_start_delay"sv,

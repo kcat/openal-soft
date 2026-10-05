@@ -72,12 +72,6 @@ void AL_APIENTRY alFlushMappedBufferDirectSOFT(ALCcontext *context, ALuint buffe
 #define AL_FORMAT_UHJ4CHN_I32_SOFT               0x19EB
 #endif
 
-#ifndef AL_SOFT_source_panning
-#define AL_SOFT_source_panning
-#define AL_PANNING_ENABLED_SOFT                  0x19EC
-#define AL_PAN_SOFT                              0x19ED
-#endif
-
 /* Non-standard exports. Not part of any extension. */
 AL_API const ALchar* AL_APIENTRY alsoft_get_version(void) noexcept;
 

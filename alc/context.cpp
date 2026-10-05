@@ -319,7 +319,7 @@ void Context::applyAllUpdates()
 #endif
 
     if(std::exchange(mPropsDirty, false))
-        UpdateContextProps(this);
+        UpdateContextProps(*this);
     UpdateAllEffectSlotProps(gsl::make_not_null(this));
     UpdateAllSourceProps(gsl::make_not_null(this));
 

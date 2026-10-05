@@ -1907,7 +1907,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         srclock.unlock();
 
         context->mPropsDirty = false;
-        UpdateContextProps(context);
+        UpdateContextProps(*context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
     });

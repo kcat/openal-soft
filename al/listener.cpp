@@ -49,32 +49,32 @@ import logging;
 
 namespace {
 
-inline void UpdateProps(gsl::not_null<al::Context*> context)
+void UpdateProps(al::Context &context)
 {
-    if(!context->mDeferUpdates)
+    if(!context.mDeferUpdates)
     {
         UpdateContextProps(context);
         return;
     }
-    context->mPropsDirty = true;
+    context.mPropsDirty = true;
 }
 
-inline void CommitAndUpdateProps(gsl::not_null<al::Context*> context)
+void CommitAndUpdateProps(al::Context &context)
 {
-    if(!context->mDeferUpdates)
+    if(!context.mDeferUpdates)
     {
 #if ALSOFT_EAX
-        if(context->eaxNeedsCommit())
+        if(context.eaxNeedsCommit())
         {
-            context->mPropsDirty = true;
-            context->applyAllUpdates();
+            context.mPropsDirty = true;
+            context.applyAllUpdates();
             return;
         }
 #endif
         UpdateContextProps(context);
         return;
     }
-    context->mPropsDirty = true;
+    context.mPropsDirty = true;
 }
 
 
@@ -88,7 +88,7 @@ try {
         if(!(value >= 0.0f && std::isfinite(value)))
             context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
         listener.mGain = value;
-        UpdateProps(context);
+        UpdateProps(*context);
         return;
 
     case AL_METERS_PER_UNIT:
@@ -96,7 +96,7 @@ try {
             context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
                 value);
         listener.mMetersPerUnit = value;
-        UpdateProps(context);
+        UpdateProps(*context);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
@@ -121,7 +121,7 @@ try {
         listener.mPosition[0] = value1;
         listener.mPosition[1] = value2;
         listener.mPosition[2] = value3;
-        CommitAndUpdateProps(context);
+        CommitAndUpdateProps(*context);
         return;
 
     case AL_VELOCITY:
@@ -130,7 +130,7 @@ try {
         listener.mVelocity[0] = value1;
         listener.mVelocity[1] = value2;
         listener.mVelocity[2] = value3;
-        CommitAndUpdateProps(context);
+        CommitAndUpdateProps(*context);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
@@ -173,7 +173,7 @@ try {
         /* AT then UP */
         std::ranges::copy(vals | std::views::take(3), listener.mOrientAt.begin());
         std::ranges::copy(vals | std::views::drop(3), listener.mOrientUp.begin());
-        CommitAndUpdateProps(context);
+        CommitAndUpdateProps(*context);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
@@ -196,7 +196,7 @@ try {
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
         listener.mGain = gsl::narrow_cast<float>(value);
-        UpdateProps(context);
+        UpdateProps(*context);
         return;
 
     case AL_METERS_PER_UNIT:
@@ -204,7 +204,7 @@ try {
             context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
                 value);
         listener.mMetersPerUnit = gsl::narrow_cast<float>(value);
-        UpdateProps(context);
+        UpdateProps(*context);
         return;
     }
     context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",

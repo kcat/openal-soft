@@ -372,7 +372,7 @@ using ContextRef = al::intrusive_ptr<al::Context>;
 
 auto GetContextRef() noexcept -> ContextRef;
 
-void UpdateContextProps(al::Context *context);
+void UpdateContextProps(al::Context &context);
 
 namespace al {
 

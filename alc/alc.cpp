@@ -741,10 +741,10 @@ void alc_initconfig()
         });
     }
 
-    InitEffect(&al::Context::sDefaultEffect);
+    InitEffect(al::Context::sDefaultEffect);
     auto defrevopt = al::getenv("ALSOFT_DEFAULT_REVERB");
     if(!defrevopt) defrevopt = ConfigValueStr({}, {}, "default-reverb"sv);
-    if(defrevopt) LoadReverbPreset(*defrevopt, &al::Context::sDefaultEffect);
+    if(defrevopt) LoadReverbPreset(*defrevopt, al::Context::sDefaultEffect);
 
 #if ALSOFT_EAX
     if(const auto eax_enable_opt = ConfigValueBool({}, "eax", "enable"))

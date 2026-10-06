@@ -63,6 +63,13 @@ struct Effect {
     /* Self ID */
     ALuint mId{0u};
 
+    Effect() = default;
+    Effect(const Effect&) = delete;
+    Effect(Effect&&) = delete;
+    ~Effect() = default;
+    auto operator=(const Effect&) -> Effect& = delete;
+    auto operator=(Effect&&) -> Effect& = delete;
+
     static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
@@ -70,9 +77,9 @@ struct Effect {
 
 } /* namespace al */
 
-void InitEffect(al::Effect *effect);
+void InitEffect(al::Effect& effect);
 
-void LoadReverbPreset(std::string_view name, al::Effect *effect);
+void LoadReverbPreset(std::string_view name, al::Effect& effect);
 
 bool IsValidEffectType(ALenum type) noexcept;
 

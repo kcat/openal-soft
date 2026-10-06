@@ -24,15 +24,15 @@ inline constexpr auto HighPassFreqRef = 250.0f;
 
 template<typename T>
 struct FilterTable {
-    static void setParami(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, ALint);
-    static void setParamiv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, ALint const*);
-    static void setParamf(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, ALfloat);
-    static void setParamfv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter*>, ALenum, ALfloat const*);
+    static void setParami(al::Context&, al::Filter&, ALenum, ALint);
+    static void setParamiv(al::Context&, al::Filter&, ALenum, ALint const*);
+    static void setParamf(al::Context&, al::Filter&, ALenum, ALfloat);
+    static void setParamfv(al::Context&, al::Filter&, ALenum, ALfloat const*);
 
-    static void getParami(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, ALint*);
-    static void getParamiv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, ALint*);
-    static void getParamf(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, ALfloat*);
-    static void getParamfv(gsl::not_null<al::Context*>, gsl::not_null<al::Filter const*>, ALenum, ALfloat*);
+    static void getParami(al::Context& context, al::Filter const&, ALenum, ALint*);
+    static void getParamiv(al::Context& context, al::Filter const&, ALenum, ALint*);
+    static void getParamf(al::Context& context, al::Filter const&, ALenum, ALfloat*);
+    static void getParamfv(al::Context& context, al::Filter const&, ALenum, ALfloat*);
 
 private:
     FilterTable() = default;
@@ -61,6 +61,13 @@ struct Filter {
 
     /* Self ID */
     ALuint mId{0};
+
+    Filter() = default;
+    Filter(const Filter&) = delete;
+    Filter(Filter&&) = delete;
+    ~Filter() = default;
+    auto operator=(const Filter&) -> Filter& = delete;
+    auto operator=(Filter&&) -> Filter& = delete;
 
     static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
 

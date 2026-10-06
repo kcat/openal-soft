@@ -580,21 +580,21 @@ try {
     }
     else if(identifier == AL_BUFFER)
     {
-        auto const device = al::get_not_null(context->mALDevice);
-        auto buflock = std::lock_guard{device->BufferLock};
-        copy_name(device->mBufferNames);
+        auto& device = *context->mALDevice;
+        auto buflock = std::lock_guard{device.BufferLock};
+        copy_name(device.mBufferNames);
     }
     else if(identifier == AL_FILTER_EXT)
     {
-        auto const device = al::get_not_null(context->mALDevice);
-        auto buflock = std::lock_guard{device->FilterLock};
-        copy_name(device->mFilterNames);
+        auto& device = *context->mALDevice;
+        auto buflock = std::lock_guard{device.BufferLock};
+        copy_name(device.mFilterNames);
     }
     else if(identifier == AL_EFFECT_EXT)
     {
-        auto const device = al::get_not_null(context->mALDevice);
-        auto buflock = std::lock_guard{device->EffectLock};
-        copy_name(device->mEffectNames);
+        auto& device = *context->mALDevice;
+        auto buflock = std::lock_guard{device.BufferLock};
+        copy_name(device.mEffectNames);
     }
     else if(identifier == AL_AUXILIARY_EFFECT_SLOT_EXT)
     {

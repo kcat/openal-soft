@@ -148,7 +148,7 @@ constexpr auto EnumFromEaxStorage(EaxStorage const storage) -> ALenum
 }
 
 
-auto eax_x_ram_check_availability(const al::Device &device, al::Buffer const &buffer,
+auto eax_x_ram_check_availability(const al::Device& device, al::Buffer const& buffer,
     ALuint const newsize) noexcept -> bool
 {
     auto freemem = device.eax_x_ram_free_size;
@@ -160,7 +160,7 @@ auto eax_x_ram_check_availability(const al::Device &device, al::Buffer const &bu
     return freemem >= newsize;
 }
 
-void eax_x_ram_apply(al::Device &device, al::Buffer &buffer) noexcept
+void eax_x_ram_apply(al::Device& device, al::Buffer& buffer) noexcept
 {
     if(buffer.mEaxXRamIsHardware)
         return;
@@ -172,7 +172,7 @@ void eax_x_ram_apply(al::Device &device, al::Buffer &buffer) noexcept
     }
 }
 
-void eax_x_ram_clear(al::Device &al_device, al::Buffer &al_buffer) noexcept
+void eax_x_ram_clear(al::Device& al_device, al::Buffer& al_buffer) noexcept
 {
     if(al_buffer.mEaxXRamIsHardware)
         al_device.eax_x_ram_free_size += al_buffer.mOriginalSize;
@@ -189,21 +189,21 @@ constexpr auto INVALID_MAP_FLAGS = ~gsl::narrow<ALbitfieldSOFT>(AL_MAP_READ_BIT_
 
 
 [[nodiscard]]
-auto EnsureBuffers(gsl::not_null<al::Device*> const device, usize const needed) noexcept -> bool
+auto EnsureBuffers(al::Device& device, usize const needed) noexcept -> bool
 try {
-    auto count = std::accumulate(device->BufferList.cbegin(), device->BufferList.cend(), 0_usize,
+    auto count = std::accumulate(device.BufferList.cbegin(), device.BufferList.cend(), 0_usize,
         [](usize const cur, const BufferSubList &sublist) noexcept -> usize
         { return cur + sublist.mFreeMask.popcount(); });
 
     while(needed > count)
     {
-        if(device->BufferList.size() >= 1_uz<<25) [[unlikely]]
+        if(device.BufferList.size() >= 1_uz<<25) [[unlikely]]
             return false;
 
         auto sublist = BufferSubList{};
         sublist.mFreeMask = ~0_u64;
         sublist.mBuffers = SubListAllocator{}.allocate(1);
-        device->BufferList.emplace_back(std::move(sublist));
+        device.BufferList.emplace_back(std::move(sublist));
         count += std::tuple_size_v<SubListAllocator::value_type>;
     }
     return true;
@@ -213,11 +213,11 @@ catch(...) {
 }
 
 [[nodiscard]]
-auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_null<al::Buffer*>
+auto AllocBuffer(al::Device& device) noexcept -> gsl::not_null<al::Buffer*>
 {
-    auto sublist = std::ranges::find_if(device->BufferList,
+    auto sublist = std::ranges::find_if(device.BufferList,
         [](BufferSubList const &slist) { return slist.mFreeMask != 0; });
-    auto lidx = gsl::narrow_cast<ALuint>(std::distance(device->BufferList.begin(), sublist));
+    auto lidx = gsl::narrow_cast<ALuint>(std::distance(device.BufferList.begin(), sublist));
     auto slidx = sublist->mFreeMask.countr_zero().c_val;
     ASSUME(slidx < 64);
 
@@ -232,45 +232,44 @@ auto AllocBuffer(gsl::not_null<al::Device*> const device) noexcept -> gsl::not_n
     return buffer;
 }
 
-void FreeBuffer(gsl::not_null<al::Device*> const device, gsl::not_null<al::Buffer*> const buffer)
+void FreeBuffer(al::Device& device, al::Buffer& buffer)
 {
 #if ALSOFT_EAX
-    eax_x_ram_clear(*device, *buffer);
+    eax_x_ram_clear(device, buffer);
 #endif // ALSOFT_EAX
 
-    device->mBufferNames.erase(buffer->mId);
+    device.mBufferNames.erase(buffer.mId);
 
-    const auto id = buffer->mId - 1;
+    const auto id = buffer.mId - 1;
     const auto lidx = id >> 6;
     const auto slidx = id & 0x3f;
 
-    std::destroy_at(buffer.get());
+    std::destroy_at(&buffer);
 
-    device->BufferList[lidx].mFreeMask |= 1_u64 << slidx;
+    device.BufferList[lidx].mFreeMask |= 1_u64 << slidx;
 }
 
 [[nodiscard]]
-inline auto LookupBuffer(std::nothrow_t, gsl::not_null<al::Device*> const device, ALuint const id)
-    noexcept -> al::Buffer*
+auto LookupBuffer(std::nothrow_t, al::Device const& device, ALuint const id) noexcept
+    -> al::Buffer*
 {
     const auto lidx = (id-1) >> 6;
     const auto slidx = (id-1) & 0x3f;
 
-    if(lidx >= device->BufferList.size()) [[unlikely]]
+    if(lidx >= device.BufferList.size()) [[unlikely]]
         return nullptr;
-    auto &sublist = device->BufferList[lidx];
+    auto &sublist = device.BufferList[lidx];
     if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mBuffers->begin(), as_signed(slidx)));
 }
 
 [[nodiscard]]
-auto LookupBuffer(gsl::not_null<al::Context*> const context, ALuint const id)
-    -> gsl::not_null<al::Buffer*>
+auto LookupBuffer(al::Context& context, ALuint const id) -> al::Buffer&
 {
-    if(auto *const buffer = LookupBuffer(std::nothrow, al::get_not_null(context->mALDevice), id))
-        [[likely]] return gsl::make_not_null(buffer);
-    context->throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
+    if(auto *const buffer = LookupBuffer(std::nothrow, *context.mALDevice, id)) [[likely]]
+        return *buffer;
+    context.throw_error(AL_INVALID_NAME, "Invalid buffer ID {}", id);
 }
 
 [[nodiscard]]
@@ -304,42 +303,42 @@ constexpr auto SanitizeAlignment(FmtType const type, ALuint const align) noexcep
 
 
 /** Loads the specified data into the buffer, using the specified format. */
-void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffer*> const ALBuf,
-    ALsizei const freq, ALuint const size, FmtChannels const DstChannels, FmtType const DstType,
+void LoadData(al::Context& context, al::Buffer& ALBuf, ALsizei const freq, ALuint const size,
+    FmtChannels const DstChannels, FmtType const DstType,
     std::span<std::byte const> const SrcData, ALbitfieldSOFT const access)
 {
-    if(ALBuf->mRef.load(std::memory_order_relaxed) != 0 || ALBuf->mMappedAccess != 0)
-        context->throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
-            ALBuf->mId);
+    if(ALBuf.mRef.load(std::memory_order_relaxed) != 0 || ALBuf.mMappedAccess != 0)
+        context.throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
+            ALBuf.mId);
 
-    auto const samplesPerBlock = SanitizeAlignment(DstType, ALBuf->mUnpackAlign);
+    auto const samplesPerBlock = SanitizeAlignment(DstType, ALBuf.mUnpackAlign);
     if(samplesPerBlock < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
-            ALBuf->mUnpackAlign, NameFromFormat(DstType));
+        context.throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
+            ALBuf.mUnpackAlign, NameFromFormat(DstType));
 
-    auto const ambiorder = IsBFormat(DstChannels) ? ALBuf->mUnpackAmbiOrder :
+    auto const ambiorder = IsBFormat(DstChannels) ? ALBuf.mUnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1u : 0u);
     if(ambiorder > 3)
     {
-        if(ALBuf->mAmbiLayout == AmbiLayout::FuMa)
-            context->throw_error(AL_INVALID_OPERATION,
-                "Cannot load {}{} order B-Format data with FuMa layout", ALBuf->mAmbiOrder,
-                GetCounterSuffix(ALBuf->mAmbiOrder));
-        if(ALBuf->mAmbiScaling == AmbiScaling::FuMa)
-            context->throw_error(AL_INVALID_OPERATION,
-                "Cannot load {}{} order B-Format data with FuMa scaling", ALBuf->mAmbiOrder,
-                GetCounterSuffix(ALBuf->mAmbiOrder));
+        if(ALBuf.mAmbiLayout == AmbiLayout::FuMa)
+            context.throw_error(AL_INVALID_OPERATION,
+                "Cannot load {}{} order B-Format data with FuMa layout", ALBuf.mAmbiOrder,
+                GetCounterSuffix(ALBuf.mAmbiOrder));
+        if(ALBuf.mAmbiScaling == AmbiScaling::FuMa)
+            context.throw_error(AL_INVALID_OPERATION,
+                "Cannot load {}{} order B-Format data with FuMa scaling", ALBuf.mAmbiOrder,
+                GetCounterSuffix(ALBuf.mAmbiOrder));
     }
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
-        if(ALBuf->mChannels != DstChannels || ALBuf->mType != DstType)
-            context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched format");
-        if(ALBuf->mBlockAlign != samplesPerBlock)
-            context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched alignment");
-        if(ALBuf->mAmbiOrder != ambiorder)
-            context->throw_error(AL_INVALID_VALUE, "Preserving data of mismatched order");
+        if(ALBuf.mChannels != DstChannels || ALBuf.mType != DstType)
+            context.throw_error(AL_INVALID_VALUE, "Preserving data of mismatched format");
+        if(ALBuf.mBlockAlign != samplesPerBlock)
+            context.throw_error(AL_INVALID_VALUE, "Preserving data of mismatched alignment");
+        if(ALBuf.mAmbiOrder != ambiorder)
+            context.throw_error(AL_INVALID_VALUE, "Preserving data of mismatched order");
     }
 
     /* Convert the size in bytes to blocks using the unpack block alignment. */
@@ -349,30 +348,30 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
         (DstType == FmtMSADPCM) ? (samplesPerBlock-2u)/2u + 7u :
         (samplesPerBlock * BytesFromFmt(DstType)));
     if((size%bytesPerBlock) != 0)
-        context->throw_error(AL_INVALID_VALUE,
+        context.throw_error(AL_INVALID_VALUE,
             "Data size {} is not a multiple of frame size {} ({} unpack alignment)",
             size, bytesPerBlock, samplesPerBlock);
     auto const blocks = size / bytesPerBlock;
 
     if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
-        context->throw_error(AL_OUT_OF_MEMORY,
+        context.throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
     if(blocks > usize::max()/bytesPerBlock)
-        context->throw_error(AL_OUT_OF_MEMORY,
+        context.throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
 #if ALSOFT_EAX
-    if(ALBuf->mEaxXRamMode == EaxStorage::Hardware)
+    if(ALBuf.mEaxXRamMode == EaxStorage::Hardware)
     {
-        auto &device = *context->mALDevice;
-        if(!eax_x_ram_check_availability(device, *ALBuf, size))
-            context->throw_error(AL_OUT_OF_MEMORY, "Out of X-RAM memory (avail: {}, needed: {})",
+        auto& device = *context.mALDevice;
+        if(!eax_x_ram_check_availability(device, ALBuf, size))
+            context.throw_error(AL_OUT_OF_MEMORY, "Out of X-RAM memory (avail: {}, needed: {})",
                 device.eax_x_ram_free_size, size);
     }
 #endif
 
     auto const newsize = std::size_t{blocks} * bytesPerBlock;
-    auto const needRealloc = std::visit([ALBuf,DstType,newsize,access]<typename T>(T &datavec)
+    auto const needRealloc = std::visit([&ALBuf,DstType,newsize,access]<typename T>(T &datavec)
         -> bool
     {
         using vector_t = std::remove_cvref_t<T>;
@@ -389,16 +388,16 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
 
             /* Reallocate in situ, to preserve existing samples as needed. */
             datavec.resize(newsize, SampleInfo<sample_t>::silence());
-            ALBuf->mData = datavec;
+            ALBuf.mData = datavec;
         }
         return false;
-    }, ALBuf->mDataStorage);
+    }, ALBuf.mDataStorage);
     if(needRealloc)
     {
-        auto do_realloc = [ALBuf,newsize]<typename T>(T value)
+        auto do_realloc = [&ALBuf,newsize]<typename T>(T value)
         {
             using vector_t = al::vector<T, 16>;
-            ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
+            ALBuf.mData = ALBuf.mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
         };
         switch(DstType)
         {
@@ -415,53 +414,53 @@ void LoadData(gsl::not_null<al::Context*> const context, gsl::not_null<al::Buffe
     }
 
     auto const bufferbytes = std::visit([](auto&& dataspan) -> std::span<std::byte>
-    { return std::as_writable_bytes(dataspan); }, ALBuf->mData);
+    { return std::as_writable_bytes(dataspan); }, ALBuf.mData);
     std::ranges::copy(SrcData | std::views::take(newsize), bufferbytes.begin());
 
 #if ALSOFT_EAX
-    eax_x_ram_clear(*context->mALDevice, *ALBuf);
+    eax_x_ram_clear(*context.mALDevice, ALBuf);
 #endif
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
+    ALBuf.mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
 
-    ALBuf->mOriginalSize = size;
+    ALBuf.mOriginalSize = size;
 
-    ALBuf->mAccess = access;
+    ALBuf.mAccess = access;
 
-    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
-    ALBuf->mChannels = DstChannels;
-    ALBuf->mType = DstType;
-    ALBuf->mAmbiOrder = ambiorder;
+    ALBuf.mSampleRate = gsl::narrow_cast<ALuint>(freq);
+    ALBuf.mChannels = DstChannels;
+    ALBuf.mType = DstType;
+    ALBuf.mAmbiOrder = ambiorder;
 
-    ALBuf->mCallback = nullptr;
-    ALBuf->mUserData = nullptr;
+    ALBuf.mCallback = nullptr;
+    ALBuf.mUserData = nullptr;
 
-    ALBuf->mSampleLen = blocks * samplesPerBlock;
-    ALBuf->mLoopStart = 0;
-    ALBuf->mLoopEnd = ALBuf->mSampleLen;
+    ALBuf.mSampleLen = blocks * samplesPerBlock;
+    ALBuf.mLoopStart = 0;
+    ALBuf.mLoopEnd = ALBuf.mSampleLen;
 
 #if ALSOFT_EAX
-    if(eax_g_is_enabled && ALBuf->mEaxXRamMode == EaxStorage::Hardware)
-        eax_x_ram_apply(*context->mALDevice, *ALBuf);
+    if(eax_g_is_enabled && ALBuf.mEaxXRamMode == EaxStorage::Hardware)
+        eax_x_ram_apply(*context.mALDevice, ALBuf);
 #endif
 }
 
 /** Prepares the buffer to use the specified callback, using the specified format. */
-void PrepareCallback(gsl::not_null<al::Context*> const context,
-    gsl::not_null<al::Buffer*> const ALBuf, ALsizei const freq, FmtChannels const DstChannels,
-    FmtType const DstType, ALBUFFERCALLBACKTYPESOFT const callback, void *const userptr)
+void PrepareCallback(al::Context& context, al::Buffer& ALBuf, ALsizei const freq,
+    FmtChannels const DstChannels, FmtType const DstType, ALBUFFERCALLBACKTYPESOFT const callback,
+    void *const userptr)
 {
-    if(ALBuf->mRef.load(std::memory_order_relaxed) != 0 || ALBuf->mMappedAccess != 0)
-        context->throw_error(AL_INVALID_OPERATION, "Modifying callback for in-use buffer {}",
-            ALBuf->mId);
+    if(ALBuf.mRef.load(std::memory_order_relaxed) != 0 || ALBuf.mMappedAccess != 0)
+        context.throw_error(AL_INVALID_OPERATION, "Modifying callback for in-use buffer {}",
+            ALBuf.mId);
 
-    const auto ambiorder = IsBFormat(DstChannels) ? ALBuf->mUnpackAmbiOrder :
+    const auto ambiorder = IsBFormat(DstChannels) ? ALBuf.mUnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1u : 0u);
 
-    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf->mUnpackAlign);
+    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf.mUnpackAlign);
     if(samplesPerBlock < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
-            ALBuf->mUnpackAlign, NameFromFormat(DstType));
+        context.throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
+            ALBuf.mUnpackAlign, NameFromFormat(DstType));
 
     const auto bytesPerBlock = ChannelsFromFmt(DstChannels, ambiorder) *
         ((DstType == FmtIMA4) ? (samplesPerBlock-1u)/2u + 4u :
@@ -478,10 +477,10 @@ void PrepareCallback(gsl::not_null<al::Context*> const context,
     const auto line_blocks = (line_size + samplesPerBlock-1u) / samplesPerBlock;
 
     const auto newsize = line_blocks * bytesPerBlock;
-    auto do_realloc = [ALBuf,newsize]<typename T>(T value)
+    auto do_realloc = [&ALBuf,newsize]<typename T>(T value)
     {
         using vector_t = al::vector<T,16>;
-        ALBuf->mData = ALBuf->mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
+        ALBuf.mData = ALBuf.mDataStorage.emplace<vector_t>(newsize/sizeof(T), value);
     };
     switch(DstType)
     {
@@ -497,44 +496,44 @@ void PrepareCallback(gsl::not_null<al::Context*> const context,
     }
 
 #if ALSOFT_EAX
-    eax_x_ram_clear(*context->mALDevice, *ALBuf);
+    eax_x_ram_clear(*context.mALDevice, ALBuf);
 #endif
 
     /* The user-supplied callback should be non-blocking, but it could be a
      * problem to annotate the type with the attribute.
      */
     IGNORE_FUNCTION_EFFECTS(
-        ALBuf->mCallback = callback;
+        ALBuf.mCallback = callback;
     )
-    ALBuf->mUserData = userptr;
+    ALBuf.mUserData = userptr;
 
-    ALBuf->mOriginalSize = 0;
-    ALBuf->mAccess = 0;
+    ALBuf.mOriginalSize = 0;
+    ALBuf.mAccess = 0;
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
-    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
-    ALBuf->mChannels = DstChannels;
-    ALBuf->mType = DstType;
-    ALBuf->mAmbiOrder = ambiorder;
+    ALBuf.mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
+    ALBuf.mSampleRate = gsl::narrow_cast<ALuint>(freq);
+    ALBuf.mChannels = DstChannels;
+    ALBuf.mType = DstType;
+    ALBuf.mAmbiOrder = ambiorder;
 
-    ALBuf->mSampleLen = 0;
-    ALBuf->mLoopStart = 0;
-    ALBuf->mLoopEnd = ALBuf->mSampleLen;
+    ALBuf.mSampleLen = 0;
+    ALBuf.mLoopStart = 0;
+    ALBuf.mLoopEnd = ALBuf.mSampleLen;
 }
 
 /** Prepares the buffer to use caller-specified storage. */
-void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
-    gsl::not_null<al::Buffer*> const ALBuf, ALsizei const freq, FmtChannels const DstChannels,
-    FmtType const DstType, void *const usrdata, ALuint const usrdatalen)
+void PrepareUserPtr(al::Context& context [[maybe_unused]], al::Buffer& ALBuf, ALsizei const freq,
+    FmtChannels const DstChannels, FmtType const DstType, void *const usrdata,
+    ALuint const usrdatalen)
 {
-    if(ALBuf->mRef.load(std::memory_order_relaxed) != 0 || ALBuf->mMappedAccess != 0)
-        context->throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
-            ALBuf->mId);
+    if(ALBuf.mRef.load(std::memory_order_relaxed) != 0 || ALBuf.mMappedAccess != 0)
+        context.throw_error(AL_INVALID_OPERATION, "Modifying storage for in-use buffer {}",
+            ALBuf.mId);
 
-    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf->mUnpackAlign);
+    const auto samplesPerBlock = SanitizeAlignment(DstType, ALBuf.mUnpackAlign);
     if(samplesPerBlock < 1)
-        context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
-            ALBuf->mUnpackAlign, NameFromFormat(DstType));
+        context.throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {} for {} samples",
+            ALBuf.mUnpackAlign, NameFromFormat(DstType));
 
     const auto typealign = std::invoke([DstType]() noexcept -> ALuint
     {
@@ -557,10 +556,10 @@ void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
     });
     /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
     if((reinterpret_cast<uintptr_t>(usrdata) & (typealign-1)) != 0)
-        context->throw_error(AL_INVALID_VALUE, "Pointer {} is misaligned for {} samples ({})",
+        context.throw_error(AL_INVALID_VALUE, "Pointer {} is misaligned for {} samples ({})",
             usrdata, NameFromFormat(DstType), typealign);
 
-    const auto ambiorder = IsBFormat(DstChannels) ? ALBuf->mUnpackAmbiOrder :
+    const auto ambiorder = IsBFormat(DstChannels) ? ALBuf.mUnpackAmbiOrder :
         (IsUHJ(DstChannels) ? 1u : 0u);
 
     /* Convert the size in bytes to blocks using the unpack block alignment. */
@@ -570,32 +569,32 @@ void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
         (DstType == FmtMSADPCM) ? (samplesPerBlock-2u)/2u + 7u :
         (samplesPerBlock * BytesFromFmt(DstType)));
     if((usrdatalen%bytesPerBlock) != 0)
-        context->throw_error(AL_INVALID_VALUE,
+        context.throw_error(AL_INVALID_VALUE,
             "Data size {} is not a multiple of frame size {} ({} unpack alignment)",
             usrdatalen, bytesPerBlock, samplesPerBlock);
     const auto blocks = usrdatalen / bytesPerBlock;
 
     if(blocks > std::numeric_limits<ALsizei>::max()/samplesPerBlock)
-        context->throw_error(AL_OUT_OF_MEMORY,
+        context.throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} blocks x {} samples per block", blocks, samplesPerBlock);
     if(blocks > usize::max()/bytesPerBlock)
-        context->throw_error(AL_OUT_OF_MEMORY,
+        context.throw_error(AL_OUT_OF_MEMORY,
             "Buffer size overflow, {} frames x {} bytes per frame", blocks, bytesPerBlock);
 
 #if ALSOFT_EAX
-    if(ALBuf->mEaxXRamMode == EaxStorage::Hardware)
+    if(ALBuf.mEaxXRamMode == EaxStorage::Hardware)
     {
-        auto &device = *context->mALDevice;
-        if(!eax_x_ram_check_availability(device, *ALBuf, usrdatalen))
-            context->throw_error(AL_OUT_OF_MEMORY, "Out of X-RAM memory (avail: {}, needed: {})",
+        auto const& device = *context.mALDevice;
+        if(!eax_x_ram_check_availability(device, ALBuf, usrdatalen))
+            context.throw_error(AL_OUT_OF_MEMORY, "Out of X-RAM memory (avail: {}, needed: {})",
                 device.eax_x_ram_free_size, usrdatalen);
     }
 #endif
 
-    auto do_realloc = [ALBuf,usrdata,usrdatalen]<typename T>(T value [[maybe_unused]])
+    auto do_realloc = [&ALBuf,usrdata,usrdatalen]<typename T>(T value [[maybe_unused]])
     {
-        ALBuf->mDataStorage.emplace<al::vector<T, 16>>();
-        ALBuf->mData = std::span{static_cast<T*>(usrdata), usrdatalen/sizeof(T)};
+        ALBuf.mDataStorage.emplace<al::vector<T, 16>>();
+        ALBuf.mData = std::span{static_cast<T*>(usrdata), usrdatalen/sizeof(T)};
     };
     switch(DstType)
     {
@@ -611,28 +610,28 @@ void PrepareUserPtr(gsl::not_null<al::Context*> const context [[maybe_unused]],
     }
 
 #if ALSOFT_EAX
-    eax_x_ram_clear(*context->mALDevice, *ALBuf);
+    eax_x_ram_clear(*context.mALDevice, ALBuf);
 #endif
 
-    ALBuf->mCallback = nullptr;
-    ALBuf->mUserData = nullptr;
+    ALBuf.mCallback = nullptr;
+    ALBuf.mUserData = nullptr;
 
-    ALBuf->mOriginalSize = usrdatalen;
-    ALBuf->mAccess = 0;
+    ALBuf.mOriginalSize = usrdatalen;
+    ALBuf.mAccess = 0;
 
-    ALBuf->mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
-    ALBuf->mSampleRate = gsl::narrow_cast<ALuint>(freq);
-    ALBuf->mChannels = DstChannels;
-    ALBuf->mType = DstType;
-    ALBuf->mAmbiOrder = ambiorder;
+    ALBuf.mBlockAlign = (DstType == FmtIMA4 || DstType == FmtMSADPCM) ? samplesPerBlock : 1u;
+    ALBuf.mSampleRate = gsl::narrow_cast<ALuint>(freq);
+    ALBuf.mChannels = DstChannels;
+    ALBuf.mType = DstType;
+    ALBuf.mAmbiOrder = ambiorder;
 
-    ALBuf->mSampleLen = blocks * samplesPerBlock;
-    ALBuf->mLoopStart = 0;
-    ALBuf->mLoopEnd = ALBuf->mSampleLen;
+    ALBuf.mSampleLen = blocks * samplesPerBlock;
+    ALBuf.mLoopStart = 0;
+    ALBuf.mLoopEnd = ALBuf.mSampleLen;
 
 #if ALSOFT_EAX
-    if(ALBuf->mEaxXRamMode == EaxStorage::Hardware)
-        eax_x_ram_apply(*context->mALDevice, *ALBuf);
+    if(ALBuf.mEaxXRamMode == EaxStorage::Hardware)
+        eax_x_ram_apply(*context.mALDevice, ALBuf);
 #endif
 }
 
@@ -753,15 +752,15 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Generating {} buffers", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
     const auto bids = std::views::counted(buffers, n);
     if(!EnsureBuffers(device, bids.size()))
         context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} buffer{}", n,
             (n==1) ? "" : "s");
 
-    std::ranges::generate(bids, [device]{ return AllocBuffer(device)->mId; });
+    std::ranges::generate(bids, [&device]{ return AllocBuffer(device)->mId; });
 }
 catch(al::base_exception&) {
 }
@@ -776,24 +775,24 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Deleting {} buffers", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
     /* First try to find any buffers that are invalid or in-use. */
     auto const bids = std::views::counted(buffers, n);
     std::ranges::for_each(bids, [context](ALuint const bid)
     {
         if(!bid) return;
-        auto const albuf = LookupBuffer(context, bid);
-        if(albuf->mRef.load(std::memory_order_relaxed) != 0)
+        auto const& albuf = LookupBuffer(*context, bid);
+        if(albuf.mRef.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION, "Deleting in-use buffer {}", bid);
     });
 
     /* All good. Delete non-0 buffer IDs. */
-    std::ranges::for_each(bids, [device](ALuint const bid) -> void
+    std::ranges::for_each(bids, [&device](ALuint const bid) -> void
     {
         if(auto *const buffer = LookupBuffer(std::nothrow, device, bid))
-            FreeBuffer(device, gsl::make_not_null(buffer));
+            FreeBuffer(device, *buffer);
     });
 }
 catch(al::base_exception&) {
@@ -805,8 +804,8 @@ catch(std::exception &e) {
 auto alIsBuffer_(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
     -> ALboolean
 {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
     if(buffer == 0 || LookupBuffer(std::nothrow, device, buffer) != nullptr)
         return AL_TRUE;
     return AL_FALSE;
@@ -817,10 +816,10 @@ void alBufferStorageSOFT_(gsl::not_null<al::Context*> const context, ALuint cons
     ALenum const format, void const *const data, ALsizei const size, ALsizei const freq,
     ALbitfieldSOFT const flags) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     if(size < 0)
         context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
     if(freq < 1)
@@ -838,7 +837,7 @@ try {
 
     auto *const bdata = static_cast<const std::byte*>(data);
     auto const usize = gsl::narrow<ALuint>(size);
-    LoadData(context, albuf, freq, usize, usrfmt->channels, usrfmt->type,
+    LoadData(*context, albuf, freq, usize, usrfmt->channels, usrfmt->type,
         std::span{bdata, bdata ? usize : 0u}, flags);
 }
 catch(al::base_exception&) {
@@ -856,20 +855,20 @@ void alBufferData_(gsl::not_null<al::Context*> const context, ALuint const buffe
 void alBufferDataStatic_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const format, void *const data, ALsizei const size, ALsizei const freq) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     if(size < 0)
         context->throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
     if(freq < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
 
-    auto usrfmt = DecomposeUserFormat(format);
+    auto const usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
-    PrepareUserPtr(context, albuf, freq, usrfmt->channels, usrfmt->type, data,
+    PrepareUserPtr(*context, albuf, freq, usrfmt->channels, usrfmt->type, data,
         gsl::narrow<ALuint>(size));
 }
 catch(al::base_exception&) {
@@ -883,10 +882,10 @@ void alBufferCallbackSOFT_(gsl::not_null<al::Context*> const context, ALuint con
     ALenum const format, ALsizei const freq, ALBUFFERCALLBACKTYPESOFT const callback,
     void *const userptr) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     if(freq < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
     if(callback == nullptr)
@@ -896,7 +895,7 @@ try {
     if(!usrfmt)
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
-    PrepareCallback(context, albuf, freq, usrfmt->channels, usrfmt->type, callback, userptr);
+    PrepareCallback(*context, albuf, freq, usrfmt->channels, usrfmt->type, callback, userptr);
 }
 catch(al::base_exception&) {
 }
@@ -909,37 +908,37 @@ void alBufferSubDataSOFT_(gsl::not_null<al::Context*> const context, ALuint cons
     ALenum const format, void const *const data, ALsizei const offset, ALsizei const length)
     noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
 
     auto const usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
         context->throw_error(AL_INVALID_ENUM, "Invalid format {:#04x}", as_unsigned(format));
 
-    const auto unpack_align = albuf->mUnpackAlign;
+    const auto unpack_align = albuf.mUnpackAlign;
     const auto align = SanitizeAlignment(usrfmt->type, unpack_align);
     if(align < 1)
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack alignment {}", unpack_align);
-    if(usrfmt->channels != albuf->mChannels || usrfmt->type != albuf->mType)
+    if(usrfmt->channels != albuf.mChannels || usrfmt->type != albuf.mType)
         context->throw_error(AL_INVALID_ENUM, "Unpacking data with mismatched format");
-    if(align != albuf->mBlockAlign)
+    if(align != albuf.mBlockAlign)
         context->throw_error(AL_INVALID_VALUE,
             "Unpacking data with alignment {} does not match original alignment {}", align,
-            albuf->mBlockAlign);
-    if(albuf->isBFormat() && albuf->mUnpackAmbiOrder != albuf->mAmbiOrder)
+            albuf.mBlockAlign);
+    if(albuf.isBFormat() && albuf.mUnpackAmbiOrder != albuf.mAmbiOrder)
         context->throw_error(AL_INVALID_VALUE, "Unpacking data with mismatched ambisonic order");
-    if(albuf->mMappedAccess != 0)
+    if(albuf.mMappedAccess != 0)
         context->throw_error(AL_INVALID_OPERATION, "Unpacking data into mapped buffer {}", buffer);
 
-    const auto num_chans = albuf->channelsFromFmt();
-    const auto byte_align = (albuf->mType == FmtIMA4) ? ((align-1u)/2u + 4u) * num_chans :
-        (albuf->mType == FmtMSADPCM) ? ((align-2u)/2u + 7u) * num_chans :
-        (align * albuf->bytesFromFmt() * num_chans);
+    const auto num_chans = albuf.channelsFromFmt();
+    const auto byte_align = (albuf.mType == FmtIMA4) ? ((align-1u)/2u + 4u) * num_chans :
+        (albuf.mType == FmtMSADPCM) ? ((align-2u)/2u + 7u) * num_chans :
+        (align * albuf.bytesFromFmt() * num_chans);
 
-    if(offset < 0 || length < 0 || usize::from(offset) > albuf->mOriginalSize
-        || usize::from(length) > albuf->mOriginalSize - usize::from(offset))
+    if(offset < 0 || length < 0 || usize::from(offset) > albuf.mOriginalSize
+        || usize::from(length) > albuf.mOriginalSize - usize::from(offset))
         context->throw_error(AL_INVALID_VALUE, "Invalid data sub-range {}+{} on buffer {}", offset,
             length, buffer);
     if((usize::from(offset)%byte_align) != 0)
@@ -952,7 +951,7 @@ try {
             length, byte_align, align);
 
     auto bufferbytes = std::visit([](auto &datavec)
-    { return std::as_writable_bytes(datavec); }, albuf->mData);
+    { return std::as_writable_bytes(datavec); }, albuf.mData);
     std::ranges::copy(std::views::counted(static_cast<std::byte const*>(data), length),
         (bufferbytes | std::views::drop(offset)).begin());
 }
@@ -966,10 +965,10 @@ catch(std::exception &e) {
 auto alMapBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALsizei const offset, ALsizei const length, ALbitfieldSOFT const access) noexcept -> void*
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     if((access&INVALID_MAP_FLAGS) != 0)
         context->throw_error(AL_INVALID_VALUE, "Invalid map flags {:#x}",
             access&INVALID_MAP_FLAGS);
@@ -977,11 +976,11 @@ try {
         context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} without read or write access",
             buffer);
 
-    auto const unavailable = (albuf->mAccess^access) & access;
-    if(albuf->mRef.load(std::memory_order_relaxed) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
+    auto const unavailable = (albuf.mAccess^access) & access;
+    if(albuf.mRef.load(std::memory_order_relaxed) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
         context->throw_error(AL_INVALID_OPERATION,
             "Mapping in-use buffer {} without persistent mapping", buffer);
-    if(albuf->mMappedAccess != 0)
+    if(albuf.mMappedAccess != 0)
         context->throw_error(AL_INVALID_OPERATION, "Mapping already-mapped buffer {}", buffer);
     if((unavailable&AL_MAP_READ_BIT_SOFT))
         context->throw_error(AL_INVALID_VALUE, "Mapping buffer {} for reading without read access",
@@ -992,16 +991,16 @@ try {
     if((unavailable&AL_MAP_PERSISTENT_BIT_SOFT))
         context->throw_error(AL_INVALID_VALUE,
             "Mapping buffer {} persistently without persistent access", buffer);
-    if(offset < 0 || length <= 0 || usize::from(offset) >= albuf->mOriginalSize
-        || usize::from(length) > albuf->mOriginalSize - usize::from(offset))
+    if(offset < 0 || length <= 0 || usize::from(offset) >= albuf.mOriginalSize
+        || usize::from(length) > albuf.mOriginalSize - usize::from(offset))
         context->throw_error(AL_INVALID_VALUE, "Mapping invalid range {}+{} for buffer {}", offset,
             length, buffer);
 
     auto *const retval = std::visit([ptroff=gsl::narrow<std::size_t>(offset)](auto &datavec)
-    { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf->mData);
-    albuf->mMappedAccess = access;
-    albuf->mMappedOffset = offset;
-    albuf->mMappedSize = length;
+    { return &std::as_writable_bytes(datavec)[ptroff]; }, albuf.mData);
+    albuf.mMappedAccess = access;
+    albuf.mMappedOffset = offset;
+    albuf.mMappedSize = length;
     return retval;
 }
 catch(al::base_exception&) {
@@ -1014,16 +1013,16 @@ catch(std::exception &e) {
 
 void alUnmapBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
-    if(albuf->mMappedAccess == 0)
+    auto& albuf = LookupBuffer(*context, buffer);
+    if(albuf.mMappedAccess == 0)
         context->throw_error(AL_INVALID_OPERATION, "Unmapping unmapped buffer {}", buffer);
 
-    albuf->mMappedAccess = 0;
-    albuf->mMappedOffset = 0;
-    albuf->mMappedSize = 0;
+    albuf.mMappedAccess = 0;
+    albuf.mMappedOffset = 0;
+    albuf.mMappedSize = 0;
 }
 catch(al::base_exception&) {
 }
@@ -1034,16 +1033,16 @@ catch(std::exception &e) {
 void alFlushMappedBufferSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALsizei const offset, ALsizei const length) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
-    if(!(albuf->mMappedAccess&AL_MAP_WRITE_BIT_SOFT))
+    auto const& albuf = LookupBuffer(*context, buffer);
+    if(!(albuf.mMappedAccess&AL_MAP_WRITE_BIT_SOFT))
         context->throw_error(AL_INVALID_OPERATION,
             "Flushing buffer {} while not mapped for writing", buffer);
-    if(offset < albuf->mMappedOffset || length <= 0
-        || offset >= albuf->mMappedOffset+albuf->mMappedSize
-        || length > albuf->mMappedOffset+albuf->mMappedSize-offset)
+    if(offset < albuf.mMappedOffset || length <= 0
+        || offset >= albuf.mMappedOffset+albuf.mMappedSize
+        || length > albuf.mMappedOffset+albuf.mMappedSize-offset)
         context->throw_error(AL_INVALID_VALUE, "Flushing invalid range {}+{} on buffer {}", offset,
             length, buffer);
 
@@ -1064,10 +1063,10 @@ catch(std::exception &e) {
 void alBufferf_(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
     float const value [[maybe_unused]]) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
 
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer float property {:#04x}",
         as_unsigned(param));
@@ -1082,10 +1081,10 @@ void alBuffer3f_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float const value1 [[maybe_unused]], float const value2 [[maybe_unused]],
     float const value3 [[maybe_unused]]) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
 
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-float property {:#04x}",
         as_unsigned(param));
@@ -1099,10 +1098,10 @@ catch(std::exception &e) {
 void alBufferfv_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float const *const values) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1119,51 +1118,51 @@ catch(std::exception &e) {
 void alBufferi_(gsl::not_null<al::Context*> const context, ALuint const buffer, ALenum const param,
     ALint const value) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Invalid unpack block alignment {}", value);
-        albuf->mUnpackAlign = gsl::narrow_cast<ALuint>(value);
+        albuf.mUnpackAlign = gsl::narrow_cast<ALuint>(value);
         return;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(value < 0)
             context->throw_error(AL_INVALID_VALUE, "Invalid pack block alignment {}", value);
-        albuf->mPackAlign = gsl::narrow_cast<ALuint>(value);
+        albuf.mPackAlign = gsl::narrow_cast<ALuint>(value);
         return;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        if(albuf->mRef.load(std::memory_order_relaxed) != 0)
+        if(albuf.mRef.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION,
                 "Modifying in-use buffer {}'s ambisonic layout", buffer);
         if(const auto layout = AmbiLayoutFromEnum(value))
         {
-            if(layout.value() == AmbiLayout::FuMa && albuf->mAmbiOrder > 3)
+            if(layout.value() == AmbiLayout::FuMa && albuf.mAmbiOrder > 3)
                 context->throw_error(AL_INVALID_OPERATION,
-                    "Cannot set FuMa layout for {}{} order B-Format data", albuf->mAmbiOrder,
-                    GetCounterSuffix(albuf->mAmbiOrder));
-            albuf->mAmbiLayout = layout.value();
+                    "Cannot set FuMa layout for {}{} order B-Format data", albuf.mAmbiOrder,
+                    GetCounterSuffix(albuf.mAmbiOrder));
+            albuf.mAmbiLayout = layout.value();
             return;
         }
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic layout {:#04x}",
             as_unsigned(value));
 
     case AL_AMBISONIC_SCALING_SOFT:
-        if(albuf->mRef.load(std::memory_order_relaxed) != 0)
+        if(albuf.mRef.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION,
                 "Modifying in-use buffer {}'s ambisonic scaling", buffer);
         if(const auto scaling = AmbiScalingFromEnum(value))
         {
-            if(scaling.value() == AmbiScaling::FuMa && albuf->mAmbiOrder > 3)
+            if(scaling.value() == AmbiScaling::FuMa && albuf.mAmbiOrder > 3)
                 context->throw_error(AL_INVALID_OPERATION,
-                    "Cannot set FuMa scaling for {}{} order B-Format data", albuf->mAmbiOrder,
-                    GetCounterSuffix(albuf->mAmbiOrder));
-            albuf->mAmbiScaling = scaling.value();
+                    "Cannot set FuMa scaling for {}{} order B-Format data", albuf.mAmbiOrder,
+                    GetCounterSuffix(albuf.mAmbiOrder));
+            albuf.mAmbiScaling = scaling.value();
             return;
         }
         context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic scaling {:#04x}",
@@ -1172,7 +1171,7 @@ try {
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
         if(value < 1 || value > 14)
             context->throw_error(AL_INVALID_VALUE, "Invalid unpack ambisonic order {}", value);
-        albuf->mUnpackAmbiOrder = gsl::narrow_cast<ALuint>(value);
+        albuf.mUnpackAmbiOrder = gsl::narrow_cast<ALuint>(value);
         return;
     }
 
@@ -1189,10 +1188,10 @@ void alBuffer3i_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint const value1 [[maybe_unused]], ALint const value2 [[maybe_unused]],
     ALint const value3 [[maybe_unused]]) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
 
     context->throw_error(AL_INVALID_ENUM, "Invalid buffer 3-integer property {:#04x}",
         as_unsigned(param));
@@ -1220,24 +1219,24 @@ try {
         return;
     }
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto& albuf = LookupBuffer(*context, buffer);
     switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
         const auto vals = std::span{values, 2_uz};
-        if(albuf->mRef.load(std::memory_order_relaxed) != 0)
+        if(albuf.mRef.load(std::memory_order_relaxed) != 0)
             context->throw_error(AL_INVALID_OPERATION, "Modifying in-use buffer {}'s loop points",
                 buffer);
         if(vals[0] < 0 || vals[0] >= vals[1]
-            || gsl::narrow_cast<ALuint>(vals[1]) > albuf->mSampleLen)
+            || gsl::narrow_cast<ALuint>(vals[1]) > albuf.mSampleLen)
             context->throw_error(AL_INVALID_VALUE,
                 "Invalid loop point range {} -> {} on buffer {}", vals[0], vals[1], buffer);
 
-        albuf->mLoopStart = gsl::narrow_cast<ALuint>(vals[0]);
-        albuf->mLoopEnd = gsl::narrow_cast<ALuint>(vals[1]);
+        albuf.mLoopStart = gsl::narrow_cast<ALuint>(vals[0]);
+        albuf.mLoopEnd = gsl::narrow_cast<ALuint>(vals[1]);
         return;
     }
 
@@ -1254,18 +1253,18 @@ catch(std::exception &e) {
 void alGetBufferf_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float *const value) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto const& albuf = LookupBuffer(*context, buffer);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     switch(param)
     {
     case AL_SEC_LENGTH_SOFT:
-        *value = (albuf->mSampleRate < 1) ? 0.0f :
-            (gsl::narrow_cast<float>(albuf->mSampleLen)/gsl::narrow_cast<float>(albuf->mSampleRate));
+        *value = (albuf.mSampleRate < 1) ? 0.0f :
+            (gsl::narrow_cast<float>(albuf.mSampleLen)/gsl::narrow_cast<float>(albuf.mSampleRate));
         return;
     }
 
@@ -1281,10 +1280,10 @@ catch(std::exception &e) {
 void alGetBuffer3f_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, float *const value1, float *const value2, float *const value3) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1307,10 +1306,10 @@ try {
         return;
     }
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1327,64 +1326,64 @@ catch(std::exception &e) {
 void alGetBufferi_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint *const value) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto const& albuf = LookupBuffer(*context, buffer);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     switch(param)
     {
     case AL_FREQUENCY:
-        *value = gsl::narrow_cast<ALint>(albuf->mSampleRate);
+        *value = gsl::narrow_cast<ALint>(albuf.mSampleRate);
         return;
 
     case AL_BITS:
-        *value = (albuf->mType == FmtIMA4 || albuf->mType == FmtMSADPCM) ? 4
-            : gsl::narrow_cast<ALint>(albuf->bytesFromFmt() * 8u);
+        *value = (albuf.mType == FmtIMA4 || albuf.mType == FmtMSADPCM) ? 4
+            : gsl::narrow_cast<ALint>(albuf.bytesFromFmt() * 8u);
         return;
 
     case AL_CHANNELS:
-        *value = gsl::narrow_cast<ALint>(albuf->channelsFromFmt());
+        *value = gsl::narrow_cast<ALint>(albuf.channelsFromFmt());
         return;
 
     case AL_SIZE:
-        if(albuf->mCallback)
+        if(albuf.mCallback)
             *value = 0;
         else
             *value = std::visit([](auto &dataspan) -> ALint
                 { return gsl::narrow_cast<ALint>(dataspan.size_bytes()); },
-                albuf->mData);
+                albuf.mData);
         return;
 
     case AL_BYTE_LENGTH_SOFT:
-        *value = gsl::narrow_cast<ALint>(albuf->mSampleLen / albuf->mBlockAlign
-            * albuf->blockSizeFromFmt());
+        *value = gsl::narrow_cast<ALint>(albuf.mSampleLen / albuf.mBlockAlign
+            * albuf.blockSizeFromFmt());
         return;
 
     case AL_SAMPLE_LENGTH_SOFT:
-        *value = gsl::narrow_cast<ALint>(albuf->mSampleLen);
+        *value = gsl::narrow_cast<ALint>(albuf.mSampleLen);
         return;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        *value = gsl::narrow_cast<ALint>(albuf->mUnpackAlign);
+        *value = gsl::narrow_cast<ALint>(albuf.mUnpackAlign);
         return;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        *value = gsl::narrow_cast<ALint>(albuf->mPackAlign);
+        *value = gsl::narrow_cast<ALint>(albuf.mPackAlign);
         return;
 
     case AL_AMBISONIC_LAYOUT_SOFT:
-        *value = EnumFromAmbiLayout(albuf->mAmbiLayout);
+        *value = EnumFromAmbiLayout(albuf.mAmbiLayout);
         return;
 
     case AL_AMBISONIC_SCALING_SOFT:
-        *value = EnumFromAmbiScaling(albuf->mAmbiScaling);
+        *value = EnumFromAmbiScaling(albuf.mAmbiScaling);
         return;
 
     case AL_UNPACK_AMBISONIC_ORDER_SOFT:
-        *value = gsl::narrow_cast<ALint>(albuf->mUnpackAmbiOrder);
+        *value = gsl::narrow_cast<ALint>(albuf.mUnpackAmbiOrder);
         return;
     }
 
@@ -1400,10 +1399,10 @@ catch(std::exception &e) {
 void alGetBuffer3i_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, ALint *const value1, ALint *const value2, ALint *const value3) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1437,10 +1436,10 @@ try {
         return;
     }
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto const& albuf = LookupBuffer(*context, buffer);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1448,8 +1447,8 @@ try {
     {
     case AL_LOOP_POINTS_SOFT:
         const auto vals = std::span{values, 2_uz};
-        vals[0] = gsl::narrow_cast<ALint>(albuf->mLoopStart);
-        vals[1] = gsl::narrow_cast<ALint>(albuf->mLoopEnd);
+        vals[0] = gsl::narrow_cast<ALint>(albuf.mLoopStart);
+        vals[1] = gsl::narrow_cast<ALint>(albuf.mLoopEnd);
         return;
     }
 
@@ -1466,10 +1465,10 @@ catch(std::exception &e) {
 void alGetBufferPtrSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, void **const value) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const albuf = LookupBuffer(context, buffer);
+    auto const& albuf = LookupBuffer(*context, buffer);
     if(!value)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1477,10 +1476,10 @@ try {
     {
     case AL_BUFFER_CALLBACK_FUNCTION_SOFT:
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
-        *value = reinterpret_cast<void*>(albuf->mCallback);
+        *value = reinterpret_cast<void*>(albuf.mCallback);
         return;
     case AL_BUFFER_CALLBACK_USER_PARAM_SOFT:
-        *value = albuf->mUserData;
+        *value = albuf.mUserData;
         return;
     }
 
@@ -1496,10 +1495,10 @@ catch(std::exception &e) {
 void alGetBuffer3PtrSOFT_(gsl::not_null<al::Context*> const context, ALuint const buffer,
     ALenum const param, void **const value1, void **const value2, void **const value3) noexcept
 try {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!value1 || !value2 || !value3)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1523,10 +1522,10 @@ try {
         return;
     }
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock [[maybe_unused]] = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock [[maybe_unused]] = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, buffer);
+    std::ignore = LookupBuffer(*context, buffer);
     if(!values)
         context->throw_error(AL_INVALID_VALUE, "NULL pointer");
 
@@ -1569,7 +1568,7 @@ try {
         if(bufid == AL_NONE)
             return AL_TRUE;
 
-        auto const buffer = LookupBuffer(context, bufid);
+        auto& buffer = LookupBuffer(*context, bufid);
 
         /* TODO: Is the store location allowed to change for in-use buffers, or
          * only when not set/queued on a source?
@@ -1577,17 +1576,17 @@ try {
 
         if(*storage == EaxStorage::Hardware)
         {
-            if(!buffer->mEaxXRamIsHardware
-                && buffer->mOriginalSize > device.eax_x_ram_free_size)
+            if(!buffer.mEaxXRamIsHardware
+                && buffer.mOriginalSize > device.eax_x_ram_free_size)
                 context->throw_error(AL_OUT_OF_MEMORY,
-                    "Out of X-RAM memory (need: {}, avail: {})", buffer->mOriginalSize,
+                    "Out of X-RAM memory (need: {}, avail: {})", buffer.mOriginalSize,
                     device.eax_x_ram_free_size);
 
-            eax_x_ram_apply(device, *buffer);
+            eax_x_ram_apply(device, buffer);
         }
         else
-            eax_x_ram_clear(device, *buffer);
-        buffer->mEaxXRamMode = *storage;
+            eax_x_ram_clear(device, buffer);
+        buffer.mEaxXRamMode = *storage;
         return AL_TRUE;
     }
 
@@ -1598,27 +1597,27 @@ try {
         if(bufid == AL_NONE)
             continue;
 
-        auto const buffer = LookupBuffer(context, bufid);
+        auto& buffer = LookupBuffer(*context, bufid);
 
         /* TODO: Is the store location allowed to change for in-use buffers, or
          * only when not set/queued on a source?
          */
 
-        buflist.emplace(buffer);
+        buflist.emplace(&buffer);
     }
 
     if(*storage == EaxStorage::Hardware)
     {
         auto total_needed = 0_uz;
-        for(auto const &buffer : buflist)
+        for(auto const &buffer : buflist | std::views::transform(al::dereference{}))
         {
-            if(!buffer->mEaxXRamIsHardware)
+            if(!buffer.mEaxXRamIsHardware)
             {
-                if(usize::max() - buffer->mOriginalSize < total_needed)
+                if(usize::max() - buffer.mOriginalSize < total_needed)
                     context->throw_error(AL_OUT_OF_MEMORY, "Size overflow ({} + {})",
-                        buffer->mOriginalSize, total_needed);
+                        buffer.mOriginalSize, total_needed);
 
-                total_needed += buffer->mOriginalSize;
+                total_needed += buffer.mOriginalSize;
             }
         }
         if(total_needed > device.eax_x_ram_free_size)
@@ -1655,11 +1654,11 @@ try {
     if(pReserved)
         context->throw_error(AL_INVALID_VALUE, "Non-null reserved parameter");
 
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const devlock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    auto const al_buffer = LookupBuffer(context, buffer);
-    return EnumFromEaxStorage(al_buffer->mEaxXRamMode);
+    auto const& al_buffer = LookupBuffer(*context, buffer);
+    return EnumFromEaxStorage(al_buffer.mEaxXRamMode);
 }
 catch(al::base_exception&) {
     return AL_NONE;
@@ -1753,11 +1752,11 @@ AL_API auto AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) noexcep
 void al::Buffer::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
     std::string_view const name)
 {
-    auto const device = al::get_not_null(context->mALDevice);
-    auto const buflock = std::lock_guard{device->BufferLock};
+    auto& device = *context->mALDevice;
+    auto const buflock = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(context, id);
-    device->mBufferNames.insert_or_assign(id, name);
+    std::ignore = LookupBuffer(*context, id);
+    device.mBufferNames.insert_or_assign(id, name);
 }
 
 

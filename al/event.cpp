@@ -147,30 +147,30 @@ constexpr auto GetEventType(ALenum const etype) noexcept -> std::optional<AsyncE
 }
 
 
-void alEventControlSOFT_(gsl::not_null<al::Context*> const context, ALsizei const count,
-    ALenum const *const types, ALboolean const enable) noexcept
+void alEventControlSOFT_(al::Context& context, ALsizei const count, ALenum const *const types,
+    ALboolean const enable) noexcept
 try {
     if(count < 0)
-        context->throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
+        context.throw_error(AL_INVALID_VALUE, "Controlling {} events", count);
     if(count <= 0) [[unlikely]] return;
 
     if(!types)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     auto flags = ContextBase::AsyncEventBitset{};
-    std::ranges::for_each(std::views::counted(types, count), [context,&flags](ALenum const evttype)
+    std::ranges::for_each(std::views::counted(types, count), [&context,&flags](ALenum const evttype)
     {
         auto const etype = GetEventType(evttype);
         if(!etype)
-            context->throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
+            context.throw_error(AL_INVALID_ENUM, "Invalid event type {:#04x}",
                 as_unsigned(evttype));
         flags.set(*etype);
     });
 
     if(enable)
     {
-        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
-        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
+        auto enabledevts = context.mEnabledEvts.load(std::memory_order_relaxed);
+        while(context.mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
             /* enabledevts is (re-)filled with the current value on failure, so
@@ -180,15 +180,15 @@ try {
     }
     else
     {
-        auto enabledevts = context->mEnabledEvts.load(std::memory_order_relaxed);
-        while(context->mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
+        auto enabledevts = context.mEnabledEvts.load(std::memory_order_relaxed);
+        while(context.mEnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
             std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
         }
         /* Wait to ensure the event handler sees the changed flags before
          * returning.
          */
-        std::ignore = std::lock_guard{context->mEventCbLock};
+        std::ignore = std::lock_guard{context.mEventCbLock};
     }
 }
 catch(al::base_exception&) {
@@ -197,12 +197,12 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEventCallbackSOFT_(gsl::not_null<al::Context*> const context,
-    ALEVENTPROCSOFT const callback, void *const userParam) noexcept
+void alEventCallbackSOFT_(al::Context& context, ALEVENTPROCSOFT const callback,
+    void *const userParam) noexcept
 try {
-    auto const eventlock = std::lock_guard{context->mEventCbLock};
-    context->mEventCb = callback;
-    context->mEventParam = userParam;
+    auto const eventlock = std::lock_guard{context.mEventCbLock};
+    context.mEventCb = callback;
+    context.mEventParam = userParam;
 }
 catch(al::base_exception&) {
 }

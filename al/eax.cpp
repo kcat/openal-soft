@@ -57,28 +57,28 @@ auto get_alguid(_GUID const *const guid) -> AL_GUID
     return store;
 }
 
-auto EAXSet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
-    ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
+auto EAXSet_(al::Context& context, _GUID const *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
-    auto const proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_set(get_alguid(property_set_id), property_id, source_id, value,
+    auto const proplock = std::lock_guard{context.mPropLock};
+    return context.eax_eax_set(get_alguid(property_set_id), property_id, source_id, value,
         value_size);
 }
 catch(...) {
-    context->eaxSetLastError();
+    context.eaxSetLastError();
     eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;
 }
 
-auto EAXGet_(gsl::not_null<al::Context*> context, _GUID const *property_set_id,
-    ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
+auto EAXGet_(al::Context& context, _GUID const *property_set_id, ALuint property_id,
+    ALuint source_id, ALvoid *value, ALuint value_size) noexcept -> ALenum
 try {
-    auto const proplock = std::lock_guard{context->mPropLock};
-    return context->eax_eax_get(get_alguid(property_set_id), property_id, source_id, value,
+    auto const proplock = std::lock_guard{context.mPropLock};
+    return context.eax_eax_get(get_alguid(property_set_id), property_id, source_id, value,
         value_size);
 }
 catch(...) {
-    context->eaxSetLastError();
+    context.eaxSetLastError();
     eax_log_exception(std::data(__func__));
     return AL_INVALID_OPERATION;
 }

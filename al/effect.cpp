@@ -227,18 +227,18 @@ auto LookupEffect(al::Context& context, ALuint const id) -> al::Effect&
 }
 
 
-void alGenEffects_(gsl::not_null<al::Context*> context, ALsizei n, ALuint *effects) noexcept
+void alGenEffects_(al::Context& context, ALsizei n, ALuint *effects) noexcept
 try {
     if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
+        context.throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
     const auto eids = std::views::counted(effects, n);
     if(!EnsureEffects(device, eids.size()))
-        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
+        context.throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} effect{}", n,
             (n==1) ? "" : "s");
 
     std::ranges::generate(eids, [&device]{ return AllocEffect(device)->mId; });
@@ -249,23 +249,22 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alDeleteEffects_(gsl::not_null<al::Context*> context, ALsizei n, const ALuint *effects)
-    noexcept
+void alDeleteEffects_(al::Context& context, ALsizei n, const ALuint *effects) noexcept
 try {
     if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Deleting {} effects", n);
+        context.throw_error(AL_INVALID_VALUE, "Deleting {} effects", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
     /* First try to find any effects that are invalid. */
     const auto eids = std::views::counted(effects, n);
-    std::ranges::for_each(eids, [context](const ALuint eid)
-    { if(eid != 0) std::ignore = LookupEffect(*context, eid); });
+    std::ranges::for_each(eids, [&context](const ALuint eid)
+    { if(eid != 0) std::ignore = LookupEffect(context, eid); });
 
     /* All good. Delete non-0 effect IDs. */
-    std::ranges::for_each(eids, [&device](ALuint eid)
+    std::ranges::for_each(eids, [&device](ALuint const eid)
     {
         if(auto *effect = LookupEffect(std::nothrow, device, eid))
             FreeEffect(device, *effect);
@@ -277,9 +276,9 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto alIsEffect_(gsl::not_null<al::Context*> context, ALuint effect) noexcept -> ALboolean
+auto alIsEffect_(al::Context& context, ALuint effect) noexcept -> ALboolean
 {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
     if(effect == 0 || LookupEffect(std::nothrow, device, effect) != nullptr)
         return AL_TRUE;
@@ -287,13 +286,12 @@ auto alIsEffect_(gsl::not_null<al::Context*> context, ALuint effect) noexcept ->
 }
 
 
-void alEffecti_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param, ALint value)
-    noexcept
+void alEffecti_(al::Context& context, ALuint effect, ALenum param, ALint value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto& aleffect = LookupEffect(*context, effect);
+    auto& aleffect = LookupEffect(context, effect);
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -302,7 +300,7 @@ try {
             auto check_effect = [value](const EffectList &item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
             if(!std::ranges::any_of(gEffectList, check_effect))
-                context->throw_error(AL_INVALID_VALUE, "Effect type {:#04x} not supported",
+                context.throw_error(AL_INVALID_VALUE, "Effect type {:#04x} not supported",
                     as_unsigned(value));
         }
 
@@ -311,10 +309,10 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,value]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParami(*context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.SetParami(context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -323,8 +321,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEffectiv_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param,
-    const ALint *values) noexcept
+void alEffectiv_(al::Context& context, ALuint effect, ALenum param, const ALint *values) noexcept
 try {
     switch(param)
     {
@@ -333,16 +330,16 @@ try {
         return;
     }
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto& aleffect = LookupEffect(*context, effect);
+    auto& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,values]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamiv(*context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.SetParamiv(context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -351,19 +348,18 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEffectf_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param, ALfloat value)
-    noexcept
+void alEffectf_(al::Context& context, ALuint effect, ALenum param, ALfloat value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto& aleffect = LookupEffect(*context, effect);
+    auto& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,value]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamf(*context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.SetParamf(context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -372,19 +368,18 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alEffectfv_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param,
-    const ALfloat *values) noexcept
+void alEffectfv_(al::Context& context, ALuint effect, ALenum param, const ALfloat *values) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto& aleffect = LookupEffect(*context, effect);
+    auto& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,values]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamfv(*context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.SetParamfv(context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -393,23 +388,22 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetEffecti_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param, ALint *value)
-    noexcept
+void alGetEffecti_(al::Context& context, ALuint effect, ALenum param, ALint *value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto& aleffect = LookupEffect(*context, effect);
+    auto& aleffect = LookupEffect(context, effect);
     switch(param)
     {
     case AL_EFFECT_TYPE: *value = aleffect.mType; return;
     }
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,value]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParami(*context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.GetParami(context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -418,8 +412,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetEffectiv_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param,
-    ALint *values) noexcept
+void alGetEffectiv_(al::Context& context, ALuint effect, ALenum param, ALint *values) noexcept
 try {
     switch(param)
     {
@@ -428,16 +421,16 @@ try {
         return;
     }
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto const& aleffect = LookupEffect(*context, effect);
+    auto const& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,values]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamiv(*context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.GetParamiv(context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -446,19 +439,18 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetEffectf_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param,
-    ALfloat *value) noexcept
+void alGetEffectf_(al::Context& context, ALuint effect, ALenum param, ALfloat *value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto const& aleffect = LookupEffect(*context, effect);
+    auto const& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,value]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamf(*context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.GetParamf(context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -467,19 +459,18 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetEffectfv_(gsl::not_null<al::Context*> context, ALuint effect, ALenum param,
-    ALfloat *values) noexcept
+void alGetEffectfv_(al::Context& context, ALuint effect, ALenum param, ALfloat *values) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    auto const& aleffect = LookupEffect(*context, effect);
+    auto const& aleffect = LookupEffect(context, effect);
 
     /* Call the appropriate handler */
-    std::visit([context,&aleffect,param,values]<typename T>(T &arg)
+    std::visit([&context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamfv(*context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.GetParamfv(context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {

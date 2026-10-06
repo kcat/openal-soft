@@ -78,28 +78,28 @@ void CommitAndUpdateProps(al::Context &context)
 }
 
 
-void alListenerf_(gsl::not_null<al::Context*> context, ALenum param, ALfloat value) noexcept
+void alListenerf_(al::Context& context, ALenum param, ALfloat value) noexcept
 try {
-    const auto proplock = std::lock_guard{context->mPropLock};
-    auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    auto &listener = context.mListener;
     switch(param)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
+            context.throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
         listener.mGain = value;
-        UpdateProps(*context);
+        UpdateProps(context);
         return;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
+            context.throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
                 value);
         listener.mMetersPerUnit = value;
-        UpdateProps(*context);
+        UpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -108,32 +108,32 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3f_(gsl::not_null<al::Context*> context, ALenum param, ALfloat value1,
-    ALfloat value2, ALfloat value3) noexcept
+void alListener3f_(al::Context& context, ALenum param, ALfloat value1, ALfloat value2,
+    ALfloat value3) noexcept
 try {
-    auto &listener = context->mListener;
-    const auto proplock = std::lock_guard{context->mPropLock};
+    auto &listener = context.mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
     switch(param)
     {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            context->throw_error(AL_INVALID_VALUE, "Listener position out of range");
+            context.throw_error(AL_INVALID_VALUE, "Listener position out of range");
         listener.mPosition[0] = value1;
         listener.mPosition[1] = value2;
         listener.mPosition[2] = value3;
-        CommitAndUpdateProps(*context);
+        CommitAndUpdateProps(context);
         return;
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            context->throw_error(AL_INVALID_VALUE, "Listener velocity out of range");
+            context.throw_error(AL_INVALID_VALUE, "Listener velocity out of range");
         listener.mVelocity[0] = value1;
         listener.mVelocity[1] = value2;
         listener.mVelocity[2] = value3;
-        CommitAndUpdateProps(*context);
+        CommitAndUpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -142,11 +142,10 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListenerfv_(gsl::not_null<al::Context*> context, ALenum param, const ALfloat *values)
-    noexcept
+void alListenerfv_(al::Context& context, ALenum param, const ALfloat *values) noexcept
 try {
     if(!values)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     switch(param)
     {
@@ -162,21 +161,21 @@ try {
         return;
     }
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    auto &listener = context.mListener;
     switch(param)
     {
     case AL_ORIENTATION:
         const auto vals = std::span<const float,6>{values, 6_uz};
         if(!std::ranges::all_of(vals, [](float f){ return std::isfinite(f); }))
-            context->throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
+            context.throw_error(AL_INVALID_VALUE, "Listener orientation out of range");
         /* AT then UP */
         std::ranges::copy(vals | std::views::take(3), listener.mOrientAt.begin());
         std::ranges::copy(vals | std::views::drop(3), listener.mOrientUp.begin());
-        CommitAndUpdateProps(*context);
+        CommitAndUpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -186,28 +185,28 @@ catch(std::exception &e) {
 }
 
 
-void alListeneri_(gsl::not_null<al::Context*> context, ALenum param, ALint value) noexcept
+void alListeneri_(al::Context& context, ALenum param, ALint value) noexcept
 try {
-    const auto proplock = std::lock_guard{context->mPropLock};
-    auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    auto &listener = context.mListener;
     switch(param)
     {
     case AL_GAIN:
         if(value < 0)
-            context->throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
+            context.throw_error(AL_INVALID_VALUE, "Listener gain {} out of range", value);
         listener.mGain = gsl::narrow_cast<float>(value);
-        UpdateProps(*context);
+        UpdateProps(context);
         return;
 
     case AL_METERS_PER_UNIT:
         if(value < 1)
-            context->throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
+            context.throw_error(AL_INVALID_VALUE, "Listener meters per unit {} out of range",
                 value);
         listener.mMetersPerUnit = gsl::narrow_cast<float>(value);
-        UpdateProps(*context);
+        UpdateProps(context);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -216,8 +215,8 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListener3i_(gsl::not_null<al::Context*> context, ALenum param, ALint value1, ALint value2,
-    ALint value3) noexcept
+void alListener3i_(al::Context& context, ALenum param, ALint value1, ALint value2, ALint value3)
+    noexcept
 try {
     switch(param)
     {
@@ -228,8 +227,8 @@ try {
         return;
     }
 
-    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
+    const auto proplock [[maybe_unused]] = std::lock_guard{context.mPropLock};
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -238,10 +237,10 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alListeneriv_(gsl::not_null<al::Context*> context, ALenum param, const ALint *values) noexcept
+void alListeneriv_(al::Context& context, ALenum param, const ALint *values) noexcept
 try {
     if(!values)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     auto vals = std::span<const ALint>{};
     switch(param)
@@ -269,8 +268,8 @@ try {
         return;
     }
 
-    const auto proplock [[maybe_unused]] = std::lock_guard{context->mPropLock};
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
+    const auto proplock [[maybe_unused]] = std::lock_guard{context.mPropLock};
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -280,19 +279,19 @@ catch(std::exception &e) {
 }
 
 
-void alGetListenerf_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value) noexcept
+void alGetListenerf_(al::Context& context, ALenum param, ALfloat *value) noexcept
 try {
     if(!value)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
     switch(param)
     {
     case AL_GAIN: *value = listener.mGain; return;
     case AL_METERS_PER_UNIT: *value = listener.mMetersPerUnit; return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener float property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -301,14 +300,14 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3f_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *value1,
-    ALfloat *value2, ALfloat *value3) noexcept
+void alGetListener3f_(al::Context& context, ALenum param, ALfloat *value1, ALfloat *value2,
+    ALfloat *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
     switch(param)
     {
     case AL_POSITION:
@@ -323,7 +322,7 @@ try {
         *value3 = listener.mVelocity[2];
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener 3-float property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -332,10 +331,10 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListenerfv_(gsl::not_null<al::Context*> context, ALenum param, ALfloat *values) noexcept
+void alGetListenerfv_(al::Context& context, ALenum param, ALfloat *values) noexcept
 try {
     if(!values)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     switch(param)
     {
@@ -351,8 +350,8 @@ try {
         return;
     }
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
     switch(param)
     {
     case AL_ORIENTATION:
@@ -362,7 +361,7 @@ try {
         std::ranges::copy(listener.mOrientUp, oiter);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener float-vector property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -372,16 +371,16 @@ catch(std::exception &e) {
 }
 
 
-void alGetListeneri_(gsl::not_null<al::Context*> context, ALenum param, ALint *value) noexcept
+void alGetListeneri_(al::Context& context, ALenum param, ALint *value) noexcept
 try {
     /* The largest float value that can fit in an int. */
     static constexpr auto float_int_max = 2147483520.0f;
 
     if(!value)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
     switch(param)
     {
     case AL_GAIN:
@@ -391,7 +390,7 @@ try {
         *value = gsl::narrow_cast<int>(std::clamp(listener.mMetersPerUnit, 1.0f, float_int_max));
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener integer property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -400,14 +399,14 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListener3i_(gsl::not_null<al::Context*> context, ALenum param, ALint *value1,
-    ALint *value2, ALint *value3) noexcept
+void alGetListener3i_(al::Context& context, ALenum param, ALint *value1, ALint *value2,
+    ALint *value3) noexcept
 try {
     if(!value1 || !value2 || !value3)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
     switch(param)
     {
     case AL_POSITION:
@@ -422,7 +421,7 @@ try {
         *value3 = gsl::narrow_cast<int>(listener.mVelocity[2]);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener 3-integer property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {
@@ -431,10 +430,10 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetListeneriv_(gsl::not_null<al::Context*> context, ALenum param, ALint *values) noexcept
+void alGetListeneriv_(al::Context& context, ALenum param, ALint *values) noexcept
 try {
     if(!values)
-        context->throw_error(AL_INVALID_VALUE, "NULL pointer");
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
 
     switch(param)
     {
@@ -450,8 +449,8 @@ try {
         return;
     }
 
-    const auto proplock = std::lock_guard{context->mPropLock};
-    const auto &listener = context->mListener;
+    const auto proplock = std::lock_guard{context.mPropLock};
+    const auto &listener = context.mListener;
 
     static constexpr auto f2i = [](const float val) { return gsl::narrow_cast<int>(val); };
     switch(param)
@@ -463,7 +462,7 @@ try {
         std::ranges::transform(listener.mOrientUp, oiter, f2i);
         return;
     }
-    context->throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid listener integer-vector property {:#04x}",
         as_unsigned(param));
 }
 catch(al::base_exception&) {

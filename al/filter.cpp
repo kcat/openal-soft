@@ -370,18 +370,18 @@ auto LookupFilter(al::Context& context, ALuint const id) -> al::Filter&
 }
 
 
-void alGenFilters_(gsl::not_null<al::Context*> context, ALsizei n, ALuint *filters) noexcept
+void alGenFilters_(al::Context& context, ALsizei n, ALuint *filters) noexcept
 try {
     if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
+        context.throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
     const auto fids = std::views::counted(filters, n);
     if(!EnsureFilters(device, fids.size()))
-        context->throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
+        context.throw_error(AL_OUT_OF_MEMORY, "Failed to allocate {} filter{}", n,
             (n==1) ? "" : "s");
 
     std::ranges::generate(fids, [&device]{ return AllocFilter(device)->mId; });
@@ -392,20 +392,19 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alDeleteFilters_(gsl::not_null<al::Context*> context, ALsizei n, const ALuint *filters)
-    noexcept
+void alDeleteFilters_(al::Context& context, ALsizei n, const ALuint *filters) noexcept
 try {
     if(n < 0)
-        context->throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
+        context.throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
     if(n <= 0) [[unlikely]] return;
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
     /* First try to find any filters that are invalid. */
     const auto fids = std::views::counted(filters, n);
-    std::ranges::for_each(fids, [context](const ALuint fid)
-    { if(fid != 0) std::ignore = LookupFilter(*context, fid); });
+    std::ranges::for_each(fids, [&context](const ALuint fid)
+    { if(fid != 0) std::ignore = LookupFilter(context, fid); });
 
     /* All good. Delete non-0 filter IDs. */
     std::ranges::for_each(fids, [&device](const ALuint fid)
@@ -420,9 +419,9 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-auto alIsFilter_(gsl::not_null<al::Context*> context, ALuint filter) noexcept -> ALboolean
+auto alIsFilter_(al::Context& context, ALuint filter) noexcept -> ALboolean
 {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
     if(filter == 0 || LookupFilter(std::nothrow, device, filter) != nullptr)
         return AL_TRUE;
@@ -430,27 +429,26 @@ auto alIsFilter_(gsl::not_null<al::Context*> context, ALuint filter) noexcept ->
 }
 
 
-void alFilteri_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint value)
-    noexcept
+void alFilteri_(al::Context& context, ALuint filter, ALenum param, ALint value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto& alfilt = LookupFilter(*context, filter);
+    auto& alfilt = LookupFilter(context, filter);
     switch(param)
     {
     case AL_FILTER_TYPE:
         if(!(value == AL_FILTER_NULL || value == AL_FILTER_LOWPASS
             || value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS))
-            context->throw_error(AL_INVALID_VALUE, "Invalid filter type {:#04x}",
+            context.throw_error(AL_INVALID_VALUE, "Invalid filter type {:#04x}",
                 as_unsigned(value));
         InitFilterParams(alfilt, value);
         return;
     }
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,value](auto&& thunk)
-    { thunk.setParami(*context, alfilt, param, value); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,value](auto&& thunk)
+    { thunk.setParami(context, alfilt, param, value); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -458,8 +456,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilteriv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
-    const ALint *values) noexcept
+void alFilteriv_(al::Context& context, ALuint filter, ALenum param, const ALint *values) noexcept
 try {
     switch(param)
     {
@@ -468,14 +465,14 @@ try {
         return;
     }
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto& alfilt = LookupFilter(*context, filter);
+    auto& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,values](auto&& thunk)
-    { thunk.setParamiv(*context, alfilt, param, values); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,values](auto&& thunk)
+    { thunk.setParamiv(context, alfilt, param, values); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -483,17 +480,16 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilterf_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALfloat value)
-    noexcept
+void alFilterf_(al::Context& context, ALuint filter, ALenum param, ALfloat value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto& alfilt = LookupFilter(*context, filter);
+    auto& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,value](auto&& thunk)
-    { thunk.setParamf(*context, alfilt, param, value); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,value](auto&& thunk)
+    { thunk.setParamf(context, alfilt, param, value); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -501,17 +497,16 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alFilterfv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
-    const ALfloat *values) noexcept
+void alFilterfv_(al::Context& context, ALuint filter, ALenum param, const ALfloat *values) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto& alfilt = LookupFilter(*context, filter);
+    auto& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,values](auto&& thunk)
-    { thunk.setParamfv(*context, alfilt, param, values); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,values](auto&& thunk)
+    { thunk.setParamfv(context, alfilt, param, values); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -519,13 +514,12 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilteri_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param, ALint *value)
-    noexcept
+void alGetFilteri_(al::Context& context, ALuint filter, ALenum param, ALint *value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto const& alfilt = LookupFilter(*context, filter);
+    auto const& alfilt = LookupFilter(context, filter);
 
     switch(param)
     {
@@ -533,8 +527,8 @@ try {
     }
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,value](auto&& thunk)
-    { thunk.getParami(*context, alfilt, param, value); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,value](auto&& thunk)
+    { thunk.getParami(context, alfilt, param, value); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -542,8 +536,7 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilteriv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
-    ALint *values) noexcept
+void alGetFilteriv_(al::Context& context, ALuint filter, ALenum param, ALint *values) noexcept
 try {
     switch(param)
     {
@@ -552,14 +545,14 @@ try {
         return;
     }
 
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto const& alfilt = LookupFilter(*context, filter);
+    auto const& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,values](auto&& thunk)
-    { thunk.getParamiv(*context, alfilt, param, values); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,values](auto&& thunk)
+    { thunk.getParamiv(context, alfilt, param, values); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -567,17 +560,16 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilterf_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
-    ALfloat *value) noexcept
+void alGetFilterf_(al::Context& context, ALuint filter, ALenum param, ALfloat *value) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto const& alfilt = LookupFilter(*context, filter);
+    auto const& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,value](auto&& thunk)
-    { thunk.getParamf(*context, alfilt, param, value); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,value](auto&& thunk)
+    { thunk.getParamf(context, alfilt, param, value); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }
@@ -585,17 +577,16 @@ catch(std::exception &e) {
     ERR("Caught exception: {}", e.what());
 }
 
-void alGetFilterfv_(gsl::not_null<al::Context*> context, ALuint filter, ALenum param,
-    ALfloat *values) noexcept
+void alGetFilterfv_(al::Context& context, ALuint filter, ALenum param, ALfloat *values) noexcept
 try {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    auto const& alfilt = LookupFilter(*context, filter);
+    auto const& alfilt = LookupFilter(context, filter);
 
     /* Call the appropriate handler */
-    std::visit([context,&alfilt,param,values](auto&& thunk)
-    { thunk.getParamfv(*context, alfilt, param, values); }, alfilt.mTypeVariant);
+    std::visit([&context,&alfilt,param,values](auto&& thunk)
+    { thunk.getParamfv(context, alfilt, param, values); }, alfilt.mTypeVariant);
 }
 catch(al::base_exception&) {
 }

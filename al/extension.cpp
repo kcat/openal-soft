@@ -39,17 +39,16 @@ import alc.context;
 
 namespace {
 
-auto alIsExtensionPresent_(gsl::not_null<al::Context*> context, const ALchar *extName) noexcept
-    -> ALboolean
+auto alIsExtensionPresent_(al::Context& context, const ALchar *extName) noexcept -> ALboolean
 {
     if(!extName) [[unlikely]]
     {
-        context->setError(AL_INVALID_VALUE, "NULL pointer");
+        context.setError(AL_INVALID_VALUE, "NULL pointer");
         return AL_FALSE;
     }
 
     const auto tofind = std::string_view{extName};
-    const auto found = std::ranges::any_of(context->mExtensions, [tofind](std::string_view ext)
+    const auto found = std::ranges::any_of(context.mExtensions, [tofind](std::string_view ext)
     { return tofind.size() == ext.size() && is_eq(al::case_compare(ext, tofind)); });
     return found ? AL_TRUE : AL_FALSE;
 }

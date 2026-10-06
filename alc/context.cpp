@@ -798,7 +798,7 @@ void Context::eax_dispatch_source(const EaxCall& call)
     const auto source_id = call.get_property_al_name();
     const auto srclock = std::lock_guard{mSourceLock};
 
-    const auto source = Source::EaxLookupSource(gsl::make_not_null(this), source_id);
+    const auto source = Source::EaxLookupSource(*this, source_id);
     if(source == nullptr)
         eax_fail("Source not found.");
 

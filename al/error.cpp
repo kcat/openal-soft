@@ -58,18 +58,19 @@ import logging;
 
 namespace {
 
-auto alGetError_(gsl::not_null<al::Context*> context) noexcept -> ALenum
+auto alGetError_(al::Context& context) noexcept -> ALenum
 {
-    auto ret = context->mLastThreadError.get();
+    auto const ret = context.mLastThreadError.get();
     if(ret != AL_NO_ERROR) [[unlikely]]
-        context->mLastThreadError.set(AL_NO_ERROR);
+        context.mLastThreadError.set(AL_NO_ERROR);
     return ret;
 }
 
 } // namespace
 
 
-void al::Context::setErrorImpl(ALenum const errorCode, al::string_view const fmt, al::format_args args)
+void al::Context::setErrorImpl(ALenum const errorCode, al::string_view const fmt,
+    al::format_args args)
 {
     const auto message = al::vformat(fmt, std::move(args));
 
@@ -106,8 +107,8 @@ void al::Context::throw_error_impl(ALenum const errorCode, al::string_view const
  */
 AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
 {
-    if(auto context = GetContextRef()) [[likely]]
-        return alGetError_(gsl::make_not_null(context.get()));
+    if(auto const context = GetContextRef()) [[likely]]
+        return alGetError_(*context);
 
     static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
     {
@@ -145,6 +146,6 @@ DefineFuncAlias(alGetError)
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    return alGetError_(al::verify_context(context));
+    return alGetError_(*al::verify_context(context));
 }
 DefineFuncAlias(alGetErrorDirect)

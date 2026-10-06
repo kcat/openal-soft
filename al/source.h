@@ -169,12 +169,12 @@ struct Source {
 
 #if ALSOFT_EAX
 public:
-    void eaxInitialize(gsl::not_null<Context*> context) noexcept;
+    void eaxInitialize(al::Context& context) noexcept;
     void eaxDispatch(const EaxCall& call) { call.is_get() ? eax_get(call) : eax_set(call); }
     void eaxCommit();
     void eaxMarkAsChanged() noexcept { mEaxChanged = true; }
 
-    static auto EaxLookupSource(gsl::not_null<Context*> al_context LIFETIMEBOUND, ALuint source_id)
+    static auto EaxLookupSource(al::Context& al_context LIFETIMEBOUND, ALuint source_id)
         noexcept -> Source*;
 
 private:

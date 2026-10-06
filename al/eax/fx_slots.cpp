@@ -19,7 +19,7 @@ public:
 
 } // namespace
 
-void EaxFxSlots::initialize(gsl::not_null<al::Context*> al_context)
+void EaxFxSlots::initialize(al::Context& al_context)
 {
     auto fx_slot_index = EaxFxSlotIndexValue{};
 

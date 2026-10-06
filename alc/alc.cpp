@@ -1908,7 +1908,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 
         context->mPropsDirty = false;
         UpdateContextProps(*context);
-        UpdateAllEffectSlotProps(context);
+        UpdateAllEffectSlotProps(*context);
         UpdateAllSourceProps(*context);
     });
     mixer_mode.leave();
@@ -2896,8 +2896,8 @@ try {
     {
         try {
             slot->initEffect(0, al::Context::sDefaultEffect.mType,
-                al::Context::sDefaultEffect.mProps, gsl::make_not_null(context.get()));
-            slot->updateProps(context.get());
+                al::Context::sDefaultEffect.mProps, *context);
+            slot->updateProps(*context);
         }
         catch(std::exception& e) {
             ERR("Exception initializing the default effect: {}", e.what());

@@ -207,7 +207,7 @@ void Context::init()
 {
     if(sDefaultEffect.mType != AL_EFFECT_NULL && mDevice.Type == DeviceType::Playback)
     {
-        mDefaultSlot = std::make_unique<EffectSlot>(gsl::make_not_null(this));
+        mDefaultSlot = std::make_unique<EffectSlot>(*this);
         aluInitEffectPanning(mDefaultSlot->mSlot, this);
     }
 
@@ -320,7 +320,7 @@ void Context::applyAllUpdates()
 
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(*this);
-    UpdateAllEffectSlotProps(gsl::make_not_null(this));
+    UpdateAllEffectSlotProps(*this);
     UpdateAllSourceProps(*this);
 
     /* Now with all updates declared, let the mixer continue applying them so
@@ -888,7 +888,7 @@ void Context::eax_context_commit_macro_fx_factor()
 
 void Context::eax_initialize_fx_slots()
 {
-    mEaxFxSlots.initialize(gsl::make_not_null(this));
+    mEaxFxSlots.initialize(*this);
     mEaxPrimaryFxSlotIndex = mEax.guidPrimaryFXSlotID;
 }
 

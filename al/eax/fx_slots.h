@@ -6,7 +6,6 @@
 
 #include "al/auxeffectslot.h"
 #include "fx_slot_index.h"
-#include "gsl/gsl"
 
 namespace al {
 struct Context;
@@ -15,7 +14,7 @@ struct Context;
 
 class EaxFxSlots {
 public:
-    void initialize(gsl::not_null<al::Context*> al_context);
+    void initialize(al::Context& al_context);
     void uninitialize() noexcept;
 
     void commit() const

@@ -321,7 +321,7 @@ void Context::applyAllUpdates()
     if(std::exchange(mPropsDirty, false))
         UpdateContextProps(*this);
     UpdateAllEffectSlotProps(gsl::make_not_null(this));
-    UpdateAllSourceProps(gsl::make_not_null(this));
+    UpdateAllSourceProps(*this);
 
     /* Now with all updates declared, let the mixer continue applying them so
      * they all happen at once.

@@ -1909,7 +1909,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         context->mPropsDirty = false;
         UpdateContextProps(*context);
         UpdateAllEffectSlotProps(context);
-        UpdateAllSourceProps(context);
+        UpdateAllSourceProps(*context);
     });
     mixer_mode.leave();
 

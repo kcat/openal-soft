@@ -429,7 +429,7 @@ private:
 
 } /* namespace al */
 
-void UpdateAllSourceProps(gsl::not_null<al::Context*> context);
+void UpdateAllSourceProps(al::Context& context);
 
 struct SourceSubList {
     u64 mFreeMask{~0_u64};

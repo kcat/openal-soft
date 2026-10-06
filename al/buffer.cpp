@@ -1749,13 +1749,12 @@ AL_API auto AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum /*format*/) noexcep
 }
 
 
-void al::Buffer::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
-    std::string_view const name)
+void al::Buffer::SetName(al::Context& context, ALuint const id, std::string_view const name)
 {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const buflock = std::lock_guard{device.BufferLock};
 
-    std::ignore = LookupBuffer(*context, id);
+    std::ignore = LookupBuffer(context, id);
     device.mBufferNames.insert_or_assign(id, name);
 }
 

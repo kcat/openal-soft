@@ -77,7 +77,7 @@ struct Buffer : BufferStorage {
     auto operator=(const Buffer&) -> Buffer& = delete;
     auto operator=(Buffer&&) -> Buffer& = delete;
 
-    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
+    static void SetName(al::Context& context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 

@@ -3715,13 +3715,12 @@ void UpdateAllSourceProps(al::Context& context)
     }
 }
 
-void al::Source::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
-    std::string_view const name)
+void al::Source::SetName(al::Context& context, ALuint const id, std::string_view const name)
 {
-    auto const srclock = std::lock_guard{context->mSourceLock};
+    auto const srclock = std::lock_guard{context.mSourceLock};
 
-    std::ignore = LookupSource(*context, id);
-    context->mSourceNames.insert_or_assign(id, name);
+    std::ignore = LookupSource(context, id);
+    context.mSourceNames.insert_or_assign(id, name);
 }
 
 

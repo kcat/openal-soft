@@ -82,7 +82,7 @@ struct EffectSlot {
         Context const& context) -> void;
     void updateProps(Context& context) const;
 
-    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
+    static void SetName(al::Context& context, ALuint id, std::string_view name);
 
 #if ALSOFT_EAX
     void eax_initialize(EaxFxSlotIndexValue index);

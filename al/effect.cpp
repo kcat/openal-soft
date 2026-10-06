@@ -509,13 +509,12 @@ void InitEffect(al::Effect& effect)
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
 
-void al::Effect::SetName(gsl::not_null<Context*> const context, ALuint const id,
-    std::string_view const name)
+void al::Effect::SetName(al::Context& context, ALuint const id, std::string_view const name)
 {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
-    std::ignore = LookupEffect(*context, id);
+    std::ignore = LookupEffect(context, id);
     device.mEffectNames.insert_or_assign(id, name);
 }
 

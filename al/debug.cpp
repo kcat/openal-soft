@@ -524,11 +524,11 @@ try {
 
     switch(identifier)
     {
-    case AL_SOURCE_EXT: al::Source::SetName(context, name, objname); return;
-    case AL_BUFFER: al::Buffer::SetName(context, name, objname); return;
-    case AL_FILTER_EXT: al::Filter::SetName(context, name, objname); return;
-    case AL_EFFECT_EXT: al::Effect::SetName(context, name, objname); return;
-    case AL_AUXILIARY_EFFECT_SLOT_EXT: al::EffectSlot::SetName(context, name, objname); return;
+    case AL_SOURCE_EXT: al::Source::SetName(*context, name, objname); return;
+    case AL_BUFFER: al::Buffer::SetName(*context, name, objname); return;
+    case AL_FILTER_EXT: al::Filter::SetName(*context, name, objname); return;
+    case AL_EFFECT_EXT: al::Effect::SetName(*context, name, objname); return;
+    case AL_AUXILIARY_EFFECT_SLOT_EXT: al::EffectSlot::SetName(*context, name, objname); return;
     }
 
     context->throw_error(AL_INVALID_ENUM, "Invalid name identifier {:#04x}",

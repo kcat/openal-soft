@@ -70,7 +70,7 @@ struct Effect {
     auto operator=(const Effect&) -> Effect& = delete;
     auto operator=(Effect&&) -> Effect& = delete;
 
-    static void SetName(gsl::not_null<al::Context*> context, ALuint id, std::string_view name);
+    static void SetName(al::Context& context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

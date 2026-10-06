@@ -163,7 +163,7 @@ struct Source {
     Source(const Source&) = delete;
     auto operator=(const Source&) -> Source& = delete;
 
-    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
+    static void SetName(al::Context& context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 

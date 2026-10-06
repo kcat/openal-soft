@@ -619,13 +619,12 @@ DECL_FUNC(AL_API, void, alGetFilterf, ALuint,filter, ALenum,param, ALfloat*,valu
 DECL_FUNC(AL_API, void, alGetFilterfv, ALuint,filter, ALenum,param, ALfloat*,values)
 
 
-void al::Filter::SetName(gsl::not_null<al::Context*> const context, ALuint const id,
-    std::string_view const name)
+void al::Filter::SetName(al::Context& context, ALuint const id, std::string_view const name)
 {
-    auto& device = *context->mALDevice;
+    auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
-    std::ignore = LookupFilter(*context, id);
+    std::ignore = LookupFilter(context, id);
     device.mFilterNames.insert_or_assign(id, name);
 }
 

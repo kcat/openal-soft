@@ -913,13 +913,12 @@ void al::EffectSlot::updateProps(Context& context) const
     }
 }
 
-void al::EffectSlot::SetName(gsl::not_null<Context*> const context, ALuint const id,
-    std::string_view const name)
+void al::EffectSlot::SetName(al::Context& context, ALuint const id, std::string_view const name)
 {
-    const auto slotlock = std::lock_guard{context->mEffectSlotLock};
+    const auto slotlock = std::lock_guard{context.mEffectSlotLock};
 
-    std::ignore = LookupEffectSlot(*context, id);
-    context->mEffectSlotNames.insert_or_assign(id, name);
+    std::ignore = LookupEffectSlot(context, id);
+    context.mEffectSlotNames.insert_or_assign(id, name);
 }
 
 void UpdateAllEffectSlotProps(al::Context& context)

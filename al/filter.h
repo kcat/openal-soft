@@ -69,7 +69,7 @@ struct Filter {
     auto operator=(const Filter&) -> Filter& = delete;
     auto operator=(Filter&&) -> Filter& = delete;
 
-    static void SetName(gsl::not_null<Context*> context, ALuint id, std::string_view name);
+    static void SetName(al::Context& context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC
 };

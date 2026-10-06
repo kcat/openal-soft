@@ -39,35 +39,35 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps PshifterEffectProps(genDefaultProps());
 
-void PshifterEffectHandler::SetParami(al::Context *context, PshifterProps &props, ALenum param, int val)
+void PshifterEffectHandler::SetParami(al::Context& context, PshifterProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_PITCH_SHIFTER_COARSE_TUNE:
         if(!(val >= AL_PITCH_SHIFTER_MIN_COARSE_TUNE && val <= AL_PITCH_SHIFTER_MAX_COARSE_TUNE))
-            context->throw_error(AL_INVALID_VALUE, "Pitch shifter coarse tune out of range");
+            context.throw_error(AL_INVALID_VALUE, "Pitch shifter coarse tune out of range");
         props.CoarseTune = val;
         return;
 
     case AL_PITCH_SHIFTER_FINE_TUNE:
         if(!(val >= AL_PITCH_SHIFTER_MIN_FINE_TUNE && val <= AL_PITCH_SHIFTER_MAX_FINE_TUNE))
-            context->throw_error(AL_INVALID_VALUE, "Pitch shifter fine tune out of range");
+            context.throw_error(AL_INVALID_VALUE, "Pitch shifter fine tune out of range");
         props.FineTune = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void PshifterEffectHandler::SetParamiv(al::Context *context, PshifterProps &props, ALenum param, const int *vals)
+void PshifterEffectHandler::SetParamiv(al::Context& context, PshifterProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void PshifterEffectHandler::SetParamf(al::Context *context, PshifterProps&, ALenum param, float)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
-void PshifterEffectHandler::SetParamfv(al::Context *context, PshifterProps &props, ALenum param, const float *vals)
+void PshifterEffectHandler::SetParamf(al::Context& context, PshifterProps&, ALenum param, float)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
+void PshifterEffectHandler::SetParamfv(al::Context& context, PshifterProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void PshifterEffectHandler::GetParami(al::Context *context, const PshifterProps &props, ALenum param, int *val)
+void PshifterEffectHandler::GetParami(al::Context& context, const PshifterProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -75,15 +75,15 @@ void PshifterEffectHandler::GetParami(al::Context *context, const PshifterProps 
     case AL_PITCH_SHIFTER_FINE_TUNE: *val = props.FineTune; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid pitch shifter integer property {:#04x}",
         as_unsigned(param));
 }
-void PshifterEffectHandler::GetParamiv(al::Context *context, const PshifterProps &props, ALenum param, int *vals)
+void PshifterEffectHandler::GetParamiv(al::Context& context, const PshifterProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
 
-void PshifterEffectHandler::GetParamf(al::Context *context, const PshifterProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
-void PshifterEffectHandler::GetParamfv(al::Context *context, const PshifterProps &props, ALenum param, float *vals)
+void PshifterEffectHandler::GetParamf(al::Context& context, const PshifterProps&, ALenum param, float*)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid pitch shifter float property {:#04x}", as_unsigned(param)); }
+void PshifterEffectHandler::GetParamfv(al::Context& context, const PshifterProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

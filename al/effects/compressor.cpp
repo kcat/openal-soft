@@ -35,43 +35,43 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps CompressorEffectProps(genDefaultProps());
 
-void CompressorEffectHandler::SetParami(al::Context *context, CompressorProps &props, ALenum param, int val)
+void CompressorEffectHandler::SetParami(al::Context& context, CompressorProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_COMPRESSOR_ONOFF:
         if(!(val >= AL_COMPRESSOR_MIN_ONOFF && val <= AL_COMPRESSOR_MAX_ONOFF))
-            context->throw_error(AL_INVALID_VALUE, "Compressor state out of range");
+            context.throw_error(AL_INVALID_VALUE, "Compressor state out of range");
         props.OnOff = (val != AL_FALSE);
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
         as_unsigned(param));
 }
-void CompressorEffectHandler::SetParamiv(al::Context *context, CompressorProps &props, ALenum param, const int *vals)
+void CompressorEffectHandler::SetParamiv(al::Context& context, CompressorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void CompressorEffectHandler::SetParamf(al::Context *context, CompressorProps&, ALenum param, float)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
-void CompressorEffectHandler::SetParamfv(al::Context *context, CompressorProps&, ALenum param, const float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
+void CompressorEffectHandler::SetParamf(al::Context& context, CompressorProps&, ALenum param, float)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
+void CompressorEffectHandler::SetParamfv(al::Context& context, CompressorProps&, ALenum param, const float*)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
-void CompressorEffectHandler::GetParami(al::Context *context, const CompressorProps &props, ALenum param, int *val)
+void CompressorEffectHandler::GetParami(al::Context& context, const CompressorProps &props, ALenum param, int *val)
 { 
     switch(param)
     {
     case AL_COMPRESSOR_ONOFF: *val = props.OnOff; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid compressor integer property {:#04x}",
         as_unsigned(param));
 }
-void CompressorEffectHandler::GetParamiv(al::Context *context, const CompressorProps &props, ALenum param, int *vals)
+void CompressorEffectHandler::GetParamiv(al::Context& context, const CompressorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void CompressorEffectHandler::GetParamf(al::Context *context, const CompressorProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
-void CompressorEffectHandler::GetParamfv(al::Context *context, const CompressorProps&, ALenum param, float*)
-{ context->throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
+void CompressorEffectHandler::GetParamf(al::Context& context, const CompressorProps&, ALenum param, float*)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid compressor float property {:#04x}", as_unsigned(param)); }
+void CompressorEffectHandler::GetParamfv(al::Context& context, const CompressorProps&, ALenum param, float*)
+{ context.throw_error(AL_INVALID_ENUM, "Invalid compressor float-vector property {:#04x}", as_unsigned(param)); }
 
 
 #if ALSOFT_EAX

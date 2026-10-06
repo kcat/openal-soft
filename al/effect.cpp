@@ -314,7 +314,7 @@ try {
     std::visit([context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParami(context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.SetParami(*context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -342,7 +342,7 @@ try {
     std::visit([context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamiv(context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.SetParamiv(*context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -363,7 +363,7 @@ try {
     std::visit([context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamf(context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.SetParamf(*context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -384,7 +384,7 @@ try {
     std::visit([context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.SetParamfv(context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.SetParamfv(*context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -409,7 +409,7 @@ try {
     std::visit([context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParami(context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.GetParami(*context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -437,7 +437,7 @@ try {
     std::visit([context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamiv(context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.GetParamiv(*context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -458,7 +458,7 @@ try {
     std::visit([context,&aleffect,param,value]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamf(context, std::get<PropType>(aleffect.mProps), param, value);
+        return arg.GetParamf(*context, std::get<PropType>(aleffect.mProps), param, value);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {
@@ -479,7 +479,7 @@ try {
     std::visit([context,&aleffect,param,values]<typename T>(T &arg)
     {
         using PropType = T::prop_type;
-        return arg.GetParamfv(context, std::get<PropType>(aleffect.mProps), param, values);
+        return arg.GetParamfv(*context, std::get<PropType>(aleffect.mProps), param, values);
     }, aleffect.mPropsVariant);
 }
 catch(al::base_exception&) {

@@ -89,7 +89,7 @@ consteval auto genDefaultFlangerProps() noexcept -> EffectProps
 
 constinit const EffectProps ChorusEffectProps(genDefaultChorusProps());
 
-void ChorusEffectHandler::SetParami(al::Context *context, ChorusProps &props, ALenum param, int val)
+void ChorusEffectHandler::SetParami(al::Context& context, ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -97,58 +97,58 @@ void ChorusEffectHandler::SetParami(al::Context *context, ChorusProps &props, AL
         if(auto formopt = WaveformFromEnum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid chorus waveform: {:#04x}",
+            context.throw_error(AL_INVALID_VALUE, "Invalid chorus waveform: {:#04x}",
                 as_unsigned(val));
         return;
 
     case AL_CHORUS_PHASE:
         if(!(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE))
-            context->throw_error(AL_INVALID_VALUE, "Chorus phase out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Chorus phase out of range: {}", val);
         props.Phase = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
         as_unsigned(param));
 }
-void ChorusEffectHandler::SetParamiv(al::Context *context, ChorusProps &props, ALenum param, const int *vals)
+void ChorusEffectHandler::SetParamiv(al::Context& context, ChorusProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void ChorusEffectHandler::SetParamf(al::Context *context, ChorusProps &props, ALenum param, float val)
+void ChorusEffectHandler::SetParamf(al::Context& context, ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_CHORUS_RATE:
         if(!(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE))
-            context->throw_error(AL_INVALID_VALUE, "Chorus rate out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Chorus rate out of range: {}", val);
         props.Rate = val;
         return;
 
     case AL_CHORUS_DEPTH:
         if(!(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH))
-            context->throw_error(AL_INVALID_VALUE, "Chorus depth out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Chorus depth out of range: {}", val);
         props.Depth = val;
         return;
 
     case AL_CHORUS_FEEDBACK:
         if(!(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK))
-            context->throw_error(AL_INVALID_VALUE, "Chorus feedback out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Chorus feedback out of range: {}", val);
         props.Feedback = val;
         return;
 
     case AL_CHORUS_DELAY:
         if(!(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY))
-            context->throw_error(AL_INVALID_VALUE, "Chorus delay out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Chorus delay out of range: {}", val);
         props.Delay = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
         as_unsigned(param));
 }
-void ChorusEffectHandler::SetParamfv(al::Context *context, ChorusProps &props, ALenum param, const float *vals)
+void ChorusEffectHandler::SetParamfv(al::Context& context, ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void ChorusEffectHandler::GetParami(al::Context *context, const ChorusProps &props, ALenum param, int *val)
+void ChorusEffectHandler::GetParami(al::Context& context, const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -156,12 +156,12 @@ void ChorusEffectHandler::GetParami(al::Context *context, const ChorusProps &pro
     case AL_CHORUS_PHASE: *val = props.Phase; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid chorus integer property {:#04x}",
         as_unsigned(param));
 }
-void ChorusEffectHandler::GetParamiv(al::Context *context, const ChorusProps &props, ALenum param, int *vals)
+void ChorusEffectHandler::GetParamiv(al::Context& context, const ChorusProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void ChorusEffectHandler::GetParamf(al::Context *context, const ChorusProps &props, ALenum param, float *val)
+void ChorusEffectHandler::GetParamf(al::Context& context, const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -171,16 +171,16 @@ void ChorusEffectHandler::GetParamf(al::Context *context, const ChorusProps &pro
     case AL_CHORUS_DELAY: *val = props.Delay; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid chorus float property {:#04x}",
         as_unsigned(param));
 }
-void ChorusEffectHandler::GetParamfv(al::Context *context, const ChorusProps &props, ALenum param, float *vals)
+void ChorusEffectHandler::GetParamfv(al::Context& context, const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 
 constinit const EffectProps FlangerEffectProps(genDefaultFlangerProps());
 
-void FlangerEffectHandler::SetParami(al::Context *context, ChorusProps &props, ALenum param, int val)
+void FlangerEffectHandler::SetParami(al::Context& context, ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -188,58 +188,58 @@ void FlangerEffectHandler::SetParami(al::Context *context, ChorusProps &props, A
         if(auto formopt = WaveformFromEnum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid flanger waveform: {:#04x}",
+            context.throw_error(AL_INVALID_VALUE, "Invalid flanger waveform: {:#04x}",
                 as_unsigned(val));
         return;
 
     case AL_FLANGER_PHASE:
         if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
-            context->throw_error(AL_INVALID_VALUE, "Flanger phase out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Flanger phase out of range: {}", val);
         props.Phase = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
         as_unsigned(param));
 }
-void FlangerEffectHandler::SetParamiv(al::Context *context, ChorusProps &props, ALenum param, const int *vals)
+void FlangerEffectHandler::SetParamiv(al::Context& context, ChorusProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
-void FlangerEffectHandler::SetParamf(al::Context *context, ChorusProps &props, ALenum param, float val)
+void FlangerEffectHandler::SetParamf(al::Context& context, ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_FLANGER_RATE:
         if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
-            context->throw_error(AL_INVALID_VALUE, "Flanger rate out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Flanger rate out of range: {}", val);
         props.Rate = val;
         return;
 
     case AL_FLANGER_DEPTH:
         if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
-            context->throw_error(AL_INVALID_VALUE, "Flanger depth out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Flanger depth out of range: {}", val);
         props.Depth = val;
         return;
 
     case AL_FLANGER_FEEDBACK:
         if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
-            context->throw_error(AL_INVALID_VALUE, "Flanger feedback out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Flanger feedback out of range: {}", val);
         props.Feedback = val;
         return;
 
     case AL_FLANGER_DELAY:
         if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
-            context->throw_error(AL_INVALID_VALUE, "Flanger delay out of range: {}", val);
+            context.throw_error(AL_INVALID_VALUE, "Flanger delay out of range: {}", val);
         props.Delay = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
         as_unsigned(param));
 }
-void FlangerEffectHandler::SetParamfv(al::Context *context, ChorusProps &props, ALenum param, const float *vals)
+void FlangerEffectHandler::SetParamfv(al::Context& context, ChorusProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void FlangerEffectHandler::GetParami(al::Context *context, const ChorusProps &props, ALenum param, int *val)
+void FlangerEffectHandler::GetParami(al::Context& context, const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -247,12 +247,12 @@ void FlangerEffectHandler::GetParami(al::Context *context, const ChorusProps &pr
     case AL_FLANGER_PHASE: *val = props.Phase; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid flanger integer property {:#04x}",
         as_unsigned(param));
 }
-void FlangerEffectHandler::GetParamiv(al::Context *context, const ChorusProps &props, ALenum param, int *vals)
+void FlangerEffectHandler::GetParamiv(al::Context& context, const ChorusProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void FlangerEffectHandler::GetParamf(al::Context *context, const ChorusProps &props, ALenum param, float *val)
+void FlangerEffectHandler::GetParamf(al::Context& context, const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -262,10 +262,10 @@ void FlangerEffectHandler::GetParamf(al::Context *context, const ChorusProps &pr
     case AL_FLANGER_DELAY: *val = props.Delay; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid flanger float property {:#04x}",
         as_unsigned(param));
 }
-void FlangerEffectHandler::GetParamfv(al::Context *context, const ChorusProps &props, ALenum param, float *vals)
+void FlangerEffectHandler::GetParamfv(al::Context& context, const ChorusProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

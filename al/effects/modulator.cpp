@@ -68,7 +68,7 @@ consteval auto genDefaultProps() noexcept -> EffectProps
 
 constinit const EffectProps ModulatorEffectProps(genDefaultProps());
 
-void ModulatorEffectHandler::SetParami(al::Context *context, ModulatorProps &props, ALenum param, int val)
+void ModulatorEffectHandler::SetParami(al::Context& context, ModulatorProps &props, ALenum param, int val)
 {
     switch(param)
     {
@@ -81,42 +81,42 @@ void ModulatorEffectHandler::SetParami(al::Context *context, ModulatorProps &pro
         if(auto formopt = WaveformFromEmum(val))
             props.Waveform = *formopt;
         else
-            context->throw_error(AL_INVALID_VALUE, "Invalid modulator waveform: {:#04x}",
+            context.throw_error(AL_INVALID_VALUE, "Invalid modulator waveform: {:#04x}",
                 as_unsigned(val));
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamiv(al::Context *context, ModulatorProps &props, ALenum param, const int *vals)
+void ModulatorEffectHandler::SetParamiv(al::Context& context, ModulatorProps &props, ALenum param, const int *vals)
 { SetParami(context, props, param, *vals); }
 
-void ModulatorEffectHandler::SetParamf(al::Context *context, ModulatorProps &props, ALenum param, float val)
+void ModulatorEffectHandler::SetParamf(al::Context& context, ModulatorProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_RING_MODULATOR_FREQUENCY:
         if(!(val >= AL_RING_MODULATOR_MIN_FREQUENCY && val <= AL_RING_MODULATOR_MAX_FREQUENCY))
-            context->throw_error(AL_INVALID_VALUE, "Modulator frequency out of range: {:f}", val);
+            context.throw_error(AL_INVALID_VALUE, "Modulator frequency out of range: {:f}", val);
         props.Frequency = val;
         return;
 
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
         if(!(val >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF && val <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF))
-            context->throw_error(AL_INVALID_VALUE, "Modulator high-pass cutoff out of range: {:f}",
+            context.throw_error(AL_INVALID_VALUE, "Modulator high-pass cutoff out of range: {:f}",
                 val);
         props.HighPassCutoff = val;
         return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::SetParamfv(al::Context *context, ModulatorProps &props, ALenum param, const float *vals)
+void ModulatorEffectHandler::SetParamfv(al::Context& context, ModulatorProps &props, ALenum param, const float *vals)
 { SetParamf(context, props, param, *vals); }
 
-void ModulatorEffectHandler::GetParami(al::Context *context, const ModulatorProps &props, ALenum param, int *val)
+void ModulatorEffectHandler::GetParami(al::Context& context, const ModulatorProps &props, ALenum param, int *val)
 {
     switch(param)
     {
@@ -125,12 +125,12 @@ void ModulatorEffectHandler::GetParami(al::Context *context, const ModulatorProp
     case AL_RING_MODULATOR_WAVEFORM: *val = EnumFromWaveform(props.Waveform); return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid modulator integer property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamiv(al::Context *context, const ModulatorProps &props, ALenum param, int *vals)
+void ModulatorEffectHandler::GetParamiv(al::Context& context, const ModulatorProps &props, ALenum param, int *vals)
 { GetParami(context, props, param, vals); }
-void ModulatorEffectHandler::GetParamf(al::Context *context, const ModulatorProps &props, ALenum param, float *val)
+void ModulatorEffectHandler::GetParamf(al::Context& context, const ModulatorProps &props, ALenum param, float *val)
 {
     switch(param)
     {
@@ -138,10 +138,10 @@ void ModulatorEffectHandler::GetParamf(al::Context *context, const ModulatorProp
     case AL_RING_MODULATOR_HIGHPASS_CUTOFF: *val = props.HighPassCutoff; return;
     }
 
-    context->throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
+    context.throw_error(AL_INVALID_ENUM, "Invalid modulator float property {:#04x}",
         as_unsigned(param));
 }
-void ModulatorEffectHandler::GetParamfv(al::Context *context, const ModulatorProps &props, ALenum param, float *vals)
+void ModulatorEffectHandler::GetParamfv(al::Context& context, const ModulatorProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
 

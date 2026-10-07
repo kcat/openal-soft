@@ -21,6 +21,7 @@
 #include "intrusive_ptr.h"
 
 struct BackendBase;
+struct BackendFactory;
 struct BufferSubList;
 struct EffectSubList;
 struct FilterSubList;
@@ -152,5 +153,8 @@ auto Device::configValue(std::string_view const block, std::string_view const ke
 { return ConfigValueBool(mDeviceName, block, key); }
 
 } // namespace al
+
+inline BackendFactory *PlaybackFactory{};
+inline BackendFactory *CaptureFactory{};
 
 #endif

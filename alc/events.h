@@ -5,7 +5,6 @@
 
 #include <cstdint>
 #include <mutex>
-#include <optional>
 
 #include "zstring_view.hpp"
 
@@ -18,8 +17,6 @@ enum class EventType : std::uint8_t {
 
     MaxValue = DeviceRemoved
 };
-
-auto GetEventType(ALCenum type) -> std::optional<EventType>;
 
 enum class EventSupport : ALCenum {
     FullSupport = ALC_EVENT_SUPPORTED_SOFT,

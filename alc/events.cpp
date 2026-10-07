@@ -7,6 +7,7 @@
 #include <span>
 
 #include "alnumeric.h"
+#include "backends/base.h"
 #include "bitset.hpp"
 #include "opthelpers.h"
 
@@ -34,6 +35,7 @@ namespace {
 using EventBitSet = al::bitset<alc::EventType>;
 auto gEventsEnabled = EventBitSet{0};
 
+[[nodiscard]] constexpr
 auto EnumFromEventType(const alc::EventType type) -> ALCenum
 {
     switch(type)
@@ -45,20 +47,22 @@ auto EnumFromEventType(const alc::EventType type) -> ALCenum
     throw std::runtime_error{al::format("Invalid EventType: {}", int{al::to_underlying(type)})};
 }
 
-} // namespace
-
-namespace alc {
-
-auto GetEventType(ALCenum const type) -> std::optional<EventType>
+[[nodiscard]] constexpr
+auto GetEventType(ALCenum const type) -> std::optional<alc::EventType>
 {
     switch(type)
     {
-    case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: return EventType::DefaultDeviceChanged;
-    case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return EventType::DeviceAdded;
-    case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return EventType::DeviceRemoved;
+        case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT:
+            return alc::EventType::DefaultDeviceChanged;
+        case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT: return alc::EventType::DeviceAdded;
+        case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT: return alc::EventType::DeviceRemoved;
     }
     return std::nullopt;
 }
+
+} // namespace
+
+namespace alc {
 
 void Event(EventType const eventType, DeviceType const deviceType, ALCdevice *const device,
     al::zstring_view const message) noexcept
@@ -71,8 +75,38 @@ void Event(EventType const eventType, DeviceType const deviceType, ALCdevice *co
 
 } /* namespace alc */
 
-FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum *events,
-    ALCboolean enable) noexcept -> ALCboolean
+FORCE_ALIGN auto ALC_APIENTRY alcEventIsSupportedSOFT(ALCenum const eventType,
+    ALCenum const deviceType) noexcept -> ALCenum
+{
+    auto const etype = GetEventType(eventType);
+    if(!etype)
+    {
+        WARN("Invalid event type: {:#04x}", as_unsigned(eventType));
+        al::Device::SetGlobalError(ALC_INVALID_ENUM);
+        return ALC_FALSE;
+    }
+
+    auto supported = alc::EventSupport::NoSupport;
+    switch(deviceType)
+    {
+        case ALC_PLAYBACK_DEVICE_SOFT:
+            if(PlaybackFactory)
+                supported = PlaybackFactory->queryEventSupport(*etype, BackendType::Playback);
+            return al::to_underlying(supported);
+
+        case ALC_CAPTURE_DEVICE_SOFT:
+            if(CaptureFactory)
+                supported = CaptureFactory->queryEventSupport(*etype, BackendType::Capture);
+            return al::to_underlying(supported);
+    }
+    WARN("Invalid device type: {:#04x}", as_unsigned(deviceType));
+    al::Device::SetGlobalError(ALC_INVALID_ENUM);
+    return ALC_FALSE;
+}
+DefineAlcAlias(alcEventIsSupportedSOFT)
+
+FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei const count, ALCenum const*const events,
+    ALCboolean const enable) noexcept -> ALCboolean
 {
     if(enable != ALC_FALSE && enable != ALC_TRUE)
     {
@@ -96,7 +130,7 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
     auto eventrange = std::views::counted(events, count);
     const auto invalidevent = std::ranges::find_if_not(eventrange, [&eventSet](ALCenum const type)
     {
-        const auto etype = alc::GetEventType(type);
+        const auto etype = GetEventType(type);
         if(!etype) return false;
 
         eventSet.set(*etype);
@@ -116,7 +150,8 @@ FORCE_ALIGN auto ALC_APIENTRY alcEventControlSOFT(ALCsizei count, const ALCenum 
 }
 DefineAlcAlias(alcEventControlSOFT)
 
-FORCE_ALIGN void ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT callback, void *userParam) noexcept
+FORCE_ALIGN auto ALC_APIENTRY alcEventCallbackSOFT(ALCEVENTPROCTYPESOFT const callback,
+    void *const userParam) noexcept -> void
 {
     auto eventlock = std::unique_lock{alc::EventMutex};
     alc::EventCallback = callback;

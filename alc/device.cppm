@@ -15,4 +15,6 @@ export {
         using al::DeviceDeleter;
         using al::Device;
     }
+    using ::PlaybackFactory;
+    using ::CaptureFactory;
 }

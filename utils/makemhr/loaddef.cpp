@@ -45,6 +45,7 @@
 
 #include "albit.h"
 #include "alstring.h"
+#include "gsl/assert"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"

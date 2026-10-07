@@ -1,10 +1,9 @@
 #ifndef OPTHELPERS_H
 #define OPTHELPERS_H
 
-#include <memory>
+#include <functional>
 #include <type_traits>
 
-#include "gsl/pointers"
 
 #ifdef __has_builtin
 #define HAS_BUILTIN __has_builtin
@@ -97,19 +96,6 @@ struct assign_result {
     [[nodiscard]] constexpr explicit(false)
     operator result_t() && noexcept { return std::invoke(std::forward<F>(mCallable)); }
 };
-
-
-/**
- * Gets a not_null<T*> from a not_null<SmartPtr<T>>, hopefully avoiding ths
- * extraneous null check from not_null's constructor.
- */
-template<typename T>
-constexpr auto get_not_null(const gsl::not_null<T> &val) noexcept
-{
-    auto *tmp = std::to_address(val);
-    ASSUME(tmp != nullptr);
-    return gsl::make_not_null(tmp);
-}
 
 } // namespace al
 

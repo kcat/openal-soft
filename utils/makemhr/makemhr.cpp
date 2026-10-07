@@ -86,6 +86,7 @@
 
 #include "alcomplex.h"
 #include "alstring.h"
+#include "gsl/assert"
 #include "loaddef.h"
 #include "loadsofa.h"
 

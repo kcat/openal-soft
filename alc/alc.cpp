@@ -1082,15 +1082,15 @@ constexpr auto X71Downmix = std::array{
 };
 
 
-auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 const threshold)
+auto CreateDeviceLimiter(al::Device const& device, f32 const threshold)
     -> std::unique_ptr<Compressor>
 {
     constexpr auto flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
         .set(Compressor::Flags::AutoAttack).set(Compressor::Flags::AutoRelease)
         .set(Compressor::Flags::AutoPostGain).set(Compressor::Flags::AutoDeclip);
 
-    return Compressor::Create({.NumChans = usize{device->RealOut.Buffer.size()}.cast_to<u32>(),
-        .SampleRate = sys_uint{device->mSampleRate}.reinterpret_as<f32>(), .AutoFlags = flags,
+    return Compressor::Create({.NumChans = usize{device.RealOut.Buffer.size()}.cast_to<u32>(),
+        .SampleRate = sys_uint{device.mSampleRate}.cast_to<f32>(), .AutoFlags = flags,
         .LookAheadTime = 0.001_f32, .HoldTime = 0.002_f32, .PreGainDb = 0.0_f32,
         .PostGainDb = 0.0_f32, .ThresholdDb = threshold, .Ratio = f32::infinity(),
         .KneeDb = 0.0_f32, .AttackTime = 0.02_f32, .ReleaseTime = 0.2_f32});
@@ -1102,42 +1102,42 @@ auto CreateDeviceLimiter(gsl::not_null<const al::Device*> const device, f32 cons
  * to jump forward or back. Must not be called while the device is running/
  * mixing.
  */
-void UpdateClockBase(gsl::not_null<al::Device*> const device)
+void UpdateClockBase(al::Device& device)
 {
     using std::chrono::duration_cast;
 
-    auto const mixLock = device->getWriteMixLock();
+    auto const mixLock = device.getWriteMixLock();
 
-    auto clockBaseSec = device->mClockBaseSec.load(std::memory_order_relaxed);
-    auto clockBaseNSec = nanoseconds{device->mClockBaseNSec.load(std::memory_order_relaxed)};
-    clockBaseNSec += nanoseconds{seconds{device->mSamplesDone.load(std::memory_order_relaxed)}}
-        / device->mSampleRate;
+    auto clockBaseSec = device.mClockBaseSec.load(std::memory_order_relaxed);
+    auto clockBaseNSec = nanoseconds{device.mClockBaseNSec.load(std::memory_order_relaxed)};
+    clockBaseNSec += nanoseconds{seconds{device.mSamplesDone.load(std::memory_order_relaxed)}}
+        / device.mSampleRate;
 
     clockBaseSec += duration_cast<DeviceBase::seconds32>(clockBaseNSec);
     clockBaseNSec %= seconds{1};
 
-    device->mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);
-    device->mClockBaseNSec.store(duration_cast<DeviceBase::nanoseconds32>(clockBaseNSec),
+    device.mClockBaseSec.store(clockBaseSec, std::memory_order_relaxed);
+    device.mClockBaseNSec.store(duration_cast<DeviceBase::nanoseconds32>(clockBaseNSec),
         std::memory_order_relaxed);
-    device->mSamplesDone.store(0, std::memory_order_relaxed);
+    device.mSamplesDone.store(0, std::memory_order_relaxed);
 }
 
 /**
  * Updates device parameters according to the attribute list (caller is
  * responsible for holding the list lock).
  */
-auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
-    std::span<AttributePair const> const attrList) -> ALCenum
+auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const attrList)
+    -> ALCenum
 {
-    if(attrList.empty() && device->Type == DeviceType::Loopback)
+    if(attrList.empty() && device.Type == DeviceType::Loopback)
     {
         WARN("Missing attributes for loopback device");
         return ALC_INVALID_VALUE;
     }
 
-    auto numMono = device->NumMonoSources;
-    auto numStereo = device->NumStereoSources;
-    auto numSends = device->NumAuxSends;
+    auto numMono = device.NumMonoSources;
+    auto numStereo = device.NumStereoSources;
+    auto numSends = device.NumAuxSends;
     auto stereomode = std::optional<StereoEncoding>{};
     auto optlimit = std::optional<bool>{};
     auto optsrate = std::optional<ALCuint>{};
@@ -1150,11 +1150,11 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     auto hrtf_id = -1;
     auto aorder = ALCuint{0};
 
-    if(device->Type != DeviceType::Loopback)
+    if(device.Type != DeviceType::Loopback)
     {
         /* Get default settings from the user configuration */
 
-        if(auto freqopt = device->configValue<unsigned>({}, "frequency"))
+        if(auto freqopt = device.configValue<unsigned>({}, "frequency"))
         {
             optsrate = std::clamp<unsigned>(*freqopt, MinOutputRate, MaxOutputRate);
 
@@ -1162,14 +1162,14 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             period_size = gsl::narrow_cast<ALCuint>(std::lround(period_size * scale));
         }
 
-        if(auto persizeopt = device->configValue<unsigned>({}, "period_size"))
+        if(auto persizeopt = device.configValue<unsigned>({}, "period_size"))
             period_size = std::clamp(*persizeopt, 64u, 8192u);
-        if(auto numperopt = device->configValue<unsigned>({}, "periods"))
+        if(auto numperopt = device.configValue<unsigned>({}, "periods"))
             buffer_size = std::clamp(*numperopt, 2u, 16u) * period_size;
         else
             buffer_size = period_size * ALCuint{DefaultNumUpdates};
 
-        if(auto typeopt = device->configValue<std::string>({}, "sample-type"))
+        if(auto typeopt = device.configValue<std::string>({}, "sample-type"))
         {
             struct TypeMap {
                 std::string_view name;
@@ -1193,7 +1193,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             else
                 opttype = iter->type;
         }
-        if(auto const chanopt = device->configValue<std::string>({}, "channels"); chanopt
+        if(auto const chanopt = device.configValue<std::string>({}, "channels"); chanopt
             and is_neq(al::case_compare(*chanopt, "surround3d71"sv)))
         {
             struct ChannelMap {
@@ -1235,7 +1235,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             ERR("  If you mean 7.1 surround sound, please use \"surround71\"");
             ERR("  Otherwise, if 3D7.1 specifically is set up correctly, please use \"3d71\"");
         }
-        if(auto ambiopt = device->configValue<std::string>({}, "ambi-format"sv))
+        if(auto ambiopt = device.configValue<std::string>({}, "ambi-format"sv))
         {
             if(is_eq(al::case_compare(*ambiopt, "fuma"sv)))
             {
@@ -1269,7 +1269,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             optscale = DevAmbiScaling::Default;
         }
 
-        if(auto hrtfopt = device->configValue<std::string>({}, "hrtf"sv))
+        if(auto hrtfopt = device.configValue<std::string>({}, "hrtf"sv))
         {
             WARN("general/hrtf is deprecated, please use stereo-encoding instead");
 
@@ -1285,7 +1285,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         }
     }
 
-    if(auto encopt = device->configValue<std::string>({}, "stereo-encoding"sv))
+    if(auto encopt = device.configValue<std::string>({}, "stereo-encoding"sv))
     {
         if(is_eq(al::case_compare(*encopt, "basic"sv))
             or is_eq(al::case_compare(*encopt, "panpot"sv)))
@@ -1314,12 +1314,12 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             switch(attrparam)
             {
             case ATTRIBUTE_HEX(ALC_FORMAT_CHANNELS_SOFT)
-                if(device->Type == DeviceType::Loopback)
+                if(device.Type == DeviceType::Loopback)
                     optchans = DevFmtChannelsFromEnum(attrvalue);
                 break;
 
             case ATTRIBUTE_HEX(ALC_FORMAT_TYPE_SOFT)
-                if(device->Type == DeviceType::Loopback)
+                if(device.Type == DeviceType::Loopback)
                     opttype = DevFmtTypeFromEnum(attrvalue);
                 break;
 
@@ -1328,17 +1328,17 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 break;
 
             case ATTRIBUTE_HEX(ALC_AMBISONIC_LAYOUT_SOFT)
-                if(device->Type == DeviceType::Loopback)
+                if(device.Type == DeviceType::Loopback)
                     optlayout = DevAmbiLayoutFromEnum(attrvalue);
                 break;
 
             case ATTRIBUTE_HEX(ALC_AMBISONIC_SCALING_SOFT)
-                if(device->Type == DeviceType::Loopback)
+                if(device.Type == DeviceType::Loopback)
                     optscale = DevAmbiScalingFromEnum(attrvalue);
                 break;
 
             case ATTRIBUTE(ALC_AMBISONIC_ORDER_SOFT)
-                if(device->Type == DeviceType::Loopback)
+                if(device.Type == DeviceType::Loopback)
                     aorder = gsl::narrow_cast<ALCuint>(attrvalue);
                 break;
 
@@ -1401,7 +1401,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
 #undef ATTRIBUTE
         }
 
-        if(device->Type == DeviceType::Loopback)
+        if(device.Type == DeviceType::Loopback)
         {
             if(!optchans || !opttype)
                 return ALC_INVALID_VALUE;
@@ -1494,153 +1494,153 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated.
          */
-        if(device->mDeviceState == DeviceState::Playing)
+        if(device.mDeviceState == DeviceState::Playing)
         {
-            device->Backend->stop();
-            device->mDeviceState = DeviceState::Unprepared;
+            device.Backend->stop();
+            device.mDeviceState = DeviceState::Unprepared;
         }
 
         UpdateClockBase(device);
     }
 
-    if(device->mDeviceState == DeviceState::Playing)
+    if(device.mDeviceState == DeviceState::Playing)
         return ALC_NO_ERROR;
 
-    device->mDeviceState = DeviceState::Unprepared;
-    device->AvgSpeakerDist = 0.0f;
-    device->mNFCtrlFilter = NfcFilter{};
-    device->mPostProcess.emplace<std::monostate>();
+    device.mDeviceState = DeviceState::Unprepared;
+    device.AvgSpeakerDist = 0.0f;
+    device.mNFCtrlFilter = NfcFilter{};
+    device.mPostProcess.emplace<std::monostate>();
 
-    device->Limiter = nullptr;
-    device->ChannelDelays = nullptr;
+    device.Limiter = nullptr;
+    device.ChannelDelays = nullptr;
 
-    device->HrtfAccumData.fill(f32x2{});
+    device.HrtfAccumData.fill(f32x2{});
 
-    device->Dry.AmbiMap.fill(BFChannelConfig{});
-    device->Dry.Buffer = {};
-    device->NumChannelsPerOrder.fill(0u);
-    device->RealOut.RemixMap = {};
-    device->RealOut.ChannelIndex.fill(InvalidChannelIndex);
-    device->RealOut.Buffer = {};
-    device->MixBuffer.clear();
-    device->MixBuffer.shrink_to_fit();
+    device.Dry.AmbiMap.fill(BFChannelConfig{});
+    device.Dry.Buffer = {};
+    device.NumChannelsPerOrder.fill(0u);
+    device.RealOut.RemixMap = {};
+    device.RealOut.ChannelIndex.fill(InvalidChannelIndex);
+    device.RealOut.Buffer = {};
+    device.MixBuffer.clear();
+    device.MixBuffer.shrink_to_fit();
 
     UpdateClockBase(device);
-    device->FixedLatency = nanoseconds::zero();
+    device.FixedLatency = nanoseconds::zero();
 
-    device->DitherDepth = 0.0f;
-    device->DitherSeed = DitherRNGSeed;
+    device.DitherDepth = 0.0f;
+    device.DitherSeed = DitherRNGSeed;
 
-    device->mHrtfStatus = ALC_HRTF_DISABLED_SOFT;
+    device.mHrtfStatus = ALC_HRTF_DISABLED_SOFT;
 
     /*************************************************************************
      * Update device format request
      */
 
-    if(device->Type == DeviceType::Loopback)
+    if(device.Type == DeviceType::Loopback)
     {
-        device->mSampleRate = *optsrate;
-        device->FmtChans = *optchans;
-        device->FmtType = *opttype;
-        if(device->FmtChans == DevFmtAmbi3D)
+        device.mSampleRate = *optsrate;
+        device.FmtChans = *optchans;
+        device.FmtType = *opttype;
+        if(device.FmtChans == DevFmtAmbi3D)
         {
-            device->mAmbiOrder = aorder;
-            device->mAmbiLayout = *optlayout;
-            device->mAmbiScale = *optscale;
+            device.mAmbiOrder = aorder;
+            device.mAmbiLayout = *optlayout;
+            device.mAmbiScale = *optscale;
         }
-        device->mFlags.set(DeviceFlag::FrequencyRequest).set(DeviceFlag::ChannelsRequest)
+        device.mFlags.set(DeviceFlag::FrequencyRequest).set(DeviceFlag::ChannelsRequest)
             .set(DeviceFlag::SampleTypeRequest);
     }
     else
     {
-        device->FmtType = opttype.value_or(DevFmtTypeDefault);
-        device->FmtChans = optchans.value_or(DevFmtChannelsDefault);
-        device->mAmbiOrder = 0;
-        device->mBufferSize = buffer_size;
-        device->mUpdateSize = period_size;
-        device->mSampleRate = optsrate.value_or(DefaultOutputRate);
-        device->mFlags.set(DeviceFlag::FrequencyRequest, optsrate.has_value())
+        device.FmtType = opttype.value_or(DevFmtTypeDefault);
+        device.FmtChans = optchans.value_or(DevFmtChannelsDefault);
+        device.mAmbiOrder = 0;
+        device.mBufferSize = buffer_size;
+        device.mUpdateSize = period_size;
+        device.mSampleRate = optsrate.value_or(DefaultOutputRate);
+        device.mFlags.set(DeviceFlag::FrequencyRequest, optsrate.has_value())
             .set(DeviceFlag::ChannelsRequest, optchans.has_value())
             .set(DeviceFlag::SampleTypeRequest, opttype.has_value());
 
-        if(device->FmtChans == DevFmtAmbi3D)
+        if(device.FmtChans == DevFmtAmbi3D)
         {
-            device->mAmbiOrder = std::clamp(aorder, 1u, ALCuint{MaxAmbiOrder});
-            device->mAmbiLayout = optlayout.value_or(DevAmbiLayout::Default);
-            device->mAmbiScale = optscale.value_or(DevAmbiScaling::Default);
-            if(device->mAmbiOrder > 3
-                && (device->mAmbiLayout == DevAmbiLayout::FuMa
-                    || device->mAmbiScale == DevAmbiScaling::FuMa))
+            device.mAmbiOrder = std::clamp(aorder, 1u, ALCuint{MaxAmbiOrder});
+            device.mAmbiLayout = optlayout.value_or(DevAmbiLayout::Default);
+            device.mAmbiScale = optscale.value_or(DevAmbiScaling::Default);
+            if(device.mAmbiOrder > 3
+                && (device.mAmbiLayout == DevAmbiLayout::FuMa
+                    || device.mAmbiScale == DevAmbiScaling::FuMa))
             {
                 ERR("FuMa is incompatible with {}{} order ambisonics (up to 3rd order only)",
-                    device->mAmbiOrder, GetCounterSuffix(device->mAmbiOrder));
-                device->mAmbiOrder = 3;
+                    device.mAmbiOrder, GetCounterSuffix(device.mAmbiOrder));
+                device.mAmbiOrder = 3;
             }
         }
     }
 
     TRACE("Pre-reset: {}{}, {}{}, {}{}hz, {} / {} buffer",
-        device->mFlags.test(DeviceFlag::ChannelsRequest) ? "*" : "",
-        DevFmtChannelsString(device->FmtChans),
-        device->mFlags.test(DeviceFlag::SampleTypeRequest) ? "*" : "",
-        DevFmtTypeString(device->FmtType),
-        device->mFlags.test(DeviceFlag::FrequencyRequest) ? "*" : "", device->mSampleRate,
-        device->mUpdateSize, device->mBufferSize);
+        device.mFlags.test(DeviceFlag::ChannelsRequest) ? "*" : "",
+        DevFmtChannelsString(device.FmtChans),
+        device.mFlags.test(DeviceFlag::SampleTypeRequest) ? "*" : "",
+        DevFmtTypeString(device.FmtType),
+        device.mFlags.test(DeviceFlag::FrequencyRequest) ? "*" : "", device.mSampleRate,
+        device.mUpdateSize, device.mBufferSize);
 
-    const auto oldFreq = device->mSampleRate;
-    const auto oldChans = device->FmtChans;
-    const auto oldType = device->FmtType;
+    const auto oldFreq = device.mSampleRate;
+    const auto oldChans = device.FmtChans;
+    const auto oldType = device.FmtType;
     try {
-        if(auto *const backend = device->Backend.get(); !backend->reset())
+        if(auto *const backend = device.Backend.get(); !backend->reset())
             throw al::backend_exception{al::backend_error::DeviceError, "Device reset failure"};
     }
     catch(std::exception &e) {
         ERR("Device error: {}", e.what());
-        device->handleDisconnect("{}", e.what());
+        device.handleDisconnect("{}", e.what());
         return ALC_INVALID_DEVICE;
     }
 
-    if(device->FmtChans != oldChans && device->mFlags.test(DeviceFlag::ChannelsRequest))
+    if(device.FmtChans != oldChans && device.mFlags.test(DeviceFlag::ChannelsRequest))
     {
         ERR("Failed to set {}, got {} instead", DevFmtChannelsString(oldChans),
-            DevFmtChannelsString(device->FmtChans));
-        device->mFlags.reset(DeviceFlag::ChannelsRequest);
+            DevFmtChannelsString(device.FmtChans));
+        device.mFlags.reset(DeviceFlag::ChannelsRequest);
     }
-    if(device->FmtType != oldType && device->mFlags.test(DeviceFlag::SampleTypeRequest))
+    if(device.FmtType != oldType && device.mFlags.test(DeviceFlag::SampleTypeRequest))
     {
         ERR("Failed to set {}, got {} instead", DevFmtTypeString(oldType),
-            DevFmtTypeString(device->FmtType));
-        device->mFlags.reset(DeviceFlag::SampleTypeRequest);
+            DevFmtTypeString(device.FmtType));
+        device.mFlags.reset(DeviceFlag::SampleTypeRequest);
     }
-    if(device->mSampleRate != oldFreq && device->mFlags.test(DeviceFlag::FrequencyRequest))
+    if(device.mSampleRate != oldFreq && device.mFlags.test(DeviceFlag::FrequencyRequest))
     {
-        WARN("Failed to set {}hz, got {}hz instead", oldFreq, device->mSampleRate);
-        device->mFlags.reset(DeviceFlag::FrequencyRequest);
+        WARN("Failed to set {}hz, got {}hz instead", oldFreq, device.mSampleRate);
+        device.mFlags.reset(DeviceFlag::FrequencyRequest);
     }
 
     TRACE("Post-reset: {}, {}, {}hz, {} / {} buffer",
-        DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-        device->mSampleRate, device->mUpdateSize, device->mBufferSize);
+        DevFmtChannelsString(device.FmtChans), DevFmtTypeString(device.FmtType),
+        device.mSampleRate, device.mUpdateSize, device.mBufferSize);
 
-    if(device->Type != DeviceType::Loopback)
+    if(device.Type != DeviceType::Loopback)
     {
-        if(auto modeopt = device->configValue<std::string>({}, "stereo-mode"))
+        if(auto modeopt = device.configValue<std::string>({}, "stereo-mode"))
         {
             if(is_eq(al::case_compare(*modeopt, "headphones"sv)))
-                device->mFlags.set(DeviceFlag::DirectEar);
+                device.mFlags.set(DeviceFlag::DirectEar);
             else if(is_eq(al::case_compare(*modeopt, "speakers"sv)))
-                device->mFlags.reset(DeviceFlag::DirectEar);
+                device.mFlags.reset(DeviceFlag::DirectEar);
             else if(is_neq(al::case_compare(*modeopt, "auto"sv)))
                 ERR("Unexpected stereo-mode: {}", *modeopt);
         }
     }
 
-    aluInitRenderer(device, hrtf_id, stereomode);
+    aluInitRenderer(&device, hrtf_id, stereomode);
 
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device->configValue<unsigned>({}, "sources"sv))
+    if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
     {
         if(*srcsopt <= 0) numMono = 256;
         else numMono = std::max(*srcsopt, 16u);
@@ -1652,32 +1652,32 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     }
     numStereo = std::min(numStereo, numMono);
     numMono -= numStereo;
-    device->SourcesMax = numMono + numStereo;
-    device->NumMonoSources = numMono;
-    device->NumStereoSources = numStereo;
+    device.SourcesMax = numMono + numStereo;
+    device.NumMonoSources = numMono;
+    device.NumStereoSources = numStereo;
 
-    if(auto sendsopt = device->configValue<unsigned>({}, "sends"sv))
+    if(auto sendsopt = device.configValue<unsigned>({}, "sends"sv))
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));
-    device->NumAuxSends = numSends;
+    device.NumAuxSends = numSends;
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",
-        device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
-        device->AuxiliaryEffectSlotMax, device->NumAuxSends);
+        device.SourcesMax, device.NumMonoSources, device.NumStereoSources,
+        device.AuxiliaryEffectSlotMax, device.NumAuxSends);
 
-    switch(device->FmtChans)
+    switch(device.FmtChans)
     {
     case DevFmtMono: break;
     case DevFmtStereo:
-        if(!std::holds_alternative<UhjPostProcess>(device->mPostProcess))
-            device->RealOut.RemixMap = StereoDownmix;
+        if(!std::holds_alternative<UhjPostProcess>(device.mPostProcess))
+            device.RealOut.RemixMap = StereoDownmix;
         break;
-    case DevFmtQuad: device->RealOut.RemixMap = QuadDownmix; break;
-    case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
-    case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
-    case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
-    case DevFmtX714: device->RealOut.RemixMap = X71Downmix; break;
-    case DevFmtX7144: device->RealOut.RemixMap = X71Downmix; break;
-    case DevFmtX3D71: device->RealOut.RemixMap = X51Downmix; break;
+    case DevFmtQuad: device.RealOut.RemixMap = QuadDownmix; break;
+    case DevFmtX51: device.RealOut.RemixMap = X51Downmix; break;
+    case DevFmtX61: device.RealOut.RemixMap = X61Downmix; break;
+    case DevFmtX71: device.RealOut.RemixMap = X71Downmix; break;
+    case DevFmtX714: device.RealOut.RemixMap = X71Downmix; break;
+    case DevFmtX7144: device.RealOut.RemixMap = X71Downmix; break;
+    case DevFmtX3D71: device.RealOut.RemixMap = X51Downmix; break;
     case DevFmtAmbi3D: break;
     }
 
@@ -1690,15 +1690,15 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             [](TsmePostProcess const &pp) { return pp.mTsmeEncoder->getDelay(); },
             [](StablizerPostProcess const&) { return 0_uz; },
             [](Bs2bPostProcess const&) { return 0_uz; },
-        }, device->mPostProcess)
+        }, device.mPostProcess)
     };
 
-    if(device->getConfigValueBool({}, "dither"sv, true))
+    if(device.getConfigValueBool({}, "dither"sv, true))
     {
-        auto depth = device->configValue<int>({}, "dither-depth"sv).value_or(0);
+        auto depth = device.configValue<int>({}, "dither-depth"sv).value_or(0);
         if(depth <= 0)
         {
-            switch(device->FmtType)
+            switch(device.FmtType)
             {
             case DevFmtByte:
             case DevFmtUByte:
@@ -1718,17 +1718,17 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         if(depth > 0)
         {
             depth = std::clamp(depth, 2, 24);
-            device->DitherDepth = gsl::narrow_cast<float>(1 << (depth-1));
+            device.DitherDepth = gsl::narrow_cast<float>(1 << (depth-1));
         }
     }
-    if(!(device->DitherDepth > 0.0f))
+    if(!(device.DitherDepth > 0.0f))
         TRACE("Dithering disabled");
     else
         TRACE("Dithering enabled ({}-bit, {:g})",
-            float2int(std::log2(device->DitherDepth)+0.5f)+1, device->DitherDepth);
+            float2int(std::log2(device.DitherDepth)+0.5f)+1, device.DitherDepth);
 
     if(!optlimit)
-        optlimit = device->configValue<bool>({}, "output-limiter");
+        optlimit = device.configValue<bool>({}, "output-limiter");
 
     /* If the gain limiter is unset, use the limiter for integer-based output
      * (where samples must be clamped), and don't for floating-point (which can
@@ -1736,7 +1736,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
      */
     if(!optlimit)
     {
-        switch(device->FmtType)
+        switch(device.FmtType)
         {
         case DevFmtByte:
         case DevFmtUByte:
@@ -1755,7 +1755,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     else
     {
         auto thrshld = 1.0_f32;
-        switch(device->FmtType)
+        switch(device.FmtType)
         {
         case DevFmtByte:
         case DevFmtUByte:
@@ -1770,24 +1770,24 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         case DevFmtFloat:
             break;
         }
-        if(device->DitherDepth > 0.0f)
-            thrshld -= 1.0f / device->DitherDepth;
+        if(device.DitherDepth > 0.0f)
+            thrshld -= 1.0f / device.DitherDepth;
 
         const auto thrshld_dB = log10(thrshld) * 20.0f;
         auto limiter = CreateDeviceLimiter(device, thrshld_dB);
 
         sample_delay += limiter->getLookAhead();
-        device->Limiter = std::move(limiter);
+        device.Limiter = std::move(limiter);
         TRACE("Output limiter enabled, {:.4f}dB limit", thrshld_dB);
     }
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
     sample_delay = std::min(sample_delay, i32::max().as<usize>());
-    device->FixedLatency += nanoseconds{seconds{sample_delay.c_val}} / device->mSampleRate;
-    TRACE("Fixed device latency: {}ns", device->FixedLatency.count());
+    device.FixedLatency += nanoseconds{seconds{sample_delay.c_val}} / device.mSampleRate;
+    TRACE("Fixed device latency: {}ns", device.FixedLatency.count());
 
     auto mixer_mode = FPUCtl{};
-    std::ranges::for_each(*device->mContexts.load(), [device](ContextBase *ctxbase)
+    std::ranges::for_each(*device.mContexts.load(), [&device](ContextBase *ctxbase)
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
         auto const context = gsl::make_not_null(static_cast<al::Context*>(ctxbase));
@@ -1824,14 +1824,15 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                 AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
             auto *state = slot->mEffect.State.get();
-            state->mOutTarget = device->Dry.Buffer;
-            state->deviceUpdate(device, slot->mBuffer.get());
+            state->mOutTarget = device.Dry.Buffer;
+            state->deviceUpdate(&device, slot->mBuffer.get());
             slot->mPropsDirty = true;
         }
 
         if(auto *curarray = context->mActiveAuxSlots.load(std::memory_order_relaxed))
             std::ranges::fill(*curarray | std::views::drop(curarray->size()>>1), nullptr);
-        std::ranges::for_each(context->mEffectSlotList,[device,context](EffectSlotSubList &sublist)
+        std::ranges::for_each(context->mEffectSlotList,
+            [&device, context](EffectSlotSubList &sublist)
         {
             auto usemask = ~sublist.mFreeMask;
             while(usemask != 0)
@@ -1847,8 +1848,8 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
                     AtomicReplaceHead(context->mFreeEffectSlotProps, props);
 
                 auto &state = *slot.mEffect.State;
-                state.mOutTarget = device->Dry.Buffer;
-                state.deviceUpdate(device, slot.mBuffer.get());
+                state.mOutTarget = device.Dry.Buffer;
+                state.deviceUpdate(&device, slot.mBuffer.get());
                 slot.mPropsDirty = true;
             }
         });
@@ -1859,7 +1860,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
         slotlock.unlock();
 
         auto srclock = std::unique_lock{context->mSourceLock};
-        const auto num_sends = device->NumAuxSends;
+        const auto num_sends = device.NumAuxSends;
         std::ranges::for_each(context->mSourceList, [num_sends](SourceSubList &sublist)
         {
             auto usemask = ~sublist.mFreeMask;
@@ -1878,7 +1879,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             }
         });
 
-        std::ranges::for_each(context->getVoicesSpan(), [device,num_sends,context](Voice *voice)
+        std::ranges::for_each(context->getVoicesSpan(), [&device,num_sends,context](Voice *voice)
         {
             /* Clear extraneous property set sends. */
             std::ranges::fill(voice->mProps.Send | std::views::drop(num_sends),
@@ -1898,7 +1899,7 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
             if(voice->mSourceID.load(std::memory_order_relaxed) == 0u)
                 return;
 
-            voice->prepare(device);
+            voice->prepare(&device);
         });
 
         /* Clear all voice props to let them get allocated again. */
@@ -1913,22 +1914,22 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
     });
     mixer_mode.leave();
 
-    device->mDeviceState = DeviceState::Configured;
-    if(!device->mFlags.test(DeviceFlag::DevicePaused))
+    device.mDeviceState = DeviceState::Configured;
+    if(!device.mFlags.test(DeviceFlag::DevicePaused))
     {
         try {
-            auto backend = device->Backend.get();
+            auto backend = device.Backend.get();
             backend->start();
-            device->mDeviceState = DeviceState::Playing;
+            device.mDeviceState = DeviceState::Playing;
         }
         catch(al::backend_exception& e) {
             ERR("{}", e.what());
-            device->handleDisconnect("{}", e.what());
+            device.handleDisconnect("{}", e.what());
             return ALC_INVALID_DEVICE;
         }
         TRACE("Post-start: {}, {}, {}hz, {} / {} buffer",
-            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-            device->mSampleRate, device->mUpdateSize, device->mBufferSize);
+            DevFmtChannelsString(device.FmtChans), DevFmtTypeString(device.FmtType),
+            device.mSampleRate, device.mUpdateSize, device.mBufferSize);
     }
 
     return ALC_NO_ERROR;
@@ -1938,16 +1939,15 @@ auto UpdateDeviceParams(gsl::not_null<al::Device*> device,
  * Updates device parameters as above, and also first clears the disconnected
  * status, if set.
  */
-auto ResetDeviceParams(gsl::not_null<al::Device*> device,
-    const std::span<const AttributePair> attrList) -> bool
+auto ResetDeviceParams(al::Device& device, const std::span<const AttributePair> attrList) -> bool
 {
     /* If the device was disconnected, reset it since we're opened anew. */
-    if(!device->Connected.load(std::memory_order_relaxed))
+    if(!device.Connected.load(std::memory_order_relaxed))
     {
         /* Make sure disconnection is finished before continuing on. */
-        std::ignore = device->waitForMix();
+        std::ignore = device.waitForMix();
 
-        std::ranges::for_each(*device->mContexts.load(std::memory_order_acquire),
+        std::ranges::for_each(*device.mContexts.load(std::memory_order_acquire),
             [](ContextBase *ctxbase)
         {
             /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
@@ -1972,14 +1972,14 @@ auto ResetDeviceParams(gsl::not_null<al::Device*> device,
                 ctx->mActiveVoiceCount.load(std::memory_order_relaxed)));
         });
 
-        device->Connected.store(true);
+        device.Connected.store(true);
     }
 
     auto const err = UpdateDeviceParams(device, attrList);
     if(err == ALC_NO_ERROR) [[likely]]
         return ALC_TRUE;
 
-    device->setError(err);
+    device.setError(err);
     return ALC_FALSE;
 }
 
@@ -2829,7 +2829,7 @@ try {
     dev->mLastError.store(ALC_NO_ERROR);
 
     const auto attrSpan = SpanFromAttributeList(attrList);
-    if(const auto err = UpdateDeviceParams(al::get_not_null(dev), attrSpan); err != ALC_NO_ERROR)
+    if(const auto err = UpdateDeviceParams(*dev, attrSpan); err != ALC_NO_ERROR)
     {
         dev->setError(err);
         return nullptr;
@@ -2941,16 +2941,16 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context) noexcept
     auto ctx = ContextRef{*iter};
     ContextList.erase(iter);
 
-    auto const device = al::get_not_null(ctx->mALDevice);
-    auto statelock = std::lock_guard{device->StateLock};
+    auto& device = *ctx->mALDevice;
+    auto statelock = std::lock_guard{device.StateLock};
 
-    const auto stopPlayback = device->removeContext(ctx.get()) == 0;
+    const auto stopPlayback = device.removeContext(ctx.get()) == 0;
     ctx->deinit();
 
-    if(stopPlayback && device->mDeviceState == DeviceState::Playing)
+    if(stopPlayback && device.mDeviceState == DeviceState::Playing)
     {
-        device->Backend->stop();
-        device->mDeviceState = DeviceState::Configured;
+        device.Backend->stop();
+        device.mDeviceState = DeviceState::Configured;
     }
 }
 DefineAlcAlias(alcDestroyContext)
@@ -3675,8 +3675,7 @@ try {
         dev->mDeviceState = DeviceState::Configured;
     }
 
-    return ResetDeviceParams(al::get_not_null(dev), SpanFromAttributeList(attribs)) ? ALC_TRUE
-        : ALC_FALSE;
+    return ResetDeviceParams(*dev, SpanFromAttributeList(attribs)) ? ALC_TRUE : ALC_FALSE;
 }
 catch(al::base_exception&) {
     return ALC_FALSE;
@@ -3790,7 +3789,7 @@ try {
      * In this way, we essentially act as if the function succeeded, but
      * immediately disconnects following it.
      */
-    ResetDeviceParams(al::get_not_null(dev), SpanFromAttributeList(attribs));
+    ResetDeviceParams(*dev, SpanFromAttributeList(attribs));
     return ALC_TRUE;
 }
 catch(std::bad_alloc&) {

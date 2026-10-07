@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cstdint>
 #include <numbers>
 #include <ranges>
 
@@ -23,11 +24,11 @@ import types;
 
 namespace {
 
-using u16x2 = std::array<u16, 2>;
+using u16x2 = std::array<std::uint16_t, 2>;
 using complex_d = std::complex<double>;
 
-[[nodiscard]]
-constexpr auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::size_t
+[[nodiscard]] constexpr
+auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::size_t
 {
     /* Some magic math that calculates the number of swaps needed for a
      * sequence of bit-reversed indices when index < reversed_index.
@@ -56,8 +57,8 @@ struct BitReverser : std::array<u16x2, BitReverseCounter(N)> {
 
             if(idx < revidx)
             {
-                (*iter)[0] = idx.cast_to<u16>();
-                (*iter)[1] = revidx.cast_to<u16>();
+                (*iter)[0] = idx.cast_to<u16>().c_val;
+                (*iter)[1] = revidx.cast_to<u16>().c_val;
                 ++iter;
             }
         }
@@ -94,19 +95,18 @@ constexpr auto gBitReverses = std::array<std::span<u16x2 const>, 12>{{
 }};
 
 /* Lookup table for std::polar(1, pi / (1<<index)); */
-template<typename T>
-constexpr auto gArgAngle = std::array<std::complex<T>, gBitReverses.size()-1>{{
-    {gsl::narrow_cast<T>(-1.00000000000000000e+00), gsl::narrow_cast<T>(0.00000000000000000e+00)},
-    {gsl::narrow_cast<T>( 0.00000000000000000e+00), gsl::narrow_cast<T>(1.00000000000000000e+00)},
-    {gsl::narrow_cast<T>( 7.07106781186547524e-01), gsl::narrow_cast<T>(7.07106781186547524e-01)},
-    {gsl::narrow_cast<T>( 9.23879532511286756e-01), gsl::narrow_cast<T>(3.82683432365089772e-01)},
-    {gsl::narrow_cast<T>( 9.80785280403230449e-01), gsl::narrow_cast<T>(1.95090322016128268e-01)},
-    {gsl::narrow_cast<T>( 9.95184726672196886e-01), gsl::narrow_cast<T>(9.80171403295606020e-02)},
-    {gsl::narrow_cast<T>( 9.98795456205172393e-01), gsl::narrow_cast<T>(4.90676743274180143e-02)},
-    {gsl::narrow_cast<T>( 9.99698818696204220e-01), gsl::narrow_cast<T>(2.45412285229122880e-02)},
-    {gsl::narrow_cast<T>( 9.99924701839144541e-01), gsl::narrow_cast<T>(1.22715382857199261e-02)},
-    {gsl::narrow_cast<T>( 9.99981175282601143e-01), gsl::narrow_cast<T>(6.13588464915447536e-03)},
-    {gsl::narrow_cast<T>( 9.99995293809576172e-01), gsl::narrow_cast<T>(3.06795676296597627e-03)}
+constexpr auto gArgAngle = std::array<complex_d, gBitReverses.size()-1>{{
+    {-1.00000000000000000e+00, 0.00000000000000000e+00},
+    { 0.00000000000000000e+00, 1.00000000000000000e+00},
+    { 7.07106781186547524e-01, 7.07106781186547524e-01},
+    { 9.23879532511286756e-01, 3.82683432365089772e-01},
+    { 9.80785280403230449e-01, 1.95090322016128268e-01},
+    { 9.95184726672196886e-01, 9.80171403295606020e-02},
+    { 9.98795456205172393e-01, 4.90676743274180143e-02},
+    { 9.99698818696204220e-01, 2.45412285229122880e-02},
+    { 9.99924701839144541e-01, 1.22715382857199261e-02},
+    { 9.99981175282601143e-01, 6.13588464915447536e-03},
+    { 9.99995293809576172e-01, 3.06795676296597627e-03}
 }};
 
 } // namespace
@@ -122,7 +122,7 @@ void complex_fft(std::span<std::complex<double>> const buffer, double const sign
         log2_size < gBitReverses.size()) [[likely]]
     {
         for(auto &rev : gBitReverses[log2_size])
-            std::swap(buffer[rev[0].c_val], buffer[rev[1].c_val]);
+            std::swap(buffer[rev[0]], buffer[rev[1]]);
 
         /* Iterative form of Danielson-Lanczos lemma */
         for(auto const i : std::views::iota(0_uz, log2_size))
@@ -139,7 +139,7 @@ void complex_fft(std::span<std::complex<double>> const buffer, double const sign
                 buffer[k] += temp;
             }
 
-            auto const w = complex_d{gArgAngle<double>[i].real(),gArgAngle<double>[i].imag()*sign};
+            auto const w = complex_d{gArgAngle[i].real(),gArgAngle[i].imag()*sign};
             auto u = w;
             for(auto const j : std::views::iota(1_uz, step2))
             {

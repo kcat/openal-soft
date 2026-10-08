@@ -12,6 +12,7 @@
 #include <array>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <ranges>
 #include <string>
 #include <string_view>

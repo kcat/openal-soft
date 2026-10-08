@@ -18,7 +18,8 @@ enum class backend_error {
 class backend_exception final : public base_exception {
     backend_error mErrorCode;
 
-    static auto make_string(al::string_view fmt, al::format_args args) -> std::string;
+    [[nodiscard]] static
+    auto make_string(al::string_view fmt, al::format_args&& args) -> std::string;
 
 public:
     template<typename ...Args>

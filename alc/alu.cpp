@@ -82,8 +82,10 @@ import cemath;
 import core.context;
 import core.device;
 import cubic_tables;
+import format;
 import types;
 #else
+#include "alformat.hpp"
 #include "altypes.hpp"
 #include "cemath.hpp"
 #include "core/bsinc_tables.hpp"
@@ -2538,15 +2540,14 @@ void DeviceBase::renderSamples(void *const outBuffer, unsigned const numSamples,
     }
 }
 
-void DeviceBase::doDisconnect(std::string&& msg)
+void DeviceBase::doDisconnect(al::string_view const fmt, al::format_args&& args)
 {
     const auto mixLock = getWriteMixLock();
 
     if(Connected.exchange(false, std::memory_order_acq_rel))
     {
-        auto evt = std::array{AsyncEvent{std::in_place_type<AsyncDisconnectEvent>}};
-        auto &disconnect = std::get<AsyncDisconnectEvent>(evt.front());
-        disconnect.msg = std::move(msg);
+        auto const evt = std::array{AsyncEvent{std::in_place_type<AsyncDisconnectEvent>,
+            al::vformat(fmt, std::move(args))}};
 
         for(auto *ctx : *mContexts.load())
         {

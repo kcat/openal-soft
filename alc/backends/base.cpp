@@ -21,7 +21,7 @@ import format;
 
 namespace al {
 
-auto backend_exception::make_string(al::string_view const fmt, al::format_args args)
+auto backend_exception::make_string(al::string_view const fmt, al::format_args&& args)
     -> std::string
 { return al::vformat(fmt, std::move(args)); }
 

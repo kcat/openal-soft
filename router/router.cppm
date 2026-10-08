@@ -195,41 +195,19 @@ enum class eLogLevel {
 inline eLogLevel LogLevel{eLogLevel::Error};
 inline fs::ofstream LogFile; /* NOLINT(cert-err58-cpp) */
 
+extern "C++" void al_print(eLogLevel level, fmt::string_view fmt, fmt::format_args&& args);
+
 template<typename ...Args>
 void TRACE(fmt::format_string<Args...> fmt, Args&& ...args)
-{
-    if(LogLevel >= eLogLevel::Trace)
-    {
-        auto &file = LogFile ? LogFile : std::cerr;
-        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
-        fmt::vprint(file, "AL Router (II): {}\n", fmt::make_format_args(msg));
-        file.flush();
-    }
-}
+{ al_print(eLogLevel::Trace, fmt.get(), fmt::make_format_args(args...)); }
 
 template<typename ...Args>
 void WARN(fmt::format_string<Args...> fmt, Args&& ...args)
-{
-    if(LogLevel >= eLogLevel::Warn)
-    {
-        auto &file = LogFile ? LogFile : std::cerr;
-        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
-        fmt::vprint(file, "AL Router (WW): {}\n", fmt::make_format_args(msg));
-        file.flush();
-    }
-}
+{ al_print(eLogLevel::Warn, fmt.get(), fmt::make_format_args(args...)); }
 
 template<typename ...Args>
 void ERR(fmt::format_string<Args...> fmt, Args&& ...args)
-{
-    if(LogLevel >= eLogLevel::Error)
-    {
-        auto &file = LogFile ? LogFile : std::cerr;
-        auto msg = fmt::vformat(fmt, fmt::make_format_args(args...));
-        fmt::vprint(file, "AL Router (EE): {}\n", fmt::make_format_args(msg));
-        file.flush();
-    }
-}
+{ al_print(eLogLevel::Error, fmt.get(), fmt::make_format_args(args...)); }
 
 
 extern "C++" void LoadDriverList();

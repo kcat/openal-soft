@@ -39,6 +39,8 @@ import openal.alc;
 
 namespace {
 
+using namespace std::string_view_literals;
+
 /* C++23 has this... */
 struct contains_fn_ {
     template<std::input_iterator I, std::sentinel_for<I> S, typename T,
@@ -339,6 +341,28 @@ auto GetLoadedModuleDirectory(gsl::cwzstring const name, std::wstring *const mod
 }
 
 } // namespace
+
+void al_print(eLogLevel const level, fmt::string_view const fmt, fmt::format_args&& args)
+{
+    if(LogLevel < level)
+        return;
+
+    auto const prefix = std::invoke([level]
+    {
+        switch(level)
+        {
+        case eLogLevel::None: break;
+        case eLogLevel::Trace: return "AL Router (II): {}\n"sv;
+        case eLogLevel::Warn: return "AL Router (WW): {}\n"sv;
+        case eLogLevel::Error: return "AL Router (EE): {}\n"sv;
+        }
+        return "AL Router (--): {}\n"sv;
+    });
+    auto &file = LogFile ? LogFile : std::cerr;
+    auto const msg = fmt::vformat(fmt, std::move(args));
+    fmt::vprint(file, prefix, fmt::make_format_args(msg));
+    file.flush();
+}
 
 void LoadDriverList()
 {

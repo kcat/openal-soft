@@ -98,8 +98,8 @@ void al_set_log_callback(LogCallbackFunc const callback, void *const userptr)
     }
 }
 
-void al_print_impl(LogLevel const level, al::string_view const fmt, al::format_args&& args)
-{
+void al_print(LogLevel const level, al::string_view const fmt, al::format_args&& args) noexcept
+try {
     const auto msg = al::vformat(fmt, std::move(args));
 
     auto const prefix = std::invoke([level]() -> al::zstring_view
@@ -157,4 +157,7 @@ void al_print_impl(LogLevel const level, al::string_view const fmt, al::format_a
                 gLogState = LogState::Disable;
         }
     }
+}
+catch(...) {
+    /* Swallow all exceptions */
 }

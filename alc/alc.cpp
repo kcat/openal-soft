@@ -687,9 +687,8 @@ void alc_initconfig()
          * the normal backends are usable, rather than pretending there is a
          * device but outputs nowhere.
          */
-        const auto reversenamerange = backends | std::views::reverse;
-        const auto iter = std::ranges::find(reversenamerange, "null"sv, &BackendInfo::name);
-        backends = std::span{backends.begin(), iter.base()};
+        auto const iter = std::ranges::find(backends, "null"sv, &BackendInfo::name);
+        backends = std::span{backends.begin(), iter};
     }
 
     std::ignore = std::ranges::find_if(backends, [](const BackendInfo &backend)

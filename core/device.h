@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -11,7 +12,6 @@
 #include <variant>
 
 #include "alformat.hpp"
-#include "altypes.hpp"
 #include "ambidefs.h"
 #include "atomic.h"
 #include "bitset.hpp"
@@ -265,7 +265,7 @@ struct DeviceBase {
     al::atomic_unique_ptr<ContextArray> mContexts;
 
     /** Returns the number of contexts remaining on the device. */
-    [[nodiscard]] auto removeContext(ContextBase *context) -> usize;
+    [[nodiscard]] auto removeContext(ContextBase *context) -> std::size_t;
 
     [[nodiscard]]
     auto bytesFromFmt() const noexcept -> unsigned { return BytesFromDevFmt(FmtType); }

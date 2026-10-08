@@ -3,15 +3,16 @@
 
 #include "bformatdec.h"
 #include "bs2b.h"
-#include "context.h"
 #include "front_stablizer.h"
 #include "hrtf.h"
 #include "mastering.h"
 
 #if HAVE_CXXMODULES
+import core.context;
 import core.device;
 import gsl;
 #else
+#include "core/context.h"
 #include "core/device.h"
 #include "gsl/gsl"
 #endif
@@ -24,7 +25,7 @@ DeviceBase::DeviceBase(DeviceType const type)
 
 DeviceBase::~DeviceBase() = default;
 
-auto DeviceBase::removeContext(ContextBase *context) -> usize
+auto DeviceBase::removeContext(ContextBase *context) -> std::size_t
 {
     auto oldarray = std::span{*mContexts.load(std::memory_order_acquire)};
     if(const auto toremove = std::ranges::count(oldarray, context))

@@ -82,8 +82,11 @@ template<typename T> [[nodiscard]] constexpr
 auto to_underlying(T e) noexcept -> std::underlying_type_t<T>
 { return static_cast<std::underlying_type_t<T>>(e); }
 
+template<typename T>
+concept dereferenceable = requires(T& p) { *p; };
+
 struct dereference {
-    template<typename T> [[nodiscard]] constexpr
+    template<dereferenceable T> [[nodiscard]] constexpr
     auto operator()(T&& p) const noexcept(noexcept(*std::forward<T>(p))) -> decltype(auto)
     { return *std::forward<T>(p); }
 };

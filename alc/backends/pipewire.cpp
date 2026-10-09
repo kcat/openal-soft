@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "pipewire.h"
+#include "pipewire.hpp"
 
 #include <algorithm>
 #include <array>
@@ -46,7 +46,6 @@
 #include <utility>
 
 #include "alc/alconfig.h"
-#include "alc/backends/base.h"
 #include "alnumeric.h"
 #include "alstring.h"
 #include "core/helpers.h"

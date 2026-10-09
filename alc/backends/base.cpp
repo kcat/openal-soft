@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "base.h"
+#include "base.hpp"
 
 #include <atomic>
 #include <utility>

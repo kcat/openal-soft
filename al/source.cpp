@@ -53,7 +53,7 @@
 #include "AL/alext.h"
 #include "AL/efx.h"
 
-#include "alc/backends/base.h"
+#include "alc/backends/base.hpp"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"

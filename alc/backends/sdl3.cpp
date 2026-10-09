@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "sdl3.h"
+#include "sdl3.hpp"
 
 #include <concepts>
 #include <cstddef>

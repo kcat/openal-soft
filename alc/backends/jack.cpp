@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "jack.h"
+#include "jack.hpp"
 
 #include <array>
 #include <bit>

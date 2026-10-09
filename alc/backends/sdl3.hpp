@@ -1,12 +1,14 @@
-#ifndef BACKENDS_WAVE_H
-#define BACKENDS_WAVE_H
+#ifndef BACKENDS_SDL3_HPP
+#define BACKENDS_SDL3_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct WaveBackendFactory final : BackendFactory {
+struct SDL3BackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
+
+    auto queryEventSupport(alc::EventType event, BackendType backend) -> alc::EventSupport final;
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
@@ -15,4 +17,4 @@ struct WaveBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_WAVE_H */
+#endif /* BACKENDS_SDL3_HPP */

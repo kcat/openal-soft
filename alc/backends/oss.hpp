@@ -1,14 +1,12 @@
-#ifndef BACKENDS_COREAUDIO_H
-#define BACKENDS_COREAUDIO_H
+#ifndef BACKENDS_OSS_HPP
+#define BACKENDS_OSS_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct CoreAudioBackendFactory final : BackendFactory {
+struct OSSBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
-
-    auto queryEventSupport(alc::EventType eventType, BackendType type) -> alc::EventSupport final;
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
@@ -17,4 +15,4 @@ struct CoreAudioBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_COREAUDIO_H */
+#endif /* BACKENDS_OSS_HPP */

@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "oboe.h"
+#include "oboe.hpp"
 
 #include <cstring>
 

@@ -1,9 +1,9 @@
-#ifndef BACKENDS_ALSA_H
-#define BACKENDS_ALSA_H
+#ifndef BACKENDS_OBOE_HPP
+#define BACKENDS_OBOE_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct AlsaBackendFactory final : BackendFactory {
+struct OboeBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct AlsaBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_ALSA_H */
+#endif /* BACKENDS_OBOE_HPP */

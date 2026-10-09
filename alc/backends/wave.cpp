@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "wave.h"
+#include "wave.hpp"
 
 #include <algorithm>
 #include <atomic>

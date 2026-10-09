@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "dsound.h"
+#include "dsound.hpp"
 
 #include <windows.h>
 
@@ -51,7 +51,7 @@
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;
-#include <dsound.h> /* NOLINT(readability-duplicate-include) Not the same */
+#include <dsound.h>
 
 
 #ifndef DSSPEAKER_5POINT1

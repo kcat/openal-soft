@@ -1,12 +1,14 @@
-#ifndef BACKENDS_LOOPBACK_H
-#define BACKENDS_LOOPBACK_H
+#ifndef BACKENDS_COREAUDIO_HPP
+#define BACKENDS_COREAUDIO_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct LoopbackBackendFactory final : BackendFactory {
+struct CoreAudioBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
+
+    auto queryEventSupport(alc::EventType eventType, BackendType type) -> alc::EventSupport final;
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
@@ -15,4 +17,4 @@ struct LoopbackBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_LOOPBACK_H */
+#endif /* BACKENDS_COREAUDIO_HPP */

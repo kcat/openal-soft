@@ -1,7 +1,7 @@
-#ifndef BACKENDS_NULL_H
-#define BACKENDS_NULL_H
+#ifndef BACKENDS_NULL_HPP
+#define BACKENDS_NULL_HPP
 
-#include "base.h"
+#include "base.hpp"
 
 struct NullBackendFactory final : BackendFactory {
     auto init() -> bool final;
@@ -15,4 +15,4 @@ struct NullBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_NULL_H */
+#endif /* BACKENDS_NULL_HPP */

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "loopback.h"
+#include "loopback.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;

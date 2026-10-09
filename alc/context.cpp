@@ -18,7 +18,7 @@
 #include "al/event.h"
 #include "al/listener.h"
 #include "alc/alu.h"
-#include "alc/backends/base.h"
+#include "alc/backends/base.hpp"
 #include "alnumeric.h"
 #include "atomic.h"
 #include "core/async_event.h"

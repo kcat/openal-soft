@@ -1,7 +1,7 @@
 #ifndef BACKENDS_PORTAUDIO_HPP
 #define BACKENDS_PORTAUDIO_HPP
 
-#include "base.h"
+#include "base.hpp"
 
 struct PortBackendFactory final : BackendFactory {
     auto init() -> bool final;

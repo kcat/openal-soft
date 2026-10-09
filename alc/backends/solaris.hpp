@@ -1,14 +1,12 @@
-#ifndef BACKENDS_WASAPI_H
-#define BACKENDS_WASAPI_H
+#ifndef BACKENDS_SOLARIS_HPP
+#define BACKENDS_SOLARIS_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct WasapiBackendFactory final : BackendFactory {
+struct SolarisBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
-
-    auto queryEventSupport(alc::EventType eventType, BackendType type) -> alc::EventSupport final;
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
@@ -17,4 +15,4 @@ struct WasapiBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_WASAPI_H */
+#endif /* BACKENDS_SOLARIS_HPP */

@@ -1,11 +1,11 @@
-#ifndef BACKENDS_PULSEAUDIO_H
-#define BACKENDS_PULSEAUDIO_H
+#ifndef BACKENDS_PULSEAUDIO_HPP
+#define BACKENDS_PULSEAUDIO_HPP
 
 #include <string>
 #include <vector>
 
 #include "alc/events.h"
-#include "base.h"
+#include "base.hpp"
 
 struct DeviceBase;
 
@@ -24,4 +24,4 @@ public:
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_PULSEAUDIO_H */
+#endif /* BACKENDS_PULSEAUDIO_HPP */

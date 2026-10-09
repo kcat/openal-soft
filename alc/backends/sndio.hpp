@@ -1,7 +1,7 @@
 #ifndef BACKENDS_SNDIO_HPP
 #define BACKENDS_SNDIO_HPP
 
-#include "base.h"
+#include "base.hpp"
 
 struct SndIOBackendFactory final : BackendFactory {
     auto init() -> bool final;

@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "opensl.h"
+#include "opensl.hpp"
 
 #include <jni.h>
 

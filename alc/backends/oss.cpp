@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "oss.h"
+#include "oss.hpp"
 
 #include <fcntl.h>
 #include <poll.h>

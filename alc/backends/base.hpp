@@ -1,5 +1,5 @@
-#ifndef ALC_BACKENDS_BASE_H
-#define ALC_BACKENDS_BASE_H
+#ifndef ALC_BACKENDS_BASE_HPP
+#define ALC_BACKENDS_BASE_HPP
 
 #include <chrono>
 #include <cstddef>
@@ -78,4 +78,4 @@ struct BackendFactory {
     virtual auto createBackend(DeviceBase &device, BackendType type) -> BackendPtr = 0;
 };
 
-#endif /* ALC_BACKENDS_BASE_H */
+#endif /* ALC_BACKENDS_BASE_HPP */

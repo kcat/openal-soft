@@ -1,9 +1,9 @@
-#ifndef BACKENDS_DSOUND_H
-#define BACKENDS_DSOUND_H
+#ifndef BACKENDS_WINMM_HPP
+#define BACKENDS_WINMM_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct DSoundBackendFactory final : BackendFactory {
+struct WinMMBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct DSoundBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_DSOUND_H */
+#endif /* BACKENDS_WINMM_HPP */

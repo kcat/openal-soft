@@ -1,11 +1,11 @@
-#ifndef BACKENDS_PIPEWIRE_H
-#define BACKENDS_PIPEWIRE_H
+#ifndef BACKENDS_PIPEWIRE_HPP
+#define BACKENDS_PIPEWIRE_HPP
 
 #include <string>
 #include <vector>
 
 #include "alc/events.h"
-#include "base.h"
+#include "base.hpp"
 
 struct DeviceBase;
 
@@ -23,4 +23,4 @@ struct PipeWireBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_PIPEWIRE_H */
+#endif /* BACKENDS_PIPEWIRE_HPP */

@@ -1,12 +1,14 @@
-#ifndef BACKENDS_SDL2_H
-#define BACKENDS_SDL2_H
+#ifndef BACKENDS_WASAPI_HPP
+#define BACKENDS_WASAPI_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct SDL2BackendFactory final : BackendFactory {
+struct WasapiBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
+
+    auto queryEventSupport(alc::EventType eventType, BackendType type) -> alc::EventSupport final;
 
     auto enumerate(BackendType type) -> std::vector<std::string> final;
 
@@ -15,4 +17,4 @@ struct SDL2BackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_SDL2_H */
+#endif /* BACKENDS_WASAPI_HPP */

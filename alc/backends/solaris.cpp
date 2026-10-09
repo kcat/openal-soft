@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "solaris.h"
+#include "solaris.hpp"
 
 #include <sys/ioctl.h>
 #include <sys/types.h>

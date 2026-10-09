@@ -14,7 +14,7 @@
 #include "al/filter.h"
 #include "alnumeric.h"
 #include "atomic.h"
-#include "backends/base.h"
+#include "backends/base.hpp"
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "flexarray.h"

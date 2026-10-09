@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#include "pulseaudio.h"
+#include "pulseaudio.hpp"
 
 #include <algorithm>
 #include <array>
@@ -42,7 +42,6 @@
 
 #include "alc/alconfig.h"
 #include "alnumeric.h"
-#include "base.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"

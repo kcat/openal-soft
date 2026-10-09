@@ -1,9 +1,9 @@
-#ifndef BACKENDS_WINMM_H
-#define BACKENDS_WINMM_H
+#ifndef BACKENDS_LOOPBACK_HPP
+#define BACKENDS_LOOPBACK_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct WinMMBackendFactory final : BackendFactory {
+struct LoopbackBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct WinMMBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_WINMM_H */
+#endif /* BACKENDS_LOOPBACK_HPP */

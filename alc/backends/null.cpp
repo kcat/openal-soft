@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "null.h"
+#include "null.hpp"
 
 #include <exception>
 #include <atomic>

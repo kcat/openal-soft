@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "sdl2.h"
+#include "sdl2.hpp"
 
 #include <cstdlib>
 #include <cstring>

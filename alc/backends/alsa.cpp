@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "alsa.h"
+#include "alsa.hpp"
 
 #include <algorithm>
 #include <atomic>

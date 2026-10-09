@@ -1,9 +1,9 @@
-#ifndef BACKENDS_OSS_H
-#define BACKENDS_OSS_H
+#ifndef BACKENDS_DSOUND_HPP
+#define BACKENDS_DSOUND_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct OSSBackendFactory final : BackendFactory {
+struct DSoundBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct OSSBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_OSS_H */
+#endif /* BACKENDS_DSOUND_HPP */

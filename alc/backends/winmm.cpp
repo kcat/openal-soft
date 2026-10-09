@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "winmm.h"
+#include "winmm.hpp"
 
 #include <cstdlib>
 #include <cstdio>

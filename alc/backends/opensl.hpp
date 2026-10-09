@@ -1,9 +1,9 @@
-#ifndef BACKENDS_OBOE_H
-#define BACKENDS_OBOE_H
+#ifndef BACKENDS_OSL_HPP
+#define BACKENDS_OSL_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct OboeBackendFactory final : BackendFactory {
+struct OSLBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct OboeBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_OBOE_H */
+#endif /* BACKENDS_OSL_HPP */

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "coreaudio.h"
+#include "coreaudio.hpp"
 
 #include <cinttypes>
 #include <cmath>

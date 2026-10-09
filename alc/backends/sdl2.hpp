@@ -1,9 +1,9 @@
-#ifndef BACKENDS_JACK_H
-#define BACKENDS_JACK_H
+#ifndef BACKENDS_SDL2_HPP
+#define BACKENDS_SDL2_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct JackBackendFactory final : BackendFactory {
+struct SDL2BackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct JackBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_JACK_H */
+#endif /* BACKENDS_SDL2_HPP */

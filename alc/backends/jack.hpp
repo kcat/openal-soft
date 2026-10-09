@@ -1,9 +1,9 @@
-#ifndef BACKENDS_SOLARIS_H
-#define BACKENDS_SOLARIS_H
+#ifndef BACKENDS_JACK_HPP
+#define BACKENDS_JACK_HPP
 
-#include "base.h"
+#include "base.hpp"
 
-struct SolarisBackendFactory final : BackendFactory {
+struct JackBackendFactory final : BackendFactory {
     auto init() -> bool final;
 
     auto querySupport(BackendType type) -> bool final;
@@ -15,4 +15,4 @@ struct SolarisBackendFactory final : BackendFactory {
     static auto getFactory() -> BackendFactory&;
 };
 
-#endif /* BACKENDS_SOLARIS_H */
+#endif /* BACKENDS_JACK_HPP */

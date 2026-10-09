@@ -106,59 +106,59 @@
 #include "strutils.hpp"
 #include "zudl.hpp"
 
-#include "backends/base.h"
-#include "backends/null.h"
-#include "backends/loopback.h"
+#include "backends/base.hpp"
+#include "backends/null.hpp"
+#include "backends/loopback.hpp"
 #if HAVE_PIPEWIRE
-#include "backends/pipewire.h"
+#include "backends/pipewire.hpp"
 #endif
 #if HAVE_JACK
-#include "backends/jack.h"
+#include "backends/jack.hpp"
 #endif
 #if HAVE_PULSEAUDIO
-#include "backends/pulseaudio.h"
+#include "backends/pulseaudio.hpp"
 #endif
 #if HAVE_ALSA
-#include "backends/alsa.h"
+#include "backends/alsa.hpp"
 #endif
 #if HAVE_WASAPI
-#include "backends/wasapi.h"
+#include "backends/wasapi.hpp"
 #endif
 #if HAVE_COREAUDIO
-#include "backends/coreaudio.h"
+#include "backends/coreaudio.hpp"
 #endif
 #if HAVE_OPENSL
-#include "backends/opensl.h"
+#include "backends/opensl.hpp"
 #endif
 #if HAVE_OBOE
-#include "backends/oboe.h"
+#include "backends/oboe.hpp"
 #endif
 #if HAVE_SOLARIS
-#include "backends/solaris.h"
+#include "backends/solaris.hpp"
 #endif
 #if HAVE_SNDIO
 #include "backends/sndio.hpp"
 #endif
 #if HAVE_OSS
-#include "backends/oss.h"
+#include "backends/oss.hpp"
 #endif
 #if HAVE_DSOUND
-#include "backends/dsound.h"
+#include "backends/dsound.hpp"
 #endif
 #if HAVE_WINMM
-#include "backends/winmm.h"
+#include "backends/winmm.hpp"
 #endif
 #if HAVE_PORTAUDIO
 #include "backends/portaudio.hpp"
 #endif
 #if HAVE_SDL3
-#include "backends/sdl3.h"
+#include "backends/sdl3.hpp"
 #endif
 #if HAVE_SDL2
-#include "backends/sdl2.h"
+#include "backends/sdl2.hpp"
 #endif
 #if HAVE_WAVE
-#include "backends/wave.h"
+#include "backends/wave.hpp"
 #endif
 
 #if ALSOFT_EAX

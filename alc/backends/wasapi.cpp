@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "wasapi.h"
+#include "wasapi.hpp"
 
 #include <windows.h>
 

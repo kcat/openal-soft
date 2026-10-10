@@ -1413,8 +1413,11 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
                     auto id = decltype(flags){1} << std::countr_zero(flags);
                     flags &= ~id;
 
-                    audio.mRender->ActivateSpatialAudioObject(static_cast<AudioObjectType>(id),
-                        al::out_ptr(channels.emplace_back()));
+                    auto const acthr = audio.mRender->ActivateSpatialAudioObject(
+                        static_cast<AudioObjectType>(id), al::out_ptr(channels.emplace_back()));
+                    if(FAILED(acthr))
+                        ERR("Failed to get spatial audio object for channel {}: {:x}",
+                            channels.size()-1, as_unsigned(acthr));
                 }
                 buffers.resize(channels.size());
                 if(mResampler)
@@ -1498,8 +1501,8 @@ FORCE_ALIGN void WasapiPlayback::mixerProc(SpatialDevice const &audio)
             ERR("Failed to update playback objects: {:#x}", as_unsigned(hr));
     }
     mPadding.store(0u, std::memory_order_release);
-    audio.mRender->Stop();
-    audio.mRender->Reset();
+    std::ignore = audio.mRender->Stop();
+    std::ignore = audio.mRender->Reset();
 }
 
 
@@ -2528,8 +2531,8 @@ void WasapiCapture::recordProc(IAudioClient *client, IAudioCaptureClient *captur
             ERR("WaitForSingleObjectEx error: {:#x}", res);
     }
 
-    client->Stop();
-    client->Reset();
+    std::ignore = client->Stop();
+    std::ignore = client->Reset();
 }
 
 

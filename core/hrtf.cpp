@@ -434,17 +434,23 @@ try {
         }
     }
 
-    auto stream = std::unique_ptr<std::istream>{};
-    auto residx = int{};
-    auto ch = char{};
-    /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
-    if(sscanf(fname.c_str(), "!%d%c", &residx, &ch) == 2 && ch == '_')
+    auto builtin_name = [](al::ispanstream stream) -> std::optional<int>
     {
-        TRACE("Loading built-in HRTF {}...", residx);
-        auto const res = GetHrtfResource(residx);
+        if(stream.get() != '!')
+            return std::nullopt;
+        auto residx = int{};
+        if((stream >> residx).get() != '_')
+            return std::nullopt;
+        return residx;
+    };
+    auto stream = std::unique_ptr<std::istream>{};
+    if(auto residx = builtin_name(al::ispanstream{fname}); residx.has_value())
+    {
+        TRACE("Loading built-in HRTF {}...", *residx);
+        auto const res = GetHrtfResource(*residx);
         if(res.empty())
         {
-            ERR("Could not get resource {}, {}", residx, name);
+            ERR("Could not get resource {}, {}", *residx, name);
             return nullptr;
         }
         auto spstream = std::make_unique<al::ispanstream>(std::span<char>{}, std::ios::binary);

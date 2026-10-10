@@ -28,7 +28,6 @@
 #include <cinttypes>
 #include <cmath>
 #include <concepts>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -137,6 +136,7 @@ import fmtlib;
 import format;
 import gsl;
 import logging;
+import spanstream;
 import types;
 import zstring_view;
 #else
@@ -149,6 +149,7 @@ import zstring_view;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "spanstream.hpp"
 #include "zstring_view.hpp"
 #endif
 
@@ -239,17 +240,21 @@ using std::chrono::nanoseconds;
 auto *gConfigFileName = gsl::czstring{};
 
 
-auto check_version(gsl::czstring const version) -> bool
+auto check_version(al::zstring_view const version) -> bool
 {
     /* There doesn't seem to be a function to get the version as an integer, so
      * instead we have to parse the string, which hopefully won't break in the
      * future.
      */
+    auto verstream = al::ispanstream{version};
     auto major = int{};
+    if((verstream >> major).get() != '.')
+        return false;
     auto minor = int{};
+    if((verstream >> minor).get() != '.')
+        return false;
     auto revision = int{};
-    /* NOLINTNEXTLINE(cert-err34-c,cppcoreguidelines-pro-type-vararg) */
-    if(auto const ret = sscanf(version, "%d.%d.%d", &major, &minor, &revision); ret != 3)
+    if((verstream >> revision).fail())
         return false;
 
     /* client-rt.conf is deprecated since PipeWire 1.3.81, and we should just
@@ -2276,7 +2281,7 @@ bool PipeWireBackendFactory::init()
     if(!pwire_load())
         return false;
 
-    auto const version = pw_get_library_version();
+    auto const version = al::zstring_view{pw_get_library_version()};
     if(!check_version(version))
     {
         WARN("PipeWire version \"{}\" too old ({} or newer required)", version,

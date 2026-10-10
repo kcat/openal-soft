@@ -39,12 +39,14 @@
 import filesystem;
 import format;
 import logging;
+import spanstream;
 import types;
 #else
 #include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "filesystem.h"
 #include "logging.h"
+#include "spanstream.hpp"
 #endif
 
 
@@ -90,79 +92,6 @@ auto LoadedHrtfs = std::vector<LoadedHrtf>{};
 
 auto EnumeratedHrtfLock = std::mutex{};
 auto EnumeratedHrtfs = std::vector<HrtfEntry>{};
-
-
-/* NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
- * To access a memory buffer through the std::istream interface, a custom
- * std::streambuf implementation is needed that has to do pointer manipulation
- * for seeking. With C++23, we may be able to use std::spanstream instead.
- */
-class databuf final : public std::streambuf {
-protected:
-    auto underflow() -> int_type final { return traits_type::eof(); }
-
-    auto seekoff(off_type const offset, std::ios_base::seekdir const whence,
-        std::ios_base::openmode const mode) -> pos_type final
-    {
-        if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
-            return traits_type::eof();
-
-        switch(whence)
-        {
-        case std::ios_base::beg:
-            if(offset < 0 || offset > egptr()-eback())
-                return traits_type::eof();
-            setg(eback(), eback()+offset, egptr());
-            break;
-
-        case std::ios_base::cur:
-            if((offset >= 0 && offset > egptr()-gptr()) ||
-                (offset < 0 && -offset > gptr()-eback()))
-                return traits_type::eof();
-            setg(eback(), gptr()+offset, egptr());
-            break;
-
-        case std::ios_base::end:
-            if(offset > 0 || -offset > egptr()-eback())
-                return traits_type::eof();
-            setg(eback(), egptr()+offset, egptr());
-            break;
-
-        default:
-            return traits_type::eof();
-        }
-
-        return gptr() - eback();
-    }
-
-    auto seekpos(pos_type const pos, std::ios_base::openmode const mode) -> pos_type final
-    {
-        // Simplified version of seekoff
-        if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
-            return traits_type::eof();
-
-        if(pos < 0 || pos > egptr()-eback())
-            return traits_type::eof();
-
-        setg(eback(), eback()+gsl::narrow_cast<std::size_t>(pos), egptr());
-        return pos;
-    }
-
-public:
-    explicit databuf(std::span<char_type> const data) noexcept
-    {
-        setg(data.data(), data.data(), std::to_address(data.end()));
-    }
-};
-/* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */
-
-class idstream final : public std::istream {
-    databuf mStreamBuf;
-
-public:
-    explicit idstream(const std::span<char_type> data) : std::istream{nullptr}, mStreamBuf{data}
-    { init(&mStreamBuf); }
-};
 
 
 struct IdxBlend { unsigned idx; float blend; };
@@ -518,8 +447,9 @@ try {
             ERR("Could not get resource {}, {}", residx, name);
             return nullptr;
         }
-        /* NOLINTNEXTLINE(*-const-cast) */
-        stream = std::make_unique<idstream>(std::span{const_cast<char*>(res.data()), res.size()});
+        auto spstream = std::make_unique<al::ispanstream>(std::span<char>{}, std::ios::binary);
+        spstream->span(res);
+        stream = std::move(spstream);
     }
     else
     {

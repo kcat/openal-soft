@@ -66,29 +66,13 @@ struct HrtfEntry {
     NOINLINE ~HrtfEntry() = default;
 };
 
-struct LoadedHrtf {
-    std::string mFilename;
-    unsigned mSampleRate{};
-    std::unique_ptr<HrtfStore> mEntry;
-
-    template<typename T, typename U>
-    LoadedHrtf(T&& name, unsigned const srate, U&& entry)
-        : mFilename{std::forward<T>(name)}, mSampleRate{srate}, mEntry{std::forward<U>(entry)}
-    { }
-    LoadedHrtf(LoadedHrtf&&) = default;
-    /* GCC warns when it tries to inline this. */
-    NOINLINE ~LoadedHrtf() = default;
-
-    LoadedHrtf& operator=(LoadedHrtf&&) = default;
-};
-
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
 constexpr auto PassthruCoeff = gsl::narrow_cast<float>(1.0/std::numbers::sqrt2);
 
 auto LoadedHrtfLock = std::mutex{};
-auto LoadedHrtfs = std::vector<LoadedHrtf>{};
+auto LoadedHrtfs = std::vector<std::unique_ptr<HrtfStore>>{};
 
 auto EnumeratedHrtfLock = std::mutex{};
 auto EnumeratedHrtfs = std::vector<HrtfEntry>{};
@@ -419,19 +403,16 @@ try {
 
     auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](LoadedHrtf const &hrtf, std::string_view const filename) -> bool
+        [devrate](std::unique_ptr<HrtfStore> &hrtf, std::string_view const filename) -> bool
     {
-        return hrtf.mSampleRate < devrate
-            || (hrtf.mSampleRate == devrate && hrtf.mFilename < filename);
+        return hrtf->mSampleRate < devrate
+            || (hrtf->mSampleRate == devrate && hrtf->mFilename < filename);
     });
-    if(handle != LoadedHrtfs.end() && handle->mSampleRate == devrate && handle->mFilename == fname)
+    if(handle != LoadedHrtfs.end() && (*handle)->mSampleRate == devrate
+        && (*handle)->mFilename == fname)
     {
-        if(auto *hrtf = handle->mEntry.get())
-        {
-            Expects(hrtf->mSampleRate == devrate);
-            hrtf->inc_ref();
-            return HrtfStorePtr{hrtf};
-        }
+        (*handle)->inc_ref();
+        return HrtfStorePtr{std::to_address(*handle)};
     }
 
     auto builtin_name = [](al::ispanstream stream) -> std::optional<int>
@@ -544,11 +525,11 @@ try {
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 
-    handle = LoadedHrtfs.emplace(handle, fname, devrate, std::move(hrtf));
+    handle = LoadedHrtfs.emplace(handle, std::move(hrtf));
     TRACE("Loaded HRTF {} for sample rate {}hz, {}-sample filter", name,
-        unsigned{handle->mEntry->mSampleRate}, unsigned{handle->mEntry->mIrSize});
+        unsigned{(*handle)->mSampleRate}, unsigned{(*handle)->mIrSize});
 
-    return HrtfStorePtr{handle->mEntry.get()};
+    return HrtfStorePtr{std::to_address(*handle)};
 }
 catch(std::exception& e) {
     ERR("Failed to load {}: {}", name, e.what());
@@ -571,16 +552,15 @@ void HrtfStore::dec_ref() noexcept
         auto const loadlock = std::lock_guard{LoadedHrtfLock};
 
         /* Go through and remove all unused HRTFs. */
-        auto iter = std::ranges::remove_if(LoadedHrtfs, [](LoadedHrtf &hrtf) -> bool
+        auto unused = std::ranges::remove_if(LoadedHrtfs, [](HrtfStore &hrtf) -> bool
         {
-            if(auto const *const entry = hrtf.mEntry.get(); entry && entry->mRef.load() == 0)
+            if(hrtf.mRef.load() == 0)
             {
                 TRACE("Unloading unused HRTF {}", hrtf.mFilename);
-                hrtf.mEntry = nullptr;
                 return true;
             }
             return false;
-        });
-        LoadedHrtfs.erase(iter.begin(), iter.end());
+        }, al::dereference{});
+        LoadedHrtfs.erase(unused.begin(), unused.end());
     }
 }

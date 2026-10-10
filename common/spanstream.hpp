@@ -117,15 +117,13 @@ protected:
                 if((mode&std::ios_base::in))
                     return traits_type::eof();
 
-                if((offset >= 0 and offset > this->epptr()-this->pptr())
-                    or (offset < 0 and -offset > this->pptr()-this->pbase()))
+                if(offset > this->epptr()-this->pptr() or offset < this->pbase()-this->pptr())
                     return traits_type::eof();
                 newoff = this->pptr() - this->pbase() + offset;
             }
             else if((mode&std::ios_base::in))
             {
-                if((offset >= 0 and offset > this->egptr()-this->gptr())
-                    or (offset < 0 and -offset > this->gptr()-this->eback()))
+                if(offset > this->egptr()-this->gptr() or offset < this->eback()-this->gptr())
                     return traits_type::eof();
                 newoff = this->gptr() - this->eback() + offset;
             }
@@ -135,7 +133,7 @@ protected:
             {
                 auto const base = (mode == std::ios_base::out) ? this->pptr() - this->pbase()
                     : std::ssize(mData);
-                if(offset > 0 or -offset > base)
+                if(offset > 0 or offset < -base)
                     return traits_type::eof();
                 newoff = base + offset;
             }
@@ -227,7 +225,7 @@ public:
     [[nodiscard]]
     auto rdbuf() const noexcept LIFETIMEBOUND -> basic_spanbuf<CharT, Traits>*
     {
-        /* NOLINENEXTLINE(cppcoreguidelines-pro-type-const-cast) */
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast) */
         return const_cast<basic_spanbuf<CharT, Traits>*>(std::addressof(mStreamBuf));
     }
 

@@ -1,7 +1,5 @@
 module;
 
-#include <type_traits>
-
 #include "alformat.hpp"
 #include "instance_of.hpp"
 #include "zstring_view.hpp"

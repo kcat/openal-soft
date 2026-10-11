@@ -22,9 +22,6 @@
 
 #include "winmm.hpp"
 
-#include <cstdlib>
-#include <cstdio>
-
 #include <windows.h>
 #include <mmsystem.h>
 #include <mmreg.h>

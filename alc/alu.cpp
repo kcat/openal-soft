@@ -2354,32 +2354,41 @@ void ApplyDither(std::span<FloatBufferLine> const Samples, unsigned *const dithe
 }
 
 
-template<typename T> [[nodiscard]]
-auto SampleConv(float) noexcept -> T = delete;
-
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> f32
-{ return f32{val}; }
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i32
+template<typename T> [[nodiscard]] constexpr
+auto SampleConv(float const val) noexcept -> T
 {
-    /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
-     * This means a normalized float has at most 25 bits of signed precision.
-     * When scaling and clamping for a signed 32-bit integer, these following
-     * values are the best a float can give.
-     */
-    return i32{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
+    if constexpr(std::same_as<T, f32>)
+        return f32{val};
+    else if constexpr(std::same_as<T, i32>)
+    {
+        /* Floats have a 23-bit mantissa, plus an implied 1 bit and a sign bit.
+         * This means a normalized float has at most 25 bits of signed precision.
+         * When scaling and clamping for a signed 32-bit integer, these following
+         * values are the best a float can give.
+         */
+        return i32{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
+    }
+    else if constexpr(std::same_as<T, i16>)
+    {
+        auto const tmp = std::clamp(val*32768.0f, -32768.0f, 32767.0f);
+        return i16{gsl::narrow_cast<i16::value_t>(fastf2i(tmp))};
+    }
+    else if constexpr(std::same_as<T, i8>)
+        return i8{gsl::narrow_cast<i8::value_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))};
+    /* Unsigned output variations use the signed conversions with an offset. */
+    else if constexpr(std::same_as<T, u32>)
+        return SampleConv<i32>(val).reinterpret_as<u32>() + 2147483648_u32;
+    else if constexpr(std::same_as<T, u16>)
+        return SampleConv<i16>(val).reinterpret_as<u16>() + 32768_u16;
+    else if constexpr(std::same_as<T, u8>)
+        return SampleConv<i8>(val).reinterpret_as<u8>() + 128_u8;
+    else
+    {
+        static_assert(al::dependent_false<T>, "Unexpected sample type");
+        return T{};
+    }
 }
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i16
-{ return i16{gsl::narrow_cast<i16::value_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> i8
-{ return i8{gsl::narrow_cast<i8::value_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
 
-/* Define unsigned output variations. */
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u32
-{ return SampleConv<i32>(val).reinterpret_as<u32>() + 2147483648u; }
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u16
-{ return SampleConv<i16>(val).reinterpret_as<u16>() + 32768; }
-template<> [[nodiscard]] auto SampleConv(float const val) noexcept -> u8
-{ return SampleConv<i8>(val).reinterpret_as<u8>() + 128; }
 
 template<typename T>
 void Write(std::span<FloatBufferLine const> const InBuffer, void *const OutBuffer,

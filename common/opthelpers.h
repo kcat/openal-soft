@@ -78,6 +78,9 @@
 
 namespace al {
 
+template<typename>
+concept dependent_false = false;
+
 template<typename T> [[nodiscard]] constexpr
 auto to_underlying(T e) noexcept -> std::underlying_type_t<T>
 { return static_cast<std::underlying_type_t<T>>(e); }

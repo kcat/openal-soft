@@ -89,31 +89,26 @@ using ALvoidptr = ALvoid*;
 [[nodiscard]] constexpr auto GetStackUnderflowString() noexcept { return "Stack Underflow"; }
 
 /* Resampler strings */
-template<Resampler rtype> struct ResamplerName { };
-template<> struct ResamplerName<Resampler::Point>
-{ static constexpr const ALchar *Get() noexcept { return "Nearest"; } };
-template<> struct ResamplerName<Resampler::Linear>
-{ static constexpr const ALchar *Get() noexcept { return "Linear"; } };
-template<> struct ResamplerName<Resampler::Spline>
-{ static constexpr const ALchar *Get() noexcept { return "Cubic Spline"; } };
-template<> struct ResamplerName<Resampler::Gaussian>
-{ static constexpr const ALchar *Get() noexcept { return "4-point Gaussian"; } };
-template<> struct ResamplerName<Resampler::FastBSinc12>
-{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc (fast)"; } };
-template<> struct ResamplerName<Resampler::BSinc12>
-{ static constexpr const ALchar *Get() noexcept { return "11th order Sinc"; } };
-template<> struct ResamplerName<Resampler::FastBSinc24>
-{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc (fast)"; } };
-template<> struct ResamplerName<Resampler::BSinc24>
-{ static constexpr const ALchar *Get() noexcept { return "23rd order Sinc"; } };
-template<> struct ResamplerName<Resampler::FastBSinc48>
-{ static constexpr const ALchar *Get() noexcept { return "47th order Sinc (fast)"; } };
-template<> struct ResamplerName<Resampler::BSinc48>
-{ static constexpr const ALchar *Get() noexcept { return "47th order Sinc"; } };
-
-constexpr auto GetResamplerName(const Resampler rtype) -> const ALchar*
+template<Resampler rtype> [[nodiscard]] consteval
+auto GetResamplerName() noexcept -> const ALchar*
 {
-#define HANDLE_RESAMPLER(r) case r: return ResamplerName<r>::Get()
+    if constexpr(rtype == Resampler::Point) return "Nearest";
+    else if constexpr(rtype == Resampler::Linear) return "Linear";
+    else if constexpr(rtype == Resampler::Spline) return "Cubic Spline";
+    else if constexpr(rtype == Resampler::Gaussian) return "4-point Gaussian";
+    else if constexpr(rtype == Resampler::FastBSinc12) return "11th order Sinc (fast)";
+    else if constexpr(rtype == Resampler::BSinc12) return "11th order Sinc";
+    else if constexpr(rtype == Resampler::FastBSinc24) return "23rd order Sinc (fast)";
+    else if constexpr(rtype == Resampler::BSinc24) return "23rd order Sinc";
+    else if constexpr(rtype == Resampler::FastBSinc48) return "47th order Sinc (fast)";
+    else if constexpr(rtype == Resampler::BSinc48) return "47th order Sinc";
+    else ASSUME(false);
+}
+
+[[nodiscard]] constexpr
+auto GetResamplerName(Resampler const rtype) -> const ALchar*
+{
+#define HANDLE_RESAMPLER(r) case r: return GetResamplerName<r>()
     switch(rtype)
     {
     HANDLE_RESAMPLER(Resampler::Point);

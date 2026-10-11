@@ -45,9 +45,6 @@ auto throw_narrowing_error(std::string_view prefix, long double value, std::stri
     -> void;
 
 
-template<typename>
-concept dependent_false = false;
-
 template<typename T> [[nodiscard]] consteval
 auto get_type_name() -> std::string_view
 {

@@ -4,12 +4,13 @@
 #include "config.h"
 
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "AL/al.h"
@@ -103,6 +104,7 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
 
     void enumerateHrtfs();
 
+    [[nodiscard]]
     auto getConfigValueBool(std::string_view const block, std::string_view const key,
         bool const def) const -> bool
     { return GetConfigValueBool(mDeviceName, block, key, def); }
@@ -128,7 +130,7 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
         }
     }
 
-    static auto Create(DeviceType type) -> intrusive_ptr<Device>;
+    [[nodiscard]] static auto Create(DeviceType type) -> intrusive_ptr<Device>;
 
     /** Stores the latest ALC device error. */
     static void SetGlobalError(ALCenum const errorCode) { SetError(nullptr, errorCode); }

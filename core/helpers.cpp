@@ -76,8 +76,8 @@ using namespace std::string_view_literals;
 
 auto gSearchLock = std::mutex{};
 
-void DirectorySearch(const fs::path &path, const std::string_view ext,
-    std::vector<std::string> *const results)
+void DirectorySearch(const fs::path &path, const std::u8string_view ext,
+    std::vector<std::u8string> *const results)
 {
     const auto base = results->size();
 
@@ -86,7 +86,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
         if(!fs::exists(fpath))
             return;
 
-        TRACE("Searching {} for *{}", al::u8_as_char(fpath.u8string()), ext);
+        TRACE("Searching {} for *{}", al::u8_as_char(fpath.u8string()), al::u8_as_char(ext));
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
@@ -96,8 +96,8 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
             if(fs::status(entrypath).type() != fs::file_type::regular)
                 continue;
             const auto u8ext = entrypath.extension().u8string();
-            if(is_eq(al::case_compare(al::u8_as_char(u8ext), ext)))
-                results->emplace_back(al::u8_as_char(entrypath.u8string()));
+            if(is_eq(al::case_compare(u8ext, ext)))
+                results->emplace_back(al::assign_result{[&]{ return entrypath.u8string(); }});
         }
     }
     catch(std::exception& e) {
@@ -107,7 +107,7 @@ void DirectorySearch(const fs::path &path, const std::string_view ext,
     const auto newlist = std::span{*results}.subspan(base);
     std::ranges::sort(newlist);
     for(const auto &name : newlist)
-        TRACE(" got {}", name);
+        TRACE(" got {}", al::u8_as_char(name));
 }
 
 } // namespace
@@ -183,12 +183,12 @@ struct CoTaskMemDeleter {
 
 } // namespace
 
-auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+auto SearchDataFiles(std::u8string_view const ext) -> std::vector<std::u8string>
 {
     const auto srchlock = std::lock_guard{gSearchLock};
 
     /* Search the app-local directory. */
-    auto results = std::vector<std::string>{};
+    auto results = std::vector<std::u8string>{};
     if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
         DirectorySearch(*localpath, ext, &results);
     else if(auto curpath = fs::current_path(); !curpath.empty())
@@ -197,14 +197,14 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
     return results;
 }
 
-auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
-    -> std::vector<std::string>
+auto SearchDataFiles(std::u8string_view const ext, std::u8string_view const subdir)
+    -> std::vector<std::u8string>
 {
     const auto srchlock = std::lock_guard{gSearchLock};
 
     /* If the path is absolute, use it directly. */
-    auto results = std::vector<std::string>{};
-    const auto path = fs::path(al::char_as_u8(subdir));
+    auto results = std::vector<std::u8string>{};
+    const auto path = fs::path(subdir);
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);
@@ -322,12 +322,12 @@ auto GetProcBinary() -> const PathNamePair&
     return procbin;
 }
 
-auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
+auto SearchDataFiles(std::u8string_view const ext) -> std::vector<std::u8string>
 {
     const auto srchlock = std::lock_guard{gSearchLock};
 
     /* Search the app-local directory. */
-    auto results = std::vector<std::string>{};
+    auto results = std::vector<std::u8string>{};
     if(auto const localpath = al::getenv("ALSOFT_LOCAL_PATH"))
         DirectorySearch(*localpath, ext, &results);
     else if(auto const curpath = fs::current_path(); !curpath.empty())
@@ -336,13 +336,13 @@ auto SearchDataFiles(const std::string_view ext) -> std::vector<std::string>
     return results;
 }
 
-auto SearchDataFiles(const std::string_view ext, const std::string_view subdir)
-    -> std::vector<std::string>
+auto SearchDataFiles(std::u8string_view const ext, std::u8string_view const subdir)
+    -> std::vector<std::u8string>
 {
     const auto srchlock = std::lock_guard{gSearchLock};
 
-    auto results = std::vector<std::string>{};
-    auto path = fs::path(al::char_as_u8(subdir));
+    auto results = std::vector<std::u8string>{};
+    auto path = fs::path(subdir);
     if(path.is_absolute())
     {
         DirectorySearch(path, ext, &results);

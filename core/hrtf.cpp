@@ -57,7 +57,7 @@ using namespace std::string_view_literals;
 
 struct HrtfEntry {
     std::string mDispName;
-    std::string mFilename;
+    fs::path mFilename;
 
     template<typename T, typename U>
     HrtfEntry(T&& dispname, U&& fname)
@@ -290,31 +290,28 @@ auto checkName(std::string_view const name) -> bool
     return find(EnumeratedHrtfs, name, &HrtfEntry::mDispName) != EnumeratedHrtfs.end();
 }
 
-void AddFileEntry(std::string_view const filename)
+void AddFileEntry(fs::path&& filename)
 {
     /* Check if this file has already been enumerated. */
-    if(std::ranges::find(EnumeratedHrtfs, filename,&HrtfEntry::mFilename) != EnumeratedHrtfs.end())
+    using std::ranges::find;
+    if(find(EnumeratedHrtfs, filename, &HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
-        TRACE("Skipping duplicate file entry {}", filename);
+        TRACE("Skipping duplicate file entry {}", al::u8_as_char(filename.u8string()));
         return;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update).
      */
-    auto const namepos = std::max(filename.rfind('/')+1, filename.rfind('\\')+1);
-    auto const extpos = filename.substr(namepos).rfind('.');
-
-    auto const basename = (extpos == std::string_view::npos) ?
-        filename.substr(namepos) : filename.substr(namepos, extpos);
+    auto const basename = std::string{al::u8_as_char(filename.stem().u8string())};
 
     auto count = 1;
     auto newname = std::string{basename};
     while(checkName(newname))
         newname = al::format("{} #{}", basename, ++count);
 
-    auto const &entry = EnumeratedHrtfs.emplace_back(newname, filename);
-    TRACE("Adding file entry \"{}\"", entry.mFilename);
+    auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
+    TRACE("Adding file entry \"{}\"", al::u8_as_char(entry.mFilename.u8string()));
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
@@ -322,11 +319,12 @@ void AddFileEntry(std::string_view const filename)
  */
 void AddBuiltInEntry(std::string_view const dispname, unsigned const residx)
 {
-    auto filename = al::format("!{}_{}", residx, dispname);
+    auto filename = fs::path{al::char_as_u8(al::format("!{}_{}", residx, dispname))};
 
-    if(std::ranges::find(EnumeratedHrtfs, filename,&HrtfEntry::mFilename) != EnumeratedHrtfs.end())
+    using std::ranges::find;
+    if(find(EnumeratedHrtfs, filename, &HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
-        TRACE("Skipping duplicate file entry {}", filename);
+        TRACE("Skipping duplicate file entry {}", al::u8_as_char(filename.u8string()));
         return;
     }
 
@@ -339,7 +337,7 @@ void AddBuiltInEntry(std::string_view const dispname, unsigned const residx)
         newname = al::format("{} #{}", dispname, ++count);
 
     auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
-    TRACE("Adding built-in entry \"{}\"", entry.mFilename);
+    TRACE("Adding built-in entry \"{}\"", al::u8_as_char(entry.mFilename.u8string()));
 }
 
 } // namespace
@@ -350,7 +348,7 @@ auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std
     auto enumlock = std::lock_guard{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
-    std::ranges::for_each(SearchDataFiles(".mhr"sv), AddFileEntry);
+    std::ranges::for_each(SearchDataFiles(u8".mhr"sv), AddFileEntry);
 
     auto usedefaults = true;
     if(pathopt)
@@ -367,13 +365,14 @@ auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std
                 return;
             }
             usedefaults = false;
-            std::ranges::for_each(SearchDataFiles(".mhr"sv, entry), AddFileEntry);
+            std::ranges::for_each(SearchDataFiles(u8".mhr"sv, al::char_as_u8(entry)),
+                AddFileEntry);
         });
     }
 
     if(usedefaults)
     {
-        std::ranges::for_each(SearchDataFiles(".mhr"sv, "openal/hrtf"sv), AddFileEntry);
+        std::ranges::for_each(SearchDataFiles(u8".mhr"sv, u8"openal/hrtf"sv), AddFileEntry);
         if(!GetHrtfResource(DefaultHrtfResourceID).empty())
             AddBuiltInEntry("Built-In HRTF", DefaultHrtfResourceID);
     }
@@ -391,20 +390,20 @@ try {
         WARN("Device sample rate too large for HRTF ({}hz > {}hz)", devrate, MaxHrtfSampleRate);
         return nullptr;
     }
-    auto const fname = std::invoke([name]() -> std::string
+    auto const fname = std::invoke([name]() -> std::u8string
     {
         auto const enumlock = std::lock_guard{EnumeratedHrtfLock};
         auto const entry_iter = std::ranges::find(EnumeratedHrtfs, name, &HrtfEntry::mDispName);
         if(entry_iter == EnumeratedHrtfs.cend())
-            return std::string{};
-        return entry_iter->mFilename;
+            return std::u8string{};
+        return entry_iter->mFilename.u8string();
     });
     if(fname.empty())
         return nullptr;
 
     auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](std::unique_ptr<HrtfStore> &hrtf, std::string_view const filename) -> bool
+        [devrate](std::unique_ptr<HrtfStore> const&hrtf, std::u8string_view const filename) -> bool
     {
         return hrtf->mSampleRate < devrate
             || (hrtf->mSampleRate == devrate && hrtf->mFilename < filename);
@@ -416,8 +415,9 @@ try {
         return HrtfStorePtr{std::to_address(*handle)};
     }
 
-    auto builtin_name = [](al::ispanstream stream) -> std::optional<int>
+    auto builtin_name = [](std::u8string_view const name_) -> std::optional<int>
     {
+        auto stream = al::ispanstream{al::u8_as_char(name_)};
         if(stream.get() != '!')
             return std::nullopt;
         auto residx = int{};
@@ -426,7 +426,7 @@ try {
         return residx;
     };
     auto stream = std::unique_ptr<std::istream>{};
-    if(auto residx = builtin_name(al::ispanstream{fname}); residx.has_value())
+    if(auto residx = builtin_name(fname); residx.has_value())
     {
         TRACE("Loading built-in HRTF {}...", *residx);
         auto const res = GetHrtfResource(*residx);
@@ -441,12 +441,11 @@ try {
     }
     else
     {
-        TRACE("Loading {}...", fname);
-        auto fstr = std::make_unique<fs::ifstream>(fs::path(al::char_as_u8(fname)),
-            std::ios::binary);
+        TRACE("Loading {}...", al::u8_as_char(fname));
+        auto fstr = std::make_unique<fs::ifstream>(fs::path(fname), std::ios::binary);
         if(!fstr->is_open())
         {
-            ERR("Could not open {}", fname);
+            ERR("Could not open {}", al::u8_as_char(fname));
             return nullptr;
         }
         stream = std::move(fstr);
@@ -553,11 +552,11 @@ void HrtfStore::dec_ref() noexcept
         auto const loadlock = std::lock_guard{LoadedHrtfLock};
 
         /* Go through and remove all unused HRTFs. */
-        auto unused = std::ranges::remove_if(LoadedHrtfs, [](HrtfStore &hrtf) -> bool
+        auto unused = std::ranges::remove_if(LoadedHrtfs, [](HrtfStore const& hrtf) -> bool
         {
             if(hrtf.mRef.load() == 0)
             {
-                TRACE("Unloading unused HRTF {}", hrtf.mFilename);
+                TRACE("Unloading unused HRTF {}", al::u8_as_char(hrtf.mFilename));
                 return true;
             }
             return false;

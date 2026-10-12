@@ -19,7 +19,8 @@ inline auto AllowRTTimeLimit = true;
 
 auto SetRTPriority() -> void;
 
-auto SearchDataFiles(std::string_view ext) -> std::vector<std::string>;
-auto SearchDataFiles(std::string_view ext, std::string_view subdir) -> std::vector<std::string>;
+auto SearchDataFiles(std::u8string_view ext) -> std::vector<std::u8string>;
+auto SearchDataFiles(std::u8string_view ext, std::u8string_view subdir)
+    -> std::vector<std::u8string>;
 
 #endif /* CORE_HELPERS_H */

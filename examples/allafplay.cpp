@@ -81,13 +81,13 @@
 #endif
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
 import alhelpers;
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -103,6 +103,7 @@ import zstring_view;
 
 #include "alformatzsv.hpp"
 #include "alformattypes.hpp"
+#include "alstring.h"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"

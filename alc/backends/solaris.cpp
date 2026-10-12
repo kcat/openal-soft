@@ -42,19 +42,20 @@
 #include <functional>
 
 #include "alc/alconfig.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/helpers.h"
 
 #include <sys/audioio.h>
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import gsl;
 import logging;
 #else
 #include "alc/backends/exception.hpp"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

@@ -41,7 +41,6 @@
 
 #include "alconfig.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "alu.h"
 #include "core/ambdec.h"
 #include "core/ambidefs.h"
@@ -63,6 +62,7 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
+import alstring;
 import gsl;
 import logging;
 import types;
@@ -70,6 +70,7 @@ import types;
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformattypes.hpp"
+#include "alstring.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

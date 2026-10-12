@@ -39,7 +39,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "opthelpers.h"
 #include "vector.h"
 #include "zudl.hpp"
@@ -49,6 +48,7 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -57,6 +57,7 @@ import types;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"

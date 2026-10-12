@@ -76,7 +76,6 @@
 #include "alc/events.h"
 #include "alconfig.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "alu.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
@@ -169,6 +168,7 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
+import alstring;
 import backends.exception;
 import fmtlib;
 import format;
@@ -180,6 +180,7 @@ import types;
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "alformattypes.hpp"
+#include "alstring.h"
 #include "core/logging.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

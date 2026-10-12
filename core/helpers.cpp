@@ -57,13 +57,14 @@
 #endif
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "strutils.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import logging;
 #else
+#include "alstring.h"
 #include "filesystem.h"
 #include "logging.h"
 #endif

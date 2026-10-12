@@ -37,12 +37,12 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/ambidefs.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import filesystem;
@@ -51,6 +51,7 @@ import logging;
 import types;
 #else
 #include "alc/backends/exception.hpp"
+#include "alstring.h"
 #include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"

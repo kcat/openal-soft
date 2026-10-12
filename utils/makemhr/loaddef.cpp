@@ -44,7 +44,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "alstring.h"
 #include "gsl/assert"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
@@ -53,10 +52,12 @@
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
 #else
+#include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

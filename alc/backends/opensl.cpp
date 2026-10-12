@@ -37,7 +37,6 @@
 #include <thread>
 #include <functional>
 
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "core/helpers.h"
 #include "dlopennote.h"

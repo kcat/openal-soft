@@ -42,7 +42,6 @@
 #include <variant>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
 #include "core/async_event.h"
@@ -77,6 +76,7 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import bsinc_tables;
 import cemath;
 import core.context;
@@ -86,6 +86,7 @@ import format;
 import types;
 #else
 #include "alformat.hpp"
+#include "alstring.h"
 #include "altypes.hpp"
 #include "cemath.hpp"
 #include "core/bsinc_tables.hpp"

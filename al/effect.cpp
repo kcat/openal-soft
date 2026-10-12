@@ -44,7 +44,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "core/except.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
@@ -52,11 +51,13 @@
 #if HAVE_CXXMODULES
 import alc.context;
 import alc.device;
+import alstring;
 import gsl;
 import logging;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
+#include "alstring.h"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

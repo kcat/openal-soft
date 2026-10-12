@@ -66,7 +66,6 @@
 
 #include "alc/alconfig.h"
 #include "alnumeric.h"
-#include "alstring.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -103,12 +102,14 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #endif
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import format;
 import logging;
 #else
 #include "alc/backends/exception.hpp"
+#include "alstring.h"
 #include "alformat.hpp"
 #include "core/device.h"
 #include "core/logging.h"

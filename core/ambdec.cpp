@@ -16,15 +16,16 @@
 #include <string>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import format;
 import gsl;
 #else
 #include "alformat.hpp"
+#include "alstring.h"
 #include "filesystem.h"
 #include "gsl/gsl"
 #endif

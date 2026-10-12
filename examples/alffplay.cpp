@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "inout_ptr.hpp"
 #include "opthelpers.h"
 #include "pragmadefs.h"
@@ -68,6 +67,7 @@ struct SwsContext;
 
 #if HAVE_CXXMODULES
 import alhelpers;
+import alstring;
 import fmtlib;
 import gsl;
 import openal;
@@ -87,6 +87,7 @@ import zstring_view;
 #include "AL/alext.h"
 
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "common/alhelpers.hpp"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

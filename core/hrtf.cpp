@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
 #include "gsl/gsl"
@@ -36,6 +35,7 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import format;
 import logging;
@@ -44,6 +44,7 @@ import types;
 #else
 #include "alformat.hpp"
 #include "alformattypes.hpp"
+#include "alstring.h"
 #include "filesystem.h"
 #include "logging.h"
 #include "spanstream.hpp"

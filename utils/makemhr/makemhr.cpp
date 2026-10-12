@@ -85,7 +85,6 @@
 #include <vector>
 
 #include "alcomplex.h"
-#include "alstring.h"
 #include "gsl/assert"
 #include "loaddef.h"
 #include "loadsofa.h"
@@ -93,12 +92,14 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

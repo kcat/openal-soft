@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "strutils.hpp"
 
 
@@ -20,6 +19,7 @@
 #endif
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import fmtlib;
 import format;
@@ -28,6 +28,7 @@ import zstring_view;
 #else
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "filesystem.h"
 #include "fmt/std.h"
 #include "logging.h"

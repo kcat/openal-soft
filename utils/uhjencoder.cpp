@@ -36,7 +36,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -45,6 +44,7 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -52,6 +52,7 @@ import phase_shifter;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

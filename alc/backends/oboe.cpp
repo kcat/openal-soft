@@ -6,18 +6,19 @@
 #include <cstring>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "ringbuffer.h"
 
 #include "oboe/Oboe.h"
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import gsl;
 import logging;
 #else
 #include "alc/backends/exception.hpp"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

@@ -722,7 +722,6 @@ set(COMMON_MODS )
 set(COMMON_SRCS
     common/alcomplex.cpp
     common/almalloc.cpp
-    common/alstring.cpp
     common/althrd_setname.cpp
     common/altypes.cpp
     common/dynload.cpp
@@ -782,6 +781,7 @@ if(HAVE_CXXMODULES)
         alsoft-modules/fmtlib.cppm
         alsoft-modules/gsl.cppm
         common/alformat.cppm
+        common/alstring.cppm
         common/altypes.cppm
         common/cemath.cppm
         common/filesystem.cppm

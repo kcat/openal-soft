@@ -27,13 +27,14 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "alstring.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
 import alc.context;
+import alstring;
 #else
 #include "alc/context.hpp"
+#include "alstring.h"
 #endif
 
 

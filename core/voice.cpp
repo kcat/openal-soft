@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "alstring.h"
 #include "ambidefs.h"
 #include "async_event.h"
 #include "buffer_storage.h"
@@ -39,10 +38,12 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import alstring;
 import core.device;
 import logging;
 import types;
 #else
+#include "alstring.h"
 #include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"

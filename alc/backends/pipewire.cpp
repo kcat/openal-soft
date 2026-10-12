@@ -871,6 +871,12 @@ constexpr auto X714Map = std::array{
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR,
     SPA_AUDIO_CHANNEL_TFL, SPA_AUDIO_CHANNEL_TFR, SPA_AUDIO_CHANNEL_TRL, SPA_AUDIO_CHANNEL_TRR
 };
+/* Unpositioned channels, as used by "Pro Audio" profiles. Treated as stereo,
+ * with the stream still using FL and FR like other stereo apps.
+ */
+constexpr auto AuxStereoMap = std::array{
+    SPA_AUDIO_CHANNEL_AUX0, SPA_AUDIO_CHANNEL_AUX1
+};
 
 /**
  * Checks if every channel in 'map1' exists in 'map0' (that is, map0 is equal
@@ -995,7 +1001,8 @@ void DeviceNode::parsePositions(spa_pod const *value, bool const force_update) n
         }
         else if(MatchChannelMap(chanmap, QuadMap))
             mChannels = DevFmtQuad;
-        else if(MatchChannelMap(chanmap, StereoMap))
+        else if(MatchChannelMap(chanmap, StereoMap)
+            || MatchChannelMap(chanmap, AuxStereoMap))
             mChannels = DevFmtStereo;
         else
             mChannels = DevFmtMono;

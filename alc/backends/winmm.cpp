@@ -37,7 +37,6 @@
 
 #include "alnumeric.h"
 #include "althrd_setname.h"
-#include "core/helpers.h"
 #include "ringbuffer.h"
 #include "strutils.hpp"
 #include "vector.h"
@@ -50,6 +49,7 @@
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import core.helpers;
 import format;
 import gsl;
 import logging;
@@ -59,6 +59,7 @@ import types;
 #include "alformat.hpp"
 #include "altypes.hpp"
 #include "core/device.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

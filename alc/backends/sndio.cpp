@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "althrd_setname.h"
-#include "core/helpers.h"
 #include "ringbuffer.h"
 
 #include <sndio.h>
@@ -40,11 +39,13 @@
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import core.helpers;
 import gsl;
 import logging;
 #else
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

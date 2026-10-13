@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "helpers.h"
-
 #if defined(_WIN32)
 #include <windows.h>
 #endif
@@ -61,12 +59,14 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import core.helpers;
 import filesystem;
 import logging;
 #else
 #include "alstring.h"
+#include "core/helpers.hpp"
+#include "core/logging.h"
 #include "filesystem.h"
-#include "logging.h"
 #endif
 
 

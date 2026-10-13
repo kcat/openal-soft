@@ -1,5 +1,5 @@
-#ifndef CORE_HELPERS_H
-#define CORE_HELPERS_H
+#ifndef CORE_HELPERS_HPP
+#define CORE_HELPERS_HPP
 
 #include <string>
 #include <string_view>
@@ -23,4 +23,4 @@ auto SearchDataFiles(std::u8string_view ext) -> std::vector<std::u8string>;
 auto SearchDataFiles(std::u8string_view ext, std::u8string_view subdir)
     -> std::vector<std::u8string>;
 
-#endif /* CORE_HELPERS_H */
+#endif /* CORE_HELPERS_HPP */

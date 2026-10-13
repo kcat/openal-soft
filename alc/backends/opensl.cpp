@@ -38,7 +38,6 @@
 #include <functional>
 
 #include "althrd_setname.h"
-#include "core/helpers.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
@@ -52,6 +51,7 @@
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import core.helpers;
 import gsl;
 import logging;
 import zstring_view;
@@ -59,6 +59,7 @@ import zstring_view;
 #include "alc/backends/exception.hpp"
 #include "alformatzsv.hpp"
 #include "core/device.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

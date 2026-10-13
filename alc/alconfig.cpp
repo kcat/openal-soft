@@ -45,7 +45,6 @@
 #include <vector>
 
 #include "alnumeric.h"
-#include "core/helpers.h"
 #include "inout_ptr.hpp"
 #include "strutils.hpp"
 
@@ -59,12 +58,14 @@ using namespace winrt;
 
 #if HAVE_CXXMODULES
 import alstring;
+import core.helpers;
 import filesystem;
 import fmtlib;
 import gsl;
 import logging;
 #else
 #include "alstring.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
 #include "fmt/format.h"

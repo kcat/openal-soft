@@ -27,7 +27,6 @@
 #include "ambidefs.h"
 #include "filters/splitter.h"
 #include "gsl/gsl"
-#include "helpers.h"
 #include "hrtf_loader.hpp"
 #include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
@@ -36,6 +35,7 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import core.helpers;
 import filesystem;
 import format;
 import logging;
@@ -45,8 +45,9 @@ import types;
 #include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "alstring.h"
+#include "core/helpers.hpp"
+#include "core/logging.h"
 #include "filesystem.h"
-#include "logging.h"
 #include "spanstream.hpp"
 #endif
 

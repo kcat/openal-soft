@@ -40,7 +40,6 @@
 #include "alc/alconfig.h"
 #include "alnumeric.h"
 #include "althrd_setname.h"
-#include "core/helpers.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "inout_ptr.hpp"
@@ -51,6 +50,7 @@
 #if HAVE_CXXMODULES
 import backends.exception;
 import core.device;
+import core.helpers;
 import format;
 import gsl;
 import logging;
@@ -60,6 +60,7 @@ import zstring_view;
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
 #include "core/device.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

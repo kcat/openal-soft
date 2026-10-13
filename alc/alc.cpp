@@ -88,7 +88,6 @@
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
-#include "core/helpers.h"
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "core/tsmefilter.hpp"
@@ -170,6 +169,7 @@ import alc.context;
 import alc.device;
 import alstring;
 import backends.exception;
+import core.helpers;
 import fmtlib;
 import format;
 import logging;
@@ -181,6 +181,7 @@ import types;
 #include "alformat.hpp"
 #include "alformattypes.hpp"
 #include "alstring.h"
+#include "core/helpers.hpp"
 #include "core/logging.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

@@ -861,7 +861,6 @@ set(CORE_HDRS
     core/fmt_traits.h
     core/fpu_ctrl.h
     core/front_stablizer.h
-    core/helpers.h
     core/hrtf.h
     core/hrtf_loader.hpp
     core/hrtf_resource.hpp
@@ -880,9 +879,10 @@ if(HAVE_CXXMODULES)
         core/context.cppm
         core/cubic_tables.cppm
         core/device.cppm
+        core/helpers.cppm
         core/logging.cppm)
 else()
-    list(APPEND CORE_HDRS core/logging.h)
+    list(APPEND CORE_HDRS core/helpers.hpp core/logging.h)
 endif()
 
 set(HAVE_RTKIT 0)

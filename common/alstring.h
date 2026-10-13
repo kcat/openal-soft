@@ -14,20 +14,21 @@
 namespace al {
 
 [[nodiscard]] constexpr
-auto contains(std::string_view const str0, std::string_view const str1) noexcept -> bool
+auto contains(std::string_view const& str0, std::string_view const& str1) noexcept -> bool
 { return str0.find(str1) != std::string_view::npos; }
 
 namespace detail {
     template<typename CharT, typename Traits> NOINLINE [[nodiscard]]
-    auto case_compare(std::basic_string_view<CharT, Traits> str0,
-        std::basic_string_view<CharT, Traits> str1) noexcept -> std::weak_ordering
+    auto case_compare(std::basic_string_view<CharT, Traits> const& str0,
+        std::basic_string_view<CharT, Traits> const& str1) noexcept -> std::weak_ordering
     {
         return std::lexicographical_compare_three_way(str0.cbegin(), str0.cend(),
             str1.cbegin(), str1.cend(), [](CharT const ch0, CharT const ch1) -> std::weak_ordering
         {
-            /* Treat char8_t as normal char. We essentially do this anyway with
-            * u8_as_char.
-            */
+            /* Treat char8_t as normal char for comparison purposes. We
+             * basically do this anyway when storing UTF-8 in char strings, or
+             * use u8_as_char to reinterpret char8_t strings as char strings.
+             */
             if constexpr(std::same_as<char8_t, CharT> or std::same_as<char, CharT>)
                 return std::toupper(static_cast<int>(Traits::to_int_type(ch0))) <=>
                     std::toupper(static_cast<int>(Traits::to_int_type(ch1)));
@@ -44,17 +45,17 @@ namespace detail {
 }
 
 [[nodiscard]] inline
-auto case_compare(std::string_view const str0, std::string_view const str1) noexcept
+auto case_compare(std::string_view const& str0, std::string_view const& str1) noexcept
     -> std::weak_ordering
 { return detail::case_compare(str0, str1); }
 
 [[nodiscard]] inline
-auto case_compare(std::u8string_view const str0, std::u8string_view const str1) noexcept
+auto case_compare(std::u8string_view const& str0, std::u8string_view const& str1) noexcept
     -> std::weak_ordering
 { return detail::case_compare(str0, str1); }
 
 [[nodiscard]] inline
-auto case_compare(std::wstring_view const str0, std::wstring_view const str1) noexcept
+auto case_compare(std::wstring_view const& str0, std::wstring_view const& str1) noexcept
     -> std::weak_ordering
 { return detail::case_compare(str0, str1); }
 

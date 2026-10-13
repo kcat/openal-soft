@@ -349,7 +349,8 @@ auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std
     auto enumlock = std::lock_guard{EnumeratedHrtfLock};
     EnumeratedHrtfs.clear();
 
-    std::ranges::for_each(SearchDataFiles(u8".mhr"sv), AddFileEntry);
+    std::ranges::for_each(SearchDataFiles(u8".mhr"sv),
+        [](fs::path& path) { AddFileEntry(std::move(path)); });
 
     auto usedefaults = true;
     if(pathopt)
@@ -367,13 +368,14 @@ auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std
             }
             usedefaults = false;
             std::ranges::for_each(SearchDataFiles(u8".mhr"sv, al::char_as_u8(entry)),
-                AddFileEntry);
+                [](fs::path& path) { AddFileEntry(std::move(path)); });
         });
     }
 
     if(usedefaults)
     {
-        std::ranges::for_each(SearchDataFiles(u8".mhr"sv, u8"openal/hrtf"sv), AddFileEntry);
+        std::ranges::for_each(SearchDataFiles(u8".mhr"sv, u8"openal/hrtf"sv),
+            [](fs::path& path) { AddFileEntry(std::move(path)); });
         if(!GetHrtfResource(DefaultHrtfResourceID).empty())
             AddBuiltInEntry("Built-In HRTF", DefaultHrtfResourceID);
     }

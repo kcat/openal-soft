@@ -2,8 +2,9 @@
 #define CORE_HELPERS_HPP
 
 #include <string>
-#include <string_view>
 #include <vector>
+
+#include "filesystem.h"
 
 
 struct PathNamePair {
@@ -19,8 +20,7 @@ inline auto AllowRTTimeLimit = true;
 
 auto SetRTPriority() -> void;
 
-auto SearchDataFiles(std::u8string_view ext) -> std::vector<std::u8string>;
-auto SearchDataFiles(std::u8string_view ext, std::u8string_view subdir)
-    -> std::vector<std::u8string>;
+auto SearchDataFiles(fs::path const& ext) -> std::vector<fs::path>;
+auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector<fs::path>;
 
 #endif /* CORE_HELPERS_HPP */

@@ -27,8 +27,10 @@
 #include <csignal>
 #include <cstdarg>
 #include <cstdlib>
+#include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "AL/al.h"
@@ -110,7 +112,9 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
     if(auto const context = GetContextRef()) [[likely]]
         return alGetError_(*context);
 
-    static constexpr auto get_value = [](gsl::czstring envname, std::string_view optname) -> ALenum
+    using namespace std::string_view_literals;
+    static const auto deferror = std::invoke([envname = "__ALSOFT_DEFAULT_ERROR",
+        optname = "default-error"sv]() -> ALenum
     {
         auto optstr = al::getenv(envname);
         if(!optstr)
@@ -119,16 +123,15 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
         {
             try {
                 auto idx = 0_uz;
-                auto value = std::stoi(*optstr, &idx, 0);
-                if(idx >= optstr->size() || std::isspace(optstr->at(idx)))
+                if(auto const value = std::stoi(*optstr, &idx, 0);
+                    idx >= optstr->size() || std::isspace(optstr->at(idx)))
                     return value;
             } catch(...) {
             }
             ERR("Invalid default error value: \"{}\"", *optstr);
         }
         return AL_INVALID_OPERATION;
-    };
-    static const auto deferror = get_value("__ALSOFT_DEFAULT_ERROR", "default-error");
+    });
 
     WARN("Querying error state on null context (implicitly {:#04x})", as_unsigned(deferror));
     if(TrapALError)

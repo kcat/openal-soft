@@ -19,7 +19,6 @@
 #include <emmintrin.h>
 #endif
 
-#include "gsl/gsl"
 #include "opthelpers.h"
 
 
@@ -85,7 +84,7 @@ auto saturate_cast(T val) noexcept -> R
         if(val < 0)
             return R{0};
     }
-    return gsl::narrow_cast<R>(val);
+    return static_cast<R>(val);
 }
 
 } /* namespace al */
@@ -165,12 +164,12 @@ auto fastf2i(float const f) noexcept -> int
 
 #else
 
-    return gsl::narrow_cast<int>(f);
+    return static_cast<int>(f);
 #endif
 }
 [[nodiscard]] inline
 auto fastf2u(float const f) noexcept -> unsigned
-{ return gsl::narrow_cast<unsigned>(fastf2i(f)); }
+{ return static_cast<unsigned>(fastf2i(f)); }
 
 /**
  * Converts float-to-int using standard behavior (truncation). Out of range
@@ -217,7 +216,7 @@ auto float2uint(float const f) noexcept -> unsigned
     if(shift > 8) [[unlikely]]
         return std::numeric_limits<unsigned>::max() & mask;
 
-    const auto mant = gsl::narrow_cast<unsigned>(conv_i&0x7f'ff'ff) | 0x80'00'00u;
+    const auto mant = static_cast<unsigned>(conv_i&0x7f'ff'ff) | 0x80'00'00u;
     if(shift < 0) [[likely]]
         return (mant >> -shift) & mask;
     return (mant << shift) & mask;

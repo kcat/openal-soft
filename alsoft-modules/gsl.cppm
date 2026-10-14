@@ -12,6 +12,7 @@ using gsl::czstring;
 using gsl::finally;
 using gsl::make_not_null;
 using gsl::narrow;
+using gsl::narrowing_error;
 using gsl::narrow_cast;
 using gsl::not_null;
 using gsl::owner;

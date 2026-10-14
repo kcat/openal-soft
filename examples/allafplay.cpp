@@ -442,7 +442,6 @@ auto LafStream::prepareTrack(std::size_t const trackidx, usize const count) -> s
         }).c_val;
 
         auto const step = mNumEnabled.as<usize>().c_val;
-        Expects(idx < step);
         return std::visit([count,idx,step,src=std::span{mSampleChunk}]<typename T>(T &dst)
         {
             using sample_t = T::value_type;

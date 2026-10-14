@@ -16,7 +16,6 @@
 #include <unordered_map>
 
 #include "opthelpers.h"
-#include "strutils.hpp"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES

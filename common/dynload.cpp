@@ -8,13 +8,13 @@
 #ifdef _WIN32
 #include <windows.h>
 
-#include "strutils.hpp"
-
 #if HAVE_CXXMODULES
+import alstring;
 import format;
 import gsl;
 #else
 #include "alformat.hpp"
+#include "alstring.h"
 #include "gsl/gsl"
 #endif
 

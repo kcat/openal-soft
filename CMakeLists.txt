@@ -722,6 +722,7 @@ set(COMMON_MODS )
 set(COMMON_SRCS
     common/alcomplex.cpp
     common/almalloc.cpp
+    common/alstring.cpp
     common/althrd_setname.cpp
     common/altypes.cpp
     common/dynload.cpp

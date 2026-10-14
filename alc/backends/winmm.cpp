@@ -38,7 +38,6 @@
 #include "alnumeric.h"
 #include "althrd_setname.h"
 #include "ringbuffer.h"
-#include "strutils.hpp"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -47,6 +46,7 @@
 #endif
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -57,6 +57,7 @@ import types;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
+#include "alstring.h"
 #include "altypes.hpp"
 #include "core/device.h"
 #include "core/helpers.hpp"

@@ -4,24 +4,14 @@
 #include <optional>
 #include <string>
 
-#include "gsl/gsl"
+#include "gsl/zstring"
 
+namespace al {
+
+auto getenv(gsl::czstring envname) -> std::optional<std::string>;
 #ifdef _WIN32
-#include <string_view>
-
-auto wstr_to_utf8(std::wstring_view wstr) -> std::string;
-auto utf8_to_wstr(std::string_view str) -> std::wstring;
-
-namespace al {
-
-auto getenv(const gsl::cwzstring envname) -> std::optional<std::wstring>;
-
-} /* namespace al */
+auto getenv(gsl::cwzstring envname) -> std::optional<std::wstring>;
 #endif
-
-namespace al {
-
-auto getenv(const gsl::czstring envname) -> std::optional<std::string>;
 
 } /* namespace al */
 

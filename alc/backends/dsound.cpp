@@ -46,7 +46,6 @@
 #include "dynload.h"
 #include "inout_ptr.hpp"
 #include "ringbuffer.h"
-#include "strutils.hpp"
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;
@@ -82,6 +81,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 #endif
 
 #if HAVE_CXXMODULES
+import alstring;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -93,6 +93,7 @@ import zstring_view;
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
+#include "alstring.h"
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"

@@ -4,11 +4,16 @@ module;
 
 export module alstring;
 
-export namespace al {
+export {
+#if defined(_WIN32)
+    using ::utf8_to_wstr;
+    using ::wstr_to_utf8;
+#endif
 
-    using al::contains;
-    using al::case_compare;
-    using al::u8_as_char;
-    using al::char_as_u8;
-
+    namespace al {
+        using al::case_compare;
+        using al::char_as_u8;
+        using al::contains;
+        using al::u8_as_char;
+    }
 }

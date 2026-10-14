@@ -1,5 +1,5 @@
-#ifndef AL_STRUTILS_HPP
-#define AL_STRUTILS_HPP
+#ifndef COMMON_ENVUTILS_HPP
+#define COMMON_ENVUTILS_HPP
 
 #include <optional>
 #include <string>
@@ -15,4 +15,4 @@ auto getenv(gsl::cwzstring envname) -> std::optional<std::wstring>;
 
 } /* namespace al */
 
-#endif /* AL_STRUTILS_HPP */
+#endif /* COMMON_ENVUTILS_HPP */

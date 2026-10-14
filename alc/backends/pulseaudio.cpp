@@ -44,8 +44,8 @@
 #include "alnumeric.h"
 #include "dlopennote.h"
 #include "dynload.h"
+#include "envutils.hpp"
 #include "opthelpers.h"
-#include "strutils.hpp"
 #include "zudl.hpp"
 
 #include <pulse/pulseaudio.h>

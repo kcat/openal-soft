@@ -55,7 +55,7 @@
 #endif
 
 #include "alnumeric.h"
-#include "strutils.hpp"
+#include "envutils.hpp"
 
 #if HAVE_CXXMODULES
 import alstring;

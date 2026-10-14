@@ -45,8 +45,8 @@
 #include <vector>
 
 #include "alnumeric.h"
+#include "envutils.hpp"
 #include "inout_ptr.hpp"
-#include "strutils.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!

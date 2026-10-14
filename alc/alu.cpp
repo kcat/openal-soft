@@ -67,11 +67,11 @@
 #include "core/voice.h"
 #include "core/voice_change.h"
 #include "core/front_stablizer.h"
+#include "envutils.hpp"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "ringbuffer.h"
-#include "strutils.hpp"
 #include "vecmat.h"
 #include "zudl.hpp"
 

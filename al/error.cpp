@@ -40,7 +40,7 @@
 #include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "strutils.hpp"
+#include "envutils.hpp"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES

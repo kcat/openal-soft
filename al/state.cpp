@@ -45,9 +45,9 @@
 #include "core/mixer/defs.h"
 #include "core/voice.h"
 #include "direct_defs.h"
+#include "envutils.hpp"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "strutils.hpp"
 #include "zudl.hpp"
 
 #if ALSOFT_EAX

@@ -11,7 +11,7 @@
 #include "opthelpers.h"
 
 #if defined(_WIN32)
-#include <string_view>
+#include <string>
 
 auto wstr_to_utf8(std::wstring_view wstr) -> std::string;
 auto utf8_to_wstr(std::string_view str) -> std::wstring;

@@ -170,7 +170,7 @@ auto GetProcBinary() -> fs::path const&
         }
 #endif
 #ifdef HAVE_PROC_PIDPATH
-        if(pathname.empty())
+        if(resultpath.empty())
         {
             auto procpath = std::array<char,PROC_PIDPATHINFO_MAXSIZE>{};
             const auto pid = getpid();
@@ -178,15 +178,15 @@ auto GetProcBinary() -> fs::path const&
                 ERR("proc_pidpath({}, ...) failed: {}", pid,
                     std::generic_category().message(errno));
             else
-                pathname = procpath.data();
+                resultpath = procpath.data();
         }
 #endif
 #ifdef __HAIKU__
-        if(pathname.empty())
+        if(resultpath.empty())
         {
             auto procpath = std::array<char,PATH_MAX>{};
             if(find_path(B_APP_IMAGE_SYMBOL, B_FIND_PATH_IMAGE_PATH, NULL, procpath.data(), procpath.size()) == B_OK)
-                pathname = procpath.data();
+                resultpath = procpath.data();
         }
 #endif
 #ifndef __SWITCH__

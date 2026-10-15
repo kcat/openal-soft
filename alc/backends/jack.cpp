@@ -48,6 +48,7 @@
 import backends.exception;
 import core.device;
 import core.helpers;
+import filesystem;
 import format;
 import gsl;
 import logging;
@@ -59,6 +60,7 @@ import zstring_view;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "filesystem.h"
 #include "gsl/gsl"
 #endif
 
@@ -457,8 +459,8 @@ void JackPlayback::open(std::string_view name)
 {
     if(!mClient)
     {
-        auto&& binname = GetProcBinary();
-        auto *client_name = binname.fname.empty() ? "alsoft" : binname.fname.c_str();
+        auto&& binname = GetProcBinary().filename().string();
+        auto *client_name = binname.empty() ? "alsoft" : binname.c_str();
 
         auto status = jack_status_t{};
         mClient = jack_client_open(client_name, ClientOptions, &status, nullptr);
@@ -684,8 +686,8 @@ bool JackBackendFactory::init()
     if(!GetConfigValueBool({}, "jack", "spawn-server", false))
         ClientOptions = gsl::narrow_cast<jack_options_t>(ClientOptions | JackNoStartServer);
 
-    auto&& binname = GetProcBinary();
-    auto *client_name = binname.fname.empty() ? "alsoft" : binname.fname.c_str();
+    auto&& binname = GetProcBinary().filename().string();
+    auto *client_name = binname.empty() ? "alsoft" : binname.c_str();
 
     void (*old_error_cb)(const char*){&jack_error_callback ? jack_error_callback : nullptr};
     jack_set_error_function(jack_msg_handler);
@@ -711,8 +713,8 @@ auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {
     auto outnames = std::vector<std::string>{};
 
-    auto&& binname = GetProcBinary();
-    auto *client_name = binname.fname.empty() ? "alsoft" : binname.fname.c_str();
+    auto&& binname = GetProcBinary().filename().string();
+    auto *client_name = binname.empty() ? "alsoft" : binname.c_str();
     auto status = jack_status_t{};
     switch(type)
     {

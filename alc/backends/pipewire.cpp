@@ -132,6 +132,7 @@ import alstring;
 import backends.exception;
 import core.device;
 import core.helpers;
+import filesystem;
 import fmtlib;
 import format;
 import gsl;
@@ -148,6 +149,7 @@ import zstring_view;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "filesystem.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
@@ -1759,8 +1761,8 @@ auto PipeWirePlayback::reset() -> bool
     /* TODO: Which properties are actually needed here? Any others that could
      * be useful?
      */
-    auto&& binary = GetProcBinary();
-    auto *const appname = !binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft";
+    auto&& binname = GetProcBinary().filename().string();
+    auto *const appname = !binname.empty() ? binname.c_str() : "OpenAL Soft";
     auto *props = pw_properties_new(PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,
         PW_KEY_MEDIA_TYPE, "Audio",
@@ -2174,8 +2176,8 @@ void PipeWireCapture::open(std::string_view name)
         throw al::backend_exception{al::backend_error::DeviceError,
             "Failed to set PipeWire audio format parameters"};
 
-    auto&& binary = GetProcBinary();
-    auto *appname = !binary.fname.empty() ? binary.fname.c_str() : "OpenAL Soft";
+    auto&& binname = GetProcBinary().filename().string();
+    auto *appname = !binname.empty() ? binname.c_str() : "OpenAL Soft";
     pw_properties *props{pw_properties_new(
         PW_KEY_NODE_NAME, appname,
         PW_KEY_NODE_DESCRIPTION, appname,

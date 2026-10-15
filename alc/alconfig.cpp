@@ -415,7 +415,7 @@ void ReadALConfig()
     }
 #endif
 
-    path = fs::path(al::char_as_u8(GetProcBinary().path));
+    path = GetProcBinary().parent_path();
     if(!path.empty())
     {
         path /= L"alsoft.ini";
@@ -522,7 +522,7 @@ void ReadALConfig()
             LoadConfigFromFile(f);
     }
 
-    path = GetProcBinary().path;
+    path = GetProcBinary().parent_path();
     if(!path.empty())
     {
         path /= "alsoft.conf";

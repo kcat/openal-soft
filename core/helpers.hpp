@@ -1,16 +1,12 @@
 #ifndef CORE_HELPERS_HPP
 #define CORE_HELPERS_HPP
 
-#include <string>
 #include <vector>
 
 #include "filesystem.h"
 
 
-struct PathNamePair {
-    std::string path, fname;
-};
-auto GetProcBinary() -> const PathNamePair&;
+auto GetProcBinary() -> fs::path const&;
 
 /* Mixing thread priority level */
 inline auto RTPrioLevel = 1;

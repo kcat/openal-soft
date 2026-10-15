@@ -1,6 +1,5 @@
 module;
 
-#include <string>
 #include <vector>
 
 export module core.helpers;
@@ -9,10 +8,7 @@ import filesystem;
 
 export extern "C++" {
 
-struct PathNamePair {
-    std::string path, fname;
-};
-auto GetProcBinary() -> const PathNamePair&;
+auto GetProcBinary() -> fs::path const&;
 
 /* Mixing thread priority level */
 inline auto RTPrioLevel = 1;

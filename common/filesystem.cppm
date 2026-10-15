@@ -3,12 +3,15 @@ module;
 #include <concepts>
 #include <string_view>
 
+#include "alformat.hpp"
 #include "filesystem.h"
 
 export module filesystem;
 
 import alstring;
-import format;
+#if !USING_STD_FORMAT && !defined(GHC_USE_STD_FS)
+import fmtlib;
+#endif
 
 export namespace fs {
     using fs::copy_options;
@@ -122,30 +125,53 @@ export namespace ghc::filesystem {
 }
 #endif
 
-#if !defined(GHC_USE_STD_FS) || !defined(__cpp_lib_format_path) \
-    || !(__cpp_lib_format_path >= 202403L)
 export {
 
+#if USING_STD_FORMAT && (!defined(__cpp_lib_format_path) || !(__cpp_lib_format_path >= 202403L) \
+        || !defined(GHC_USE_STD_FS))
+
 template<typename CharT>
-struct al::formatter<fs::path, CharT> : al::formatter<std::basic_string_view<CharT>, CharT> {
+struct std::formatter<fs::path, CharT> : std::formatter<std::basic_string_view<CharT>, CharT> {
     using fmttype_t = std::basic_string_view<CharT>;
 
-    auto format(fs::path const &path, auto& ctx) const
+    auto format(fs::path const& path, auto& ctx) const
     {
         if constexpr(std::same_as<CharT, fs::path::value_type>)
-            return al::formatter<fmttype_t, CharT>::format(path.native(), ctx);
+            return formatter<fmttype_t, CharT>::format(path.native(), ctx);
 #if defined(_WIN32)
         /* We're assuming the execution environment has UTF-8 set for narrow/
          * multibyte/char strings. This is the default for GCC, and we pass
          * /utf-8 to MSVC to make it so there too, so it behaves like standard.
          */
         else if constexpr(std::same_as<fs::path::value_type, wchar_t> and std::same_as<char,CharT>)
-            return al::formatter<fmttype_t, CharT>::format(wstr_to_utf8(path.native()), ctx);
+            return formatter<fmttype_t, CharT>::format(wstr_to_utf8(path.native()), ctx);
 #endif
         else
-            return al::formatter<fmttype_t, CharT>::format(path.string<CharT>(), ctx);
+            return formatter<fmttype_t, CharT>::format(path.string<CharT>(), ctx);
     }
 };
 
-}
 #endif
+
+#if !USING_STD_FORMAT && !defined(GHC_USE_STD_FS)
+
+template<typename CharT>
+struct fmt::formatter<fs::path, CharT> : fmt::formatter<std::basic_string_view<CharT>, CharT> {
+    using fmttype_t = std::basic_string_view<CharT>;
+
+    auto format(fs::path const& path, auto& ctx) const
+    {
+        if constexpr(std::same_as<fs::path::value_type, CharT>)
+            return formatter<fmttype_t, CharT>::format(path.native(), ctx);
+#if defined(_WIN32)
+        else if constexpr(std::same_as<fs::path::value_type, wchar_t> and std::same_as<char,CharT>)
+            return formatter<fmttype_t, CharT>::format(wstr_to_utf8(path.native()), ctx);
+#endif
+        else
+            return formatter<fmttype_t, CharT>::format(path.string<CharT>(), ctx);
+    }
+};
+
+#endif
+
+}

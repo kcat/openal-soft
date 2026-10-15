@@ -3,7 +3,9 @@
 
 #include "alformat.hpp"
 #include "filesystem.h"
-
+#if !USING_STD_FORMAT
+#include "fmt/std.h"
+#endif
 
 #if USING_STD_FORMAT && (!defined(__cpp_lib_format_path) || !(__cpp_lib_format_path >= 202403L) \
         || !defined(GHC_USE_STD_FS))
@@ -39,7 +41,6 @@ struct std::formatter<fs::path, CharT> : std::formatter<std::basic_string_view<C
 #include <concepts>
 #include <string_view>
 
-#include "fmt/format.h"
 #if defined(_WIN32)
 #include "alstring.h"
 #endif

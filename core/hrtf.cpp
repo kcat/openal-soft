@@ -43,6 +43,7 @@ import spanstream;
 import types;
 #else
 #include "alformat.hpp"
+#include "alformatpath.hpp"
 #include "alformattypes.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
@@ -297,7 +298,7 @@ void AddFileEntry(fs::path&& filename)
     using std::ranges::find;
     if(find(EnumeratedHrtfs, filename, &HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
-        TRACE("Skipping duplicate file entry {}", al::u8_as_char(filename.u8string()));
+        TRACE("Skipping duplicate file entry {}", filename);
         return;
     }
 
@@ -312,7 +313,7 @@ void AddFileEntry(fs::path&& filename)
         newname = al::format("{} #{}", basename, ++count);
 
     auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
-    TRACE("Adding file entry \"{}\"", al::u8_as_char(entry.mFilename.u8string()));
+    TRACE("Adding file entry \"{}\"", entry.mFilename);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
@@ -325,7 +326,7 @@ void AddBuiltInEntry(std::string_view const dispname, unsigned const residx)
     using std::ranges::find;
     if(find(EnumeratedHrtfs, filename, &HrtfEntry::mFilename) != EnumeratedHrtfs.end())
     {
-        TRACE("Skipping duplicate file entry {}", al::u8_as_char(filename.u8string()));
+        TRACE("Skipping duplicate file entry {}", filename);
         return;
     }
 
@@ -338,7 +339,7 @@ void AddBuiltInEntry(std::string_view const dispname, unsigned const residx)
         newname = al::format("{} #{}", dispname, ++count);
 
     auto const &entry = EnumeratedHrtfs.emplace_back(std::move(newname), std::move(filename));
-    TRACE("Adding built-in entry \"{}\"", al::u8_as_char(entry.mFilename.u8string()));
+    TRACE("Adding built-in entry \"{}\"", entry.mFilename);
 }
 
 } // namespace
@@ -406,7 +407,7 @@ try {
 
     auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](std::unique_ptr<HrtfStore> const&hrtf, std::u8string_view const filename) -> bool
+        [devrate](std::unique_ptr<HrtfStore>const& hrtf, std::u8string_view const filename) -> bool
     {
         return hrtf->mSampleRate < devrate
             || (hrtf->mSampleRate == devrate && hrtf->mFilename < filename);

@@ -63,6 +63,7 @@ import core.helpers;
 import filesystem;
 import logging;
 #else
+#include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
@@ -76,8 +77,8 @@ using namespace std::string_view_literals;
 
 auto gSearchLock = std::mutex{};
 
-void DirectorySearch(fs::path const& path, std::u8string_view const ext,
-    std::vector<fs::path> *const results)
+void DirectorySearch(fs::path const& path, fs::path const& ext,
+    std::vector<fs::path>*const results)
 {
     const auto base = results->size();
 
@@ -86,7 +87,7 @@ void DirectorySearch(fs::path const& path, std::u8string_view const ext,
         if(!fs::exists(fpath))
             return;
 
-        TRACE("Searching {} for *{}", al::u8_as_char(fpath.u8string()), al::u8_as_char(ext));
+        TRACE("Searching {} for *{}", fpath, ext);
         for(auto&& dirent : fs::directory_iterator{fpath})
         {
             auto&& entrypath = dirent.path();
@@ -95,7 +96,7 @@ void DirectorySearch(fs::path const& path, std::u8string_view const ext,
 
             if(fs::status(entrypath).type() != fs::file_type::regular)
                 continue;
-            if(is_eq(al::case_compare(entrypath.extension().u8string(), ext)))
+            if(is_eq(al::case_compare(entrypath.extension().native(), ext.native())))
                 results->emplace_back(entrypath);
         }
     }
@@ -106,7 +107,7 @@ void DirectorySearch(fs::path const& path, std::u8string_view const ext,
     const auto newlist = std::span{*results}.subspan(base);
     std::ranges::sort(newlist);
     for(const auto &name : newlist)
-        TRACE(" got {}", al::u8_as_char(name.u8string()));
+        TRACE(" got {}", name);
 }
 
 } // namespace
@@ -123,7 +124,7 @@ auto GetProcBinary() -> fs::path const&
             for(auto pathlen = DWORD{256};pathlen != 0;pathlen <<= 1)
             {
                 fullpath.resize(pathlen, L'\0');
-                auto len = GetModuleFileNameW(nullptr, fullpath.data(), pathlen);
+                auto const len = GetModuleFileNameW(nullptr, fullpath.data(), pathlen);
                 if(len < fullpath.size())
                 {
                     fullpath.resize(len);
@@ -216,8 +217,7 @@ auto GetProcBinary() -> fs::path const&
 #endif
 
         resultpath.make_preferred();
-        TRACE(R"(Got binary: "{}", "{}")", al::u8_as_char(resultpath.parent_path().u8string()),
-            al::u8_as_char(resultpath.filename().u8string()));
+        TRACE(R"(Got binary: "{}", "{}")", resultpath.parent_path(), resultpath.filename());
         return resultpath;
     });
     return procbin;
@@ -240,9 +240,9 @@ auto SearchDataFiles(fs::path const& ext) -> std::vector<fs::path>
     /* Search the app-local directory. */
     auto results = std::vector<fs::path>{};
     if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext.u8string(), &results);
+        DirectorySearch(*localpath, ext, &results);
     else if(auto curpath = fs::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext.u8string(), &results);
+        DirectorySearch(curpath, ext, &results);
 
     return results;
 }
@@ -255,12 +255,11 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
     auto results = std::vector<fs::path>{};
     if(subdir.is_absolute())
     {
-        DirectorySearch(subdir, ext.u8string(), &results);
+        DirectorySearch(subdir, ext, &results);
         return results;
     }
 
 #if !ALSOFT_UWP && !defined(_GAMING_XBOX)
-    auto const extstr = ext.u8string();
     /* Search the local and global data dirs. */
     for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
@@ -270,7 +269,7 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
         if(FAILED(hr) || !buffer || !*buffer)
             continue;
 
-        DirectorySearch(fs::path{buffer.get()}/subdir, extstr, &results);
+        DirectorySearch(fs::path{buffer.get()}/subdir, ext, &results);
     }
 #endif
 
@@ -297,9 +296,9 @@ auto SearchDataFiles(fs::path const& ext) -> std::vector<fs::path>
     /* Search the app-local directory. */
     auto results = std::vector<fs::path>{};
     if(auto const localpath = al::getenv("ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext.u8string(), &results);
+        DirectorySearch(*localpath, ext, &results);
     else if(auto const curpath = fs::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext.u8string(), &results);
+        DirectorySearch(curpath, ext, &results);
 
     return results;
 }
@@ -311,16 +310,15 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
     auto results = std::vector<fs::path>{};
     if(subdir.is_absolute())
     {
-        DirectorySearch(subdir, ext.u8string(), &results);
+        DirectorySearch(subdir, ext, &results);
         return results;
     }
 
-    auto const extstr = ext.u8string();
     /* Search local data dir */
     if(auto const datapath = al::getenv("XDG_DATA_HOME"))
-        DirectorySearch(fs::path{*datapath}/subdir, extstr, &results);
+        DirectorySearch(fs::path{*datapath}/subdir, ext, &results);
     else if(auto const homepath = al::getenv("HOME"))
-        DirectorySearch(fs::path{*homepath}/".local/share"/subdir, extstr, &results);
+        DirectorySearch(fs::path{*homepath}/".local/share"/subdir, ext, &results);
 
     /* Search global data dirs */
     const auto datadirs = std::string{al::getenv("XDG_DATA_DIRS")
@@ -337,13 +335,13 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
         curpos = nextpos;
 
         if(!pathname.empty())
-            DirectorySearch(fs::path{pathname}/subdir, extstr, &results);
+            DirectorySearch(fs::path{pathname}/subdir, ext, &results);
     }
 
 #ifdef ALSOFT_INSTALL_DATADIR
     /* Search the installation data directory */
     if(auto instpath = fs::path{ALSOFT_INSTALL_DATADIR}; !instpath.empty())
-        DirectorySearch(instpath/subdir, extstr, &results);
+        DirectorySearch(instpath/subdir, ext, &results);
 #endif
 
     return results;

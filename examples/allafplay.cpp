@@ -101,8 +101,9 @@ import zstring_view;
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alformatzsv.hpp"
+#include "alformatpath.hpp"
 #include "alformattypes.hpp"
+#include "alformatzsv.hpp"
 #include "alstring.h"
 #include "common/alhelpers.hpp"
 #include "filesystem.h"
@@ -587,7 +588,7 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
             | (u32{as_unsigned(input[2])}<<16) | (u32{as_unsigned(input[3])}<<24);
     });
 
-    fmt::println("Filename: {}", al::u8_as_char(fname.u8string()));
+    fmt::println("Filename: {}", fname);
     fmt::println(" quality: {}", GetQualityName(laf->mQuality));
     fmt::println(" mode: {}", GetModeName(laf->mMode));
     fmt::println(" track count: {}", laf->mNumTracks);
@@ -891,13 +892,11 @@ try {
         auto outname = fs::path(al::char_as_u8(fname)).stem();
         outname += u8".caf";
         if(fs::exists(outname) && !fs::is_fifo(outname))
-            throw std::runtime_error{fmt::format("Output file {} exists",
-                al::u8_as_char(outname.u8string()))};
+            throw std::runtime_error{fmt::format("Output file {} exists", outname)};
 
         renderFile.open(outname, std::ios_base::binary | std::ios_base::out);
         if(!renderFile.is_open())
-            throw std::runtime_error{fmt::format("Failed to create {}",
-                al::u8_as_char(outname.u8string()))};
+            throw std::runtime_error{fmt::format("Failed to create {}", outname)};
 
         renderFile.write("caff", 4);
         fwrite16be(1_u16, renderFile);
@@ -968,7 +967,7 @@ try {
         renderStart = renderFile.tellp();
         fwrite32be(0_u32, renderFile);
 
-        fmt::println("Rendering to {}...", al::u8_as_char(outname.u8string()));
+        fmt::println("Rendering to {}...", outname);
     }
 
     while(!laf->isAtEnd())

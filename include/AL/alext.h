@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-16 11:52:40.073517+00:00
+ * Last regenerated: 2026-10-16 12:39:40.407024+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -1133,6 +1133,8 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 #ifndef ALC_SOFTX_device_config
 #define ALC_SOFTX_device_config 1
 #define ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT      0x0001
+#define ALC_DEVICE_MAX_MONO_SOURCES_SOFT         0x0002
+#define ALC_DEVICE_MAX_STEREO_SOURCES_SOFT       0x0003
 typedef ALCdevice* (ALC_APIENTRY *LPALCOPENDEVICECONFIGSOFT)(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT;

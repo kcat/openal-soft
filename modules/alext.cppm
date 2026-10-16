@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-16 11:52:40.073517+00:00
+ * Last regenerated: 2026-10-16 12:39:40.407024+00:00
  */
 
 module;
@@ -1028,6 +1028,8 @@ ENUMDCL AL_PAN_SOFT =                            0x19ED;
 
 /*** ALC_SOFTX_device_config ***/
 ENUMDCL ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT =    0x0001;
+ENUMDCL ALC_DEVICE_MAX_MONO_SOURCES_SOFT =       0x0002;
+ENUMDCL ALC_DEVICE_MAX_STEREO_SOURCES_SOFT =     0x0003;
 using LPALCOPENDEVICECONFIGSOFT = auto (ALC_APIENTRY*)(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCdevice*;
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API auto ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCdevice*;

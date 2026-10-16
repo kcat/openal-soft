@@ -1460,6 +1460,8 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x19DA" name="ALC_EVENT_NOT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
 
         <enum value="0x0001" name="ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT" group="DeviceConfigurationSOFT"/>
+        <enum value="0x0002" name="ALC_DEVICE_MAX_MONO_SOURCES_SOFT" group="DeviceConfigurationSOFT"/>
+        <enum value="0x0003" name="ALC_DEVICE_MAX_STEREO_SOURCES_SOFT" group="DeviceConfigurationSOFT"/>
     </enums>
 
     <commands namespace="AL">
@@ -5489,6 +5491,8 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <extension name="ALC_SOFTX_device_config" supported="alc" depends="ALC_SOFT_loopback">
             <require>
                 <enum name="ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT"/>
+                <enum name="ALC_DEVICE_MAX_MONO_SOURCES_SOFT"/>
+                <enum name="ALC_DEVICE_MAX_STEREO_SOURCES_SOFT"/>
                 <command name="alcOpenDeviceConfigSOFT"/>
             </require>
         </extension>

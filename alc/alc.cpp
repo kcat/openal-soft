@@ -1640,21 +1640,24 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
+    if (!(device.OverrideNumMonoSources || device.OverrideNumStereoSources))
     {
-        if(*srcsopt <= 0) numMono = 256;
-        else numMono = std::max(*srcsopt, 16u);
+        if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
+        {
+            if(*srcsopt <= 0) numMono = 256;
+            else numMono = std::max(*srcsopt, 16u);
+        }
+        else
+        {
+            numMono = std::min(numMono, std::numeric_limits<int>::max()-numStereo);
+            numMono = std::max(numMono+numStereo, 256u);
+        }
+        numStereo = std::min(numStereo, numMono);
+        numMono -= numStereo;
+        device.NumMonoSources = numMono;
+        device.NumStereoSources = numStereo;
+        device.SourcesMax = numMono + numStereo;
     }
-    else
-    {
-        numMono = std::min(numMono, std::numeric_limits<int>::max()-numStereo);
-        numMono = std::max(numMono+numStereo, 256u);
-    }
-    numStereo = std::min(numStereo, numMono);
-    numMono -= numStereo;
-    device.SourcesMax = numMono + numStereo;
-    device.NumMonoSources = numMono;
-    device.NumStereoSources = numStereo;
 
     if(auto sendsopt = device.configValue<unsigned>({}, "sends"sv))
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));
@@ -3159,18 +3162,28 @@ try {
     }
 
     ALCuint maxauxslots = 64;
+
+    bool overridestereosources = false;
+    ALCuint maxstereosources = 1;
+    bool overridemonosources = false;
+    ALCuint maxmonosources = 255;
     
     for (auto const [p, v] : SpanFromAttributeList(attrList))
     {
         switch (p)
         {
             case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
-                if (v < 0)
-                {
-                    al::Device::SetGlobalError(ALC_INVALID_VALUE);
-                    return nullptr;
-                }
-                maxauxslots = v;
+                maxauxslots = static_cast<ALCuint>(v > 0 ? v : 0);
+                break;
+
+            case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
+                maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
+                overridemonosources = true;
+                break;
+
+            case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
+                maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
+                overridestereosources = true;
                 break;
 
             default:
@@ -3225,11 +3238,13 @@ try {
     device->mUpdateSize = DefaultUpdateSize;
     device->mBufferSize = DefaultUpdateSize * DefaultNumUpdates;
 
-    device->SourcesMax = 256;
-    device->NumStereoSources = 1;
-    device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
+    device->SourcesMax = maxmonosources + maxstereosources;
+    device->NumStereoSources = maxstereosources;
+    device->NumMonoSources = maxmonosources;
     device->AuxiliaryEffectSlotMax = maxauxslots;
     device->NumAuxSends = DefaultSends;
+    device->OverrideNumMonoSources = overridemonosources;
+    device->OverrideNumStereoSources = overridestereosources;
 
     try {
         auto backend = PlaybackFactory->createBackend(*device, BackendType::Playback);

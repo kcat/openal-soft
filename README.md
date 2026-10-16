@@ -14,7 +14,7 @@ License
 
 The OpenAL Soft project is provided under the terms of the LGPL 2 or later (see COPYING).
 
-The default HRTF dataset is derived from the [SADIE II database[(https://www.york.ac.uk/sadie-project/database.html), and is provided under the Apache 2.0 license (see LICENSE.Apache-2.0.txt).
+The default HRTF dataset is derived from the [SADIE II database](https://www.york.ac.uk/sadie-project/database.html), and is provided under the Apache 2.0 license (see LICENSE.Apache-2.0.txt).
 
 
 Source Install

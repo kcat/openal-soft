@@ -62,17 +62,20 @@ import alstring;
 import core.helpers;
 import filesystem;
 import logging;
+import zstring_view;
 #else
 #include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "zstring_view.hpp"
 #endif
 
 
 namespace {
 
+using namespace al::zstring_view_literals;
 using namespace std::string_view_literals;
 
 auto gSearchLock = std::mutex{};
@@ -224,24 +227,21 @@ auto GetProcBinary() -> fs::path const&
 }
 
 
-#ifdef _WIN32
-#if !ALSOFT_UWP && !defined(_GAMING_XBOX)
-namespace {
-struct CoTaskMemDeleter {
-    void operator()(void *mem) const { CoTaskMemFree(mem); }
-};
-} // namespace
-#endif
-
 auto SearchDataFiles(fs::path const& ext) -> std::vector<fs::path>
 {
     const auto srchlock = std::lock_guard{gSearchLock};
 
     /* Search the app-local directory. */
+#if defined(_WIN32)
+    auto constexpr localpathenv = L"ALSOFT_LOCAL_PATH"_zsv;
+#else
+    auto constexpr localpathenv = "ALSOFT_LOCAL_PATH"_zsv;
+#endif
+
     auto results = std::vector<fs::path>{};
-    if(auto localpath = al::getenv(L"ALSOFT_LOCAL_PATH"))
+    if(auto const localpath = al::getenv(localpathenv.c_str()))
         DirectorySearch(*localpath, ext, &results);
-    else if(auto curpath = fs::current_path(); !curpath.empty())
+    else if(auto const curpath = fs::current_path(); !curpath.empty())
         DirectorySearch(curpath, ext, &results);
 
     return results;
@@ -259,13 +259,14 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
         return results;
     }
 
+#if defined(_WIN32)
 #if !ALSOFT_UWP && !defined(_GAMING_XBOX)
     /* Search the local and global data dirs. */
     for(const auto &folderid : std::array{FOLDERID_RoamingAppData, FOLDERID_ProgramData})
     {
-        auto buffer = std::unique_ptr<WCHAR,CoTaskMemDeleter>{};
-        const HRESULT hr{SHGetKnownFolderPath(folderid, KF_FLAG_DONT_UNEXPAND, nullptr,
-            al::out_ptr(buffer))};
+        auto buffer = std::unique_ptr<WCHAR, decltype([](WCHAR *mem){ CoTaskMemFree(mem); })>{};
+        auto const hr = SHGetKnownFolderPath(folderid, KF_FLAG_DONT_UNEXPAND, nullptr,
+            al::out_ptr(buffer));
         if(FAILED(hr) || !buffer || !*buffer)
             continue;
 
@@ -273,46 +274,7 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
     }
 #endif
 
-    return results;
-}
-
-void SetRTPriority()
-{
-#if !ALSOFT_UWP
-    if(RTPrioLevel > 0)
-    {
-        if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
-            ERR("Failed to set priority level for thread");
-    }
-#endif
-}
-
 #else
-
-auto SearchDataFiles(fs::path const& ext) -> std::vector<fs::path>
-{
-    const auto srchlock = std::lock_guard{gSearchLock};
-
-    /* Search the app-local directory. */
-    auto results = std::vector<fs::path>{};
-    if(auto const localpath = al::getenv("ALSOFT_LOCAL_PATH"))
-        DirectorySearch(*localpath, ext, &results);
-    else if(auto const curpath = fs::current_path(); !curpath.empty())
-        DirectorySearch(curpath, ext, &results);
-
-    return results;
-}
-
-auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector<fs::path>
-{
-    const auto srchlock = std::lock_guard{gSearchLock};
-
-    auto results = std::vector<fs::path>{};
-    if(subdir.is_absolute())
-    {
-        DirectorySearch(subdir, ext, &results);
-        return results;
-    }
 
     /* Search local data dir */
     if(auto const datapath = al::getenv("XDG_DATA_HOME"))
@@ -340,12 +302,27 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
 
 #ifdef ALSOFT_INSTALL_DATADIR
     /* Search the installation data directory */
-    if(auto instpath = fs::path{ALSOFT_INSTALL_DATADIR}; !instpath.empty())
+    if(auto const instpath = fs::path{ALSOFT_INSTALL_DATADIR}; !instpath.empty())
         DirectorySearch(instpath/subdir, ext, &results);
 #endif
-
+#endif
     return results;
 }
+
+
+#if defined(_WIN32)
+void SetRTPriority()
+{
+#if !ALSOFT_UWP
+    if(RTPrioLevel > 0)
+    {
+        if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+            ERR("Failed to set priority level for thread");
+    }
+#endif
+}
+
+#else
 
 namespace {
 

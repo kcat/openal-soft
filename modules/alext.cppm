@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-05 19:29:55.449282+00:00
+ * Last regenerated: 2026-10-16 11:52:40.073517+00:00
  */
 
 module;
@@ -1025,5 +1025,12 @@ ENUMDCL AL_UNPACK_AMBISONIC_ORDER_SOFT =         0x199D;
 /*** AL_SOFT_source_panning ***/
 ENUMDCL AL_PANNING_ENABLED_SOFT =                0x19EC;
 ENUMDCL AL_PAN_SOFT =                            0x19ED;
+
+/*** ALC_SOFTX_device_config ***/
+ENUMDCL ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT =    0x0001;
+using LPALCOPENDEVICECONFIGSOFT = auto (ALC_APIENTRY*)(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCdevice*;
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API auto ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT -> ALCdevice*;
+#endif
 
 } /* extern "C" */

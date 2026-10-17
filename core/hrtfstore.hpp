@@ -1,13 +1,13 @@
-#ifndef HRTFSTORE_HPP
-#define HRTFSTORE_HPP
+#ifndef CORE_HRTFSTORE_HPP
+#define CORE_HRTFSTORE_HPP
 
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <new>
 #include <span>
-#include <string>
 
+#include "filesystem.h"
 #include "gsl/pointers"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
@@ -25,7 +25,7 @@ constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ffu;
 
 struct HrtfStore {
     alignas(16) std::atomic<unsigned> mRef;
-    std::u8string mFilename;
+    fs::path mFilename;
 
     unsigned mSampleRate : 24;
     unsigned mIrSize : 8;
@@ -64,4 +64,4 @@ struct HrtfStore {
 };
 using HrtfStorePtr = al::intrusive_ptr<HrtfStore>;
 
-#endif /* HRTFSTORE_HPP */
+#endif /* CORE_HRTFSTORE_HPP */

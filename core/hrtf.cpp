@@ -396,20 +396,20 @@ try {
         WARN("Device sample rate too large for HRTF ({}hz > {}hz)", devrate, MaxHrtfSampleRate);
         return nullptr;
     }
-    auto const fname = std::invoke([name]() -> std::u8string
+    auto const fname = std::invoke([name]() -> fs::path
     {
         auto const enumlock = std::lock_guard{EnumeratedHrtfLock};
         auto const entry_iter = std::ranges::find(EnumeratedHrtfs, name, &HrtfEntry::mDispName);
         if(entry_iter == EnumeratedHrtfs.cend())
-            return std::u8string{};
-        return entry_iter->mFilename.u8string();
+            return fs::path{};
+        return entry_iter->mFilename;
     });
     if(fname.empty())
         return nullptr;
 
     auto const loadlock = std::lock_guard{LoadedHrtfLock};
     auto handle = std::lower_bound(LoadedHrtfs.begin(), LoadedHrtfs.end(), fname,
-        [devrate](std::unique_ptr<HrtfStore>const& hrtf, std::u8string_view const filename) -> bool
+        [devrate](std::unique_ptr<HrtfStore>const& hrtf, fs::path const& filename) -> bool
     {
         return hrtf->mSampleRate < devrate
             || (hrtf->mSampleRate == devrate && hrtf->mFilename < filename);
@@ -421,42 +421,42 @@ try {
         return HrtfStorePtr{std::to_address(*handle)};
     }
 
-    auto builtin_name = [](std::u8string_view const name_) -> std::optional<int>
+    auto stream = std::invoke([&fname, name]() -> std::unique_ptr<std::istream>
     {
-        auto stream = al::ispanstream{al::u8_as_char(name_)};
-        if(stream.get() != '!')
-            return std::nullopt;
-        auto residx = int{};
-        if((stream >> residx).get() != '_')
-            return std::nullopt;
-        return residx;
-    };
-    auto stream = std::unique_ptr<std::istream>{};
-    if(auto residx = builtin_name(fname); residx.has_value())
-    {
-        TRACE("Loading built-in HRTF {}...", *residx);
-        auto const res = GetHrtfResource(*residx);
-        if(res.empty())
+        auto const resourceIdx = std::invoke([fnamespan=fname.string()]() -> std::optional<int>
         {
-            ERR("Could not get resource {}, {}", *residx, name);
-            return nullptr;
+            auto namestream = al::ispanstream{fnamespan};
+            if(namestream.get() != '!')
+                return std::nullopt;
+            auto idx = int{};
+            if((namestream >> idx).get() != '_')
+                return std::nullopt;
+            return idx;
+        });
+
+        if(resourceIdx.has_value())
+        {
+            TRACE("Loading built-in HRTF {}...", *resourceIdx);
+            auto const res = GetHrtfResource(*resourceIdx);
+            if(res.empty())
+            {
+                ERR("Could not get resource {}, {}", *resourceIdx, name);
+                return nullptr;
+            }
+            auto spstream = std::make_unique<al::ispanstream>(std::span<char>{}, std::ios::binary);
+            spstream->span(res);
+            return spstream;
         }
-        auto spstream = std::make_unique<al::ispanstream>(std::span<char>{}, std::ios::binary);
-        spstream->span(res);
-        stream = std::move(spstream);
-    }
-    else
-    {
-        TRACE("Loading {}...", al::u8_as_char(fname));
-        auto fstr = std::make_unique<fs::ifstream>(fs::path(fname), std::ios::binary);
+
+        TRACE("Loading {}...", fname);
+        auto fstr = std::make_unique<fs::ifstream>(fname, std::ios::binary);
         if(!fstr->is_open())
         {
-            ERR("Could not open {}", al::u8_as_char(fname));
+            ERR("Could not open {}", fname);
             return nullptr;
         }
-        stream = std::move(fstr);
-    }
-
+        return fstr;
+    });
     auto hrtf = LoadHrtf(*stream);
     stream.reset();
     Expects(hrtf != nullptr);
@@ -562,7 +562,7 @@ void HrtfStore::dec_ref() noexcept
         {
             if(hrtf.mRef.load() == 0)
             {
-                TRACE("Unloading unused HRTF {}", al::u8_as_char(hrtf.mFilename));
+                TRACE("Unloading unused HRTF {}", hrtf.mFilename);
                 return true;
             }
             return false;

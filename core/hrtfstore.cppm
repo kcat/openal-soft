@@ -5,7 +5,6 @@ module;
 #include <cstdint>
 #include <new>
 #include <span>
-#include <string>
 
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
@@ -13,6 +12,7 @@ module;
 
 export module hrtfstore;
 
+import filesystem;
 import gsl;
 
 export extern "C++" {
@@ -34,7 +34,7 @@ constexpr inline auto MaxHrtfSampleRate = 0xff'ff'ffu;
 
 struct HrtfStore {
     alignas(16) std::atomic<unsigned> mRef;
-    std::u8string mFilename;
+    fs::path mFilename;
 
     unsigned mSampleRate : 24;
     unsigned mIrSize : 8;

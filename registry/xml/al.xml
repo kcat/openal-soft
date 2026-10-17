@@ -1458,6 +1458,10 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x19D8" name="ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT" group="SystemEventTypeSOFT"/>
         <enum value="0x19D9" name="ALC_EVENT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
         <enum value="0x19DA" name="ALC_EVENT_NOT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
+
+        <enum value="0x0001" name="ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT" group="DeviceConfigurationSOFT"/>
+        <enum value="0x0002" name="ALC_DEVICE_MAX_MONO_SOURCES_SOFT" group="DeviceConfigurationSOFT"/>
+        <enum value="0x0003" name="ALC_DEVICE_MAX_STEREO_SOURCES_SOFT" group="DeviceConfigurationSOFT"/>
     </enums>
 
     <commands namespace="AL">
@@ -3523,6 +3527,18 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <command export="alc" funcpointer="PFNALCGETTHREADCONTEXTPROC">
             <proto><ptype>ALCcontext</ptype>* <name>alcGetThreadContext</name></proto>
         </command>
+
+        <command export="alc">
+            <proto><ptype>ALCdevice</ptype>* <name>alcOpenDeviceConfigSOFT</name></proto>
+            <param>const <ptype>ALCchar</ptype> *<name>devicename</name></param>
+            <param>const <ptype>ALCint</ptype> *<name>attrList</name></param>
+        </command>
+
+        <command export="alc">
+            <proto><ptype>ALCdevice</ptype>* <name>alcLoopbackOpenDeviceConfigSOFT</name></proto>
+            <param>const <ptype>ALCchar</ptype> *<name>deviceName</name></param>
+            <param>const <ptype>ALCint</ptype> *<name>attrList</name></param>
+        </command>
     </commands>
 
     <feature api="al" name="AL_VERSION_1_0" number="1.0">
@@ -5475,6 +5491,16 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <require>
                 <enum name="AL_PANNING_ENABLED_SOFT"/>
                 <enum name="AL_PAN_SOFT"/>
+            </require>
+        </extension>
+
+        <extension name="ALC_SOFTX_device_config" supported="alc" depends="ALC_SOFT_loopback">
+            <require>
+                <enum name="ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT"/>
+                <enum name="ALC_DEVICE_MAX_MONO_SOURCES_SOFT"/>
+                <enum name="ALC_DEVICE_MAX_STEREO_SOURCES_SOFT"/>
+                <command name="alcOpenDeviceConfigSOFT"/>
+                <command name="alcLoopbackOpenDeviceConfigSOFT"/>
             </require>
         </extension>
     </extensions>

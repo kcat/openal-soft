@@ -348,6 +348,7 @@ constexpr auto DitherRNGSeed = 22222u;
         "ALC_SOFT_loopback "
         "ALC_SOFT_loopback_bformat "
         "ALC_SOFT_reopen_device "
+        "ALC_SOFTX_device_config "
         "ALC_SOFT_system_events";
 }
 [[nodiscard]] constexpr auto GetExtensionString() noexcept -> gsl::czstring
@@ -369,6 +370,7 @@ constexpr auto DitherRNGSeed = 22222u;
         "ALC_SOFT_output_mode "
         "ALC_SOFT_pause_device "
         "ALC_SOFT_reopen_device "
+        "ALC_SOFTX_device_config "
         "ALC_SOFT_system_events";
 }
 
@@ -1638,21 +1640,24 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
+    if (!device.OverrideSourcesNum)
     {
-        if(*srcsopt <= 0) numMono = 256;
-        else numMono = std::max(*srcsopt, 16u);
+        if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
+        {
+            if(*srcsopt <= 0) numMono = 256;
+            else numMono = std::max(*srcsopt, 16u);
+        }
+        else
+        {
+            numMono = std::min(numMono, std::numeric_limits<int>::max()-numStereo);
+            numMono = std::max(numMono+numStereo, 256u);
+        }
+        numStereo = std::min(numStereo, numMono);
+        numMono -= numStereo;
+        device.NumMonoSources = numMono;
+        device.NumStereoSources = numStereo;
+        device.SourcesMax = numMono + numStereo;
     }
-    else
-    {
-        numMono = std::min(numMono, std::numeric_limits<int>::max()-numStereo);
-        numMono = std::max(numMono+numStereo, 256u);
-    }
-    numStereo = std::min(numStereo, numMono);
-    numMono -= numStereo;
-    device.SourcesMax = numMono + numStereo;
-    device.NumMonoSources = numMono;
-    device.NumStereoSources = numStereo;
 
     if(auto sendsopt = device.configValue<unsigned>({}, "sends"sv))
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));
@@ -2046,6 +2051,39 @@ ContextRef GetContextRef() noexcept
         al::Context::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};
+}
+
+static bool ParseDeviceConfig(const al::intrusive_ptr<al::Device> dev, const ALCint *attrList)
+{
+    dev->OverrideSourcesNum = false;
+    dev->NumMonoSources = 255;
+    dev->NumStereoSources = 1;
+    for (auto const [p, v] : SpanFromAttributeList(attrList))
+    {
+        switch (p)
+        {
+            case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
+                dev->AuxiliaryEffectSlotMax = static_cast<ALCuint>(v > 0 ? v : 0);
+                break;
+
+            case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
+                dev->NumMonoSources = static_cast<ALCuint>(v > 0 ? v : 0);
+                dev->OverrideSourcesNum = true;
+                break;
+
+            case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
+                dev->NumStereoSources = static_cast<ALCuint>(v > 0 ? v : 0);
+                dev->OverrideSourcesNum = true;
+                break;
+
+            default:
+                al::Device::SetGlobalError(ALC_INVALID_ENUM);
+                return true;
+        }
+    }
+
+    dev->SourcesMax = dev->NumMonoSources + dev->NumStereoSources;
+    return false;
 }
 
 /************************************************
@@ -3144,6 +3182,122 @@ catch(std::exception &e) {
 }
 DefineAlcAlias(alcOpenDevice)
 
+ALC_API auto ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *deviceName, const ALCint *attrList) noexcept -> ALCdevice*
+try {
+    InitConfig();
+
+    if(!PlaybackFactory)
+    {
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
+        return nullptr;
+    }
+
+    auto devname = std::string_view{deviceName ? deviceName : ""};
+    if(!devname.empty())
+    {
+        TRACE("Opening playback device \"{}\"", devname);
+        if(is_eq(al::case_compare(devname, GetDefaultName()))
+#ifdef _WIN32
+            /* Some old Windows apps hardcode these expecting OpenAL to use a
+             * specific audio API, even when they're not enumerated. Creative's
+             * router effectively ignores them too.
+             */
+            or is_eq(al::case_compare(devname, "DirectSound3D"sv))
+            or is_eq(al::case_compare(devname, "DirectSound"sv))
+            or is_eq(al::case_compare(devname, "MMSYSTEM"sv))
+#endif
+            /* Some old Linux apps hardcode configuration strings that were
+             * supported by the OpenAL SI. We can't really do anything useful
+             * with them, so just ignore.
+             */
+            or devname.starts_with("'("sv)
+            or is_eq(al::case_compare(devname, "openal-soft"sv)))
+            devname = {};
+        else
+        {
+            constexpr auto prefix = GetDevicePrefix();
+            if(!prefix.empty() && devname.size() > prefix.size() && devname.starts_with(prefix))
+                devname = devname.substr(prefix.size());
+        }
+    }
+    else
+        TRACE("Opening default playback device");
+
+    const auto DefaultSends =
+#if ALSOFT_EAX
+        eax_g_is_enabled ? unsigned{EAX_MAX_FXSLOTS} :
+#endif // ALSOFT_EAX
+        unsigned{DefaultSendCount};
+
+    auto device = al::Device::Create(DeviceType::Playback);
+
+    if (ParseDeviceConfig(device, attrList)) return nullptr;
+
+    /* Set output format */
+    device->FmtChans = DevFmtChannelsDefault;
+    device->FmtType = DevFmtTypeDefault;
+    device->mSampleRate = DefaultOutputRate;
+    device->mUpdateSize = DefaultUpdateSize;
+    device->mBufferSize = DefaultUpdateSize * DefaultNumUpdates;
+    
+    device->NumAuxSends = DefaultSends;
+
+    try {
+        auto backend = PlaybackFactory->createBackend(*device, BackendType::Playback);
+        auto listlock = std::lock_guard{ListLock};
+        backend->open(devname);
+        device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
+        device->Backend = std::move(backend);
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to open playback device: {}", e.what());
+        al::Device::SetGlobalError((e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
+        return nullptr;
+    }
+
+    auto checkopt = [&device](const gsl::czstring envname, const std::string_view optname)
+    {
+        if(auto optval = al::getenv(envname)) return optval;
+        return device->configValue<std::string>("game_compat", optname);
+    };
+    if(auto overrideopt = checkopt("__ALSOFT_VENDOR_OVERRIDE", "vendor-override"sv))
+    {
+        device->mVendorOverride = std::move(*overrideopt);
+        TRACE("Overriding vendor string: \"{}\"", device->mVendorOverride);
+    }
+    if(auto overrideopt = checkopt("__ALSOFT_VERSION_OVERRIDE", "version-override"sv))
+    {
+        device->mVersionOverride = std::move(*overrideopt);
+        TRACE("Overriding version string: \"{}\"", device->mVersionOverride);
+    }
+    if(auto overrideopt = checkopt("__ALSOFT_RENDERER_OVERRIDE", "renderer-override"sv))
+    {
+        device->mRendererOverride = std::move(*overrideopt);
+        TRACE("Overriding renderer string: \"{}\"", device->mRendererOverride);
+    }
+
+    {
+        auto listlock = std::lock_guard{ListLock};
+        auto iter = std::ranges::lower_bound(DeviceList, device.get(), std::less{},
+            [](gsl::not_null<al::Device*> &dev) { return std::to_address(dev); });
+        DeviceList.emplace(iter, device.get());
+    }
+
+    TRACE("Created device {}, \"{}\"", voidp{device.get()}, device->mDeviceName);
+    return device.release();
+}
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating playback device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
+    return nullptr;
+}
+DefineAlcAlias(alcOpenDeviceConfigSOFT)
+
 ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboolean
 {
     if(!gProcessRunning)
@@ -3491,6 +3645,73 @@ catch(std::exception &e) {
     return nullptr;
 }
 DefineAlcAlias(alcLoopbackOpenDeviceSOFT)
+
+ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceConfigSOFT(const ALCchar *deviceName, const ALint *attrList) noexcept
+    -> ALCdevice*
+try {
+    InitConfig();
+
+    /* Make sure the device name, if specified, is us. */
+    if(deviceName && strcmp(deviceName, GetDefaultName()) != 0)
+    {
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
+        return nullptr;
+    }
+
+    const auto DefaultSends =
+#if ALSOFT_EAX
+        eax_g_is_enabled ? unsigned{EAX_MAX_FXSLOTS} :
+#endif // ALSOFT_EAX
+        unsigned{DefaultSendCount};
+
+    auto device = al::Device::Create(DeviceType::Loopback);
+
+    ParseDeviceConfig(device, attrList);
+    
+    device->NumAuxSends = DefaultSends;
+
+    //Set output format
+    device->mBufferSize = 0;
+    device->mUpdateSize = 0;
+
+    device->mSampleRate = DefaultOutputRate;
+    device->FmtChans = DevFmtChannelsDefault;
+    device->FmtType = DevFmtTypeDefault;
+
+    try {
+        auto backend = LoopbackBackendFactory::getFactory().createBackend(*device,
+            BackendType::Playback);
+        backend->open("Loopback");
+        device->mDeviceName = std::string{GetDevicePrefix()}+backend->mDeviceName;
+        device->Backend = std::move(backend);
+    }
+    catch(al::backend_exception &e) {
+        WARN("Failed to open loopback device: {}", e.what());
+        al::Device::SetGlobalError((e.errorCode() == al::backend_error::OutOfMemory)
+            ? ALC_OUT_OF_MEMORY : ALC_INVALID_VALUE);
+        return nullptr;
+    }
+
+    {
+        auto listlock = std::lock_guard{ListLock};
+        const auto iter = std::ranges::lower_bound(DeviceList, device.get(), std::less{},
+            [](gsl::not_null<al::Device*> &dev) { return std::to_address(dev); });
+        DeviceList.emplace(iter, device.get());
+    }
+
+    TRACE("Created loopback device {}", voidp{device.get()});
+    return device.release();
+}
+catch(std::bad_alloc&) {
+    WARN("Caught bad_alloc exception while creating loopback device");
+    al::Device::SetGlobalError(ALC_OUT_OF_MEMORY);
+    return nullptr;
+}
+catch(std::exception &e) {
+    ERR("Caught exception in {}: {}", std::source_location::current().function_name(), e.what());
+    return nullptr;
+}
+DefineAlcAlias(alcLoopbackOpenDeviceConfigSOFT)
 
 /**
  * Determines if the loopback device supports the given format for rendering.

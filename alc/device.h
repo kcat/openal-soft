@@ -47,6 +47,7 @@ struct Device final : ALCdevice, intrusive_ref<Device,DeviceDeleter>, DeviceBase
     std::mutex StateLock;
     std::unique_ptr<BackendBase> Backend;
 
+    bool OverrideSourcesNum{false};
     ALCuint NumMonoSources{};
     ALCuint NumStereoSources{};
 

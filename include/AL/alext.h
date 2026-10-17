@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-16 12:39:40.407024+00:00
+ * Last regenerated: 2026-10-17 08:28:24.575227+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -1135,9 +1135,11 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 #define ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT      0x0001
 #define ALC_DEVICE_MAX_MONO_SOURCES_SOFT         0x0002
 #define ALC_DEVICE_MAX_STEREO_SOURCES_SOFT       0x0003
-typedef ALCdevice* (ALC_APIENTRY *LPALCOPENDEVICECONFIGSOFT)(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT17;
+typedef ALCdevice* (ALC_APIENTRY *LPALCOPENDEVICECONFIGSOFT)(const ALCchar *devicename, const ALCint *attrList) ALC_API_NOEXCEPT17;
+typedef ALCdevice* (ALC_APIENTRY *LPALCLOOPBACKOPENDEVICECONFIGSOFT)(const ALCchar *deviceName, const ALCint *attrList) ALC_API_NOEXCEPT17;
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCdevice* ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrlist) ALC_API_NOEXCEPT;
+ALC_API ALCdevice* ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrList) ALC_API_NOEXCEPT;
+ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceConfigSOFT(const ALCchar *deviceName, const ALCint *attrList) ALC_API_NOEXCEPT;
 #endif
 #endif
 

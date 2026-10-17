@@ -3528,10 +3528,16 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
             <proto><ptype>ALCcontext</ptype>* <name>alcGetThreadContext</name></proto>
         </command>
 
-        <command export="alc" funcpointer="LPALCOPENDEVICECONFIGSOFT">
+        <command export="alc">
             <proto><ptype>ALCdevice</ptype>* <name>alcOpenDeviceConfigSOFT</name></proto>
             <param>const <ptype>ALCchar</ptype> *<name>devicename</name></param>
-            <param>const <ptype>ALCint</ptype> *<name>attrlist</name></param>
+            <param>const <ptype>ALCint</ptype> *<name>attrList</name></param>
+        </command>
+
+        <command export="alc">
+            <proto><ptype>ALCdevice</ptype>* <name>alcLoopbackOpenDeviceConfigSOFT</name></proto>
+            <param>const <ptype>ALCchar</ptype> *<name>deviceName</name></param>
+            <param>const <ptype>ALCint</ptype> *<name>attrList</name></param>
         </command>
     </commands>
 
@@ -5494,6 +5500,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
                 <enum name="ALC_DEVICE_MAX_MONO_SOURCES_SOFT"/>
                 <enum name="ALC_DEVICE_MAX_STEREO_SOURCES_SOFT"/>
                 <command name="alcOpenDeviceConfigSOFT"/>
+                <command name="alcLoopbackOpenDeviceConfigSOFT"/>
             </require>
         </extension>
     </extensions>

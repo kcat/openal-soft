@@ -63,6 +63,7 @@ DeclareFuncAlias(alcEventControlSOFT);
 DeclareFuncAlias(alcEventCallbackSOFT);
 
 DeclareFuncAlias(alcOpenDeviceConfigSOFT);
+DeclareFuncAlias(alcLoopbackOpenDeviceConfigSOFT);
 
 DeclareFuncAlias(alEnable);
 DeclareFuncAlias(alDisable);
@@ -444,6 +445,7 @@ inline const auto alcFunctions = std::to_array({
     DECL(alcEventCallbackSOFT),
 
     DECL(alcOpenDeviceConfigSOFT),
+    DECL(alcLoopbackOpenDeviceConfigSOFT),
 
     DECL(alEnable),
     DECL(alDisable),

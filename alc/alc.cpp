@@ -2055,28 +2055,25 @@ ContextRef GetContextRef() noexcept
 
 static bool ParseDeviceConfig(const al::intrusive_ptr<al::Device> dev, const ALCint *attrList)
 {
-    ALCuint maxauxslots = 64;
-
-    bool overridesourcesnum = false;
-    ALCuint maxstereosources = 1;
-    ALCuint maxmonosources = 255;
-    
+    dev->OverrideSourcesNum = false;
+    dev->NumMonoSources = 255;
+    dev->NumStereoSources = 1;
     for (auto const [p, v] : SpanFromAttributeList(attrList))
     {
         switch (p)
         {
             case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
-                maxauxslots = static_cast<ALCuint>(v > 0 ? v : 0);
+                dev->AuxiliaryEffectSlotMax = static_cast<ALCuint>(v > 0 ? v : 0);
                 break;
 
             case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
-                maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
+                dev->NumMonoSources = static_cast<ALCuint>(v > 0 ? v : 0);
+                dev->OverrideSourcesNum = true;
                 break;
 
             case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
-                maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
+                dev->NumStereoSources = static_cast<ALCuint>(v > 0 ? v : 0);
+                dev->OverrideSourcesNum = true;
                 break;
 
             default:
@@ -2084,14 +2081,8 @@ static bool ParseDeviceConfig(const al::intrusive_ptr<al::Device> dev, const ALC
                 return true;
         }
     }
-    
-    dev->NumStereoSources = maxstereosources;
-    dev->NumMonoSources = maxmonosources;
-    dev->SourcesMax = maxmonosources + maxstereosources;
-    dev->OverrideSourcesNum = overridesourcesnum;
-    
-    dev->AuxiliaryEffectSlotMax = maxauxslots;
 
+    dev->SourcesMax = dev->NumMonoSources + dev->NumStereoSources;
     return false;
 }
 

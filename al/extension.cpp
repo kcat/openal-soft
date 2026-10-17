@@ -50,7 +50,7 @@ auto alIsExtensionPresent_(al::Context& context, const ALchar *extName) noexcept
 
     const auto tofind = std::string_view{extName};
     const auto found = std::ranges::any_of(context.mExtensions, [tofind](std::string_view ext)
-    { return tofind.size() == ext.size() && is_eq(al::case_compare(ext, tofind)); });
+    { return tofind.size() == ext.size() && is_eq(al::ci_compare(ext, tofind)); });
     return found ? AL_TRUE : AL_FALSE;
 }
 

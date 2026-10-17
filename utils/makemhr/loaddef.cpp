@@ -1176,9 +1176,9 @@ auto LoadSource(SourceRefT *src, unsigned const hrirRate, std::span<double> cons
 // Match the channel type from a given identifier.
 auto MatchChannelType(const std::string_view ident) -> ChannelTypeT
 {
-    if(is_eq(al::case_compare(ident, "mono"sv)))
+    if(is_eq(al::ci_compare(ident, "mono"sv)))
         return CT_MONO;
-    if(is_eq(al::case_compare(ident, "stereo"sv)))
+    if(is_eq(al::ci_compare(ident, "stereo"sv)))
         return CT_STEREO;
     return CT_NONE;
 }
@@ -1212,7 +1212,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
         const auto ident = TrReadIdent(tr);
         if(ident.empty())
             return false;
-        if(is_eq(al::case_compare(ident, "rate"sv)))
+        if(is_eq(al::ci_compare(ident, "rate"sv)))
         {
             if(hasRate)
             {
@@ -1226,7 +1226,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mIrRate = static_cast<unsigned>(intVal);
             hasRate = 1;
         }
-        else if(is_eq(al::case_compare(ident, "type"sv)))
+        else if(is_eq(al::ci_compare(ident, "type"sv)))
         {
             if(hasType)
             {
@@ -1252,7 +1252,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             }
             hasType = 1;
         }
-        else if(is_eq(al::case_compare(ident, "points"sv)))
+        else if(is_eq(al::ci_compare(ident, "points"sv)))
         {
             if(hasPoints)
             {
@@ -1280,7 +1280,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mIrSize = std::max(points, 1u + (fftSize/2u));
             hasPoints = 1;
         }
-        else if(is_eq(al::case_compare(ident, "radius"sv)))
+        else if(is_eq(al::ci_compare(ident, "radius"sv)))
         {
             if(hasRadius)
             {
@@ -1294,7 +1294,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             hData->mRadius = fpVal;
             hasRadius = 1;
         }
-        else if(is_eq(al::case_compare(ident, "distance"sv)))
+        else if(is_eq(al::ci_compare(ident, "distance"sv)))
         {
             auto count = 0u;
 
@@ -1333,7 +1333,7 @@ auto ProcessMetrics(TokenReaderT *tr, unsigned const fftSize, unsigned const tru
             fdCount = count;
             hasDistance = 1;
         }
-        else if(is_eq(al::case_compare(ident, "azimuths"sv)))
+        else if(is_eq(al::ci_compare(ident, "azimuths"sv)))
         {
             auto count = 0u;
 
@@ -1454,15 +1454,15 @@ auto ReadIndexTriplet(TokenReaderT *tr, HrirDataT const *hData, unsigned *fi, un
 // Match the source format from a given identifier.
 auto MatchSourceFormat(const std::string_view ident) -> SourceFormatT
 {
-    if(is_eq(al::case_compare(ident, "ascii"sv)))
+    if(is_eq(al::ci_compare(ident, "ascii"sv)))
         return SF_ASCII;
-    if(is_eq(al::case_compare(ident, "bin_le"sv)))
+    if(is_eq(al::ci_compare(ident, "bin_le"sv)))
         return SF_BIN_LE;
-    if(is_eq(al::case_compare(ident, "bin_be"sv)))
+    if(is_eq(al::ci_compare(ident, "bin_be"sv)))
         return SF_BIN_BE;
-    if(is_eq(al::case_compare(ident, "wave"sv)))
+    if(is_eq(al::ci_compare(ident, "wave"sv)))
         return SF_WAVE;
-    if(is_eq(al::case_compare(ident, "sofa"sv)))
+    if(is_eq(al::ci_compare(ident, "sofa"sv)))
         return SF_SOFA;
     return SF_NONE;
 }
@@ -1470,9 +1470,9 @@ auto MatchSourceFormat(const std::string_view ident) -> SourceFormatT
 // Match the source element type from a given identifier.
 auto MatchElementType(const std::string_view ident) -> ElementTypeT
 {
-    if(is_eq(al::case_compare(ident, "int"sv)))
+    if(is_eq(al::ci_compare(ident, "int"sv)))
         return ET_INT;
-    if(is_eq(al::case_compare(ident, "fp"sv)))
+    if(is_eq(al::ci_compare(ident, "fp"sv)))
         return ET_FP;
     return ET_NONE;
 }
@@ -1675,9 +1675,9 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> bool
 // Match the target ear (index) from a given identifier.
 auto MatchTargetEar(const std::string_view ident) -> std::optional<uint8_t>
 {
-    if(is_eq(al::case_compare(ident, "left"sv)))
+    if(is_eq(al::ci_compare(ident, "left"sv)))
         return 0u;
-    if(is_eq(al::case_compare(ident, "right"sv)))
+    if(is_eq(al::ci_compare(ident, "right"sv)))
         return 1u;
     return std::nullopt;
 }

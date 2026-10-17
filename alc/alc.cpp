@@ -1640,7 +1640,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.
      */
-    if (!(device.OverrideNumMonoSources || device.OverrideNumStereoSources))
+    if (!device.OverrideSourcesNum)
     {
         if(auto srcsopt = device.configValue<unsigned>({}, "sources"sv))
         {
@@ -3163,9 +3163,8 @@ try {
 
     ALCuint maxauxslots = 64;
 
-    bool overridestereosources = false;
+    bool overridesourcesnum = false;
     ALCuint maxstereosources = 1;
-    bool overridemonosources = false;
     ALCuint maxmonosources = 255;
     
     for (auto const [p, v] : SpanFromAttributeList(attrList))
@@ -3178,12 +3177,12 @@ try {
 
             case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
                 maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridemonosources = true;
+                overridesourcesnum = true;
                 break;
 
             case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
                 maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridestereosources = true;
+                overridesourcesnum = true;
                 break;
 
             default:
@@ -3238,13 +3237,13 @@ try {
     device->mUpdateSize = DefaultUpdateSize;
     device->mBufferSize = DefaultUpdateSize * DefaultNumUpdates;
 
-    device->SourcesMax = maxmonosources + maxstereosources;
     device->NumStereoSources = maxstereosources;
     device->NumMonoSources = maxmonosources;
+    device->SourcesMax = maxmonosources + maxstereosources;
+    device->OverrideSourcesNum = overridesourcesnum;
+    
     device->AuxiliaryEffectSlotMax = maxauxslots;
     device->NumAuxSends = DefaultSends;
-    device->OverrideNumMonoSources = overridemonosources;
-    device->OverrideNumStereoSources = overridestereosources;
 
     try {
         auto backend = PlaybackFactory->createBackend(*device, BackendType::Playback);

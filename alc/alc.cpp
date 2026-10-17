@@ -2053,6 +2053,48 @@ ContextRef GetContextRef() noexcept
     return ContextRef{context};
 }
 
+static bool ParseDeviceConfig(const al::intrusive_ptr<al::Device> dev, const ALCint *attrList)
+{
+    ALCuint maxauxslots = 64;
+
+    bool overridesourcesnum = false;
+    ALCuint maxstereosources = 1;
+    ALCuint maxmonosources = 255;
+    
+    for (auto const [p, v] : SpanFromAttributeList(attrList))
+    {
+        switch (p)
+        {
+            case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
+                maxauxslots = static_cast<ALCuint>(v > 0 ? v : 0);
+                break;
+
+            case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
+                maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
+                overridesourcesnum = true;
+                break;
+
+            case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
+                maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
+                overridesourcesnum = true;
+                break;
+
+            default:
+                al::Device::SetGlobalError(ALC_INVALID_ENUM);
+                return true;
+        }
+    }
+    
+    dev->NumStereoSources = maxstereosources;
+    dev->NumMonoSources = maxmonosources;
+    dev->SourcesMax = maxmonosources + maxstereosources;
+    dev->OverrideSourcesNum = overridesourcesnum;
+    
+    dev->AuxiliaryEffectSlotMax = maxauxslots;
+
+    return false;
+}
+
 /************************************************
  * Standard ALC functions
  ************************************************/
@@ -3159,36 +3201,6 @@ try {
         return nullptr;
     }
 
-    ALCuint maxauxslots = 64;
-
-    bool overridesourcesnum = false;
-    ALCuint maxstereosources = 1;
-    ALCuint maxmonosources = 255;
-    
-    for (auto const [p, v] : SpanFromAttributeList(attrList))
-    {
-        switch (p)
-        {
-            case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
-                maxauxslots = static_cast<ALCuint>(v > 0 ? v : 0);
-                break;
-
-            case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
-                maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
-                break;
-
-            case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
-                maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
-                break;
-
-            default:
-                al::Device::SetGlobalError(ALC_INVALID_ENUM);
-                return nullptr;
-        }
-    }
-
     auto devname = std::string_view{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
@@ -3228,19 +3240,15 @@ try {
 
     auto device = al::Device::Create(DeviceType::Playback);
 
+    if (ParseDeviceConfig(device, attrList)) return nullptr;
+
     /* Set output format */
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->mSampleRate = DefaultOutputRate;
     device->mUpdateSize = DefaultUpdateSize;
     device->mBufferSize = DefaultUpdateSize * DefaultNumUpdates;
-
-    device->NumStereoSources = maxstereosources;
-    device->NumMonoSources = maxmonosources;
-    device->SourcesMax = maxmonosources + maxstereosources;
-    device->OverrideSourcesNum = overridesourcesnum;
     
-    device->AuxiliaryEffectSlotMax = maxauxslots;
     device->NumAuxSends = DefaultSends;
 
     try {
@@ -3659,36 +3667,6 @@ try {
         return nullptr;
     }
 
-    ALCuint maxauxslots = 64;
-
-    bool overridesourcesnum = false;
-    ALCuint maxstereosources = 1;
-    ALCuint maxmonosources = 255;
-    
-    for (auto const [p, v] : SpanFromAttributeList(attrList))
-    {
-        switch (p)
-        {
-            case ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT:
-                maxauxslots = static_cast<ALCuint>(v > 0 ? v : 0);
-                break;
-
-            case ALC_DEVICE_MAX_MONO_SOURCES_SOFT:
-                maxmonosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
-                break;
-
-            case ALC_DEVICE_MAX_STEREO_SOURCES_SOFT:
-                maxstereosources = static_cast<ALCuint>(v > 0 ? v : 0);
-                overridesourcesnum = true;
-                break;
-
-            default:
-                al::Device::SetGlobalError(ALC_INVALID_ENUM);
-                return nullptr;
-        }
-    }
-
     const auto DefaultSends =
 #if ALSOFT_EAX
         eax_g_is_enabled ? unsigned{EAX_MAX_FXSLOTS} :
@@ -3697,12 +3675,8 @@ try {
 
     auto device = al::Device::Create(DeviceType::Loopback);
 
-    device->OverrideSourcesNum = overridesourcesnum;
-    device->NumMonoSources = maxmonosources;
-    device->NumStereoSources = maxstereosources;
-    device->SourcesMax = maxmonosources + maxstereosources;
+    ParseDeviceConfig(device, attrList);
     
-    device->AuxiliaryEffectSlotMax = maxauxslots;
     device->NumAuxSends = DefaultSends;
 
     //Set output format

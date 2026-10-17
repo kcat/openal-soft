@@ -291,9 +291,9 @@ auto SearchDataFiles(fs::path const& ext, fs::path const& subdir) -> std::vector
     {
         auto nextpos = datadirs.find(':', curpos);
 
-        const auto pathname{(nextpos != std::string::npos)
+        auto const pathname = (nextpos != std::string::npos)
             ? std::string_view{datadirs}.substr(curpos, nextpos++ - curpos)
-            : std::string_view{datadirs}.substr(curpos)};
+            : std::string_view{datadirs}.substr(curpos);
         curpos = nextpos;
 
         if(!pathname.empty())

@@ -156,7 +156,7 @@ auto GetProcBinary() -> fs::path const&
             ERR("Failed to get process name: __wargv[0] == nullptr");
             return resultpath;
         }
-        resultpath = std::wstring{exePath};
+        resultpath = std::wstring_view{exePath};
 #endif
 #endif
 #ifdef __FreeBSD__

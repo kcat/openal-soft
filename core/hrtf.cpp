@@ -38,6 +38,7 @@ import alstring;
 import core.helpers;
 import filesystem;
 import format;
+import hrtfstore;
 import logging;
 import spanstream;
 import types;
@@ -47,6 +48,7 @@ import types;
 #include "alformattypes.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
+#include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
 #include "spanstream.hpp"

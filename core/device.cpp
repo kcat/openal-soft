@@ -11,9 +11,11 @@
 import core.context;
 import core.device;
 import gsl;
+import hrtfstore;
 #else
 #include "core/context.h"
 #include "core/device.h"
+#include "core/hrtfstore.hpp"
 #include "gsl/gsl"
 #endif
 

@@ -64,6 +64,7 @@ import alc.context;
 import alc.device;
 import alstring;
 import gsl;
+import hrtfstore;
 import logging;
 import types;
 #else
@@ -71,6 +72,7 @@ import types;
 #include "alc/device.h"
 #include "alformattypes.hpp"
 #include "alstring.h"
+#include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif

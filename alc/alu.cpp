@@ -83,6 +83,7 @@ import core.context;
 import core.device;
 import cubic_tables;
 import format;
+import hrtfstore;
 import types;
 #else
 #include "alformat.hpp"
@@ -94,6 +95,7 @@ import types;
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
 #include "core/devfmttraits.hpp"
+#include "core/hrtfstore.hpp"
 #endif
 
 

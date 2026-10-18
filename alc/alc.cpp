@@ -1654,9 +1654,14 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     device.NumMonoSources = numMono;
     device.NumStereoSources = numStereo;
 
-    if(auto sendsopt = device.configValue<unsigned>({}, "sends"sv))
+    if(auto const sendsopt = device.configValue<unsigned>({}, "sends"sv))
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));
     device.NumAuxSends = numSends;
+
+    if(auto const slotsopt = device.configValue<unsigned>({}, "slots"sv);
+        slotsopt.value_or(0u) > 0)
+        device.AuxiliaryEffectSlotMax = std::clamp(*slotsopt, 1u,
+            unsigned{std::numeric_limits<int>::max()});
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",
         device.SourcesMax, device.NumMonoSources, device.NumStereoSources,

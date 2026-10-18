@@ -2608,9 +2608,17 @@ try {
         else
         {
             auto i = 0_uz;
+            valuespan[i++] = ALC_MAJOR_VERSION;
+            valuespan[i++] = alcMajorVersion;
+            valuespan[i++] = ALC_MINOR_VERSION;
+            valuespan[i++] = alcMinorVersion;
+            valuespan[i++] = ALC_EFX_MAJOR_VERSION;
+            valuespan[i++] = alcEFXMajorVersion;
+            valuespan[i++] = ALC_EFX_MINOR_VERSION;
+            valuespan[i++] = alcEFXMinorVersion;
+
             valuespan[i++] = ALC_FREQUENCY;
             valuespan[i++] = dev->mSampleRate;
-
             if(dev->Type != DeviceType::Loopback)
             {
                 valuespan[i++] = ALC_REFRESH;
@@ -2658,15 +2666,18 @@ try {
             valuespan[i++] = ALC_OUTPUT_LIMITER_SOFT;
             valuespan[i++] = dev->Limiter ? ALC_TRUE : ALC_FALSE;
 
+            valuespan[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
+            valuespan[i++] = MaxAmbiOrder;
+
+            valuespan[i++] = ALC_OUTPUT_MODE_SOFT;
+            valuespan[i++] = al::to_underlying(dev->getOutputMode1());
+
             const auto clock = GetClockLatency(dev.get(), dev->Backend.get());
             valuespan[i++] = ALC_DEVICE_CLOCK_SOFT;
             valuespan[i++] = clock.ClockTime.count();
 
             valuespan[i++] = ALC_DEVICE_LATENCY_SOFT;
             valuespan[i++] = clock.Latency.count();
-
-            valuespan[i++] = ALC_OUTPUT_MODE_SOFT;
-            valuespan[i++] = al::to_underlying(dev->getOutputMode1());
 
             valuespan[i++] = 0;
             Ensures(i == NumAttrsForDevice());

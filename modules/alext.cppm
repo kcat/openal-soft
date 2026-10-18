@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-17 08:28:24.575227+00:00
+ * Last regenerated: 2026-10-18 04:11:04.287802+00:00
  */
 
 module;
@@ -1026,15 +1026,7 @@ ENUMDCL AL_UNPACK_AMBISONIC_ORDER_SOFT =         0x199D;
 ENUMDCL AL_PANNING_ENABLED_SOFT =                0x19EC;
 ENUMDCL AL_PAN_SOFT =                            0x19ED;
 
-/*** ALC_SOFTX_device_config ***/
-ENUMDCL ALC_DEVICE_MAX_AUXILIARY_SLOTS_SOFT =    0x0001;
-ENUMDCL ALC_DEVICE_MAX_MONO_SOURCES_SOFT =       0x0002;
-ENUMDCL ALC_DEVICE_MAX_STEREO_SOURCES_SOFT =     0x0003;
-using LPALCOPENDEVICECONFIGSOFT = auto (ALC_APIENTRY*)(const ALCchar *devicename, const ALCint *attrList) ALC_API_NOEXCEPT -> ALCdevice*;
-using LPALCLOOPBACKOPENDEVICECONFIGSOFT = auto (ALC_APIENTRY*)(const ALCchar *deviceName, const ALCint *attrList) ALC_API_NOEXCEPT -> ALCdevice*;
-#ifdef AL_ALEXT_PROTOTYPES
-ALC_API auto ALC_APIENTRY alcOpenDeviceConfigSOFT(const ALCchar *devicename, const ALCint *attrList) ALC_API_NOEXCEPT -> ALCdevice*;
-ALC_API auto ALC_APIENTRY alcLoopbackOpenDeviceConfigSOFT(const ALCchar *deviceName, const ALCint *attrList) ALC_API_NOEXCEPT -> ALCdevice*;
-#endif
+/*** ALC_SOFTX_limits_expansions ***/
+ENUMDCL ALC_MAX_AUXILIARY_SLOTS_SOFT =           0x19D0;
 
 } /* extern "C" */

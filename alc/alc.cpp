@@ -2272,6 +2272,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         case ALC_AMBISONIC_SCALING_SOFT:
         case ALC_AMBISONIC_ORDER_SOFT:
         case ALC_MAX_AMBISONIC_ORDER_SOFT:
+        case ALC_MAX_AUXILIARY_SLOTS_SOFT:
             al::Device::SetGlobalError(ALC_INVALID_DEVICE);
             return 0;
 
@@ -2334,8 +2335,8 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
     auto NumAttrsForDevice = [device]
     {
         if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
-            return 37_u8;
-        return 31_u8;
+            return 39_u8;
+        return 33_u8;
     };
     switch(param)
     {
@@ -2410,6 +2411,9 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
 
             values[i++] = ALC_OUTPUT_MODE_SOFT;
             values[i++] = al::to_underlying(device->getOutputMode1());
+
+            values[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            values[i++] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
 
             values[i++] = 0;
             Ensures(i == NumAttrsForDevice());
@@ -2542,6 +2546,10 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         values[0] = al::to_underlying(device->getOutputMode1());
         return 1;
 
+    case ALC_MAX_AUXILIARY_SLOTS_SOFT:
+        values[0] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
+        return 1;
+
     default:
         device->setError(ALC_INVALID_ENUM);
     }
@@ -2592,8 +2600,8 @@ try {
     auto NumAttrsForDevice = [&dev]
     {
         if(dev->Type == DeviceType::Loopback && dev->FmtChans == DevFmtAmbi3D)
-            return 41_u8;
-        return 35_u8;
+            return 33_u8;
+        return 27_u8;
     };
     auto statelock = std::lock_guard{dev->StateLock};
     switch(pname)
@@ -2667,6 +2675,9 @@ try {
 
             valuespan[i++] = ALC_OUTPUT_MODE_SOFT;
             valuespan[i++] = al::to_underlying(dev->getOutputMode1());
+
+            valuespan[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            valuespan[i++] = dev->AuxiliaryEffectSlotMax;
 
             valuespan[i++] = 0;
             Ensures(i == NumAttrsForDevice());

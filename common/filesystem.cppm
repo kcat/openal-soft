@@ -125,6 +125,27 @@ export namespace ghc::filesystem {
 }
 #endif
 
+namespace fs::detail {
+
+template<typename CharT>
+auto get_path_as(fs::path const& path) -> decltype(auto)
+{
+    if constexpr(std::same_as<fs::path::value_type, CharT>)
+        return path.native();
+#if defined(_WIN32)
+    /* We're assuming the execution environment has UTF-8 set for narrow/
+     * multibyte/char strings. This is the default for GCC, and we pass /utf-8
+     * to MSVC to make it so there too, so it behaves like standard.
+     */
+    else if constexpr(std::same_as<fs::path::value_type, wchar_t> and std::same_as<char, CharT>)
+        return wstr_to_utf8(path.native());
+#endif
+    else
+        return path.string<CharT>();
+}
+
+}
+
 export {
 
 #if USING_STD_FORMAT && (!defined(__cpp_lib_format_path) || !(__cpp_lib_format_path >= 202403L) \
@@ -135,20 +156,7 @@ struct std::formatter<fs::path, CharT> : std::formatter<std::basic_string_view<C
     using fmttype_t = std::basic_string_view<CharT>;
 
     auto format(fs::path const& path, auto& ctx) const
-    {
-        if constexpr(std::same_as<CharT, fs::path::value_type>)
-            return formatter<fmttype_t, CharT>::format(path.native(), ctx);
-#if defined(_WIN32)
-        /* We're assuming the execution environment has UTF-8 set for narrow/
-         * multibyte/char strings. This is the default for GCC, and we pass
-         * /utf-8 to MSVC to make it so there too, so it behaves like standard.
-         */
-        else if constexpr(std::same_as<fs::path::value_type, wchar_t> and std::same_as<char,CharT>)
-            return formatter<fmttype_t, CharT>::format(wstr_to_utf8(path.native()), ctx);
-#endif
-        else
-            return formatter<fmttype_t, CharT>::format(path.string<CharT>(), ctx);
-    }
+    { return formatter<fmttype_t, CharT>::format(fs::detail::get_path_as<CharT>(path), ctx); }
 };
 
 #endif
@@ -160,16 +168,7 @@ struct fmt::formatter<fs::path, CharT> : fmt::formatter<std::basic_string_view<C
     using fmttype_t = std::basic_string_view<CharT>;
 
     auto format(fs::path const& path, auto& ctx) const
-    {
-        if constexpr(std::same_as<fs::path::value_type, CharT>)
-            return formatter<fmttype_t, CharT>::format(path.native(), ctx);
-#if defined(_WIN32)
-        else if constexpr(std::same_as<fs::path::value_type, wchar_t> and std::same_as<char,CharT>)
-            return formatter<fmttype_t, CharT>::format(wstr_to_utf8(path.native()), ctx);
-#endif
-        else
-            return formatter<fmttype_t, CharT>::format(path.string<CharT>(), ctx);
-    }
+    { return formatter<fmttype_t, CharT>::format(fs::detail::get_path_as<CharT>(path), ctx); }
 };
 
 #endif

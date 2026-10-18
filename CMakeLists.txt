@@ -882,9 +882,13 @@ if(HAVE_CXXMODULES)
         core/cubic_tables.cppm
         core/device.cppm
         core/helpers.cppm
+        core/hrtfstore.cppm
         core/logging.cppm)
 else()
-    list(APPEND CORE_HDRS core/helpers.hpp core/logging.h)
+    list(APPEND CORE_HDRS
+        core/helpers.hpp
+        core/hrtfstore.hpp
+        core/logging.h)
 endif()
 
 set(HAVE_RTKIT 0)

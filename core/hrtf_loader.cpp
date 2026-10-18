@@ -20,11 +20,13 @@
 #if HAVE_CXXMODULES
 import fmtlib;
 import format;
+import hrtfstore;
 import logging;
 import types;
 #else
 #include "alformat.hpp"
 #include "alformattypes.hpp"
+#include "core/hrtfstore.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "logging.h"

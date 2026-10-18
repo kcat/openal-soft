@@ -64,6 +64,7 @@ import alc.context;
 import alc.device;
 import alstring;
 import gsl;
+import hrtfstore;
 import logging;
 import types;
 #else
@@ -71,6 +72,7 @@ import types;
 #include "alc/device.h"
 #include "alformattypes.hpp"
 #include "alstring.h"
+#include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #endif
@@ -1070,14 +1072,14 @@ auto InitHrtfPanning(al::Device *const device) -> std::unique_ptr<DirectHrtfStat
         };
 
         auto mode = std::string_view{*modeopt};
-        if(is_eq(al::case_compare(mode, "basic"sv)))
+        if(is_eq(al::ci_compare(mode, "basic"sv)))
         {
             ERR(R"(HRTF mode "{}" deprecated, substituting "{}")", *modeopt, "ambi2");
             mode = "ambi2";
         }
 
         auto iter = std::ranges::find_if(hrtf_modes, [mode](const HrtfModeEntry &entry) -> bool
-        { return is_eq(al::case_compare(mode, entry.name)); });
+        { return is_eq(al::ci_compare(mode, entry.name)); });
         if(iter == hrtf_modes.end())
             ERR("Unexpected hrtf-mode: {}", *modeopt);
         else

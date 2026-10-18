@@ -11,7 +11,7 @@ export {
 #endif
 
     namespace al {
-        using al::case_compare;
+        using al::ci_compare;
         using al::char_as_u8;
         using al::contains;
         using al::u8_as_char;

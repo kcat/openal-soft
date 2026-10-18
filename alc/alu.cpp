@@ -83,6 +83,7 @@ import core.context;
 import core.device;
 import cubic_tables;
 import format;
+import hrtfstore;
 import types;
 #else
 #include "alformat.hpp"
@@ -94,6 +95,7 @@ import types;
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
 #include "core/devfmttraits.hpp"
+#include "core/hrtfstore.hpp"
 #endif
 
 
@@ -110,8 +112,7 @@ auto InitConeScale() noexcept -> float
     auto ret = 1.0f;
     if(auto const optval = al::getenv("__ALSOFT_HALF_ANGLE_CONES"))
     {
-        if(is_eq(al::case_compare(*optval, "true"sv))
-            or strtol(optval->c_str(), nullptr, 0) == 1)
+        if(is_eq(al::ci_compare(*optval, "true"sv)) or strtol(optval->c_str(), nullptr, 0) == 1)
             ret *= 0.5f;
     }
     return ret;

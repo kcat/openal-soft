@@ -25,7 +25,7 @@ auto contains(std::string_view const& str0, std::string_view const& str1) noexce
 
 namespace detail {
     template<typename CharT, typename Traits> NOINLINE [[nodiscard]]
-    auto case_compare(std::basic_string_view<CharT, Traits> const& str0,
+    auto ci_compare(std::basic_string_view<CharT, Traits> const& str0,
         std::basic_string_view<CharT, Traits> const& str1) noexcept -> std::weak_ordering
     {
         return std::lexicographical_compare_three_way(str0.cbegin(), str0.cend(),
@@ -51,19 +51,19 @@ namespace detail {
 }
 
 [[nodiscard]] inline
-auto case_compare(std::string_view const& str0, std::string_view const& str1) noexcept
+auto ci_compare(std::string_view const& str0, std::string_view const& str1) noexcept
     -> std::weak_ordering
-{ return detail::case_compare(str0, str1); }
+{ return detail::ci_compare(str0, str1); }
 
 [[nodiscard]] inline
-auto case_compare(std::u8string_view const& str0, std::u8string_view const& str1) noexcept
+auto ci_compare(std::u8string_view const& str0, std::u8string_view const& str1) noexcept
     -> std::weak_ordering
-{ return detail::case_compare(str0, str1); }
+{ return detail::ci_compare(str0, str1); }
 
 [[nodiscard]] inline
-auto case_compare(std::wstring_view const& str0, std::wstring_view const& str1) noexcept
+auto ci_compare(std::wstring_view const& str0, std::wstring_view const& str1) noexcept
     -> std::weak_ordering
-{ return detail::case_compare(str0, str1); }
+{ return detail::ci_compare(str0, str1); }
 
 
 /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)

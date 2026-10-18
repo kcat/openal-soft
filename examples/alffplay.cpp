@@ -2331,10 +2331,10 @@ auto main(std::span<al::zstring_view> args) -> int
                     return std::numeric_limits<float>::quiet_NaN();
                 });
                 if(optarg.starts_with('+') || optarg.starts_with('-')
-                    || is_eq(al::case_compare(optarg.substr(endpos), "db")))
+                    || is_eq(al::ci_compare(optarg.substr(endpos), "db")))
                 {
                     if(!std::isfinite(gainval) || (endpos != optarg.size()
-                            && is_neq(al::case_compare(optarg.substr(endpos), "db"))))
+                            && is_neq(al::ci_compare(optarg.substr(endpos), "db"))))
                         fmt::println(std::cerr, "Invalid dB gain value: {}", optarg);
                     else
                         PlaybackGain = std::pow(10.0f, gainval/20.0f);

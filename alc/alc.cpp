@@ -2281,7 +2281,6 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         return 0;
     }
 
-    auto statelock = std::lock_guard{device->StateLock};
     if(device->Type == DeviceType::Capture)
     {
         static constexpr auto MaxCaptureAttributes = 9;
@@ -2562,7 +2561,11 @@ try {
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
     }
     else
+    {
+        auto const statelock = dev ? std::unique_lock{dev->StateLock}
+            : std::unique_lock<std::mutex>{};
         GetIntegerv(std::to_address(dev), param, std::views::counted(values, size));
+    }
 }
 catch(al::base_exception&) {
 }
@@ -2571,7 +2574,7 @@ DefineAlcAlias(alcGetIntegerv)
 ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALCsizei size,
     ALCint64SOFT *values) noexcept
 try {
-    auto dev = device ? VerifyDevice(device).get() : DeviceRef{};
+    auto const dev = device ? VerifyDevice(device).get() : DeviceRef{};
     if(size <= 0 || values == nullptr)
     {
         if(dev)
@@ -2580,11 +2583,13 @@ try {
             al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return;
     }
+
+    auto const statelock = dev ? std::unique_lock{dev->StateLock} : std::unique_lock<std::mutex>{};
     const auto valuespan = std::views::counted(values, size);
     if(!dev || dev->Type == DeviceType::Capture)
     {
         auto ivals = std::vector<int>(valuespan.size());
-        if(const auto got = GetIntegerv(dev.get(), pname, ivals))
+        if(const auto got = GetIntegerv(std::to_address(dev), pname, ivals))
             std::ranges::copy(ivals | std::views::take(got), valuespan.begin());
         return;
     }
@@ -2595,7 +2600,6 @@ try {
             return 41_u8;
         return 35_u8;
     };
-    auto statelock = std::lock_guard{dev->StateLock};
     switch(pname)
     {
     case ALC_ATTRIBUTES_SIZE:
@@ -2720,7 +2724,7 @@ try {
 
     default:
         auto ivals = std::vector<ALCint>(valuespan.size());
-        if(const auto got = GetIntegerv(dev.get(), pname, ivals))
+        if(const auto got = GetIntegerv(std::to_address(dev), pname, ivals))
             std::ranges::copy(ivals | std::views::take(got), valuespan.begin());
         break;
     }

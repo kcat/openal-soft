@@ -1458,7 +1458,6 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         <enum value="0x19D8" name="ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT" group="SystemEventTypeSOFT"/>
         <enum value="0x19D9" name="ALC_EVENT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
         <enum value="0x19DA" name="ALC_EVENT_NOT_SUPPORTED_SOFT" group="EventSupportSOFT"/>
-
         <enum value="0x19D0" name="ALC_MAX_AUXILIARY_SLOTS_SOFT" group="ContextPName,ContextAttribute,ContextInteger"/>
     </enums>
 
@@ -5479,7 +5478,6 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
                 <enum name="AL_PAN_SOFT"/>
             </require>
         </extension>
-
         <extension name="ALC_SOFTX_limits_expansions" supported="alc" depends="ALC_EXT_EFX">
             <require>
                 <enum name="ALC_MAX_AUXILIARY_SLOTS_SOFT"/>

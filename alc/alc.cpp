@@ -1655,9 +1655,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     }
     numStereo = std::min(numStereo, numMono);
     numMono -= numStereo;
+    device.SourcesMax = numMono + numStereo;
     device.NumMonoSources = numMono;
     device.NumStereoSources = numStereo;
-    device.SourcesMax = numMono + numStereo;
 
     if(auto const sendsopt = device.configValue<unsigned>({}, "sends"sv))
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));

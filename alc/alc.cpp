@@ -2610,8 +2610,8 @@ try {
     auto NumAttrsForDevice = [&dev]
     {
         if(dev->Type == DeviceType::Loopback && dev->FmtChans == DevFmtAmbi3D)
-            return 35_u8;
-        return 29_u8;
+            return 43_u8;
+        return 37_u8;
     };
     switch(pname)
     {

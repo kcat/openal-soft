@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-05 19:29:55.449282+00:00
+ * Last regenerated: 2026-10-22 05:35:50.581500+00:00
  */
 
 #ifndef AL_ALEXT_H
@@ -1128,6 +1128,11 @@ ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, AL
 #define AL_SOFT_source_panning 1
 #define AL_PANNING_ENABLED_SOFT                  0x19EC
 #define AL_PAN_SOFT                              0x19ED
+#endif
+
+#ifndef ALC_SOFTX_auxiliary_slot_request
+#define ALC_SOFTX_auxiliary_slot_request 1
+#define ALC_MAX_AUXILIARY_SLOTS_SOFT             0x19D0
 #endif
 
 #ifdef __cplusplus

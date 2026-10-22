@@ -27,7 +27,7 @@
 /* This file is auto-generated! Please do not edit it manually.
  * Instead, modify the API in al.xml and regenerate using genheaders.py.
  *
- * Last regenerated: 2026-10-05 19:29:55.449282+00:00
+ * Last regenerated: 2026-10-22 05:35:50.581500+00:00
  */
 
 module;
@@ -1025,5 +1025,8 @@ ENUMDCL AL_UNPACK_AMBISONIC_ORDER_SOFT =         0x199D;
 /*** AL_SOFT_source_panning ***/
 ENUMDCL AL_PANNING_ENABLED_SOFT =                0x19EC;
 ENUMDCL AL_PAN_SOFT =                            0x19ED;
+
+/*** ALC_SOFTX_auxiliary_slot_request ***/
+ENUMDCL ALC_MAX_AUXILIARY_SLOTS_SOFT =           0x19D0;
 
 } /* extern "C" */

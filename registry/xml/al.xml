@@ -5478,7 +5478,7 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
                 <enum name="AL_PAN_SOFT"/>
             </require>
         </extension>
-        <extension name="ALC_SOFTX_limits_expansions" supported="alc" depends="ALC_EXT_EFX">
+        <extension name="ALC_SOFTX_auxiliary_slot_request" supported="alc" depends="ALC_EXT_EFX">
             <require>
                 <enum name="ALC_MAX_AUXILIARY_SLOTS_SOFT"/>
             </require>

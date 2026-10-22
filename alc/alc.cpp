@@ -370,7 +370,7 @@ constexpr auto DitherRNGSeed = 22222u;
         "ALC_SOFT_pause_device "
         "ALC_SOFT_reopen_device "
         "ALC_SOFT_system_events "
-        "ALC_SOFTX_limits_expansion";
+        "ALC_SOFTX_auxiliary_slot_request";
 }
 
 /* Returns the above NoDeviceExt string as an array of string_views. */

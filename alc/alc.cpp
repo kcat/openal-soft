@@ -1148,6 +1148,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     auto buffer_size = ALCuint{DefaultUpdateSize * DefaultNumUpdates};
     auto hrtf_id = -1;
     auto aorder = ALCuint{0};
+    auto numSlots = device.AuxiliaryEffectSlotMax;
 
     if(device.Type != DeviceType::Loopback)
     {
@@ -1392,7 +1393,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SLOTS_SOFT)
-                device.AuxiliaryEffectSlotMax = static_cast<ALCuint>(std::max<ALCint>(attrvalue, 0));
+                numSlots = static_cast<ALCuint>(std::max<ALCint>(attrvalue, 0));
                 break;
 
             default:
@@ -1665,8 +1666,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
 
     if(auto const slotsopt = device.configValue<unsigned>({}, "slots"sv);
         slotsopt.value_or(0u) > 0)
-        device.AuxiliaryEffectSlotMax = std::clamp(*slotsopt, 1u,
+        numSlots = std::clamp(*slotsopt, 1u,
             unsigned{std::numeric_limits<int>::max()});
+    device.AuxiliaryEffectSlotMax = numSlots;
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",
         device.SourcesMax, device.NumMonoSources, device.NumStereoSources,

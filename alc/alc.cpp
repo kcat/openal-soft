@@ -369,7 +369,8 @@ constexpr auto DitherRNGSeed = 22222u;
         "ALC_SOFT_output_mode "
         "ALC_SOFT_pause_device "
         "ALC_SOFT_reopen_device "
-        "ALC_SOFT_system_events";
+        "ALC_SOFT_system_events "
+        "ALC_SOFTX_auxiliary_slot_request";
 }
 
 /* Returns the above NoDeviceExt string as an array of string_views. */
@@ -1147,6 +1148,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     auto buffer_size = ALCuint{DefaultUpdateSize * DefaultNumUpdates};
     auto hrtf_id = -1;
     auto aorder = ALCuint{0};
+    auto numSlots = device.AuxiliaryEffectSlotMax;
 
     if(device.Type != DeviceType::Loopback)
     {
@@ -1388,6 +1390,10 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
 
             case ATTRIBUTE(ALC_SYNC)
                 /* Ignored attribute */
+                break;
+
+            case ATTRIBUTE(ALC_MAX_AUXILIARY_SLOTS_SOFT)
+                numSlots = static_cast<ALCuint>(std::max<ALCint>(attrvalue, 0));
                 break;
 
             default:
@@ -1660,8 +1666,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
 
     if(auto const slotsopt = device.configValue<unsigned>({}, "slots"sv);
         slotsopt.value_or(0u) > 0)
-        device.AuxiliaryEffectSlotMax = std::clamp(*slotsopt, 1u,
+        numSlots = std::clamp(*slotsopt, 1u,
             unsigned{std::numeric_limits<int>::max()});
+    device.AuxiliaryEffectSlotMax = numSlots;
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",
         device.SourcesMax, device.NumMonoSources, device.NumStereoSources,
@@ -2272,6 +2279,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         case ALC_AMBISONIC_SCALING_SOFT:
         case ALC_AMBISONIC_ORDER_SOFT:
         case ALC_MAX_AMBISONIC_ORDER_SOFT:
+        case ALC_MAX_AUXILIARY_SLOTS_SOFT:
             al::Device::SetGlobalError(ALC_INVALID_DEVICE);
             return 0;
 
@@ -2333,8 +2341,8 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
     auto NumAttrsForDevice = [device]
     {
         if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
-            return 37_u8;
-        return 31_u8;
+            return 39_u8;
+        return 33_u8;
     };
     switch(param)
     {
@@ -2409,6 +2417,9 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
 
             values[i++] = ALC_OUTPUT_MODE_SOFT;
             values[i++] = al::to_underlying(device->getOutputMode1());
+
+            values[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            values[i++] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
 
             values[i++] = 0;
             Ensures(i == NumAttrsForDevice());
@@ -2541,6 +2552,10 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         values[0] = al::to_underlying(device->getOutputMode1());
         return 1;
 
+    case ALC_MAX_AUXILIARY_SLOTS_SOFT:
+        values[0] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
+        return 1;
+
     default:
         device->setError(ALC_INVALID_ENUM);
     }
@@ -2597,8 +2612,8 @@ try {
     auto NumAttrsForDevice = [&dev]
     {
         if(dev->Type == DeviceType::Loopback && dev->FmtChans == DevFmtAmbi3D)
-            return 41_u8;
-        return 35_u8;
+            return 43_u8;
+        return 37_u8;
     };
     switch(pname)
     {
@@ -2682,6 +2697,9 @@ try {
 
             valuespan[i++] = ALC_DEVICE_LATENCY_SOFT;
             valuespan[i++] = clock.Latency.count();
+
+            valuespan[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            valuespan[i++] = dev->AuxiliaryEffectSlotMax;
 
             valuespan[i++] = 0;
             Ensures(i == NumAttrsForDevice());

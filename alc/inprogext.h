@@ -98,6 +98,11 @@ void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, AL
 #define AL_FORMAT_MONO32                         0x1202
 #define AL_FORMAT_STEREO32                       0x1203
 
+#ifndef ALC_SOFTX_auxiliary_slot_request
+#define ALC_SOFTX_auxiliary_slot_request 1
+#define ALC_MAX_AUXILIARY_SLOTS_SOFT             0x19D0
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

@@ -5055,8 +5055,8 @@ typedef void (ALC_APIENTRY*<name>ALCEVENTPROCTYPESOFT</name>)(<type>ALCenum</typ
         </extension>
         <extension name="ALC_SOFT_device_clock" supported="al|alc">
             <require api="alc">
-                <enum name="ALCint64SOFT"/>
-                <enum name="ALCuint64SOFT"/>
+                <type name="ALCint64SOFT"/>
+                <type name="ALCuint64SOFT"/>
                 <enum name="ALC_DEVICE_CLOCK_SOFT"/>
                 <enum name="ALC_DEVICE_LATENCY_SOFT"/>
                 <enum name="ALC_DEVICE_CLOCK_LATENCY_SOFT"/>

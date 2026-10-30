@@ -5,6 +5,12 @@
 
 #include <cstdlib>
 
+#include "opthelpers.h"
+
+#if defined(_WIN32)
+#include "opthelpers.h"
+#endif
+
 #if HAVE_CXXMODULES
 #if defined(_WIN32)
 import alstring;
@@ -25,7 +31,7 @@ namespace al {
 auto getenv(gsl::czstring const envname) -> std::optional<std::string>
 {
     if(auto const*const str = _wgetenv(utf8_to_wstr(envname).c_str()); str && *str != L'\0')
-        return wstr_to_utf8(str);
+        return al::assign_result{[str]{ return wstr_to_utf8(str); }};
     return std::nullopt;
 }
 

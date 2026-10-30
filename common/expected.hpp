@@ -20,7 +20,8 @@ protected:
     bad_expected_access() noexcept = default;
     bad_expected_access(bad_expected_access const&) noexcept = default;
     bad_expected_access(bad_expected_access&&) noexcept = default;
-    auto operator=(bad_expected_access const&) noexcept LIFETIMEBOUND -> bad_expected_access& = default;
+    auto operator=(bad_expected_access const&) noexcept LIFETIMEBOUND -> bad_expected_access&
+        = default;
     auto operator=(bad_expected_access&&) noexcept LIFETIMEBOUND -> bad_expected_access& = default;
     ~bad_expected_access() override = default;
 
@@ -37,10 +38,11 @@ class bad_expected_access : public bad_expected_access<void> {
 public:
     explicit bad_expected_access(Er error) : mError{std::move(error)} { }
 
-    [[nodiscard]] auto error() const& noexcept -> Er const& { return mError; }
-    [[nodiscard]] auto error() & noexcept -> Er& { return mError; }
-    [[nodiscard]] auto error() const&& noexcept -> Er const&& { return std::move(mError); }
-    [[nodiscard]] auto error() && noexcept -> Er&& { return std::move(mError); }
+    [[nodiscard]] auto error() const& noexcept LIFETIMEBOUND -> Er const& { return mError; }
+    [[nodiscard]] auto error() & noexcept LIFETIMEBOUND -> Er& { return mError; }
+    [[nodiscard]]
+    auto error() const&& noexcept LIFETIMEBOUND -> Er const&& { return std::move(mError); }
+    [[nodiscard]] auto error() && noexcept LIFETIMEBOUND -> Er&& { return std::move(mError); }
 };
 
 
@@ -66,19 +68,28 @@ public:
         : mError{il, std::forward<Args>(args)...}
     { }
 
-    [[nodiscard]] constexpr auto error() const& noexcept -> const E& { return mError; }
-    [[nodiscard]] constexpr auto error() & noexcept -> E& { return mError; }
-    [[nodiscard]] constexpr auto error() const&& noexcept -> const E&& { return std::move(mError); }
-    [[nodiscard]] constexpr auto error() && noexcept -> E&& { return std::move(mError); }
+    [[nodiscard]] constexpr
+    auto error() const& noexcept LIFETIMEBOUND -> E const& { return mError; }
+    [[nodiscard]] constexpr
+    auto error() & noexcept LIFETIMEBOUND -> E& { return mError; }
+    [[nodiscard]] constexpr
+    auto error() const&& noexcept LIFETIMEBOUND -> E const&& { return std::move(mError); }
+    [[nodiscard]] constexpr
+    auto error() && noexcept LIFETIMEBOUND -> E&& { return std::move(mError); }
 
-    constexpr void swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>)
-    { std::swap(mError, other.mError); }
+    constexpr
+    void swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>)
+    {
+        using std::swap;
+        swap(mError, other.mError);
+    }
 
-    template<typename E2>
-    friend constexpr auto operator==(const unexpected& lhs, const unexpected<E2>& rhs) -> bool
+    template<typename E2> friend constexpr
+    auto operator==(unexpected const& lhs, unexpected<E2> const& rhs) -> bool
     { return lhs.error() == rhs.error(); }
 
-    friend constexpr void swap(unexpected& lhs, unexpected& rhs) noexcept(noexcept(lhs.swap(rhs)))
+    friend constexpr
+    void swap(unexpected& lhs, unexpected& rhs) noexcept(noexcept(lhs.swap(rhs)))
     { lhs.swap(rhs); }
 };
 
@@ -225,29 +236,29 @@ public:
     [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
 
     [[nodiscard]] constexpr
-    auto operator*() & noexcept -> S& requires(not void_success)
+    auto operator*() & noexcept LIFETIMEBOUND -> S& requires(not void_success)
     { assert_object(has_value(), "expected::operator* called without a value"); return mValue; }
     [[nodiscard]] constexpr
-    auto operator*() const& noexcept -> S const& requires(not void_success)
+    auto operator*() const& noexcept LIFETIMEBOUND -> S const& requires(not void_success)
     { assert_object(has_value(), "expected::operator* called without a value"); return mValue; }
     [[nodiscard]] constexpr
-    auto operator*() && noexcept -> S&& requires(not void_success)
+    auto operator*() && noexcept LIFETIMEBOUND -> S&& requires(not void_success)
     {
         assert_object(has_value(), "expected::operator* called without a value");
         return std::move(mValue);
     }
     [[nodiscard]] constexpr
-    auto operator*() const&& noexcept -> S const&& requires(not void_success)
+    auto operator*() const&& noexcept LIFETIMEBOUND -> S const&& requires(not void_success)
     {
         assert_object(has_value(), "expected::operator* called without a value");
         return std::move(mValue);
     }
 
     [[nodiscard]] constexpr
-    auto operator->() noexcept -> S* requires(not void_success)
+    auto operator->() noexcept LIFETIMEBOUND -> S* requires(not void_success)
     { assert_object(has_value(), "expected::operator-> called without a value"); return &mValue; }
     [[nodiscard]] constexpr
-    auto operator->() const noexcept -> S const* requires(not void_success)
+    auto operator->() const noexcept LIFETIMEBOUND -> S const* requires(not void_success)
     { assert_object(has_value(), "expected::operator-> called without a value"); return &mValue; }
 
     constexpr auto value() const& -> void { check_object(); }
@@ -256,14 +267,16 @@ public:
     constexpr auto value() && -> void { check_object(); }
 
     [[nodiscard]] constexpr
-    auto value() & -> S& requires(not void_success) { check_object(); return mValue; }
+    auto value() & LIFETIMEBOUND -> S& requires(not void_success)
+    { check_object(); return mValue; }
     [[nodiscard]] constexpr
-    auto value() const& -> const S& requires(not void_success) { check_object(); return mValue; }
+    auto value() const& LIFETIMEBOUND -> const S& requires(not void_success)
+    { check_object(); return mValue; }
     [[nodiscard]] constexpr
-    auto value() && -> S&& requires(not void_success)
+    auto value() && LIFETIMEBOUND -> S&& requires(not void_success)
     { check_object(); return std::move(mValue); }
     [[nodiscard]] constexpr
-    auto value() const&& -> const S&& requires(not void_success)
+    auto value() const&& LIFETIMEBOUND -> const S&& requires(not void_success)
     { check_object(); return std::move(mValue); }
 
     template<typename U> [[nodiscard]] constexpr
@@ -274,19 +287,19 @@ public:
     { return bool{*this} ? std::move(**this) : static_cast<S>(std::forward<U>(defval)); }
 
     [[nodiscard]] constexpr
-    auto error() & noexcept -> Er&
+    auto error() & noexcept LIFETIMEBOUND -> Er&
     { assert_object(not has_value(), "expected::error called without an error"); return mError; }
     [[nodiscard]] constexpr
-    auto error() const& noexcept -> const Er&
+    auto error() const& noexcept LIFETIMEBOUND -> const Er&
     { assert_object(not has_value(), "expected::error called without an error"); return mError; }
     [[nodiscard]] constexpr
-    auto error() && noexcept -> Er&&
+    auto error() && noexcept LIFETIMEBOUND -> Er&&
     {
         assert_object(not has_value(), "expected::error called without an error");
         return std::move(mError);
     }
     [[nodiscard]] constexpr
-    auto error() const&& noexcept -> const Er&&
+    auto error() const&& noexcept LIFETIMEBOUND -> const Er&&
     {
         assert_object(not has_value(), "expected::error called without an error");
         return std::move(mError);

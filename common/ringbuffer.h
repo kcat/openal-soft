@@ -56,6 +56,7 @@ public:
     /** Reset the read and write pointers to zero. This is not thread safe. */
     auto reset() noexcept -> void
     {
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         mWriteCount.store(0_uz, std::memory_order_relaxed);
         mReadCount.store(0_uz, std::memory_order_relaxed);
         std::ranges::fill(mBuffer, T{});
@@ -281,7 +282,8 @@ class FifoBuffer {
 
     NOINLINE ~FifoBuffer()
     {
-        const auto w = mWriteCount.load(std::memory_order_acquire);
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        const auto w = mWriteCount.load(std::memory_order_relaxed);
         const auto r = mReadCount.load(std::memory_order_relaxed);
         const auto readable = w - r;
         if(w == r) return;
@@ -303,6 +305,7 @@ public:
     /** Reset the read and write pointers to zero. This is not thread safe. */
     NOINLINE auto reset() noexcept -> void
     {
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         const auto w = mWriteCount.load(std::memory_order_relaxed);
         const auto r = mReadCount.load(std::memory_order_relaxed);
         const auto readable = w - r;

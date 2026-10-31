@@ -64,6 +64,7 @@
 #include "core/except.h"
 #include "core/mixer/defs.h"
 #include "core/voice_change.h"
+#include "debug.h"
 #include "direct_defs.h"
 #include "filter.h"
 #include "flexarray.h"
@@ -194,8 +195,8 @@ enum class SourceProp : ALenum {
 };
 
 
-constexpr auto HasBuffer(al::BufferQueueItem const &item) noexcept -> bool
-{ return item.mBuffer != nullptr; }
+constexpr auto HasBufferFormat(al::BufferQueueItem const& item) noexcept -> bool
+{ return item.mBuffer != nullptr and item.mBuffer->mSampleRate > 0; }
 
 
 auto GetSourceVoice(al::Source &source, al::Context const& context) -> Voice*
@@ -387,7 +388,7 @@ auto GetSourceSecOffset(al::Source& Source, al::Context const& context)
 
     const auto BufferFmt = std::invoke([&Source]() -> al::Buffer*
     {
-        if(const auto iter = std::ranges::find_if(Source.mQueue, HasBuffer);
+        if(const auto iter = std::ranges::find_if(Source.mQueue, HasBufferFormat);
             iter != Source.mQueue.end())
             return iter->mBuffer.get();
         return nullptr;
@@ -435,7 +436,7 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
 
     const auto BufferFmt = std::invoke([&Source]() -> al::Buffer*
     {
-        if(const auto iter = std::ranges::find_if(Source.mQueue, HasBuffer);
+        if(const auto iter = std::ranges::find_if(Source.mQueue, HasBufferFormat);
             iter != Source.mQueue.end())
             return iter->mBuffer.get();
         return nullptr;
@@ -504,7 +505,7 @@ auto GetSourceLength(al::Source const& source, SourceProp const name) -> T
 {
     const auto BufferFmt = std::invoke([&source]() -> al::Buffer*
     {
-        if(auto const iter = std::ranges::find_if(source.mQueue, HasBuffer);
+        if(auto const iter = std::ranges::find_if(source.mQueue, HasBufferFormat);
             iter != source.mQueue.end())
             return iter->mBuffer.get();
         return nullptr;
@@ -574,7 +575,7 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, SourceProp con
     /* Find the first valid Buffer in the Queue */
     const auto BufferFmt = std::invoke([&BufferList]() -> al::Buffer*
     {
-        if(auto const iter = std::ranges::find_if(BufferList, HasBuffer);
+        if(auto const iter = std::ranges::find_if(BufferList, HasBufferFormat);
             iter != BufferList.end())
             return iter->mBuffer.get();
         return nullptr;
@@ -3461,7 +3462,7 @@ try {
     auto& device = *context.mALDevice;
     auto BufferFmt = std::invoke([&source]() -> al::Buffer*
     {
-        const auto iter = std::ranges::find_if(source.mQueue, HasBuffer);
+        const auto iter = std::ranges::find_if(source.mQueue, HasBufferFormat);
         if(iter != source.mQueue.end())
             return iter->mBuffer.get();
         return nullptr;
@@ -3478,8 +3479,8 @@ try {
             if(buffer)
             {
                 if(buffer->mSampleRate < 1)
-                    context.throw_error(AL_INVALID_OPERATION,
-                        "Queueing buffer {} with no format", buffer->mId);
+                    context.debugMessage(DebugSource::API, DebugType::Portability, 2,
+                        DebugSeverity::Medium, "Queueing buffer with no format");
 
                 if(buffer->mCallback)
                     context.throw_error(AL_INVALID_OPERATION, "Queueing callback buffer {}",
@@ -3505,6 +3506,8 @@ try {
             BufferList->mSampleLen = buffer->mSampleLen;
             BufferList->mLoopEnd = buffer->mSampleLen;
             BufferList->mSamples = buffer->mData;
+            if(buffer->mSampleRate < 1)
+                return;
 
             if(BufferFmt == nullptr)
                 BufferFmt = buffer;

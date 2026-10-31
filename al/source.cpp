@@ -441,6 +441,8 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
             return iter->mBuffer.get();
         return nullptr;
     });
+    Ensures(BufferFmt != nullptr);
+
     std::ignore = std::ranges::find_if(Source.mQueue,
         [Current,&readPos](al::BufferQueueItem const &item)
     {

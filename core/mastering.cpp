@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -14,21 +15,15 @@
 #include "alnumeric.h"
 #include "opthelpers.h"
 
-#if HAVE_CXXMODULES
-import types;
-#else
-#include "altypes.hpp"
-#endif
-
 /* These structures assume BufferLineSize is a power of 2. */
 static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");
 
 struct SlidingHold {
-    alignas(16) std::array<f32, BufferLineSize> mValues;
-    std::array<sys_uint, BufferLineSize> mExpiries;
+    alignas(16) std::array<float, BufferLineSize> mValues;
+    std::array<unsigned, BufferLineSize> mExpiries;
     unsigned mLowerIndex;
     unsigned mUpperIndex;
-    sys_uint mLength;
+    unsigned mLength;
 };
 
 
@@ -45,7 +40,7 @@ constexpr auto assume_aligned_span(const std::span<T,N> s) noexcept -> std::span
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-auto UpdateSlidingHold(SlidingHold *Hold, unsigned const i, f32 const in) -> f32
+auto UpdateSlidingHold(SlidingHold *Hold, unsigned const i, float const in) -> float
 {
     constexpr auto mask = unsigned{BufferLineSize - 1};
     const auto length = Hold->mLength;
@@ -87,31 +82,31 @@ auto UpdateSlidingHold(SlidingHold *Hold, unsigned const i, f32 const in) -> f32
     return values[upperIndex];
 }
 
-void ShiftSlidingHold(SlidingHold *Hold, sys_uint const n)
+void ShiftSlidingHold(SlidingHold *Hold, unsigned const n)
 {
     if(Hold->mLowerIndex < Hold->mUpperIndex)
     {
         auto expiries = std::span{Hold->mExpiries}.first(Hold->mLowerIndex+1);
-        std::ranges::transform(expiries, expiries.begin(), [n](sys_uint const e) { return e-n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](unsigned const e) { return e-n; });
         expiries = std::span{Hold->mExpiries}.subspan(Hold->mUpperIndex);
-        std::ranges::transform(expiries, expiries.begin(), [n](sys_uint const e) { return e-n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](unsigned const e) { return e-n; });
     }
     else
     {
         const auto expiries = std::span{Hold->mExpiries}.first(Hold->mLowerIndex+1)
             .subspan(Hold->mUpperIndex);
-        std::ranges::transform(expiries, expiries.begin(), [n](sys_uint const e) { return e-n; });
+        std::ranges::transform(expiries, expiries.begin(), [n](unsigned const e) { return e-n; });
     }
 }
 
 } // namespace
 
-auto Compressor::Create(Params const params) -> std::unique_ptr<Compressor>
+auto Compressor::Create(Params const& params) -> std::unique_ptr<Compressor>
 {
-    const auto lookAhead = std::clamp(round(params.LookAheadTime*params.SampleRate), 0.0_f32,
-        f32{BufferLineSize-1.0f}).reinterpret_as<sys_uint>();
-    const auto hold = std::clamp(round(params.HoldTime*params.SampleRate), 0.0_f32,
-        f32{BufferLineSize-1.0f}).reinterpret_as<sys_uint>();
+    const auto lookAhead = gsl::narrow_cast<unsigned>(std::clamp(
+        std::round(params.LookAheadTime*params.SampleRate), 0.0f, float{BufferLineSize-1}));
+    const auto hold = gsl::narrow_cast<unsigned>(std::clamp(
+        std::round(params.HoldTime*params.SampleRate), 0.0f, float{BufferLineSize-1}));
 
     auto Comp = std::make_unique<Compressor>(PrivateToken{});
     Comp->mAuto.Knee = params.AutoFlags.test(Flags::AutoKnee);
@@ -120,21 +115,21 @@ auto Compressor::Create(Params const params) -> std::unique_ptr<Compressor>
     Comp->mAuto.PostGain = params.AutoFlags.test(Flags::AutoPostGain);
     Comp->mAuto.Declip = params.AutoFlags.test(Flags::AutoPostGain)
         && params.AutoFlags.test(Flags::AutoDeclip);
-    Comp->mLookAhead = lookAhead.c_val;
-    Comp->mPreGain = pow(10.0_f32, params.PreGainDb / 20.0_f32);
-    Comp->mPostGain = (log(10.0_f64)/20.0_f64 * params.PostGainDb).cast_to<f32>();
-    Comp->mThreshold = (log(10.0_f64)/20.0_f64 * params.ThresholdDb).cast_to<f32>();
-    Comp->mSlope = 1.0_f32/std::max(1.0_f32, params.Ratio) - 1.0_f32;
-    Comp->mKnee = std::max(0.0_f64, log(10.0_f64)/20.0_f64 * params.KneeDb).cast_to<f32>();
-    Comp->mAttack = std::max(1.0_f32, params.AttackTime * params.SampleRate);
-    Comp->mRelease = std::max(1.0_f32, params.ReleaseTime * params.SampleRate);
+    Comp->mLookAhead = lookAhead;
+    Comp->mPreGain = std::pow(10.0f, params.PreGainDb / 20.0f);
+    Comp->mPostGain = gsl::narrow_cast<float>(std::log(10.0)/20.0 * params.PostGainDb);
+    Comp->mThreshold = gsl::narrow_cast<float>(std::log(10.0)/20.0 * params.ThresholdDb);
+    Comp->mSlope = 1.0f/std::max(1.0f, params.Ratio) - 1.0f;
+    Comp->mKnee = gsl::narrow_cast<float>(std::max(0.0, std::log(10.0)/20.0 * params.KneeDb));
+    Comp->mAttack = std::max(1.0f, params.AttackTime * params.SampleRate);
+    Comp->mRelease = std::max(1.0f, params.ReleaseTime * params.SampleRate);
 
     /* Knee width automation actually treats the compressor as a limiter. By
      * varying the knee width, it can effectively be seen as applying
      * compression over a wide range of ratios.
      */
     if(params.AutoFlags.test(Flags::AutoKnee))
-        Comp->mSlope = -1.0_f32;
+        Comp->mSlope = -1.0f;
 
     if(lookAhead > 0)
     {
@@ -145,16 +140,16 @@ auto Compressor::Create(Params const params) -> std::unique_ptr<Compressor>
         if(hold > 1)
         {
             Comp->mHold = std::make_unique<SlidingHold>();
-            Comp->mHold->mValues[0] = -f32::infinity();
+            Comp->mHold->mValues[0] = -std::numeric_limits<float>::infinity();
             Comp->mHold->mExpiries[0] = hold;
             Comp->mHold->mLength = hold;
         }
-        Comp->mDelay.resize(params.NumChans.c_val, FloatBufferLine{});
+        Comp->mDelay.resize(params.NumChans, FloatBufferLine{});
     }
 
-    Comp->mCrestCoeff = exp(-1.0_f32 / (0.200_f32 * params.SampleRate)); // 200ms
-    Comp->mGainEstimate = Comp->mThreshold * -0.5_f32 * Comp->mSlope;
-    Comp->mAdaptCoeff = exp(-1.0_f32 / (2.0_f32 * params.SampleRate)); // 2s
+    Comp->mCrestCoeff = std::exp(-1.0f / (0.200f * params.SampleRate)); // 200ms
+    Comp->mGainEstimate = Comp->mThreshold * -0.5f * Comp->mSlope;
+    Comp->mAdaptCoeff = std::exp(-1.0f / (2.0f * params.SampleRate)); // 2s
 
     return Comp;
 }
@@ -186,8 +181,8 @@ void Compressor::gainCompressor(unsigned const SamplesToDo)
     auto knee = mKnee;
     auto t_att = attack;
     auto t_rel = release - attack;
-    auto a_att = exp(-1.0_f32 / t_att);
-    auto a_rel = exp(-1.0_f32 / t_rel);
+    auto a_att = std::exp(-1.0f / t_att);
+    auto a_rel = std::exp(-1.0f / t_rel);
     auto y_1 = mLastRelease;
     auto y_L = mLastAttack;
     auto c_dev = mLastGainDev;
@@ -197,30 +192,30 @@ void Compressor::gainCompressor(unsigned const SamplesToDo)
 
     std::ranges::transform(mSideChain | std::views::take(SamplesToDo),
         mSideChain | std::views::drop(mLookAhead), mSideChain.begin(),
-        [&](f32 const input, f32 const lookAhead) -> f32
+        [&](float const input, float const lookAhead) -> float
     {
         if(autoKnee)
-            knee = std::max(0.0_f32, 2.5_f32*(c_dev + c_est));
-        const auto knee_h = 0.5_f32 * knee;
+            knee = std::max(0.0f, 2.5f*(c_dev + c_est));
+        const auto knee_h = 0.5f * knee;
 
         /* This is the gain computer. It applies a static compression curve to
          * the control signal.
          */
         const auto x_over = lookAhead - threshold;
-        const auto y_G = (x_over <= -knee_h) ? 0.0_f32
-            : (x_over.abs() < knee_h) ? (x_over+knee_h) * (x_over+knee_h) / (2.0_f32 * knee)
+        const auto y_G = (x_over <= -knee_h) ? 0.0f
+            : (std::abs(x_over) < knee_h) ? (x_over+knee_h) * (x_over+knee_h) / (2.0f * knee)
             : x_over;
 
         const auto y2_crest = *(crestFactor++);
         if(autoAttack)
         {
-            t_att = 2.0_f32*attack/y2_crest;
-            a_att = exp(-1.0_f32 / t_att);
+            t_att = 2.0f*attack/y2_crest;
+            a_att = std::exp(-1.0f / t_att);
         }
         if(autoRelease)
         {
-            t_rel = 2.0_f32*release/y2_crest - t_att;
-            a_rel = exp(-1.0_f32 / t_rel);
+            t_rel = 2.0f*release/y2_crest - t_att;
+            a_rel = std::exp(-1.0f / t_rel);
         }
 
         /* Gain smoothing (ballistics) is done via a smooth decoupled peak
@@ -252,7 +247,7 @@ void Compressor::gainCompressor(unsigned const SamplesToDo)
             postGain = -(c_dev + c_est);
         }
 
-        return exp(postGain - y_L);
+        return std::exp(postGain - y_L);
     });
 
     mLastRelease = y_1;
@@ -271,7 +266,7 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
         std::ranges::for_each(InOut, [SamplesToDo,preGain](const FloatBufferSpan input) -> void
         {
             std::ranges::transform(input | std::views::take(SamplesToDo), input.begin(),
-                [preGain](const float s) noexcept { return s * preGain.c_val; });
+                [preGain](const float s) noexcept { return s * preGain; });
         });
     }
 
@@ -279,12 +274,12 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
      * channels.
      */
     const auto sideChain = std::span{mSideChain}.subspan(mLookAhead, SamplesToDo);
-    std::ranges::fill(sideChain, 0.0_f32);
+    std::ranges::fill(sideChain, 0.0f);
     std::ranges::for_each(InOut, [sideChain](const FloatBufferSpan input) -> void
     {
         std::ranges::transform(sideChain, input, sideChain.begin(),
-            [](f32 const s0, f32 const s1) noexcept -> f32
-        { return std::max(s0, s1.abs()); });
+            [](float const s0, float const s1) noexcept -> float
+        { return std::max(s0, std::abs(s1)); });
     });
 
     if(mAuto.Attack || mAuto.Release)
@@ -299,9 +294,9 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
         auto y2_rms = mLastRmsSq;
 
         std::ranges::transform(sideChain, mCrestFactor.begin(),
-            [&y2_rms,&y2_peak,a_crest](f32 const x_abs) noexcept -> f32
+            [&y2_rms, &y2_peak, a_crest](float const x_abs) noexcept -> float
         {
-            const auto x2 = f32{std::clamp(x_abs*x_abs, 0.000001_f32, 1000000.0_f32)};
+            const auto x2 = std::clamp(x_abs*x_abs, 0.000001f, 1000000.0f);
 
             y2_peak = std::max(x2, lerpf(x2, y2_peak, a_crest));
             y2_rms = lerpf(x2, y2_rms, a_crest);
@@ -319,9 +314,9 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
          * operating as a limiter.
          */
         auto i = 0u;
-        std::ranges::transform(sideChain, sideChain.begin(), [&i,hold](f32 const x_abs) -> f32
+        std::ranges::transform(sideChain, sideChain.begin(), [&i, hold](float const x_abs) -> float
         {
-            auto const x_G = log(std::max(0.000001_f32, x_abs));
+            auto const x_G = std::log(std::max(0.000001f, x_abs));
             return UpdateSlidingHold(hold, i++, x_G);
         });
         ShiftSlidingHold(hold, SamplesToDo);
@@ -332,8 +327,8 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
          * absolute value of the incoming signal) and performs most of its
          * operations in the log domain.
          */
-        std::ranges::transform(sideChain, sideChain.begin(), [](f32 const s) -> f32
-        { return log(std::max(0.000001_f32, s)); });
+        std::ranges::transform(sideChain, sideChain.begin(), [](float const s) -> float
+        { return std::log(std::max(0.000001f, s)); });
     }
 
     gainCompressor(SamplesToDo);
@@ -373,7 +368,7 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
     std::ranges::for_each(InOut, [gains](const FloatBufferSpan inout) -> void
     {
         const auto buffer = assume_aligned_span<16>(std::span{inout});
-        std::ranges::transform(gains, buffer, buffer.begin(), std::multiplies{}, &f32::c_val);
+        std::ranges::transform(gains, buffer, buffer.begin(), std::multiplies{});
     });
 
     std::ranges::copy(mSideChain | std::views::drop(SamplesToDo) | std::views::take(mLookAhead),

@@ -1,7 +1,8 @@
 #ifndef CORE_DEVFMTTRAITS_HPP
 #define CORE_DEVFMTTRAITS_HPP
 
-#include "altypes.hpp"
+#include <cstdint>
+
 #include "devformat.h"
 
 namespace detail {
@@ -9,13 +10,13 @@ namespace detail {
 template<DevFmtType Type> [[nodiscard]] consteval
 auto detect_fmttype() noexcept
 {
-    if constexpr(Type == DevFmtByte) return i8{};
-    else if constexpr(Type == DevFmtUByte) return u8{};
-    else if constexpr(Type == DevFmtShort) return i16{};
-    else if constexpr(Type == DevFmtUShort) return u16{};
-    else if constexpr(Type == DevFmtInt) return i32{};
-    else if constexpr(Type == DevFmtUInt) return u32{};
-    else if constexpr(Type == DevFmtFloat) return f32{};
+    if constexpr(Type == DevFmtByte) return std::int8_t{};
+    else if constexpr(Type == DevFmtUByte) return std::uint8_t{};
+    else if constexpr(Type == DevFmtShort) return std::int16_t{};
+    else if constexpr(Type == DevFmtUShort) return std::uint16_t{};
+    else if constexpr(Type == DevFmtInt) return std::int32_t{};
+    else if constexpr(Type == DevFmtUInt) return std::uint32_t{};
+    else if constexpr(Type == DevFmtFloat) return float{};
     else static_assert(Type == DevFmtFloat, "Unexpected DevFmtType");
 }
 

@@ -35,32 +35,36 @@ static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for Buffer
 static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
     "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
-template<DevFmtType T> constexpr
-auto LoadSample(DevFmtType_t<T> val) noexcept -> float = delete;
-
-template<> constexpr auto LoadSample<DevFmtByte>(i8 const val) noexcept -> float
-{ return (val.as<f32>() * (1.0f/128.0f)).c_val; }
-template<> constexpr auto LoadSample<DevFmtShort>(i16 const val) noexcept -> float
-{ return (val.as<f32>() * (1.0f/32768.0f)).c_val; }
-template<> constexpr auto LoadSample<DevFmtInt>(i32 const val) noexcept -> float
-{ return (val.cast_to<f32>() * (1.0f/2147483648.0f)).c_val; }
-template<> constexpr auto LoadSample<DevFmtFloat>(f32 const val) noexcept -> float
-{ return val.c_val; }
-
-template<> constexpr auto LoadSample<DevFmtUByte>(u8 const val) noexcept -> float
-{ return LoadSample<DevFmtByte>((val - 128).reinterpret_as<i8>()); }
-template<> constexpr auto LoadSample<DevFmtUShort>(u16 const val) noexcept -> float
-{ return LoadSample<DevFmtShort>((val - 32768).reinterpret_as<i16>()); }
-template<> constexpr auto LoadSample<DevFmtUInt>(u32 const val) noexcept -> float
-{ return LoadSample<DevFmtInt>((val - 2147483648u).reinterpret_as<i32>()); }
-
+template<DevFmtType T> [[nodiscard]] constexpr
+auto LoadSample(DevFmtType_t<T> const val) noexcept -> float
+{
+    if constexpr(T == DevFmtFloat)
+        return val;
+    else if constexpr(T == DevFmtInt)
+        return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f);
+    else if constexpr(T == DevFmtShort)
+        return gsl::narrow_cast<float>(val) * (1.0f/32768.0f);
+    else if constexpr(T == DevFmtByte)
+        return gsl::narrow_cast<float>(val) * (1.0f/128.0f);
+    else if constexpr(T == DevFmtUInt)
+        return LoadSample<DevFmtInt>(gsl::narrow_cast<std::int32_t>(val - 2147483648u));
+    else if constexpr(T == DevFmtUShort)
+        return LoadSample<DevFmtShort>(gsl::narrow_cast<std::int16_t>(val - 32768));
+    else if constexpr(T == DevFmtUByte)
+        return LoadSample<DevFmtByte>(gsl::narrow_cast<std::int8_t>(val - 128));
+    else
+    {
+        static_assert(al::dependent_false<decltype(val)>, "Unexpected sample type");
+        return {};
+    }
+}
 
 template<DevFmtType T>
 void LoadSampleArray(std::span<float> const dst, void const *const src, std::size_t const channel,
     std::size_t const srcstep) noexcept
 {
     Expects(channel < srcstep);
-    const auto srcspan = std::span{static_cast<const DevFmtType_t<T>*>(src), dst.size()*srcstep};
+    const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), dst.size()*srcstep};
     auto ssrc = srcspan.begin();
     std::advance(ssrc, channel);
     dst.front() = LoadSample<T>(*ssrc);
@@ -78,37 +82,44 @@ void LoadSamples(std::span<float> const dst, void const *const src, std::size_t 
     case T: LoadSampleArray<T>(dst, src, channel, srcstep); break
     switch(srctype)
     {
-        HANDLE_FMT(DevFmtByte);
-        HANDLE_FMT(DevFmtUByte);
-        HANDLE_FMT(DevFmtShort);
-        HANDLE_FMT(DevFmtUShort);
-        HANDLE_FMT(DevFmtInt);
-        HANDLE_FMT(DevFmtUInt);
-        HANDLE_FMT(DevFmtFloat);
+    HANDLE_FMT(DevFmtByte);
+    HANDLE_FMT(DevFmtUByte);
+    HANDLE_FMT(DevFmtShort);
+    HANDLE_FMT(DevFmtUShort);
+    HANDLE_FMT(DevFmtInt);
+    HANDLE_FMT(DevFmtUInt);
+    HANDLE_FMT(DevFmtFloat);
     }
 #undef HANDLE_FMT
 }
 
 
-template<DevFmtType T>
-auto StoreSample(float) noexcept -> DevFmtType_t<T> = delete;
-
-template<> auto StoreSample<DevFmtFloat>(float const val) noexcept -> f32
-{ return f32{val}; }
-template<> auto StoreSample<DevFmtInt>(float const val) noexcept -> i32
-{ return i32{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))}; }
-template<> auto StoreSample<DevFmtShort>(float const val) noexcept -> i16
-{ return i16{gsl::narrow_cast<std::int16_t>(fastf2i(std::clamp(val*32768.0f, -32768.0f, 32767.0f)))}; }
-template<> auto StoreSample<DevFmtByte>(float const val) noexcept -> i8
-{ return i8{gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)))}; }
-
-/* Define unsigned output variations. */
-template<> auto StoreSample<DevFmtUInt>(float const val) noexcept -> u32
-{ return StoreSample<DevFmtInt>(val).reinterpret_as<u32>() + 2147483648u; }
-template<> auto StoreSample<DevFmtUShort>(float const val) noexcept -> u16
-{ return StoreSample<DevFmtShort>(val).reinterpret_as<u16>() + 32768; }
-template<> auto StoreSample<DevFmtUByte>(float const val) noexcept -> u8
-{ return StoreSample<DevFmtByte>(val).reinterpret_as<u8>() + 128; }
+template<DevFmtType T> [[nodiscard]] constexpr
+auto StoreSample(float const val) noexcept
+{
+    if constexpr(T == DevFmtFloat)
+        return val;
+    else if constexpr(T == DevFmtInt)
+        return std::int32_t{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
+    else if constexpr(T == DevFmtShort)
+    {
+        auto const tmp = std::clamp(val*32768.0f, -32768.0f, 32767.0f);
+        return gsl::narrow_cast<std::int16_t>(fastf2i(tmp));
+    }
+    else if constexpr(T == DevFmtByte)
+        return gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)));
+    else if constexpr(T == DevFmtUInt)
+        return gsl::narrow_cast<std::uint32_t>(StoreSample<DevFmtInt>(val)) + 2147483648u;
+    else if constexpr(T == DevFmtUShort)
+        return gsl::narrow_cast<std::uint16_t>(StoreSample<DevFmtShort>(val) + 32768);
+    else if constexpr(T == DevFmtUByte)
+        return gsl::narrow_cast<std::uint8_t>(StoreSample<DevFmtByte>(val) + 128);
+    else
+    {
+        static_assert(al::dependent_false<DevFmtType_t<T>>, "Unexpected sample type");
+        return DevFmtType_t<T>{};
+    }
+}
 
 template<DevFmtType T>
 void StoreSampleArray(void *const dst, std::span<float const> const src, std::size_t const channel,
@@ -126,7 +137,6 @@ void StoreSampleArray(void *const dst, std::span<float const> const src, std::si
     });
 }
 
-
 void StoreSamples(void *const dst, std::span<float const> const src, std::size_t const channel,
     std::size_t const dststep, DevFmtType const dsttype) noexcept
 {
@@ -134,13 +144,13 @@ void StoreSamples(void *const dst, std::span<float const> const src, std::size_t
     case T: StoreSampleArray<T>(dst, src, channel, dststep); break
     switch(dsttype)
     {
-        HANDLE_FMT(DevFmtByte);
-        HANDLE_FMT(DevFmtUByte);
-        HANDLE_FMT(DevFmtShort);
-        HANDLE_FMT(DevFmtUShort);
-        HANDLE_FMT(DevFmtInt);
-        HANDLE_FMT(DevFmtUInt);
-        HANDLE_FMT(DevFmtFloat);
+    HANDLE_FMT(DevFmtByte);
+    HANDLE_FMT(DevFmtUByte);
+    HANDLE_FMT(DevFmtShort);
+    HANDLE_FMT(DevFmtUShort);
+    HANDLE_FMT(DevFmtInt);
+    HANDLE_FMT(DevFmtUInt);
+    HANDLE_FMT(DevFmtFloat);
     }
 #undef HANDLE_FMT
 }

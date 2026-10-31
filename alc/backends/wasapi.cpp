@@ -199,7 +199,7 @@ using unique_coptr = std::unique_ptr<T, decltype([](T *const ptr) { CoTaskMemFre
 constexpr auto RefTime2Samples(ReferenceTime const &val, DWORD const srate) noexcept -> unsigned
 {
     const auto retval = (val*srate + ReferenceTime{seconds{1}}/2) / seconds{1};
-    return al::saturate_cast<unsigned>(retval);
+    return al::saturating_cast<unsigned>(retval);
 }
 
 

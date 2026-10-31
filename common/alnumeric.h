@@ -26,7 +26,7 @@ namespace al {
 
 #if HAS_BUILTIN(__builtin_add_overflow)
 template<std::integral T> [[nodiscard]] constexpr
-auto add_sat(T const lhs, T const rhs) noexcept -> T
+auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     T res;
     if(!__builtin_add_overflow(lhs, rhs, &res))
@@ -42,7 +42,7 @@ auto add_sat(T const lhs, T const rhs) noexcept -> T
 #else
 
 template<std::integral T> [[nodiscard]]
-constexpr auto add_sat(T lhs, T rhs) noexcept -> T
+constexpr auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     if constexpr(std::is_signed_v<T>)
     {
@@ -67,7 +67,7 @@ constexpr auto add_sat(T lhs, T rhs) noexcept -> T
 #endif
 
 template<std::integral R, std::integral T> [[nodiscard]] constexpr
-auto saturate_cast(T val) noexcept -> R
+auto saturating_cast(T val) noexcept -> R
 {
     if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
     {

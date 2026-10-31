@@ -70,7 +70,7 @@ void Event(EventType const eventType, DeviceType const deviceType, ALCdevice *co
     auto eventlock = std::unique_lock{EventMutex};
     if(EventCallback && gEventsEnabled.test(eventType))
         EventCallback(EnumFromEventType(eventType), al::to_underlying(deviceType), device,
-            al::saturate_cast<ALCsizei>(message.size()), message.c_str(), EventUserPtr);
+            al::saturating_cast<ALCsizei>(message.size()), message.c_str(), EventUserPtr);
 }
 
 } /* namespace alc */

@@ -388,7 +388,7 @@ bool SetRTPriorityRTKit(int prio [[maybe_unused]])
                         rlim.rlim_cur);
                     if(maxtime > 0 and std::cmp_greater(rlim.rlim_max, maxtime))
                     {
-                        rlim.rlim_max = al::saturate_cast<rlim_t>(maxtime);
+                        rlim.rlim_max = al::saturating_cast<rlim_t>(maxtime);
                         rlim.rlim_cur = std::min(rlim.rlim_cur, rlim.rlim_max);
                         if(setrlimit(RLIMIT_RTTIME, &rlim) != 0)
                             return al::unexpected(std::errc{errno});

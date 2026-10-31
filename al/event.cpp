@@ -107,7 +107,8 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                     const auto msg = al::format("Source ID {} state has changed to {}", evt.mId,
                         state_sv);
                     context->mEventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.mId, state,
-                        al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);
+                        al::saturating_cast<ALsizei>(msg.size()), msg.c_str(),
+                        context->mEventParam);
                 },
                 [context,enabledevts](AsyncBufferCompleteEvent const &evt)
                 {
@@ -117,7 +118,8 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                     const auto msg = al::format("{} buffer{} completed", evt.mCount,
                         (evt.mCount == 1) ? "" : "s");
                     context->mEventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.mId, evt.mCount,
-                        al::saturate_cast<ALsizei>(msg.size()), msg.c_str(), context->mEventParam);
+                        al::saturating_cast<ALsizei>(msg.size()), msg.c_str(),
+                        context->mEventParam);
                 },
                 [context,enabledevts](AsyncDisconnectEvent const &evt)
                 {
@@ -125,7 +127,7 @@ auto EventThread(gsl::not_null<al::Context*> const context) -> void
                         return;
 
                     context->mEventCb(AL_EVENT_TYPE_DISCONNECTED_SOFT, 0, 0,
-                        al::saturate_cast<ALsizei>(evt.msg.size()), evt.msg.c_str(),
+                        al::saturating_cast<ALsizei>(evt.msg.size()), evt.msg.c_str(),
                         context->mEventParam);
                 }
             }, event);

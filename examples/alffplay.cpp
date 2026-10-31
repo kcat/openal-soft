@@ -959,7 +959,7 @@ auto AudioState::bufferCallback(const std::span<ALubyte> data) noexcept -> ALsiz
         | std::views::take(n1), data.begin()).out;
     std::ranges::copy(mBufferData | std::views::take(n2), outiter);
     mReadCount.store(r+n1+n2, std::memory_order_release);
-    return al::saturate_cast<ALsizei>(to_read);
+    return al::saturating_cast<ALsizei>(to_read);
 }
 
 void AudioState::handler()

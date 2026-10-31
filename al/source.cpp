@@ -459,14 +459,14 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
             return offset / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         }
         else
-            return al::saturate_cast<T>(readPos.c_val / BufferFmt->mSampleRate);
+            return al::saturating_cast<T>(readPos.c_val / BufferFmt->mSampleRate);
 
     case SourceProp::SampleOffset:
         if constexpr(std::floating_point<T>)
             return gsl::narrow_cast<T>(readPos.c_val)
                 + gsl::narrow_cast<T>(readPosFrac.c_val)/T{MixerFracOne};
         else
-            return al::saturate_cast<T>(readPos.c_val);
+            return al::saturating_cast<T>(readPos.c_val);
 
     case SourceProp::ByteOffset:
         {
@@ -523,13 +523,13 @@ auto GetSourceLength(al::Source const& source, SourceProp const name) -> T
         if constexpr(std::floating_point<T>)
             return gsl::narrow_cast<T>(length.c_val) / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         else
-            return al::saturate_cast<T>(length.c_val / BufferFmt->mSampleRate);
+            return al::saturating_cast<T>(length.c_val / BufferFmt->mSampleRate);
 
     case SourceProp::SampleLength:
         if constexpr(std::floating_point<T>)
             return gsl::narrow_cast<T>(length.c_val);
         else
-            return al::saturate_cast<T>(length.c_val);
+            return al::saturating_cast<T>(length.c_val);
 
     case SourceProp::ByteLength:
         {

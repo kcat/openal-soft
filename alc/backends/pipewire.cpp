@@ -486,7 +486,7 @@ auto get_json_string(spa_json *const iter)
     try {
         str.emplace(gsl::narrow<std::size_t>(len)+1, '\0');
         auto const err = spa_json_parse_stringn(val, len, str->data(),
-            al::saturate_cast<int>(str->size()));
+            al::saturating_cast<int>(str->size()));
         if(err <= 0)
         {
             ERR("Error parsing JSON string: {} ({})", std::generic_category().message(-err), err);
@@ -1580,7 +1580,7 @@ void PipeWirePlayback::outputCallback() noexcept NONBLOCKING
     /* In 0.3.49, pw_buffer::requested specifies the number of samples needed
      * by the resampler/graph for this audio update.
      */
-    auto length = al::saturate_cast<uint32_t>(pw_buf->requested);
+    auto length = al::saturating_cast<uint32_t>(pw_buf->requested);
 #else
     /* In 0.3.48 and earlier, spa_io_rate_match::size apparently has the number
      * of samples per update.

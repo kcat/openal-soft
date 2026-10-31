@@ -97,7 +97,7 @@ void Sdl2Backend::open(std::string_view name)
     case DevFmtInt: want.format = AUDIO_S32SYS; break;
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
-    want.channels = al::saturate_cast<Uint8>(mDevice.channelsFromFmt());
+    want.channels = al::saturating_cast<Uint8>(mDevice.channelsFromFmt());
     want.samples = static_cast<Uint16>(std::min(mDevice.mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
@@ -150,7 +150,7 @@ auto Sdl2Backend::reset() -> bool
     mDeviceID = 0;
 
     auto want = SDL_AudioSpec{};
-    want.freq = al::saturate_cast<int>(mDevice.mSampleRate);
+    want.freq = al::saturating_cast<int>(mDevice.mSampleRate);
     switch(mDevice.FmtType)
     {
     case DevFmtUByte: want.format = AUDIO_U8; break;
@@ -161,8 +161,8 @@ auto Sdl2Backend::reset() -> bool
     case DevFmtInt: want.format = AUDIO_S32SYS; break;
     case DevFmtFloat: want.format = AUDIO_F32; break;
     }
-    want.channels = al::saturate_cast<Uint8>(mDevice.channelsFromFmt());
-    want.samples = al::saturate_cast<Uint16>(std::min(mDevice.mUpdateSize, 8192u));
+    want.channels = al::saturating_cast<Uint8>(mDevice.channelsFromFmt());
+    want.samples = al::saturating_cast<Uint16>(std::min(mDevice.mUpdateSize, 8192u));
     want.callback = [](void *const ptr, Uint8 *const stream, int const len) noexcept
     { return static_cast<Sdl2Backend*>(ptr)->audioCallback(stream, len); };
     want.userdata = this;

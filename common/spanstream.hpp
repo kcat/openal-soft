@@ -47,7 +47,7 @@ public:
         {
             this->setp(data.data(), std::to_address(data.end()));
             if((which&std::ios_base::ate))
-                this->pbump(al::saturate_cast<int>(data.size()));
+                this->pbump(al::saturating_cast<int>(data.size()));
         }
     }
     basic_spanbuf(basic_spanbuf const&) = delete;
@@ -85,7 +85,7 @@ public:
         {
             this->setp(data.data(), std::to_address(data.end()));
             if((mMode&std::ios_base::ate) != 0)
-                this->pbump(al::saturate_cast<int>(data.size()));
+                this->pbump(al::saturating_cast<int>(data.size()));
         }
     }
 
@@ -150,7 +150,7 @@ protected:
             if((mode&std::ios_base::out))
             {
                 this->setp(this->pbase(), this->epptr());
-                this->pbump(al::saturate_cast<int>(newoff));
+                this->pbump(al::saturating_cast<int>(newoff));
             }
         }
         /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */

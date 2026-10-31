@@ -414,7 +414,7 @@ auto LafStream::readChunk() -> std::uint32_t
     if(!infile.read(mSampleChunk.data(), toread)) [[unlikely]]
     {
         const auto framesize = BytesFromQuality(mQuality) * mNumEnabled;
-        const auto samplesread = al::saturate_cast<std::uint64_t>(infile.gcount()) / framesize;
+        const auto samplesread = al::saturating_cast<std::uint64_t>(infile.gcount()) / framesize;
         mCurrentSample += samplesread;
         if(mSampleCount < ~std::uint64_t{0})
             fmt::println(std::cerr, "Premature end of file ({} of {} samples)", mCurrentSample,

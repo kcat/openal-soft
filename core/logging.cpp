@@ -154,7 +154,7 @@ try {
         {
             if(gLogCallback)
                 gLogCallback(gLogCallbackPtr, *logcode, msg.c_str(),
-                    al::saturate_cast<int>(msg.size()));
+                    al::saturating_cast<int>(msg.size()));
             else if(gLogState == LogState::FirstRun)
                 gLogState = LogState::Disable;
         }

@@ -695,7 +695,7 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                         fracPos += bufferSize.dst*increment;
                         auto const srcOffset = fracPos >> MixerFracBits;
                         fracPos &= MixerFracMask;
-                        intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
+                        intPos = al::saturating_add(intPos, gsl::narrow_cast<int>(srcOffset));
                     }
                     continue;
                 }
@@ -722,7 +722,7 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
             }
             else if(voice.mFlags.test(VoiceFlag::IsStatic))
             {
-                auto const uintPos = al::saturate_cast<unsigned>(intPos);
+                auto const uintPos = al::saturating_cast<unsigned>(intPos);
                 LoadBufferStatic(bufferListItem, bufferLoopItem, uintPos, chan, voice.mFrameStep,
                     srcBuffer.first(bufferSize.src).subspan(srcSampleDelay));
             }
@@ -742,7 +742,7 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                     auto const samples = IGNORE_FUNCTION_EFFECTS(std::visit([](auto &splspan)
                     { return std::as_writable_bytes(splspan); }, bufferListItem->mSamples));
 
-                    auto const gotBytes = al::saturate_cast<unsigned>(bufferListItem->mCallback(
+                    auto const gotBytes = al::saturating_cast<unsigned>(bufferListItem->mCallback(
                         bufferListItem->mUserData, &samples[byteOffset],
                         gsl::narrow_cast<int>(needBytes)));
 
@@ -756,7 +756,7 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
             }
             else
             {
-                auto const uintPos = al::saturate_cast<unsigned>(intPos);
+                auto const uintPos = al::saturating_cast<unsigned>(intPos);
                 LoadBufferQueue(bufferListItem, bufferLoopItem, uintPos, chan, voice.mFrameStep,
                     srcBuffer.first(bufferSize.src).subspan(srcSampleDelay));
             }
@@ -796,11 +796,11 @@ auto LoadResampledSamples(Voice &voice, Voice::State const vstate,
                 if(intPos < 0)
                 {
                     intPos += gsl::narrow_cast<int>(srcOffset);
-                    cbOffset += al::saturate_cast<unsigned>(intPos);
+                    cbOffset += al::saturating_cast<unsigned>(intPos);
                 }
                 else
                 {
-                    intPos = al::add_sat(intPos, gsl::narrow_cast<int>(srcOffset));
+                    intPos = al::saturating_add(intPos, gsl::narrow_cast<int>(srcOffset));
                     cbOffset += srcOffset;
                 }
 
@@ -1128,7 +1128,7 @@ void Voice::mix(State const vstate, ContextBase *const context, nanoseconds cons
     /* Update voice positions and buffers as needed. */
     bufPosFrac += increment*samplesToMix;
     auto const samplesDone = bufPosFrac >> MixerFracBits;
-    bufPosInt = al::add_sat(bufPosInt, gsl::narrow_cast<int>(samplesDone));
+    bufPosInt = al::saturating_add(bufPosInt, gsl::narrow_cast<int>(samplesDone));
     bufPosFrac &= MixerFracMask;
 
     auto buffers_done = 0u;

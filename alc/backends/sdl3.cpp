@@ -319,7 +319,7 @@ auto Sdl3Playback::reset() -> bool
         }
     }
     if(mDevice.mFlags.test(DeviceFlag::ChannelsRequest) || want.channels < 1)
-        want.channels = al::saturate_cast<int>(mDevice.channelsFromFmt());
+        want.channels = al::saturating_cast<int>(mDevice.channelsFromFmt());
 
     mStream = SDL_OpenAudioDeviceStream(mDeviceID, &want, callback, this);
     if(!mStream)

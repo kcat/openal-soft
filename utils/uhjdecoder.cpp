@@ -474,7 +474,7 @@ auto main(std::span<al::zstring_view> args) -> int
         auto LeadOut = std::size_t{UhjDecoder::sFilterDelay};
         while(LeadOut > 0)
         {
-            auto got = al::saturate_cast<std::size_t>(sf_readf_float(infile.get(), inmem.data(),
+            auto got = al::saturating_cast<std::size_t>(sf_readf_float(infile.get(), inmem.data(),
                 BufferLineSize));
             if(got < BufferLineSize)
             {

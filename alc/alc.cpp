@@ -1343,11 +1343,11 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 break;
 
             case ATTRIBUTE(ALC_MONO_SOURCES)
-                numMono = al::saturate_cast<ALCuint>(attrvalue);
+                numMono = al::saturating_cast<ALCuint>(attrvalue);
                 break;
 
             case ATTRIBUTE(ALC_STEREO_SOURCES)
-                numStereo = al::saturate_cast<ALCuint>(attrvalue);
+                numStereo = al::saturating_cast<ALCuint>(attrvalue);
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
@@ -2324,7 +2324,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
             return 1;
 
         case ALC_CAPTURE_SAMPLES:
-            values[0] = al::saturate_cast<ALCint>(device->Backend->availableSamples());
+            values[0] = al::saturating_cast<ALCint>(device->Backend->availableSamples());
             return 1;
 
         case ALC_CONNECTED:
@@ -2537,7 +2537,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
 
     case ALC_NUM_HRTF_SPECIFIERS_SOFT:
         device->enumerateHrtfs();
-        values[0] = al::saturate_cast<ALCint>(device->mHrtfList.size());
+        values[0] = al::saturating_cast<ALCint>(device->mHrtfList.size());
         return 1;
 
     case ALC_OUTPUT_LIMITER_SOFT:

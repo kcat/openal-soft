@@ -35,36 +35,36 @@ static_assert((BufferLineSize-1)/MaxPitch > 0, "MaxPitch is too large for Buffer
 static_assert((INT_MAX>>MixerFracBits)/MaxPitch > BufferLineSize,
     "MaxPitch and/or BufferLineSize are too large for MixerFracBits!");
 
-template<DevFmtType T> [[nodiscard]] constexpr
-auto LoadSample(DevFmtType_t<T> const val) noexcept -> float
+template<typename T> [[nodiscard]] constexpr
+auto LoadSample(T const& val) noexcept -> float
 {
-    if constexpr(T == DevFmtFloat)
+    if constexpr(std::same_as<T, float>)
         return val;
-    else if constexpr(T == DevFmtInt)
+    else if constexpr(std::same_as<T, std::int32_t>)
         return gsl::narrow_cast<float>(val) * (1.0f/2147483648.0f);
-    else if constexpr(T == DevFmtShort)
+    else if constexpr(std::same_as<T, std::int16_t>)
         return gsl::narrow_cast<float>(val) * (1.0f/32768.0f);
-    else if constexpr(T == DevFmtByte)
+    else if constexpr(std::same_as<T, std::int8_t>)
         return gsl::narrow_cast<float>(val) * (1.0f/128.0f);
-    else if constexpr(T == DevFmtUInt)
-        return LoadSample<DevFmtInt>(gsl::narrow_cast<std::int32_t>(val - 2147483648u));
-    else if constexpr(T == DevFmtUShort)
-        return LoadSample<DevFmtShort>(gsl::narrow_cast<std::int16_t>(val - 32768));
-    else if constexpr(T == DevFmtUByte)
-        return LoadSample<DevFmtByte>(gsl::narrow_cast<std::int8_t>(val - 128));
+    else if constexpr(std::same_as<T, std::uint32_t>)
+        return LoadSample<std::int32_t>(static_cast<std::int32_t>(val - 2147483648u));
+    else if constexpr(std::same_as<T, std::uint16_t>)
+        return LoadSample<std::int16_t>(gsl::narrow_cast<std::int16_t>(val - 32768));
+    else if constexpr(std::same_as<T, std::uint8_t>)
+        return LoadSample<std::int8_t>(gsl::narrow_cast<std::int8_t>(val - 128));
     else
     {
-        static_assert(al::dependent_false<decltype(val)>, "Unexpected sample type");
+        static_assert(al::dependent_false<T>, "Unexpected sample type");
         return {};
     }
 }
 
-template<DevFmtType T>
+template<typename T>
 void LoadSampleArray(std::span<float> const dst, void const *const src, std::size_t const channel,
     std::size_t const srcstep) noexcept
 {
     Expects(channel < srcstep);
-    const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), dst.size()*srcstep};
+    const auto srcspan = std::span{static_cast<T const*>(src), dst.size()*srcstep};
     auto ssrc = srcspan.begin();
     std::advance(ssrc, channel);
     dst.front() = LoadSample<T>(*ssrc);
@@ -79,7 +79,7 @@ void LoadSamples(std::span<float> const dst, void const *const src, std::size_t 
     std::size_t const srcstep, DevFmtType const srctype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
-    case T: LoadSampleArray<T>(dst, src, channel, srcstep); break
+    case T: LoadSampleArray<DevFmtType_t<T>>(dst, src, channel, srcstep); break
     switch(srctype)
     {
     HANDLE_FMT(DevFmtByte);
@@ -94,39 +94,39 @@ void LoadSamples(std::span<float> const dst, void const *const src, std::size_t 
 }
 
 
-template<DevFmtType T> [[nodiscard]] constexpr
-auto StoreSample(float const val) noexcept
+template<typename T> [[nodiscard]] constexpr
+auto StoreSample(float const val) noexcept -> T
 {
-    if constexpr(T == DevFmtFloat)
+    if constexpr(std::same_as<T, float>)
         return val;
-    else if constexpr(T == DevFmtInt)
+    else if constexpr(std::same_as<T, std::int32_t>)
         return std::int32_t{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
-    else if constexpr(T == DevFmtShort)
+    else if constexpr(std::same_as<T, std::int16_t>)
     {
         auto const tmp = std::clamp(val*32768.0f, -32768.0f, 32767.0f);
         return gsl::narrow_cast<std::int16_t>(fastf2i(tmp));
     }
-    else if constexpr(T == DevFmtByte)
+    else if constexpr(std::same_as<T, std::int8_t>)
         return gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)));
-    else if constexpr(T == DevFmtUInt)
-        return gsl::narrow_cast<std::uint32_t>(StoreSample<DevFmtInt>(val)) + 2147483648u;
-    else if constexpr(T == DevFmtUShort)
-        return gsl::narrow_cast<std::uint16_t>(StoreSample<DevFmtShort>(val) + 32768);
-    else if constexpr(T == DevFmtUByte)
-        return gsl::narrow_cast<std::uint8_t>(StoreSample<DevFmtByte>(val) + 128);
+    else if constexpr(std::same_as<T, std::uint32_t>)
+        return static_cast<std::uint32_t>(StoreSample<std::int32_t>(val)) + 2147483648u;
+    else if constexpr(std::same_as<T, std::uint16_t>)
+        return gsl::narrow_cast<std::uint16_t>(StoreSample<std::int16_t>(val) + 32768);
+    else if constexpr(std::same_as<T, std::uint8_t>)
+        return gsl::narrow_cast<std::uint8_t>(StoreSample<std::int8_t>(val) + 128);
     else
     {
-        static_assert(al::dependent_false<DevFmtType_t<T>>, "Unexpected sample type");
-        return DevFmtType_t<T>{};
+        static_assert(al::dependent_false<T>, "Unexpected sample type");
+        return {};
     }
 }
 
-template<DevFmtType T>
+template<typename T>
 void StoreSampleArray(void *const dst, std::span<float const> const src, std::size_t const channel,
     std::size_t const dststep) noexcept
 {
     Expects(channel < dststep);
-    const auto dstspan = std::span{static_cast<DevFmtType_t<T>*>(dst), src.size()*dststep};
+    const auto dstspan = std::span{static_cast<T*>(dst), src.size()*dststep};
     auto sdst = dstspan.begin();
     std::advance(sdst, channel);
     *sdst = StoreSample<T>(src.front());
@@ -141,7 +141,7 @@ void StoreSamples(void *const dst, std::span<float const> const src, std::size_t
     std::size_t const dststep, DevFmtType const dsttype) noexcept
 {
 #define HANDLE_FMT(T)                                                         \
-    case T: StoreSampleArray<T>(dst, src, channel, dststep); break
+    case T: StoreSampleArray<DevFmtType_t<T>>(dst, src, channel, dststep); break
     switch(dsttype)
     {
     HANDLE_FMT(DevFmtByte);
@@ -156,21 +156,21 @@ void StoreSamples(void *const dst, std::span<float const> const src, std::size_t
 }
 
 
-template<DevFmtType T>
+template<typename T>
 void Mono2Stereo(std::span<float> const dst, void const *const src) noexcept
 {
-    const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), dst.size()>>1};
+    const auto srcspan = std::span{static_cast<T const*>(src), dst.size()>>1};
     auto sdst = dst.begin();
     std::ranges::for_each(srcspan, [&sdst](float const in)
     { sdst = std::fill_n(sdst, 2, in*0.707106781187f); }, &LoadSample<T>);
 }
 
-template<DevFmtType T>
+template<typename T>
 void Multi2Mono(unsigned chanmask, std::size_t const step, std::span<float> const dst,
     void const *const src) noexcept
 {
     const auto scale = std::sqrt(1.0f / gsl::narrow_cast<float>(std::popcount(chanmask)));
-    const auto srcspan = std::span{static_cast<DevFmtType_t<T> const*>(src), step*dst.size()};
+    const auto srcspan = std::span{static_cast<T const*>(src), step*dst.size()};
     std::ranges::fill(dst, 0.0f);
     while(chanmask)
     {
@@ -463,7 +463,8 @@ void ChannelConverter::convert(void const *const src, float *const dst, unsigned
     {
         switch(mSrcType)
         {
-#define HANDLE_FMT(T) case T: Multi2Mono<T>(mChanMask, mSrcStep, {dst, frames}, src); break
+#define HANDLE_FMT(T) case T:                                                 \
+    Multi2Mono<DevFmtType_t<T>>(mChanMask, mSrcStep, {dst, frames}, src); break
         HANDLE_FMT(DevFmtByte);
         HANDLE_FMT(DevFmtUByte);
         HANDLE_FMT(DevFmtShort);
@@ -478,7 +479,7 @@ void ChannelConverter::convert(void const *const src, float *const dst, unsigned
     {
         switch(mSrcType)
         {
-#define HANDLE_FMT(T) case T: Mono2Stereo<T>({dst, frames*2_uz}, src); break
+#define HANDLE_FMT(T) case T: Mono2Stereo<DevFmtType_t<T>>({dst, frames*2_uz}, src); break
         HANDLE_FMT(DevFmtByte);
         HANDLE_FMT(DevFmtUByte);
         HANDLE_FMT(DevFmtShort);

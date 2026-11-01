@@ -44,7 +44,6 @@
 #include <utility>
 #include <vector>
 
-#include "alnumeric.h"
 #include "envutils.hpp"
 #include "inout_ptr.hpp"
 
@@ -63,6 +62,7 @@ import filesystem;
 import fmtlib;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alformatpath.hpp"
 #include "alstring.h"
@@ -72,6 +72,7 @@ import logging;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

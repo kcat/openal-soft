@@ -9,14 +9,15 @@
 #include "AL/al.h"
 
 #include "alc/inprogext.h"
-#include "alnumeric.h"
 #include "effects.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;
+import numeric;
 #else
 #include "alc/context.hpp"
+#include "numeric.hpp"
 #endif
 
 

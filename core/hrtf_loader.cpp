@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <istream>
 #include <iterator>
-#include <numeric>
 #include <ranges>
 #include <span>
 #include <stdexcept>
@@ -12,7 +11,6 @@
 
 #include "hrtf_loader.hpp"
 
-#include "alnumeric.h"
 #include "gsl/gsl"
 #include "hrtf.h"
 #include "zudl.hpp"
@@ -22,6 +20,7 @@ import fmtlib;
 import format;
 import hrtfstore;
 import logging;
+import numeric;
 import types;
 #else
 #include "alformat.hpp"
@@ -30,6 +29,7 @@ import types;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "logging.h"
+#include "numeric.hpp"
 #endif
 
 

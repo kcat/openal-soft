@@ -31,7 +31,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
 #include "zudl.hpp"
@@ -40,10 +39,12 @@
 import alc.context;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

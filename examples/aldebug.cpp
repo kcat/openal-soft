@@ -36,14 +36,13 @@
 #include <string_view>
 #include <vector>
 
-#include "alnumeric.h"
-
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
 import alhelpers;
 import fmtlib;
 import gsl;
+import numeric;
 import openal;
 import zstring_view;
 
@@ -59,6 +58,7 @@ import zstring_view;
 #include "fmt/ostream.h"
 #include "fmt/std.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

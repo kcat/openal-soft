@@ -6,7 +6,6 @@
 #include <span>
 #include <streambuf>
 
-#include "alnumeric.h"
 #include "opthelpers.h"
 
 
@@ -18,6 +17,17 @@ class basic_spanbuf final : public std::basic_streambuf<CharT, Traits> {
     std::ios_base::openmode mMode;
 
     using streambuf_type = std::basic_streambuf<CharT, Traits>;
+
+    template<typename T>
+    auto do_pbump(T count) -> void
+    {
+        while(count > 0)
+        {
+            auto const todo = std::min(count, T{std::numeric_limits<int>::max()});
+            this->pbump(static_cast<int>(todo));
+            count -= todo;
+        }
+    }
 
 public:
     using char_type   = CharT;
@@ -47,7 +57,7 @@ public:
         {
             this->setp(data.data(), std::to_address(data.end()));
             if((which&std::ios_base::ate))
-                this->pbump(al::saturating_cast<int>(data.size()));
+                do_pbump(data.size());
         }
     }
     basic_spanbuf(basic_spanbuf const&) = delete;
@@ -85,7 +95,7 @@ public:
         {
             this->setp(data.data(), std::to_address(data.end()));
             if((mMode&std::ios_base::ate) != 0)
-                this->pbump(al::saturating_cast<int>(data.size()));
+                do_pbump(data.size());
         }
     }
 
@@ -150,7 +160,7 @@ protected:
             if((mode&std::ios_base::out))
             {
                 this->setp(this->pbase(), this->epptr());
-                this->pbump(al::saturating_cast<int>(newoff));
+                do_pbump(newoff);
             }
         }
         /* NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic) */

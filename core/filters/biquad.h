@@ -7,7 +7,7 @@
 #include <numbers>
 #include <span>
 
-#include "alnumeric.h"
+#include "opthelpers.h"
 
 
 /* Filters implementation is based on the "Cookbook formulae for audio

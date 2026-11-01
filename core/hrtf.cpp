@@ -23,7 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "alnumeric.h"
 #include "ambidefs.h"
 #include "filters/splitter.h"
 #include "gsl/gsl"
@@ -40,6 +39,7 @@ import filesystem;
 import format;
 import hrtfstore;
 import logging;
+import numeric;
 import spanstream;
 import types;
 #else
@@ -51,6 +51,7 @@ import types;
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "numeric.hpp"
 #include "spanstream.hpp"
 #endif
 

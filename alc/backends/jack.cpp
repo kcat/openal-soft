@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
@@ -52,6 +51,7 @@ import filesystem;
 import format;
 import gsl;
 import logging;
+import numeric;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
@@ -62,6 +62,7 @@ import zstring_view;
 #include "core/logging.h"
 #include "filesystem.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

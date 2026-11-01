@@ -17,7 +17,6 @@
 #include <utility>
 #include <vector>
 
-#include "alnumeric.h"
 #include "ambidefs.h"
 #include "async_event.h"
 #include "buffer_storage.h"
@@ -41,12 +40,14 @@
 import alstring;
 import core.device;
 import logging;
+import numeric;
 import types;
 #else
 #include "alstring.h"
 #include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "numeric.hpp"
 #endif
 
 

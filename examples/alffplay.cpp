@@ -31,7 +31,6 @@
 #include <variant>
 #include <vector>
 
-#include "alnumeric.h"
 #include "inout_ptr.hpp"
 #include "opthelpers.h"
 #include "pragmadefs.h"
@@ -70,6 +69,7 @@ import alhelpers;
 import alstring;
 import fmtlib;
 import gsl;
+import numeric;
 import openal;
 import zstring_view;
 
@@ -92,6 +92,7 @@ import zstring_view;
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

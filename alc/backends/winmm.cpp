@@ -35,7 +35,6 @@
 #include <thread>
 #include <vector>
 
-#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "ringbuffer.h"
 #include "vector.h"
@@ -53,6 +52,7 @@ import core.helpers;
 import format;
 import gsl;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/backends/exception.hpp"
@@ -63,6 +63,7 @@ import types;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

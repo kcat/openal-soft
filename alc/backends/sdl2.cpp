@@ -27,7 +27,6 @@
 #include <string>
 #include <string_view>
 
-#include "alnumeric.h"
 #include "pragmadefs.h"
 #include "zudl.hpp"
 
@@ -40,10 +39,12 @@ DIAGNOSTIC_POP
 import backends.exception;
 import core.device;
 import gsl;
+import numeric;
 #else
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

@@ -5,8 +5,6 @@
 
 #include <algorithm>
 
-#include "alnumeric.h"
-
 
 /* Near-field control filters are the basis for handling the near-field effect.
  * The near-field effect is a bass-boost present in the directional components

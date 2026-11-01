@@ -54,7 +54,6 @@
 #endif
 #endif
 
-#include "alnumeric.h"
 #include "envutils.hpp"
 
 #if HAVE_CXXMODULES
@@ -62,6 +61,7 @@ import alstring;
 import core.helpers;
 import filesystem;
 import logging;
+import numeric;
 import zstring_view;
 #else
 #include "alformatpath.hpp"
@@ -69,6 +69,7 @@ import zstring_view;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "numeric.hpp"
 #include "zstring_view.hpp"
 #endif
 

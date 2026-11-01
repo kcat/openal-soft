@@ -13,15 +13,18 @@
 #include <ranges>
 #include <span>
 
-#include "alnumeric.h"
 #include "fpu_ctrl.h"
-#include "gsl/gsl"
+#include "gsl/assert"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;
+import gsl;
+import numeric;
 #else
 #include "core/devfmttraits.hpp"
+#include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

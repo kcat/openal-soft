@@ -21,7 +21,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alnumeric.h"
 #include "auxeffectslot.h"
 #include "buffer.h"
 #include "core/except.h"
@@ -39,6 +38,7 @@ import alc.device;
 import format;
 import gsl;
 import logging;
+import numeric;
 import types;
 import zstring_view;
 #else
@@ -49,6 +49,7 @@ import zstring_view;
 #include "alformatzsv.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

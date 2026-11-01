@@ -40,7 +40,6 @@
 #include "al/listener.h"
 #include "alc/alu.h"
 #include "alc/inprogext.h"
-#include "alnumeric.h"
 #include "atomic.h"
 #include "core/mixer/defs.h"
 #include "core/voice.h"
@@ -61,12 +60,14 @@ import alc.device;
 import format;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

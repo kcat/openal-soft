@@ -7,7 +7,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alnumeric.h"
 #include "effects.h"
 
 #if ALSOFT_EAX
@@ -25,11 +24,13 @@ import alc.context;
 import format;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

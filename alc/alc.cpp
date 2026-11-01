@@ -75,7 +75,6 @@
 #include "al/source.h"
 #include "alc/events.h"
 #include "alconfig.h"
-#include "alnumeric.h"
 #include "alu.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
@@ -173,6 +172,7 @@ import core.helpers;
 import fmtlib;
 import format;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/backends/exception.hpp"
@@ -185,6 +185,7 @@ import types;
 #include "core/logging.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
+#include "numeric.hpp"
 #endif
 
 

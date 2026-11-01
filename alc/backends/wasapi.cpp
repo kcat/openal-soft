@@ -65,7 +65,6 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -106,12 +105,14 @@ import backends.exception;
 import core.device;
 import format;
 import logging;
+import numeric;
 #else
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "alformat.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "numeric.hpp"
 #endif
 
 namespace {

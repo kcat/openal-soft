@@ -10,7 +10,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alnumeric.h"
 #include "effects.h"
 #include "zudl.hpp"
 
@@ -31,10 +30,12 @@ import eax.validator;
 import alc.context;
 import logging;
 import gsl;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

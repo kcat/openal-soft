@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <functional>
-#include <numeric>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -19,7 +18,6 @@
 #include "al/listener.h"
 #include "alc/alu.h"
 #include "alc/backends/base.hpp"
-#include "alnumeric.h"
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/effectslot.h"
@@ -48,6 +46,7 @@ import alc.device;
 import fmtlib;
 import gsl;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/context.hpp"
@@ -57,6 +56,7 @@ import types;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

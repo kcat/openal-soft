@@ -32,7 +32,6 @@
 #include <memory>
 #include <mutex>
 #include <new>
-#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -46,7 +45,6 @@
 
 #include "alc/inprogext.h"
 #include "almalloc.h"
-#include "alnumeric.h"
 #include "core/except.h"
 #include "core/resampler_limits.hpp"
 #include "core/voice.h"
@@ -68,6 +66,7 @@ import alc.device;
 import format;
 import gsl;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/context.hpp"
@@ -76,6 +75,7 @@ import types;
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

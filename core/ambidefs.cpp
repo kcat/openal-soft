@@ -9,13 +9,14 @@
 #include <ranges>
 #include <span>
 
-#include "alnumeric.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;
+import numeric;
 #else
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

@@ -43,7 +43,6 @@
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumeric.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
@@ -55,9 +54,11 @@
 #if HAVE_CXXMODULES
 import core.context;
 import core.device;
+import numeric;
 #else
 #include "core/context.h"
 #include "core/device.h"
+#include "numeric.hpp"
 #endif
 
 struct BufferStorage;

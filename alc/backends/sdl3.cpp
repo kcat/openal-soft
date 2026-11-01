@@ -31,7 +31,6 @@
 #include <string_view>
 #include <utility>
 
-#include "alnumeric.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
 #include "zudl.hpp"
@@ -54,6 +53,7 @@ import core.device;
 import format;
 import gsl;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/backends/exception.hpp"
@@ -62,6 +62,7 @@ import types;
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

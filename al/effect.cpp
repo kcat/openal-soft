@@ -27,7 +27,6 @@
 #include <memory>
 #include <mutex>
 #include <new>
-#include <numeric>
 #include <ranges>
 #include <string_view>
 #include <unordered_map>
@@ -43,7 +42,6 @@
 #include "al/effects/effects.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
-#include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
@@ -54,12 +52,14 @@ import alc.device;
 import alstring;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

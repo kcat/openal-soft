@@ -1,5 +1,5 @@
-#ifndef AL_NUMERIC_H
-#define AL_NUMERIC_H
+#ifndef COMMON_NUMERIC_HPP
+#define COMMON_NUMERIC_HPP
 
 #include "config_simd.h"
 
@@ -9,7 +9,9 @@
 #include <cmath>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <numeric>
 #include <string_view>
 #include <type_traits>
 #ifdef HAVE_INTRIN_H
@@ -344,4 +346,4 @@ auto gain_to_level_mb(float const x) -> float
     return std::max(std::log10(x) * 2'000.0f, -10'000.0f);
 }
 
-#endif /* AL_NUMERIC_H */
+#endif /* COMMON_NUMERIC_HPP */

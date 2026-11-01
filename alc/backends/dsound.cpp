@@ -40,7 +40,6 @@
 #include <thread>
 #include <vector>
 
-#include "alnumeric.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "dynload.h"
@@ -88,6 +87,7 @@ import core.helpers;
 import format;
 import gsl;
 import logging;
+import numeric;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
@@ -98,6 +98,7 @@ import zstring_view;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

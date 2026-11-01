@@ -5,7 +5,6 @@
 
 #include <cstring>
 
-#include "alnumeric.h"
 #include "ringbuffer.h"
 
 #include "oboe/Oboe.h"
@@ -16,12 +15,14 @@ import backends.exception;
 import core.device;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

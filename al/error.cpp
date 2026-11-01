@@ -39,7 +39,6 @@
 
 #include "al/debug.h"
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "core/except.h"
 #include "direct_defs.h"
 #include "envutils.hpp"
@@ -50,11 +49,13 @@ import alc.context;
 import format;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

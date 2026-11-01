@@ -8,7 +8,6 @@
 #include <span>
 #include <variant>
 
-#include "alnumeric.h"
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
@@ -20,8 +19,10 @@
 
 #if HAVE_CXXMODULES
 import gsl;
+import numeric;
 #else
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 namespace {

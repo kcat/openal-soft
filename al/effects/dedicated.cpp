@@ -6,13 +6,14 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alnumeric.h"
 #include "effects.h"
 
 #if HAVE_CXXMODULES
 import alc.context;
+import numeric;
 #else
 #include "alc/context.hpp"
+#include "numeric.hpp"
 #endif
 
 namespace {

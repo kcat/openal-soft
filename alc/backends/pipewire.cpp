@@ -45,7 +45,6 @@
 #include <utility>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
@@ -137,6 +136,7 @@ import fmtlib;
 import format;
 import gsl;
 import logging;
+import numeric;
 import spanstream;
 import types;
 import zstring_view;
@@ -153,6 +153,7 @@ import zstring_view;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #include "spanstream.hpp"
 #include "zstring_view.hpp"
 #endif

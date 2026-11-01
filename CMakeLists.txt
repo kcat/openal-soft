@@ -736,7 +736,6 @@ set(COMMON_HDRS
     common/alcomplex.h
     common/alformat.hpp
     common/almalloc.h
-    common/alnumeric.h
     common/alstring.h
     common/althrd_setname.h
     common/althreads.h
@@ -756,6 +755,7 @@ set(COMMON_HDRS
     common/inout_ptr.hpp
     common/instance_of.hpp
     common/intrusive_ptr.h
+    common/numeric.hpp
     common/opthelpers.h
     common/pffft.h
     common/polyphase_resampler.h
@@ -787,6 +787,7 @@ if(HAVE_CXXMODULES)
         common/cemath.cppm
         common/filesystem.cppm
         common/hann_window.cppm
+        common/numeric.cppm
         common/phase_shifter.cppm
         common/spanstream.cppm
         common/zstring_view.cppm

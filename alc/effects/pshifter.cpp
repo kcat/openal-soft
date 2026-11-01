@@ -32,7 +32,6 @@
 #include <variant>
 
 #include "alc/effects/base.h"
-#include "alnumeric.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
@@ -46,10 +45,12 @@
 
 #if HAVE_CXXMODULES
 import core.device;
+import numeric;
 import window.hann;
 #else
 #include "core/device.h"
 #include "hann_window.hpp"
+#include "numeric.hpp"
 #endif
 
 struct BufferStorage;

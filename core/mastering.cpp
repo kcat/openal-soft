@@ -12,8 +12,13 @@
 #include <ranges>
 #include <span>
 
-#include "alnumeric.h"
 #include "opthelpers.h"
+
+#if HAVE_CXXMODULES
+import numeric;
+#else
+#include "numeric.hpp"
+#endif
 
 /* These structures assume BufferLineSize is a power of 2. */
 static_assert((BufferLineSize & (BufferLineSize-1)) == 0, "BufferLineSize is not a power of 2");

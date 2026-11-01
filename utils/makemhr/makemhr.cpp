@@ -76,7 +76,6 @@
 #include <limits>
 #include <memory>
 #include <numbers>
-#include <numeric>
 #include <ranges>
 #include <span>
 #include <string_view>
@@ -96,6 +95,7 @@ import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
+import numeric;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
@@ -104,6 +104,7 @@ import zstring_view;
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

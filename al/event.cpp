@@ -18,7 +18,6 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "alnumeric.h"
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/effects/base.h"
@@ -32,11 +31,13 @@ import alc.context;
 import format;
 import gsl;
 import logging;
+import numeric;
 #else
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

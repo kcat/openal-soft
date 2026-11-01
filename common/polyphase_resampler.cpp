@@ -6,15 +6,16 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
-#include <numeric>
 #include <ranges>
 #include <stdexcept>
 #include <tuple>
 
 #if HAVE_CXXMODULES
 import gsl;
+import numeric;
 #else
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

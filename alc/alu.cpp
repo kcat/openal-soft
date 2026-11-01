@@ -41,7 +41,6 @@
 #include <utility>
 #include <variant>
 
-#include "alnumeric.h"
 #include "atomic.h"
 #include "core/ambidefs.h"
 #include "core/async_event.h"
@@ -84,6 +83,7 @@ import core.device;
 import cubic_tables;
 import format;
 import hrtfstore;
+import numeric;
 import types;
 #else
 #include "alformat.hpp"
@@ -96,6 +96,7 @@ import types;
 #include "core/device.h"
 #include "core/devfmttraits.hpp"
 #include "core/hrtfstore.hpp"
+#include "numeric.hpp"
 #endif
 
 

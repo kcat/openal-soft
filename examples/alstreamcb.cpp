@@ -42,7 +42,6 @@
 
 #include "sndfile.h"
 
-#include "alnumeric.h"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
@@ -51,6 +50,7 @@
 import alhelpers;
 import fmtlib;
 import gsl;
+import numeric;
 import openal;
 import zstring_view;
 
@@ -65,6 +65,7 @@ import zstring_view;
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

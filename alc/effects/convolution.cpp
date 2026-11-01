@@ -23,7 +23,6 @@
 #endif
 
 #include "alcomplex.h"
-#include "alnumeric.h"
 #include "base.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
@@ -45,10 +44,12 @@
 import core.context;
 import core.device;
 import gsl;
+import numeric;
 #else
 #include "core/context.h"
 #include "core/device.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

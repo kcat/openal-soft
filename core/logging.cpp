@@ -2,15 +2,14 @@
 #include "config.h"
 
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
 
-#include "alnumeric.h"
 #include "envutils.hpp"
-
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -24,6 +23,7 @@ import filesystem;
 import fmtlib;
 import format;
 import logging;
+import numeric;
 import zstring_view;
 #else
 #include "alformat.hpp"
@@ -33,6 +33,7 @@ import zstring_view;
 #include "filesystem.h"
 #include "fmt/std.h"
 #include "logging.h"
+#include "numeric.hpp"
 #include "zstring_view.hpp"
 #endif
 

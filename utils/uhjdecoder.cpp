@@ -38,7 +38,6 @@
 #include <system_error>
 #include <vector>
 
-#include "alnumeric.h"
 #include "opthelpers.h"
 #include "vector.h"
 #include "zudl.hpp"
@@ -52,6 +51,7 @@ import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
+import numeric;
 import phase_shifter;
 import types;
 import zstring_view;
@@ -64,6 +64,7 @@ import zstring_view;
 #include "fmt/ostream.h"
 #include "fmt/std.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #include "phase_shifter.hpp"
 #endif
 

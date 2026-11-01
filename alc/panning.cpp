@@ -28,7 +28,6 @@
 #include <iterator>
 #include <memory>
 #include <numbers>
-#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -40,7 +39,6 @@
 #include "AL/alext.h"
 
 #include "alconfig.h"
-#include "alnumeric.h"
 #include "alu.h"
 #include "core/ambdec.h"
 #include "core/ambidefs.h"
@@ -66,6 +64,7 @@ import alstring;
 import gsl;
 import hrtfstore;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/context.hpp"
@@ -75,6 +74,7 @@ import types;
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

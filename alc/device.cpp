@@ -7,12 +7,10 @@
 
 #include <algorithm>
 #include <csignal>
-#include <numeric>
 
 #include "al/buffer.h"
 #include "al/effect.h"
 #include "al/filter.h"
-#include "alnumeric.h"
 #include "atomic.h"
 #include "backends/base.hpp"
 #include "core/hrtf.h"
@@ -23,12 +21,14 @@
 import alc.device;
 import gsl;
 import logging;
+import numeric;
 import types;
 #else
 #include "alc/device.h"
 #include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

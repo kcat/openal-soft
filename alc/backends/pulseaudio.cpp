@@ -41,7 +41,6 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alnumeric.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "envutils.hpp"
@@ -56,6 +55,7 @@ import core.device;
 import format;
 import gsl;
 import logging;
+import numeric;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
@@ -64,6 +64,7 @@ import zstring_view;
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #endif
 
 

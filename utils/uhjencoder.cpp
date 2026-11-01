@@ -35,7 +35,6 @@
 #include <span>
 #include <vector>
 
-#include "alnumeric.h"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -48,6 +47,7 @@ import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
+import numeric;
 import phase_shifter;
 import zstring_view;
 #else
@@ -59,6 +59,7 @@ import zstring_view;
 #include "fmt/ranges.h"
 #include "fmt/std.h"
 #include "gsl/gsl"
+#include "numeric.hpp"
 #include "phase_shifter.hpp"
 #endif
 

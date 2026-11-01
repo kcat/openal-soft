@@ -165,7 +165,7 @@ void BsincPrepare(unsigned const increment, BsincState *const state, BSincTable 
         sf = float{MixerFracOne}/static_cast<float>(increment) - table->scaleBase;
         sf = std::max(0.0f, float{BSincScaleCount}*sf*table->scaleRange - 1.0f);
 
-        si = float2uint(sf);
+        si = al::saturating_cast<std::size_t>(sf);
         sf -= static_cast<float>(si);
         /* The interpolation factor is fit to this diagonally-symmetric curve
          * to reduce the transition ripple caused by interpolating different

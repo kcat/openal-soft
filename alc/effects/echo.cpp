@@ -87,8 +87,8 @@ void EchoState::deviceUpdate(const DeviceBase *Device, const BufferStorage*)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    auto const maxlen = std::bit_ceil(float2uint(EchoMaxDelay*frequency + 0.5f) +
-        float2uint(EchoMaxLRDelay*frequency + 0.5f));
+    auto const maxlen = std::bit_ceil(al::saturating_cast<unsigned>(EchoMaxDelay*frequency + 0.5f)+
+        al::saturating_cast<unsigned>(EchoMaxLRDelay*frequency + 0.5f));
     if(maxlen != mSampleBuffer.size())
         decltype(mSampleBuffer)(maxlen).swap(mSampleBuffer);
 
@@ -103,8 +103,8 @@ void EchoState::update(const ContextBase *context, const EffectSlotBase *slot,
     auto const &device = context->mDevice;
     auto const frequency = static_cast<float>(device.mSampleRate);
 
-    mDelayTap[0] = std::max(float2uint(std::round(props.Delay*frequency)), 1u);
-    mDelayTap[1] = float2uint(std::round(props.LRDelay*frequency)) + mDelayTap[0];
+    mDelayTap[0] = std::max(al::saturating_cast<unsigned>(std::round(props.Delay*frequency)), 1u);
+    mDelayTap[1] = al::saturating_cast<unsigned>(std::round(props.LRDelay*frequency))+mDelayTap[0];
 
     const auto gainhf = std::max(1.0f - props.Damping, 0.0625f); /* Limit -24dB */
     mFilter.setParamsFromSlope(BiquadType::HighShelf, LowpassFreqRef/frequency, gainhf, 1.0f);

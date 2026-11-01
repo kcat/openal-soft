@@ -1736,7 +1736,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         TRACE("Dithering disabled");
     else
         TRACE("Dithering enabled ({}-bit, {:g})",
-            float2int(std::log2(device.DitherDepth)+0.5f)+1, device.DitherDepth);
+            al::saturating_cast<int>(std::log2(device.DitherDepth)+0.5f)+1, device.DitherDepth);
 
     if(!optlimit)
         optlimit = device.configValue<bool>({}, "output-limiter");

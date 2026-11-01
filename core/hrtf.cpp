@@ -91,7 +91,7 @@ auto CalcEvIndex(unsigned evcount, float ev) -> IdxBlend
 {
     ev = (std::numbers::inv_pi_v<float>*ev + 0.5f) * gsl::narrow_cast<float>(evcount-1);
 
-    const auto idx = float2uint(ev);
+    const auto idx = al::saturating_cast<unsigned>(ev);
     return IdxBlend{std::min(idx, evcount-1u), ev-gsl::narrow_cast<float>(idx)};
 }
 
@@ -102,7 +102,7 @@ auto CalcAzIndex(unsigned azcount, float az) -> IdxBlend
 {
     az = (std::numbers::inv_pi_v<float>*0.5f*az + 1.0f) * gsl::narrow_cast<float>(azcount);
 
-    const auto idx = float2uint(az);
+    const auto idx = al::saturating_cast<unsigned>(az);
     return IdxBlend{idx%azcount, az-gsl::narrow_cast<float>(idx)};
 }
 
@@ -519,7 +519,7 @@ try {
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
             [delay_scale](float const fdelay) -> std::uint8_t
         {
-            return al::saturating_cast<std::uint8_t>(float2int(fdelay*delay_scale + 0.5f));
+            return al::saturating_cast<std::uint8_t>(fdelay*delay_scale + 0.5f);
         });
 
         /* Scale the IR size for the new sample rate and update the stored

@@ -24,7 +24,6 @@
 
 #include "al/listener.h"
 #include "alformat.hpp"
-#include "alnumeric.h"
 #include "althreads.h"
 #include "core/context.h"
 #include "gsl/gsl"

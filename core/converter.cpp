@@ -20,9 +20,7 @@
 
 #if HAVE_CXXMODULES
 import core.device;
-import types;
 #else
-#include "altypes.hpp"
 #include "core/devfmttraits.hpp"
 #endif
 
@@ -130,7 +128,7 @@ void StoreSampleArray(void *const dst, std::span<float const> const src, std::si
     auto sdst = dstspan.begin();
     std::advance(sdst, channel);
     *sdst = StoreSample<T>(src.front());
-    std::ranges::for_each(src | std::views::drop(1), [&sdst,dststep](float const in)
+    std::ranges::for_each(src | std::views::drop(1), [&sdst, dststep](float const in)
     {
         std::advance(sdst, dststep);
         *sdst = StoreSample<T>(in);
@@ -177,10 +175,9 @@ void Multi2Mono(unsigned chanmask, std::size_t const step, std::span<float> cons
         const auto c = std::countr_zero(chanmask);
         chanmask &= ~(1u << c);
 
-        auto ssrc = srcspan.begin();
-        std::advance(ssrc, c);
+        auto ssrc = std::next(srcspan.begin(), c);
         dst.front() += LoadSample<T>(*ssrc);
-        std::ranges::for_each(dst | std::views::drop(1), [&ssrc,step](float &sample)
+        std::ranges::for_each(dst | std::views::drop(1), [&ssrc, step](float &sample)
         {
             std::advance(ssrc, step);
             sample += LoadSample<T>(*ssrc);
@@ -247,15 +244,11 @@ auto SampleConverter::availableOut(unsigned const srcframes) const -> unsigned
         return 0;
     }
 
-    auto DataSize64 = u64{prepcount};
-    DataSize64 += u64{srcframes};
-    DataSize64 -= MaxResamplerPadding;
+    auto DataSize64 = std::uint64_t{prepcount} + srcframes - MaxResamplerPadding;
     DataSize64 <<= MixerFracBits;
-    DataSize64 -= u64{mFracOffset};
+    DataSize64 -= mFracOffset;
 
-    /* If we have a full prep, we can generate at least one sample. */
-    return gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{mIncrement}-1)/u64{mIncrement},
-        1_u64, u64{std::numeric_limits<int>::max()}).c_val);
+    return al::saturating_cast<unsigned>((DataSize64 + mIncrement-1)/mIncrement);
 }
 
 auto SampleConverter::convert(const void **const src, unsigned *const srcframes, void *const dst,
@@ -292,16 +285,15 @@ auto SampleConverter::convert(const void **const src, unsigned *const srcframes,
         const auto SrcData = std::span<float>{mSrcSamples};
         const auto DstData = std::span<float>{mDstSamples};
         const auto DataPosFrac = mFracOffset;
-        auto DataSize64 = u64{prepcount};
-        DataSize64 += u64{readable};
-        DataSize64 -= MaxResamplerPadding;
-        DataSize64 <<= MixerFracBits;
-        DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
-            1_u64, u64{BufferLineSize}).c_val);
-        DstSize = std::min(DstSize, dstframes-pos);
+        auto const DstSize = std::invoke([&] {
+            auto DataSize64 = std::uint64_t{prepcount} + readable - MaxResamplerPadding;
+            DataSize64 <<= MixerFracBits;
+            DataSize64 -= DataPosFrac;
+            auto const outcount = (DataSize64 + increment-1)/increment;
+            return std::min(al::saturating_cast<unsigned>(outcount), dstframes-pos);
+        });
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
         const auto SrcDataEnd = DataPosEnd>>MixerFracBits;
@@ -389,16 +381,15 @@ auto SampleConverter::convertPlanar(void const **const src, unsigned *const srcf
         const auto SrcData = std::span{mSrcSamples};
         const auto DstData = std::span{mDstSamples};
         const auto DataPosFrac = mFracOffset;
-        auto DataSize64 = u64{prepcount};
-        DataSize64 += u64{readable};
-        DataSize64 -= MaxResamplerPadding;
-        DataSize64 <<= MixerFracBits;
-        DataSize64 -= u64{DataPosFrac};
 
         /* If we have a full prep, we can generate at least one sample. */
-        auto DstSize = gsl::narrow_cast<unsigned>(std::clamp((DataSize64 + u64{increment}-1)/u64{increment},
-            1_u64, u64{BufferLineSize}).c_val);
-        DstSize = std::min(DstSize, dstframes-pos);
+        auto const DstSize = std::invoke([&] {
+            auto DataSize64 = std::uint64_t{prepcount} + readable - MaxResamplerPadding;
+            DataSize64 <<= MixerFracBits;
+            DataSize64 -= DataPosFrac;
+            auto const outcount = (DataSize64 + increment-1)/increment;
+            return std::min(al::saturating_cast<unsigned>(outcount), dstframes-pos);
+        });
 
         const auto DataPosEnd = DstSize*increment + DataPosFrac;
         const auto SrcDataEnd = DataPosEnd>>MixerFracBits;

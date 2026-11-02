@@ -698,9 +698,12 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     if(laf->mSampleCount < ~std::uint64_t{0})
-        fmt::println("Length: {} samples ({:.2f} sec)", laf->mSampleCount,
-            gsl::narrow_cast<double>(laf->mSampleCount)
-                / gsl::narrow_cast<double>(laf->mSampleRate));
+    {
+        auto const minutes = laf->mSampleCount / (laf->mSampleRate * 60);
+        auto const secsamples = laf->mSampleCount % (laf->mSampleRate * 60);
+        fmt::println("Length: {} samples ({}m{:.2f}s)", laf->mSampleCount, minutes,
+            gsl::narrow_cast<double>(secsamples) / gsl::narrow_cast<double>(laf->mSampleRate));
+    }
     else
         fmt::println("Length: unbounded");
 

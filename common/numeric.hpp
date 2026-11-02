@@ -146,11 +146,17 @@ auto saturating_cast(T const val) noexcept -> R
                     return static_cast<R>((mant >> (expoffset-expbase)) & mask);
                 return static_cast<R>((mant << (expbase-expoffset)) & mask);
             }
+            else
+            {
+                static_assert(al::dependent_false<R>, "Unexpected numeric type conversion");
+                return R{};
+            }
         }
         else
         {
             /* fp -> fp automatically saturates. */
             static_assert(std::floating_point<R>, "Unexpected numeric type conversion");
+            return static_cast<R>(val);
         }
     }
     else if constexpr(std::integral<R>) /* integer -> integer */
@@ -170,15 +176,15 @@ auto saturating_cast(T const val) noexcept -> R
             if(val < 0)
                 return R{0};
         }
+        return static_cast<R>(val);
     }
     else
     {
         /* integer -> fp automatically saturates. */
         static_assert(std::integral<T> and std::floating_point<R>,
             "Unexpected numeric type conversion");
+        return static_cast<R>(val);
     }
-
-    return static_cast<R>(val);
 }
 
 } /* namespace al */

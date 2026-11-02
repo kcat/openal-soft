@@ -164,6 +164,13 @@
 #endif
 
 #if HAVE_CXXMODULES
+/* HACK: GCC 16 seems to have an issue when trying to use the StereoEncoding
+ * enum in an optional when it's defined through the module. Including the
+ * header to directly define it seems to work around it.
+ */
+#if !defined(__INTEL_COMPILER) && !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 16
+#include "alc/device.h"
+#endif
 import alc.context;
 import alc.device;
 import alstring;

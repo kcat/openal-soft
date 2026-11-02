@@ -104,45 +104,47 @@ auto saturating_cast(T const val) noexcept -> R
         if constexpr(std::integral<R>) /* fp -> integer */
         {
             auto constexpr mantbits = unsigned{std::numeric_limits<T>::digits - 1};
-            auto constexpr expbits = unsigned{sizeof(T)*8 - 1 - mantbits};
-            auto constexpr expmask = unsigned{((1<<expbits) - 1) << mantbits};
-            auto constexpr signmask = unsigned{1u << (sizeof(T)*8 - 1)};
-            auto constexpr minshift = unsigned{(1<<(expbits-1)) - 1};
-            auto constexpr shiftoffset = unsigned{minshift + mantbits};
-            auto constexpr maxshift = unsigned{std::numeric_limits<R>::digits+(1<<(expbits-1))-2};
+            auto constexpr max_exponent = unsigned{std::numeric_limits<T>::max_exponent};
+            auto constexpr expbits = unsigned{std::bit_width(max_exponent)};
+            auto constexpr minexp = unsigned{(1<<(expbits-1)) - 1};
+            auto constexpr expoffset = unsigned{minexp + mantbits};
+            auto constexpr maxexp = unsigned{std::numeric_limits<R>::digits + minexp - 1};
+
+            using tmpint_t = std::common_type_t<unsigned, std::make_unsigned_t<R>,
+                decltype(detail::unsigned_from_fp(val))>;
+            auto constexpr expmask = ((tmpint_t{1}<<expbits) - 1) << mantbits;
+            auto constexpr signmask = tmpint_t{1} << (mantbits+expbits);
+            auto constexpr impliedbit = tmpint_t{1} << mantbits;
+            auto constexpr mantissamask = tmpint_t{impliedbit - 1};
 
             auto const conv_u = detail::unsigned_from_fp(val);
-            auto const shiftbase = (conv_u&expmask) >> mantbits;
-            if(shiftbase < minshift) [[unlikely]]
-                return 0;
-
-            using tmpint_t = std::common_type_t<std::make_unsigned_t<R>, decltype(conv_u)>;
-            auto constexpr impliedbit = tmpint_t{1 << mantbits};
-            auto constexpr mantissamask = tmpint_t{impliedbit - 1};
+            auto const expbase = (conv_u&expmask) >> mantbits;
+            if(expbase < minexp) [[unlikely]]
+                return R{0};
 
             if constexpr(std::signed_integral<R>) /* fp -> signed integer */
             {
-                if(shiftbase > maxshift) [[unlikely]]
+                if(expbase > maxexp) [[unlikely]]
                     return (conv_u&signmask) ? std::numeric_limits<R>::min()
                         : std::numeric_limits<R>::max();
 
                 auto const sign = (conv_u&signmask) ? R{-1} : R{1};
                 auto const mant = tmpint_t{(conv_u&mantissamask) | impliedbit};
-                if(shiftbase < shiftoffset) [[likely]]
-                    return static_cast<R>(static_cast<R>(mant >> (shiftoffset-shiftbase)) * sign);
-                return static_cast<R>(static_cast<R>(mant << (shiftbase-shiftoffset)) * sign);
+                if(expbase < expoffset) [[likely]]
+                    return static_cast<R>(static_cast<R>(mant >> (expoffset-expbase)) * sign);
+                return static_cast<R>(static_cast<R>(mant << (expbase-expoffset)) * sign);
             }
             else if constexpr(std::unsigned_integral<R>) /* fp -> unsigned integer */
             {
-                /* A 0 mask for negative values creates a 0 result. */
-                if(shiftbase > maxshift) [[unlikely]]
+                if(expbase > maxexp) [[unlikely]]
                     return (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();
 
+                /* A 0 mask for negative values creates a 0 result. */
                 auto const mask = (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();
                 auto const mant = tmpint_t{(conv_u&mantissamask) | impliedbit};
-                if(shiftbase < shiftoffset) [[likely]]
-                    return static_cast<R>((mant >> (shiftoffset-shiftbase)) & mask);
-                return static_cast<R>((mant << (shiftbase-shiftoffset)) & mask);
+                if(expbase < expoffset) [[likely]]
+                    return static_cast<R>((mant >> (expoffset-expbase)) & mask);
+                return static_cast<R>((mant << (expbase-expoffset)) & mask);
             }
         }
         else

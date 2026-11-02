@@ -150,8 +150,13 @@ auto saturating_cast(T const val) noexcept -> R
             if constexpr(std::signed_integral<R>) /* fp -> signed integer */
             {
                 if(exponent > expmax) [[unlikely]]
+                {
+                    /* Convert NaN to 0. */
+                    if(exponent == (expmask>>mantbits) and (conv_u&mantissamask) != 0)
+                        return R{0};
                     return (conv_u&signmask) ? std::numeric_limits<R>::min()
                         : std::numeric_limits<R>::max();
+                }
 
                 auto const sign = (conv_u&signmask) ? R{-1} : R{1};
                 auto const mant = tmpint_t{(conv_u&mantissamask) | impliedbit};
@@ -162,7 +167,12 @@ auto saturating_cast(T const val) noexcept -> R
             else if constexpr(std::unsigned_integral<R>) /* fp -> unsigned integer */
             {
                 if(exponent > expmax) [[unlikely]]
+                {
+                    /* Convert NaN to 0. */
+                    if(exponent == (expmask>>mantbits) and (conv_u&mantissamask) != 0)
+                        return R{0};
                     return (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();
+                }
 
                 /* A 0 mask for negative values creates a 0 result. */
                 auto const mask = (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();

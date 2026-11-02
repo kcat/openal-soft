@@ -26,8 +26,19 @@
 
 namespace al {
 
+namespace detail {
+    template<typename T>
+    concept integral = std::integral<T>
+        and not std::same_as<T, bool>
+        and not std::same_as<T, char>
+        and not std::same_as<T, wchar_t>
+        and not std::same_as<T, char8_t>
+        and not std::same_as<T, char16_t>
+        and not std::same_as<T, char32_t>;
+}
+
 #if HAS_BUILTIN(__builtin_add_overflow)
-template<std::integral T> [[nodiscard]] constexpr
+template<detail::integral T> [[nodiscard]] constexpr
 auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     T res;
@@ -43,7 +54,7 @@ auto saturating_add(T const lhs, T const rhs) noexcept -> T
 
 #else
 
-template<std::integral T> [[nodiscard]]
+template<detail::integral T> [[nodiscard]]
 constexpr auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     if constexpr(std::is_signed_v<T>)
@@ -71,7 +82,7 @@ constexpr auto saturating_add(T const lhs, T const rhs) noexcept -> T
 namespace detail {
 
     template<typename T>
-    concept number = std::integral<T> or std::floating_point<T>;
+    concept number = integral<T> or std::floating_point<T>;
 
     template<std::floating_point T> [[nodiscard]] constexpr
     auto unsigned_from_fp(T const& val) noexcept
@@ -307,7 +318,7 @@ auto fastf2u(float const f) noexcept -> unsigned
 { return static_cast<unsigned>(fastf2i(f)); }
 
 
-namespace detail_ {
+namespace detail {
 
 /* Integral limit, where sub-integral precision is not available for floats. */
 inline constexpr auto ilim = std::array{
@@ -362,10 +373,10 @@ auto fast_roundf(float f) noexcept -> float
      * may break without __builtin_assoc_barrier support).
      */
 #if HAS_BUILTIN(__builtin_assoc_barrier)
-    return __builtin_assoc_barrier(f + detail_::ilim[sign]) - detail_::ilim[sign];
+    return __builtin_assoc_barrier(f + detail::ilim[sign]) - detail::ilim[sign];
 #else
-    f += detail_::ilim[sign];
-    return f - detail_::ilim[sign];
+    f += detail::ilim[sign];
+    return f - detail::ilim[sign];
 #endif
 #endif
 }

@@ -1380,9 +1380,7 @@ auto main(std::span<al::zstring_view> args) -> int
             return 1;
         }
 
-        almgr.close();
-        almgr.mDevice = loopbackDev.release();
-        almgr.mContext = loopbackCtx.release();
+        almgr = {loopbackDev.release(), loopbackCtx.release()};
         LoadALExtensions();
     }
 
@@ -1397,8 +1395,8 @@ auto main(std::span<al::zstring_view> args) -> int
         }
     });
 
-    if(alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_EFX")
-        && alcIsExtensionPresent(almgr.mDevice, "ALC_EXT_DEDICATED"))
+    if(alcIsExtensionPresent(almgr.device(), "ALC_EXT_EFX")
+        && alcIsExtensionPresent(almgr.device(), "ALC_EXT_DEDICATED"))
     {
         palGenFilters(1, &MuteFilterID);
         palFilteri(MuteFilterID, AL_FILTER_TYPE, AL_FILTER_LOWPASS);

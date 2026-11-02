@@ -2369,7 +2369,7 @@ auto main(std::span<al::zstring_view> args) -> int
                 });
                 if(!(stretchval > 0.0f) || endpos != optarg.size())
                     fmt::println(std::cerr, "Invalid tstretch value: {}", optarg);
-                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
+                else if(!alcIsExtensionPresent(app.mALManager->device(), "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for time stretching");
                 else
                     TimeStretchFactor = stretchval;
@@ -2396,7 +2396,7 @@ auto main(std::span<al::zstring_view> args) -> int
                 auto const pitchtune = std::pow(2.0f, tuneval / 12.0f);
                 if(!std::isfinite(pitchtune) || endpos != optarg.size())
                     fmt::println(std::cerr, "Invalid tune value: {}", optarg);
-                else if(!alcIsExtensionPresent(app.mALManager->mDevice, "ALC_EXT_EFX"))
+                else if(!alcIsExtensionPresent(app.mALManager->device(), "ALC_EXT_EFX"))
                     fmt::println(std::cerr, "EFX not supported for pitch tuning");
                 else
                     PitchTuneFactor = pitchtune;

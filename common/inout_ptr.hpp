@@ -1,6 +1,7 @@
 #ifndef INOUT_PTR_HPP
 #define INOUT_PTR_HPP
 
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <type_traits>

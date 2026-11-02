@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bit>
 #include <cctype>
+#include <cmath>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>

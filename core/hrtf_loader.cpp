@@ -121,7 +121,7 @@ auto CreateHrtfStore(u32 const rate, u8 const irSize,
     std::advance(storeiter, delays.size_bytes());
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 
-    if(gsl::narrow_cast<size_t>(std::distance(base, storeiter)) != total)
+    if(std::cmp_not_equal(std::distance(base, storeiter), total))
         throw std::runtime_error{"HrtfStore allocation size mismatch"};
 
     /* Copy input data to storage. */
@@ -164,8 +164,8 @@ constexpr auto fixsign(T value) noexcept -> T
 {
     if constexpr(std::is_signed_v<T> && num_bits < sizeof(T)*8)
     {
-        constexpr auto signbit = gsl::narrow_cast<T>(1u << (num_bits-1));
-        return gsl::narrow_cast<T>((value^signbit) - signbit);
+        constexpr auto signbit = gsl::narrow<T>(1u << (num_bits-1));
+        return gsl::narrow<T>((value^signbit) - signbit);
     }
     else
         return value;
@@ -181,9 +181,9 @@ auto readle(std::istream &data) -> T
     if(!data.read(ret.data(), num_bits/8))
     {
         if constexpr(al::strict_number<T>)
-            return T{gsl::narrow_cast<typename T::value_t>(EOF)};
+            return T{static_cast<T::value_t>(EOF)};
         else
-            return gsl::narrow_cast<T>(EOF);
+            return static_cast<T>(EOF);
     }
     if constexpr(std::endian::native == std::endian::big)
         std::reverse(ret.begin(), ret.end());
@@ -193,7 +193,7 @@ auto readle(std::istream &data) -> T
 
 template<>
 auto readle<u8,8>(std::istream &data) -> u8
-{ return u8{gsl::narrow_cast<std::uint8_t>(data.get())}; }
+{ return u8{static_cast<std::uint8_t>(data.get())}; }
 
 
 auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
@@ -238,8 +238,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     for(size_t i{1};i < evCount;i++)
     {
-        elevs[i-1].azCount = gsl::narrow_cast<std::uint16_t>(elevs[i].irOffset
-            - elevs[i-1].irOffset);
+        elevs[i-1].azCount = gsl::narrow<std::uint16_t>(elevs[i].irOffset - elevs[i-1].irOffset);
         if(elevs[i-1].azCount < MinAzCount || elevs[i-1].azCount > MaxAzCount)
         {
             throw std::runtime_error{al::format(
@@ -321,7 +320,11 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     elevs[0].irOffset = 0;
     for(size_t i{1};i < evCount;i++)
-        elevs[i].irOffset = elevs[i-1].irOffset + elevs[i-1].azCount;
+    {
+        if(al::ckd_add(&elevs[i].irOffset, elevs[i-1].irOffset, elevs[i-1].azCount))
+            throw std::runtime_error{al::format("irCount overflow with elevation {}: {} + {}", i,
+                elevs[i-1].irOffset, elevs[i-1].azCount)};
+    }
     auto const irCount = unsigned{elevs.back().irOffset} + elevs.back().azCount;
 
     auto coeffs = std::vector(irCount, HrirArray{});
@@ -438,10 +441,13 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     elevs[0].irOffset = 0;
     std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
-        [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
+        [](HrtfStore::Elevation const& last, HrtfStore::Elevation const& cur)->HrtfStore::Elevation
     {
-        return HrtfStore::Elevation{.azCount=cur.azCount,
-            .irOffset=gsl::narrow_cast<std::uint16_t>(last.azCount + last.irOffset)};
+        auto next = cur;
+        if(al::ckd_add(&next.irOffset, last.azCount, last.irOffset))
+            throw std::runtime_error{al::format("irCount overflow: {} + {}", last.azCount,
+                last.irOffset)};
+        return next;
     });
     auto const irTotal = unsigned{elevs.back().azCount} + elevs.back().irOffset;
 
@@ -471,7 +477,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto const invdelay = std::ranges::find_if(ldelays, [](u8 const delay) noexcept
+        auto const invdelay = std::ranges::find_if(ldelays, [](std::uint8_t const delay) noexcept
         { return delay > MaxHrirDelay; });
         if(invdelay != ldelays.end())
         {
@@ -481,7 +487,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         }
 
         std::ranges::transform(ldelays, ldelays.begin(), [](std::uint8_t const delay)
-        { return gsl::narrow_cast<std::uint8_t>(delay << HrirDelayFracBits); });
+        { return gsl::narrow<std::uint8_t>(delay << HrirDelayFracBits); });
 
         /* Mirror the left ear responses to the right ear. */
         MirrorLeftHrirs(elevs, coeffs, delays);
@@ -520,7 +526,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         }
 
         std::ranges::transform(joined_delays, joined_delays.begin(), [](std::uint8_t const delay)
-        { return gsl::narrow_cast<std::uint8_t>(delay << HrirDelayFracBits); });
+        { return gsl::narrow<std::uint8_t>(delay << HrirDelayFracBits); });
     }
 
     if(fdCount > 1)
@@ -555,8 +561,11 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)
                 -> HrtfStore::Elevation
         {
-            return HrtfStore::Elevation{.azCount=cur.azCount,
-                .irOffset=gsl::narrow_cast<std::uint16_t>(last.azCount + last.irOffset)};
+            auto next = cur;
+            if(al::ckd_add(&next.irOffset, last.azCount, last.irOffset))
+                throw std::runtime_error{al::format("irCount overflow: {} + {}", last.azCount,
+                    last.irOffset)};
+            return next;
         });
 
         /* Reverse the order of each field's group of IRs. */
@@ -674,8 +683,11 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
     std::partial_sum(elevs.cbegin(), elevs.cend(), elevs.begin(),
         [](const HrtfStore::Elevation &last, const HrtfStore::Elevation &cur)->HrtfStore::Elevation
     {
-        return HrtfStore::Elevation{.azCount=cur.azCount,
-            .irOffset=gsl::narrow_cast<std::uint16_t>(last.azCount + last.irOffset)};
+        auto next = cur;
+        if(al::ckd_add(&next.irOffset, last.azCount, last.irOffset))
+            throw std::runtime_error{al::format("irCount overflow: {} + {}", last.azCount,
+                last.irOffset)};
+        return next;
     });
     auto const irTotal = unsigned{elevs.back().azCount} + elevs.back().irOffset;
 
@@ -694,7 +706,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto const invdelay = std::ranges::find_if(ldelays, [](u8 const delay) noexcept
+        auto const invdelay = std::ranges::find_if(ldelays, [](std::uint8_t const delay) noexcept
         { return delay > MaxHrirDelay<<HrirDelayFracBits; });
         if(invdelay != ldelays.end())
         {
@@ -719,7 +731,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto const invdelay = std::ranges::find_if(joined_delays, [](u8 const delay) noexcept
+        auto const invdelay = std::ranges::find_if(joined_delays, [](std::uint8_t const delay)
         { return delay > MaxHrirDelay<<HrirDelayFracBits; });
         if(invdelay != joined_delays.end())
         {

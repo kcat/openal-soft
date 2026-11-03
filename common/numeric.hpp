@@ -233,8 +233,54 @@ auto saturating_cast(T const val) noexcept -> R
     }
 }
 
-} /* namespace al */
+/* NOTE: C23/C++26 seemingly allows the arguments to be arbitrarily different
+ * types, but for simplicity we require the operand types to be convertible to
+ * the result type without narrowing.
+ */
+template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
+    requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
+auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
+{
+    if constexpr(std::signed_integral<ResT>)
+    {
+        using UT = std::make_unsigned_t<ResT>;
+        auto const ul = static_cast<UT>(ResT{lhs});
+        auto const ur = static_cast<UT>(ResT{rhs});
+        auto const res = ul + ur;
 
+        *result = static_cast<ResT>(res);
+        return static_cast<ResT>((ul^ur) | ~(ur^res)) >= 0;
+    }
+    else /*if constexpr(std::unsigned_integral<ResT>)*/
+    {
+        /* For unsigned types do the operation and check if it wrapped. */
+        *result = static_cast<ResT>(ResT{lhs} + ResT{rhs});
+        return *result < lhs;
+    }
+}
+
+template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
+    requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
+auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
+{
+    if constexpr(std::signed_integral<ResT>)
+    {
+        using UT = std::make_unsigned_t<ResT>;
+        auto const ul = static_cast<UT>(ResT{lhs});
+        auto const ur = static_cast<UT>(ResT{rhs});
+        auto const res = ul - ur;
+
+        *result = static_cast<ResT>(res);
+        return static_cast<ResT>((ul^ur) & (ur^res)) < 0;
+    }
+    else /*if constexpr(std::unsigned_integral<ResT>)*/
+    {
+        *result = static_cast<ResT>(ResT{lhs} - ResT{rhs});
+        return *result > lhs;
+    }
+}
+
+} /* namespace al */
 
 template<std::integral T> [[nodiscard]] constexpr
 auto as_unsigned(T const value) noexcept

@@ -7,6 +7,9 @@ export module numeric;
 export namespace al {
     using al::saturating_add;
     using al::saturating_cast;
+
+    using al::ckd_add;
+    using al::ckd_sub;
 }
 
 export namespace std {

@@ -22,10 +22,8 @@ import format;
 import hrtfstore;
 import logging;
 import numeric;
-import types;
 #else
 #include "alformat.hpp"
-#include "alformattypes.hpp"
 #include "core/hrtfstore.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -67,7 +65,7 @@ static_assert(GetMarker02Name().size() == HeaderMarkerSize);
 static_assert(GetMarker03Name().size() == HeaderMarkerSize);
 
 
-auto CreateHrtfStore(u32 const rate, u8 const irSize,
+auto CreateHrtfStore(std::uint32_t const rate, std::uint8_t const irSize,
     std::span<HrtfStore::Field const> const fields,
     std::span<HrtfStore::Elevation const> const elevs, std::span<HrirArray const> const coeffs,
     std::span<u8x2 const> const delays) -> std::unique_ptr<HrtfStore>
@@ -93,8 +91,8 @@ auto CreateHrtfStore(u32 const rate, u8 const irSize,
     static constexpr auto AlignVal = std::align_val_t{alignof(HrtfStore)};
     auto Hrtf = std::unique_ptr<HrtfStore>{::new(::operator new[](total, AlignVal)) HrtfStore{}};
     Hrtf->mRef.store(1u, std::memory_order_relaxed);
-    Hrtf->mSampleRate = rate.c_val & 0xff'ff'ff;
-    Hrtf->mIrSize = irSize.c_val;
+    Hrtf->mSampleRate = rate & 0xff'ff'ffu;
+    Hrtf->mIrSize = irSize;
 
     /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
      * Set up pointers to storage following the main HRTF struct.
@@ -179,12 +177,7 @@ auto readle(std::istream &data) -> T
 
     alignas(T) auto ret = std::array<char,sizeof(T)>{};
     if(!data.read(ret.data(), num_bits/8))
-    {
-        if constexpr(al::strict_number<T>)
-            return T{static_cast<T::value_t>(EOF)};
-        else
-            return static_cast<T>(EOF);
-    }
+        return static_cast<T>(EOF);
     if constexpr(std::endian::native == std::endian::big)
         std::reverse(ret.begin(), ret.end());
 
@@ -192,16 +185,16 @@ auto readle(std::istream &data) -> T
 }
 
 template<>
-auto readle<u8,8>(std::istream &data) -> u8
-{ return u8{static_cast<std::uint8_t>(data.get())}; }
+auto readle<std::uint8_t,8>(std::istream &data) -> std::uint8_t
+{ return static_cast<std::uint8_t>(data.get()); }
 
 
 auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    const auto rate = readle<u32>(data);
-    const auto irCount = readle<u16>(data);
-    const auto irSize = readle<u16>(data);
-    const auto evCount = readle<u8>(data);
+    const auto rate = readle<std::uint32_t>(data);
+    const auto irCount = readle<std::uint16_t>(data);
+    const auto irSize = readle<std::uint16_t>(data);
+    const auto evCount = readle<std::uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
@@ -216,7 +209,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
             evCount, MinEvCount, MaxEvCount)};
     }
 
-    auto elevs = std::vector<HrtfStore::Elevation>(evCount.c_val);
+    auto elevs = std::vector<HrtfStore::Elevation>(evCount);
     std::ranges::generate(elevs | std::views::transform(&HrtfStore::Elevation::irOffset),
         [&data] { return readle<std::uint16_t>(data); });
     if(!data || data.eof())
@@ -246,19 +239,23 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MinAzCount, MaxAzCount)};
         }
     }
-    elevs.back().azCount = (irCount - elevs.back().irOffset).c_val;
-    if(elevs.back().azCount < MinAzCount || elevs.back().azCount > MaxAzCount)
+    if(al::ckd_sub(&elevs.back().azCount, irCount, elevs.back().irOffset))
+    {
+        throw std::runtime_error{al::format("Overflow: {} - {} = {}", irCount,
+            elevs.back().irOffset, elevs.back().azCount)};
+    }
+    if(elevs.back().azCount < MinAzCount or elevs.back().azCount > MaxAzCount)
     {
         throw std::runtime_error{al::format(
             "Unsupported azimuth count: azCount[{}]={} ({} to {})", elevs.size()-1,
             elevs.back().azCount, MinAzCount, MaxAzCount)};
     }
 
-    auto coeffs = std::vector(irCount.c_val, HrirArray{});
-    auto delays = std::vector(irCount.c_val, u8x2{});
-    std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+    auto coeffs = std::vector(irCount, HrirArray{});
+    auto delays = std::vector(irCount, u8x2{});
+    std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
     {
-        std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::elements<0>,
+        std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
             [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
     });
     std::ranges::generate(delays | std::views::elements<0>,
@@ -266,7 +263,7 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
-    for(size_t i{0};i < irCount.c_val;i++)
+    for(size_t i{0};i < irCount;i++)
     {
         if(delays[i][0] > MaxHrirDelay)
         {
@@ -279,15 +276,15 @@ auto LoadHrtf00(std::istream &data) -> std::unique_ptr<HrtfStore>
     /* Mirror the left ear responses to the right ear. */
     MirrorLeftHrirs(elevs, coeffs, delays);
 
-    const auto field = std::array{HrtfStore::Field{.distance=0.0f, .evCount=evCount.c_val}};
-    return CreateHrtfStore(rate, irSize.cast_to<u8>(), field, elevs, coeffs, delays);
+    const auto field = std::array{HrtfStore::Field{.distance=0.0f, .evCount=evCount}};
+    return CreateHrtfStore(rate, gsl::narrow<std::uint8_t>(irSize), field, elevs, coeffs, delays);
 }
 
 auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    const auto rate = readle<u32>(data);
-    const auto irSize = readle<u8>(data);
-    const auto evCount = readle<u8>(data);
+    const auto rate = readle<std::uint32_t>(data);
+    const auto irSize = readle<std::uint8_t>(data);
+    const auto evCount = readle<std::uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
@@ -302,7 +299,7 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
             evCount, MinEvCount, MaxEvCount)};
     }
 
-    auto elevs = std::vector<HrtfStore::Elevation>(evCount.c_val);
+    auto elevs = std::vector<HrtfStore::Elevation>(evCount);
     std::ranges::generate(elevs | std::views::transform(&HrtfStore::Elevation::azCount),
         [&data] { return readle<std::uint8_t>(data); });
     if(!data || data.eof())
@@ -329,9 +326,9 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     auto coeffs = std::vector(irCount, HrirArray{});
     auto delays = std::vector(irCount, u8x2{});
-    std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+    std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
     {
-        std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::elements<0>,
+        std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
             [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
     });
     std::ranges::generate(delays | std::views::elements<0>,
@@ -352,29 +349,35 @@ auto LoadHrtf01(std::istream &data) -> std::unique_ptr<HrtfStore>
     /* Mirror the left ear responses to the right ear. */
     MirrorLeftHrirs(elevs, coeffs, delays);
 
-    const auto field = std::array{HrtfStore::Field{.distance=0.0f, .evCount=evCount.c_val}};
+    const auto field = std::array{HrtfStore::Field{.distance=0.0f, .evCount=evCount}};
     return CreateHrtfStore(rate, irSize, field, elevs, coeffs, delays);
 }
 
 auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    static constexpr auto SampleType_S16 = 0_u8;
-    static constexpr auto SampleType_S24 = 1_u8;
-    static constexpr auto ChanType_LeftOnly = 0_u8;
-    static constexpr auto ChanType_LeftRight = 1_u8;
+    enum class SampleType : std::uint8_t {
+        S16 = 0,
+        S24 = 1,
+    };
+    enum class ChannelType : std::uint8_t {
+        LeftOnly = 0,
+        LeftRight = 1,
+    };
 
-    const auto rate = readle<u32>(data);
-    const auto sampleType = readle<u8>(data);
-    const auto channelType = readle<u8>(data);
-    const auto irSize = readle<u8>(data);
-    const auto fdCount = readle<u8>(data);
+    const auto rate = readle<std::uint32_t>(data);
+    const auto sampleType = SampleType{readle<std::uint8_t>(data)};
+    const auto channelType = ChannelType{readle<std::uint8_t>(data)};
+    const auto irSize = readle<std::uint8_t>(data);
+    const auto fdCount = readle<std::uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
-    if(sampleType > SampleType_S24)
-        throw std::runtime_error{al::format("Unsupported sample type: {}", sampleType)};
-    if(channelType > ChanType_LeftRight)
-        throw std::runtime_error{al::format("Unsupported channel type: {}", channelType)};
+    if(sampleType > SampleType::S24)
+        throw std::runtime_error{al::format("Unsupported sample type: {}",
+            al::to_underlying(sampleType))};
+    if(channelType > ChannelType::LeftRight)
+        throw std::runtime_error{al::format("Unsupported channel type: {}",
+            al::to_underlying(channelType))};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
@@ -388,12 +391,12 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
             MaxFdCount)};
     }
 
-    auto fields = std::vector<HrtfStore::Field>(fdCount.c_val);
+    auto fields = std::vector<HrtfStore::Field>(fdCount);
     auto elevs = std::vector<HrtfStore::Elevation>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        const auto distance = readle<u16>(data);
-        const auto evCount = readle<u8>(data);
+        const auto distance = readle<std::uint16_t>(data);
+        const auto evCount = readle<std::uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
@@ -410,8 +413,8 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MaxEvCount)};
         }
 
-        fields[f].distance = gsl::narrow_cast<float>(distance.c_val) / 1000.0f;
-        fields[f].evCount = evCount.c_val;
+        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
+        fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance > fields[f-1].distance))
         {
             throw std::runtime_error{al::format(
@@ -420,7 +423,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         }
 
         const auto ebase = elevs.size();
-        elevs.resize(ebase + evCount.c_val);
+        elevs.resize(ebase + evCount);
 
         const auto new_azs = elevs | std::views::transform(&HrtfStore::Elevation::azCount)
             | std::views::drop(ebase);
@@ -453,21 +456,21 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     auto coeffs = std::vector(irTotal, HrirArray{});
     auto delays = std::vector(irTotal, u8x2{});
-    if(channelType == ChanType_LeftOnly)
+    if(channelType == ChannelType::LeftOnly)
     {
-        if(sampleType == SampleType_S16)
+        if(sampleType == SampleType::S16)
         {
-            std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+            std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
             {
-                std::ranges::generate(hrir|std::views::take(irSize.c_val)|std::views::elements<0>,
+                std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
                     [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
             });
         }
-        else if(sampleType == SampleType_S24)
+        else if(sampleType == SampleType::S24)
         {
-            std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+            std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
             {
-                std::ranges::generate(hrir|std::views::take(irSize.c_val)|std::views::elements<0>,
+                std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
                     [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
             });
         }
@@ -492,21 +495,21 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         /* Mirror the left ear responses to the right ear. */
         MirrorLeftHrirs(elevs, coeffs, delays);
     }
-    else if(channelType == ChanType_LeftRight)
+    else if(channelType == ChannelType::LeftRight)
     {
-        if(sampleType == SampleType_S16)
+        if(sampleType == SampleType::S16)
         {
-            std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+            std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
             {
-                std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::join,
+                std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
                     [&data]{ return gsl::narrow_cast<float>(readle<int16_t>(data)) / 32768.0f; });
             });
         }
-        else if(sampleType == SampleType_S24)
+        else if(sampleType == SampleType::S24)
         {
-            std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+            std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
             {
-                std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::join,
+                std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
                     [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
             });
         }
@@ -516,7 +519,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
-        auto const invdelay = std::ranges::find_if(joined_delays, [](u8 const delay) noexcept
+        auto const invdelay = std::ranges::find_if(joined_delays, [](std::uint8_t const delay)
         { return delay > MaxHrirDelay; });
         if(invdelay != joined_delays.end())
         {
@@ -529,7 +532,7 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
         { return gsl::narrow<std::uint8_t>(delay << HrirDelayFracBits); });
     }
 
-    if(fdCount > 1)
+    if(fields.size() > 1)
     {
         auto fields_ = std::vector<HrtfStore::Field>(fields.size());
         auto elevs_ = std::vector<HrtfStore::Elevation>(elevs.size());
@@ -603,18 +606,21 @@ auto LoadHrtf02(std::istream &data) -> std::unique_ptr<HrtfStore>
 
 auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
 {
-    static constexpr auto ChanType_LeftOnly = 0_u8;
-    static constexpr auto ChanType_LeftRight = 1_u8;
+    enum class ChannelType : std::uint8_t {
+        LeftOnly = 0,
+        LeftRight = 1,
+    };
 
-    const auto rate = readle<u32>(data);
-    const auto channelType = readle<u8>(data);
-    const auto irSize = readle<u8>(data);
-    const auto fdCount = readle<u8>(data);
+    const auto rate = readle<std::uint32_t>(data);
+    const auto channelType = ChannelType{readle<std::uint8_t>(data)};
+    const auto irSize = readle<std::uint8_t>(data);
+    const auto fdCount = readle<std::uint8_t>(data);
     if(!data || data.eof())
         throw std::runtime_error{"Premature end of file"};
 
-    if(channelType > ChanType_LeftRight)
-        throw std::runtime_error{al::format("Unsupported channel type: {}", channelType)};
+    if(channelType > ChannelType::LeftRight)
+        throw std::runtime_error{al::format("Unsupported channel type: {}",
+            al::to_underlying(channelType))};
 
     if(irSize < MinIrLength || irSize > HrirLength)
     {
@@ -628,12 +634,12 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
             MaxFdCount)};
     }
 
-    auto fields = std::vector<HrtfStore::Field>(fdCount.c_val);
+    auto fields = std::vector<HrtfStore::Field>(fdCount);
     auto elevs = std::vector<HrtfStore::Elevation>{};
     for(size_t f{0};f < fdCount;f++)
     {
-        const auto distance = readle<u16>(data);
-        const auto evCount = readle<u8>(data);
+        const auto distance = readle<std::uint16_t>(data);
+        const auto evCount = readle<std::uint8_t>(data);
         if(!data || data.eof())
             throw std::runtime_error{"Premature end of file"};
 
@@ -650,8 +656,8 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
                 MaxEvCount)};
         }
 
-        fields[f].distance = gsl::narrow_cast<float>(distance.c_val) / 1000.0f;
-        fields[f].evCount = evCount.c_val;
+        fields[f].distance = gsl::narrow_cast<float>(distance) / 1000.0f;
+        fields[f].evCount = evCount;
         if(f > 0 && !(fields[f].distance < fields[f-1].distance))
         {
             throw std::runtime_error{al::format(
@@ -660,7 +666,7 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         }
 
         const auto ebase = elevs.size();
-        elevs.resize(ebase + evCount.c_val);
+        elevs.resize(ebase + evCount);
 
         const auto new_azs = elevs | std::views::transform(&HrtfStore::Elevation::azCount)
             | std::views::drop(ebase);
@@ -693,11 +699,11 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
 
     auto coeffs = std::vector(irTotal, HrirArray{});
     auto delays = std::vector(irTotal, u8x2{});
-    if(channelType == ChanType_LeftOnly)
+    if(channelType == ChannelType::LeftOnly)
     {
-        std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+        std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
         {
-            std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::elements<0>,
+            std::ranges::generate(hrir | std::views::take(irSize) | std::views::elements<0>,
                 [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
         });
 
@@ -718,11 +724,11 @@ auto LoadHrtf03(std::istream &data) -> std::unique_ptr<HrtfStore>
         /* Mirror the left ear responses to the right ear. */
         MirrorLeftHrirs(elevs, coeffs, delays);
     }
-    else if(channelType == ChanType_LeftRight)
+    else if(channelType == ChannelType::LeftRight)
     {
-        std::ranges::for_each(coeffs, [&data,irSize](HrirSpan hrir)
+        std::ranges::for_each(coeffs, [&data, irSize](HrirSpan hrir)
         {
-            std::ranges::generate(hrir | std::views::take(irSize.c_val) | std::views::join,
+            std::ranges::generate(hrir | std::views::take(irSize) | std::views::join,
                 [&data]{ return gsl::narrow_cast<float>(readle<int,24>(data)) / 8388608.0f; });
         });
 

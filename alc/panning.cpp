@@ -338,7 +338,7 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
          * phase offsets. This means at 48khz, for instance, the distance delay
          * will be in steps of about 7 millimeters.
          */
-        auto delay = std::floor((maxdist - distance)*distSampleScale + 0.5f);
+        auto delay = std::round((maxdist-distance) * distSampleScale);
         if(delay > float{DistanceComp::MaxDelay-1})
         {
             ERR("Delay for channel {} ({}) exceeds buffer length ({} > {})", idx,
@@ -349,7 +349,7 @@ void InitDistanceComp(al::Device *const device, std::span<Channel const> const c
         ChanDelay.resize(std::max(ChanDelay.size(), idx+1_uz));
         if(distance > 0.0f)
         {
-            ChanDelay[idx].Length = gsl::narrow_cast<unsigned>(delay);
+            ChanDelay[idx].Length = al::saturating_cast<unsigned>(delay);
             ChanDelay[idx].Gain = distance / maxdist;
         }
         TRACE("Channel {} distance comp: {} samples, {:f} gain", GetLabelFromChannel(ch),

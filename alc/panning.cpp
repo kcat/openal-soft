@@ -231,8 +231,8 @@ struct DecoderConfig<DualBand, N> {
     SpatialMode m3DMode{};
     std::array<Channel, N> mChannels{};
     DevAmbiScaling mScaling{};
-    std::array<float, MaxAmbiOrder+1> mOrderGain{};
-    std::array<ChannelCoeffs, N> mCoeffs{};
+    std::array<float, MaxAmbiOrder+1> mOrderGainHF{};
+    std::array<ChannelCoeffs, N> mCoeffsHF{};
     std::array<float, MaxAmbiOrder+1> mOrderGainLF{};
     std::array<ChannelCoeffs, N> mCoeffsLF{};
 };
@@ -269,8 +269,8 @@ struct DecoderConfig<DualBand, 0> {
         m3DMode = rhs.m3DMode;
         mChannels = rhs.mChannels;
         mScaling = rhs.mScaling;
-        mOrderGain = rhs.mOrderGain;
-        mCoeffs = rhs.mCoeffs;
+        mOrderGain = rhs.mOrderGainHF;
+        mCoeffs = rhs.mCoeffsHF;
         mOrderGainLF = rhs.mOrderGainLF;
         mCoeffsLF = rhs.mCoeffsLF;
         return *this;
@@ -419,8 +419,8 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
     case AmbDecScale::FuMa: decoder.mScaling = DevAmbiScaling::FuMa; break;
     }
 
-    std::ranges::copy(conf->HFOrderGain | std::views::take(decoder.mOrderGain.size()),
-        decoder.mOrderGain.begin());
+    std::ranges::copy(conf->HFOrderGain | std::views::take(decoder.mOrderGainHF.size()),
+        decoder.mOrderGainHF.begin());
     std::ranges::copy(conf->LFOrderGain | std::views::take(decoder.mOrderGainLF.size()),
         decoder.mOrderGainLF.begin());
 
@@ -515,7 +515,7 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
 
         decoder.mChannels[chan_count] = ch;
         for(auto const dst : std::views::iota(0_uz, num_coeffs))
-            decoder.mCoeffs[chan_count][dst] = hfmatrix[chan_count][idx_map[dst]];
+            decoder.mCoeffsHF[chan_count][dst] = hfmatrix[chan_count][idx_map[dst]];
         if(conf->FreqBands > 1)
         {
             for(auto const dst : std::views::iota(0_uz, num_coeffs))
@@ -530,8 +530,8 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
         ret.m3DMode = decoder.m3DMode;
         ret.mScaling = decoder.mScaling;
         ret.mChannels = std::span{decoder.mChannels}.first(chan_count);
-        ret.mOrderGain = decoder.mOrderGain;
-        ret.mCoeffs = std::span{decoder.mCoeffs}.first(chan_count);
+        ret.mOrderGain = decoder.mOrderGainHF;
+        ret.mCoeffs = std::span{decoder.mCoeffsHF}.first(chan_count);
         if(conf->FreqBands > 1)
         {
             ret.mOrderGainLF = decoder.mOrderGainLF;
@@ -542,179 +542,195 @@ auto MakeDecoderView(al::Device const *const device, AmbDecConf const *const con
 }
 
 constexpr auto MonoConfig = DecoderConfig<SingleBand, 1>{
-    0, Pantaphonic, {{FrontCenter}},
-    DevAmbiScaling::N3D,
-    {{1.0f}},
-    {{ {{1.0f}} }}
+    .mOrder = 0,
+    .m3DMode = Pantaphonic,
+    .mChannels = {FrontCenter},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGain = {1.0f},
+    .mCoeffs = std::to_array<ChannelCoeffs>({{1.0f}})
 };
 constexpr auto StereoConfig = DecoderConfig<SingleBand, 2>{
-    1, Pantaphonic, {{FrontLeft, FrontRight}},
-    DevAmbiScaling::N3D,
-    {{1.0f, 1.0f}},
-    {{
-        {{5.00000000e-1f,  2.88675135e-1f,  5.52305643e-2f}},
-        {{5.00000000e-1f, -2.88675135e-1f,  5.52305643e-2f}},
-    }}
+    .mOrder = 1,
+    .m3DMode = Pantaphonic,
+    .mChannels = {FrontLeft, FrontRight},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGain = {1.0f, 1.0f},
+    .mCoeffs = std::to_array<ChannelCoeffs>({
+        {5.00000000e-1f,  2.88675135e-1f,  5.52305643e-2f},
+        {5.00000000e-1f, -2.88675135e-1f,  5.52305643e-2f},
+    })
 };
 constexpr auto QuadConfig = DecoderConfig<DualBand, 4>{
-    1, Pantaphonic, {{BackLeft, FrontLeft, FrontRight, BackRight}},
-    DevAmbiScaling::N3D,
-    /*HF*/{{1.41421356e+0f, 1.00000000e+0f}},
-    {{
-        {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f}},
-        {{2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f}},
-        {{2.50000000e-1f, -2.04124145e-1f,  2.04124145e-1f}},
-        {{2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f}},
-        {{2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f}},
-        {{2.50000000e-1f, -2.04124145e-1f,  2.04124145e-1f}},
-        {{2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f}},
-    }}
+    .mOrder = 1,
+    .m3DMode = Pantaphonic,
+    .mChannels = {BackLeft, FrontLeft, FrontRight, BackRight},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGainHF = {1.41421356e+0f, 1.00000000e+0f},
+    .mCoeffsHF = std::to_array<ChannelCoeffs>({
+        {2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f},
+        {2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f},
+        {2.50000000e-1f, -2.04124145e-1f,  2.04124145e-1f},
+        {2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f},
+    }),
+    .mOrderGainLF = {1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsLF = std::to_array<ChannelCoeffs>({
+        {2.50000000e-1f,  2.04124145e-1f, -2.04124145e-1f},
+        {2.50000000e-1f,  2.04124145e-1f,  2.04124145e-1f},
+        {2.50000000e-1f, -2.04124145e-1f,  2.04124145e-1f},
+        {2.50000000e-1f, -2.04124145e-1f, -2.04124145e-1f},
+    })
 };
 constexpr auto X51Config = DecoderConfig<DualBand, 5>{
-    2, Pantaphonic, {{SideLeft, FrontLeft, FrontCenter, FrontRight, SideRight}},
-    DevAmbiScaling::FuMa,
-    /*HF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{5.67316000e-1f,  4.22920000e-1f, -3.15495000e-1f, -6.34490000e-2f, -2.92380000e-2f}},
-        {{3.68584000e-1f,  2.72349000e-1f,  3.21616000e-1f,  1.92645000e-1f,  4.82600000e-2f}},
-        {{1.83579000e-1f,  0.00000000e+0f,  1.99588000e-1f,  0.00000000e+0f,  9.62820000e-2f}},
-        {{3.68584000e-1f, -2.72349000e-1f,  3.21616000e-1f, -1.92645000e-1f,  4.82600000e-2f}},
-        {{5.67316000e-1f, -4.22920000e-1f, -3.15495000e-1f,  6.34490000e-2f, -2.92380000e-2f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{4.90109850e-1f,  3.77305010e-1f, -3.73106990e-1f, -1.25914530e-1f,  1.45133000e-2f}},
-        {{1.49085730e-1f,  3.03561680e-1f,  1.53290060e-1f,  2.45112480e-1f, -1.50753130e-1f}},
-        {{1.37654920e-1f,  0.00000000e+0f,  4.49417940e-1f,  0.00000000e+0f,  2.57844070e-1f}},
-        {{1.49085730e-1f, -3.03561680e-1f,  1.53290060e-1f, -2.45112480e-1f, -1.50753130e-1f}},
-        {{4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f}},
-    }}
+    .mOrder = 2,
+    .m3DMode = Pantaphonic,
+    .mChannels = {SideLeft, FrontLeft, FrontCenter, FrontRight, SideRight},
+    .mScaling = DevAmbiScaling::FuMa,
+    .mOrderGainHF = {1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsHF = std::to_array<ChannelCoeffs>({
+        {5.67316000e-1f,  4.22920000e-1f, -3.15495000e-1f, -6.34490000e-2f, -2.92380000e-2f},
+        {3.68584000e-1f,  2.72349000e-1f,  3.21616000e-1f,  1.92645000e-1f,  4.82600000e-2f},
+        {1.83579000e-1f,  0.00000000e+0f,  1.99588000e-1f,  0.00000000e+0f,  9.62820000e-2f},
+        {3.68584000e-1f, -2.72349000e-1f,  3.21616000e-1f, -1.92645000e-1f,  4.82600000e-2f},
+        {5.67316000e-1f, -4.22920000e-1f, -3.15495000e-1f,  6.34490000e-2f, -2.92380000e-2f},
+    }),
+    .mOrderGainLF = {1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsLF = std::to_array<ChannelCoeffs>({
+        {4.90109850e-1f,  3.77305010e-1f, -3.73106990e-1f, -1.25914530e-1f,  1.45133000e-2f},
+        {1.49085730e-1f,  3.03561680e-1f,  1.53290060e-1f,  2.45112480e-1f, -1.50753130e-1f},
+        {1.37654920e-1f,  0.00000000e+0f,  4.49417940e-1f,  0.00000000e+0f,  2.57844070e-1f},
+        {1.49085730e-1f, -3.03561680e-1f,  1.53290060e-1f, -2.45112480e-1f, -1.50753130e-1f},
+        {4.90109850e-1f, -3.77305010e-1f, -3.73106990e-1f,  1.25914530e-1f,  1.45133000e-2f},
+    })
 };
 constexpr auto X61Config = DecoderConfig<SingleBand, 5>{
-    2, Pantaphonic, {{SideLeft, FrontLeft, FrontRight, SideRight, BackCenter}},
-    DevAmbiScaling::N3D,
-    {{1.0f, 1.0f, 1.0f}},
-    {{
-        {{2.04460341e-1f,  2.17177926e-1f, -4.39996780e-2f, -2.60790269e-2f, -6.87239792e-2f}},
-        {{1.58923161e-1f,  9.21772680e-2f,  1.59658796e-1f,  6.66278083e-2f,  3.84686854e-2f}},
-        {{1.58923161e-1f, -9.21772680e-2f,  1.59658796e-1f, -6.66278083e-2f,  3.84686854e-2f}},
-        {{2.04460341e-1f, -2.17177926e-1f, -4.39996780e-2f,  2.60790269e-2f, -6.87239792e-2f}},
-        {{2.50001688e-1f,  0.00000000e+0f, -2.50000094e-1f,  0.00000000e+0f,  6.05133395e-2f}},
-    }}
+    .mOrder = 2,
+    .m3DMode = Pantaphonic,
+    .mChannels = {SideLeft, FrontLeft, FrontRight, SideRight, BackCenter},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGain = {1.0f, 1.0f, 1.0f},
+    .mCoeffs = std::to_array<ChannelCoeffs>({
+        {2.04460341e-1f,  2.17177926e-1f, -4.39996780e-2f, -2.60790269e-2f, -6.87239792e-2f},
+        {1.58923161e-1f,  9.21772680e-2f,  1.59658796e-1f,  6.66278083e-2f,  3.84686854e-2f},
+        {1.58923161e-1f, -9.21772680e-2f,  1.59658796e-1f, -6.66278083e-2f,  3.84686854e-2f},
+        {2.04460341e-1f, -2.17177926e-1f, -4.39996780e-2f,  2.60790269e-2f, -6.87239792e-2f},
+        {2.50001688e-1f,  0.00000000e+0f, -2.50000094e-1f,  0.00000000e+0f,  6.05133395e-2f},
+    })
 };
 constexpr auto X71Config = DecoderConfig<DualBand, 6>{
-    2, Pantaphonic, {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight}},
-    DevAmbiScaling::N3D,
-    /*HF*/{{1.41421356e+0f, 1.22474487e+0f, 7.07106781e-1f}},
-    {{
-        {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f}},
-        {{1.66666667e-1f,  9.62250449e-2f,  1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f, -9.62250449e-2f,  1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f, -1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f}},
-        {{1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f}},
-        {{1.66666667e-1f,  9.62250449e-2f,  1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f, -9.62250449e-2f,  1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f}},
-        {{1.66666667e-1f, -1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f}},
-        {{1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f}},
-    }}
+    .mOrder = 2,
+    .m3DMode = Pantaphonic,
+    .mChannels = {BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGainHF = {1.41421356e+0f, 1.22474487e+0f, 7.07106781e-1f},
+    .mCoeffsHF = std::to_array<ChannelCoeffs>({
+        {1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f},
+        {1.66666667e-1f,  9.62250449e-2f,  1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f, -9.62250449e-2f,  1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f, -1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f},
+        {1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f},
+    }),
+    .mOrderGainLF = {1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsLF = std::to_array<ChannelCoeffs>({
+        {1.66666667e-1f,  9.62250449e-2f, -1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f,  1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f},
+        {1.66666667e-1f,  9.62250449e-2f,  1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f, -9.62250449e-2f,  1.66666667e-1f, -1.49071198e-1f,  8.60662966e-2f},
+        {1.66666667e-1f, -1.92450090e-1f,  0.00000000e+0f,  0.00000000e+0f, -1.72132593e-1f},
+        {1.66666667e-1f, -9.62250449e-2f, -1.66666667e-1f,  1.49071198e-1f,  8.60662966e-2f},
+    })
 };
 constexpr auto X3D71Config = DecoderConfig<DualBand, 6>{
-    1, Periphonic, {{Aux0, SideLeft, FrontLeft, FrontRight, SideRight, Aux1}},
-    DevAmbiScaling::N3D,
-    /*HF*/{{1.73205081e+0f, 1.00000000e+0f}},
-    {{
-        {{1.666666667e-01f,  0.000000000e+00f,  2.356640879e-01f, -1.667265410e-01f}},
-        {{1.666666667e-01f,  2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f}},
-        {{1.666666667e-01f,  2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f}},
-        {{1.666666667e-01f, -2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f}},
-        {{1.666666667e-01f, -2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f}},
-        {{1.666666667e-01f,  0.000000000e+00f, -2.356640879e-01f,  1.667265410e-01f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{1.666666667e-01f,  0.000000000e+00f,  2.356640879e-01f, -1.667265410e-01f}},
-        {{1.666666667e-01f,  2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f}},
-        {{1.666666667e-01f,  2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f}},
-        {{1.666666667e-01f, -2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f}},
-        {{1.666666667e-01f, -2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f}},
-        {{1.666666667e-01f,  0.000000000e+00f, -2.356640879e-01f,  1.667265410e-01f}},
-    }}
+    .mOrder = 1,
+    .m3DMode = Periphonic,
+    .mChannels = {Aux0, SideLeft, FrontLeft, FrontRight, SideRight, Aux1},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGainHF = {1.73205081e+0f, 1.00000000e+0f},
+    .mCoeffsHF = std::to_array<ChannelCoeffs>({
+        {1.666666667e-01f,  0.000000000e+00f,  2.356640879e-01f, -1.667265410e-01f},
+        {1.666666667e-01f,  2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f},
+        {1.666666667e-01f,  2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f},
+        {1.666666667e-01f, -2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f},
+        {1.666666667e-01f, -2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f},
+        {1.666666667e-01f,  0.000000000e+00f, -2.356640879e-01f,  1.667265410e-01f},
+    }),
+    .mOrderGainLF = {1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsLF = std::to_array<ChannelCoeffs>({
+        {1.666666667e-01f,  0.000000000e+00f,  2.356640879e-01f, -1.667265410e-01f},
+        {1.666666667e-01f,  2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f},
+        {1.666666667e-01f,  2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f},
+        {1.666666667e-01f, -2.033043281e-01f,  1.175581508e-01f,  1.678904388e-01f},
+        {1.666666667e-01f, -2.033043281e-01f, -1.175581508e-01f, -1.678904388e-01f},
+        {1.666666667e-01f,  0.000000000e+00f, -2.356640879e-01f,  1.667265410e-01f},
+    })
 };
 constexpr auto X714Config = DecoderConfig<SingleBand, 10>{
-    1, Periphonic,
-    {{FrontLeft, FrontRight, SideLeft, SideRight, BackLeft, BackRight, TopFrontLeft, TopFrontRight,
-        TopBackLeft, TopBackRight }},
-    DevAmbiScaling::N3D,
-    {{1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{1.27149251e-01f,  7.63047539e-02f, -3.64373750e-02f,  1.59700680e-01f}},
-        {{1.07005418e-01f, -7.67638760e-02f, -4.92129762e-02f,  1.29012797e-01f}},
-        {{1.26400196e-01f,  1.77494694e-01f, -3.71203389e-02f,  0.00000000e+00f}},
-        {{1.26396516e-01f, -1.77488059e-01f, -3.71297878e-02f,  0.00000000e+00f}},
-        {{1.06996956e-01f,  7.67615256e-02f, -4.92166307e-02f, -1.29001640e-01f}},
-        {{1.27145671e-01f, -7.63003471e-02f, -3.64353304e-02f, -1.59697510e-01f}},
-        {{8.80919747e-02f,  7.48940670e-02f,  9.08786244e-02f,  6.22527183e-02f}},
-        {{1.57880745e-01f, -7.28755272e-02f,  1.82364187e-01f,  8.74240284e-02f}},
-        {{1.57892225e-01f,  7.28944768e-02f,  1.82363474e-01f, -8.74301086e-02f}},
-        {{8.80892603e-02f, -7.48948724e-02f,  9.08779842e-02f, -6.22480443e-02f}},
-    }}
+    .mOrder = 1,
+    .m3DMode = Periphonic,
+    .mChannels = {FrontLeft, FrontRight, SideLeft, SideRight, BackLeft, BackRight,
+        TopFrontLeft, TopFrontRight, TopBackLeft, TopBackRight },
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGain = {1.00000000e+0f, 1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffs = std::to_array<ChannelCoeffs>({
+        {1.27149251e-01f,  7.63047539e-02f, -3.64373750e-02f,  1.59700680e-01f},
+        {1.07005418e-01f, -7.67638760e-02f, -4.92129762e-02f,  1.29012797e-01f},
+        {1.26400196e-01f,  1.77494694e-01f, -3.71203389e-02f,  0.00000000e+00f},
+        {1.26396516e-01f, -1.77488059e-01f, -3.71297878e-02f,  0.00000000e+00f},
+        {1.06996956e-01f,  7.67615256e-02f, -4.92166307e-02f, -1.29001640e-01f},
+        {1.27145671e-01f, -7.63003471e-02f, -3.64353304e-02f, -1.59697510e-01f},
+        {8.80919747e-02f,  7.48940670e-02f,  9.08786244e-02f,  6.22527183e-02f},
+        {1.57880745e-01f, -7.28755272e-02f,  1.82364187e-01f,  8.74240284e-02f},
+        {1.57892225e-01f,  7.28944768e-02f,  1.82363474e-01f, -8.74301086e-02f},
+        {8.80892603e-02f, -7.48948724e-02f,  9.08779842e-02f, -6.22480443e-02f},
+    })
 };
 constexpr auto X7144Config = DecoderConfig<DualBand, 14>{
-    1, Periphonic,
-    {{BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight, TopBackLeft, TopFrontLeft,
-        TopFrontRight, TopBackRight, BottomBackLeft, BottomFrontLeft, BottomFrontRight,
-        BottomBackRight}},
-    DevAmbiScaling::N3D,
-    /*HF*/{{2.64575131e+0f, 1.52752523e+0f}},
-    {{
-        {{7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f}},
-        {{7.14285714e-02f,  1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f}},
-        {{7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f}},
-        {{7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f}},
-        {{7.14285714e-02f, -1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f}},
-        {{7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f}},
-    }},
-    /*LF*/{{1.00000000e+0f, 1.00000000e+0f}},
-    {{
-        {{7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f}},
-        {{7.14285714e-02f,  1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f}},
-        {{7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f}},
-        {{7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f}},
-        {{7.14285714e-02f, -1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f}},
-        {{7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f}},
-        {{7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f}},
-        {{7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f}},
-    }}
+    .mOrder = 1,
+    .m3DMode = Periphonic,
+    .mChannels = {BackLeft, SideLeft, FrontLeft, FrontRight, SideRight, BackRight,
+        TopBackLeft, TopFrontLeft, TopFrontRight, TopBackRight,
+        BottomBackLeft, BottomFrontLeft, BottomFrontRight, BottomBackRight},
+    .mScaling = DevAmbiScaling::N3D,
+    .mOrderGainHF = {2.64575131e+0f, 1.52752523e+0f},
+    .mCoeffsHF = std::to_array<ChannelCoeffs>({
+        {7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f},
+        {7.14285714e-02f,  1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f},
+        {7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f},
+        {7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f},
+        {7.14285714e-02f, -1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f},
+        {7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f},
+        {7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f},
+    }),
+    .mOrderGainLF = {1.00000000e+0f, 1.00000000e+0f},
+    .mCoeffsLF = std::to_array<ChannelCoeffs>({
+        {7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f},
+        {7.14285714e-02f,  1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f},
+        {7.14285714e-02f,  5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f},
+        {7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f,  8.82352941e-02f},
+        {7.14285714e-02f, -1.01885342e-01f,  0.00000000e+00f,  0.00000000e+00f},
+        {7.14285714e-02f, -5.09426708e-02f,  0.00000000e+00f, -8.82352941e-02f},
+        {7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f,  1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f},
+        {7.14285714e-02f,  5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f,  5.88235294e-02f},
+        {7.14285714e-02f, -5.88235294e-02f, -1.25000000e-01f, -5.88235294e-02f},
+    })
 };
 
 
 struct PanningProc {
-    std::unique_ptr<BFormatDec> decoder;
-    std::unique_ptr<FrontStablizer> stablizer;
+    std::unique_ptr<BFormatDec> decoder{};
+    std::unique_ptr<FrontStablizer> stablizer{};
 };
 
 [[nodiscard]]
@@ -844,7 +860,7 @@ auto InitPanning(al::Device *const device, bool const hqdec=false, bool const st
         (decoder.m3DMode == Periphonic) ? " periphonic" : "");
     auto bformatdec = std::make_unique<BFormatDec>(ambicount, chancoeffs, chancoeffslf,
         device->mXOverFreq/gsl::narrow_cast<float>(device->mSampleRate));
-    return {std::move(bformatdec), std::move(stablizer)};
+    return {.decoder=std::move(bformatdec), .stablizer=std::move(stablizer)};
 }
 
 [[nodiscard]]

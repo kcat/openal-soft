@@ -2126,19 +2126,24 @@ void MovieState::stop()
 
 
 // Helper method to print the time with human-readable formatting.
-auto PrettyTime(seconds t) -> std::string
+[[nodiscard]]
+auto PrettyTime(seconds t, seconds const total) -> std::string
 {
     using std::chrono::minutes;
     using std::chrono::hours;
 
     if(t.count() < 0)
-        return "0s";
+        t = seconds::zero();
 
     // Only handle up to hour formatting
-    if(t >= hours{1})
+    if(total >= hours{1})
         return fmt::format("{}h{:02}m{:02}s", duration_cast<hours>(t).count(),
             duration_cast<minutes>(t).count()%60, t.count()%60);
-    return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
+    if(total >= minutes{10})
+        return fmt::format("{:2}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
+    if(total >= minutes{1})
+        return fmt::format("{}m{:02}s", duration_cast<minutes>(t).count(), t.count()%60);
+    return fmt::format("{:02}s", t.count());
 }
 
 
@@ -2485,7 +2490,8 @@ auto main(std::span<al::zstring_view> args) -> int
         if(cur_time != app.mLastTime)
         {
             const auto end_time = duration_cast<seconds>(app.mMovieState->getDuration());
-            fmt::print("    \r {} / {}", PrettyTime(cur_time), PrettyTime(end_time));
+            fmt::print("    \r {} / {}", PrettyTime(cur_time, end_time),
+                PrettyTime(end_time, end_time));
             std::cout.flush();
             app.mLastTime = cur_time;
         }

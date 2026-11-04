@@ -271,7 +271,7 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
         auto const res = ul - ur;
 
         *result = static_cast<ResT>(res);
-        return static_cast<ResT>((ul^ur) & (ur^res)) < 0;
+        return static_cast<ResT>((ul^ur) & (ul^res)) < 0;
     }
     else /*if constexpr(std::unsigned_integral<ResT>)*/
     {

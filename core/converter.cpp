@@ -48,11 +48,11 @@ auto LoadSample(T const& val) noexcept -> float
     else if constexpr(std::same_as<T, std::int8_t>)
         return gsl::narrow_cast<float>(val) * (1.0f/128.0f);
     else if constexpr(std::same_as<T, std::uint32_t>)
-        return LoadSample<std::int32_t>(static_cast<std::int32_t>(val - 2147483648u));
+        return LoadSample(static_cast<std::int32_t>(val - 2147483648u));
     else if constexpr(std::same_as<T, std::uint16_t>)
-        return LoadSample<std::int16_t>(gsl::narrow_cast<std::int16_t>(val - 32768));
+        return LoadSample(gsl::narrow_cast<std::int16_t>(val - 32768));
     else if constexpr(std::same_as<T, std::uint8_t>)
-        return LoadSample<std::int8_t>(gsl::narrow_cast<std::int8_t>(val - 128));
+        return LoadSample(gsl::narrow_cast<std::int8_t>(val - 128));
     else
     {
         static_assert(al::dependent_false<T>, "Unexpected sample type");
@@ -101,14 +101,12 @@ auto StoreSample(float const val) noexcept -> T
     if constexpr(std::same_as<T, float>)
         return val;
     else if constexpr(std::same_as<T, std::int32_t>)
-        return std::int32_t{fastf2i(std::clamp(val*2147483648.0f, -2147483648.0f, 2147483520.0f))};
+        return al::saturating_cast<std::int32_t>(val*2147483648.0f);
     else if constexpr(std::same_as<T, std::int16_t>)
-    {
-        auto const tmp = std::clamp(val*32768.0f, -32768.0f, 32767.0f);
-        return gsl::narrow_cast<std::int16_t>(fastf2i(tmp));
-    }
+        return al::saturating_cast<std::int16_t>(val*32768.0f);
     else if constexpr(std::same_as<T, std::int8_t>)
-        return gsl::narrow_cast<std::int8_t>(fastf2i(std::clamp(val*128.0f, -128.0f, 127.0f)));
+        return al::saturating_cast<std::int8_t>(val*128.0f);
+    /* Unsigned output variations use the signed conversions with an offset. */
     else if constexpr(std::same_as<T, std::uint32_t>)
         return static_cast<std::uint32_t>(StoreSample<std::int32_t>(val)) + 2147483648u;
     else if constexpr(std::same_as<T, std::uint16_t>)
@@ -118,7 +116,7 @@ auto StoreSample(float const val) noexcept -> T
     else
     {
         static_assert(al::dependent_false<T>, "Unexpected sample type");
-        return {};
+        return T{};
     }
 }
 

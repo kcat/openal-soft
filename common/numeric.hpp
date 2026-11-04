@@ -241,6 +241,11 @@ template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
     requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
 auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 {
+#if HAS_BUILTIN(__builtin_add_overflow)
+    return __builtin_add_overflow(lhs, rhs, result);
+
+#else
+
     if constexpr(std::signed_integral<ResT>)
     {
         using UT = std::make_unsigned_t<ResT>;
@@ -257,12 +262,18 @@ auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
         *result = static_cast<ResT>(ResT{lhs} + ResT{rhs});
         return *result < lhs;
     }
+#endif
 }
 
 template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
     requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
 auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 {
+#if HAS_BUILTIN(__builtin_sub_overflow)
+    return __builtin_sub_overflow(lhs, rhs, result);
+
+#else
+
     if constexpr(std::signed_integral<ResT>)
     {
         using UT = std::make_unsigned_t<ResT>;
@@ -278,6 +289,7 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
         *result = static_cast<ResT>(ResT{lhs} - ResT{rhs});
         return *result > lhs;
     }
+#endif
 }
 
 } /* namespace al */

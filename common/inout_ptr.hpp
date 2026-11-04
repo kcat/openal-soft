@@ -94,10 +94,8 @@ public:
     operator PT*() && noexcept { return std::addressof(mPtr); }
 
     explicit(false) /* NOLINTNEXTLINE(google-explicit-constructor) */
-    operator void**() && noexcept requires(not std::same_as<PT,void*>)
+    operator void**() && noexcept requires(std::is_pointer_v<PT> and not std::same_as<PT,void*>)
     {
-        static_assert(std::is_pointer_v<PT>,
-            "The pointer type must be void* compatible for operator void**");
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         return reinterpret_cast<void**>(static_cast<PT*>(std::move(*this)));
     }
@@ -166,10 +164,8 @@ public:
     operator PT*() && noexcept { return std::addressof(mPtr); }
 
     explicit(false) /* NOLINTNEXTLINE(google-explicit-constructor) */
-    operator void**() && noexcept requires(not std::same_as<PT,void*>)
+    operator void**() && noexcept requires(std::is_pointer_v<PT> and not std::same_as<PT,void*>)
     {
-        static_assert(std::is_pointer_v<PT>,
-            "The pointer type must be void* compatible for operator void**");
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
         return reinterpret_cast<void**>(static_cast<PT*>(std::move(*this)));
     }

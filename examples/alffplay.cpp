@@ -2145,9 +2145,7 @@ auto PrettyTime(seconds t) -> std::string
 struct Application {
     std::span<al::zstring_view> mArgs{};
 
-    using ALMgrHandle = std::invoke_result_t<decltype(InitAL), std::span<al::zstring_view>&,
-        ALCint const*>;
-    std::optional<ALMgrHandle> mALManager{};
+    std::optional<decltype(InitAL(mArgs))> mALManager{};
 
     SDL_Window *mWindow{};
     SDL_Renderer *mRenderer{};

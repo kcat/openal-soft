@@ -49,39 +49,58 @@ template<detail::integral T> [[nodiscard]] constexpr
 auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     T res;
-    if(!__builtin_add_overflow(lhs, rhs, &res))
-        return res;
-    if constexpr(detail::signed_integral<T>)
+    if(__builtin_add_overflow(lhs, rhs, &res))
     {
-        if(rhs < 0)
-            return std::numeric_limits<T>::min();
+        if constexpr(detail::signed_integral<T>)
+        {
+            using UT = std::make_unsigned_t<T>;
+            /* Signed addition under/overflow can only occur if both operands
+             * have the same sign. Calculate the saturated value by taking the
+             * signed max (e.g. 0x7fffffff) and adding 1 if the operands are
+             * negative (e.g. 0x7fffffff + 1 = 0x80000000 when the msb is 1).
+             * This is done as unsigned math to avoid UB, before casting to
+             * signed.
+             */
+            res = static_cast<T>((static_cast<UT>(lhs) >> UT{std::numeric_limits<T>::digits})
+                + UT{std::numeric_limits<T>::max()});
+        }
+        else
+            res = std::numeric_limits<T>::max();
     }
-    return std::numeric_limits<T>::max();
+    return res;
 }
 
 #else
 
-template<detail::integral T> [[nodiscard]]
-constexpr auto saturating_add(T const lhs, T const rhs) noexcept -> T
+template<detail::integral T> [[nodiscard]] constexpr
+auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     if constexpr(detail::signed_integral<T>)
     {
-        if(rhs < 0)
-        {
-            if(lhs < std::numeric_limits<T>::min()-rhs)
-                return std::numeric_limits<T>::min();
-            return lhs + rhs;
-        }
-        if(lhs > std::numeric_limits<T>::max()-rhs)
-            return std::numeric_limits<T>::max();
-        return lhs + rhs;
+        using UT = std::make_unsigned_t<T>;
+        auto const ul = static_cast<UT>(lhs);
+        auto const ur = static_cast<UT>(rhs);
+        auto const res = ul + ur;
+
+        /* Signed addition under/overflow can only occur if both operands have
+         * the same sign, and if the result's sign doesn't match the operands'.
+         * Bit twiddle to get a non-negative result (sign bit 0) if the result
+         * under/overflowed.
+         */
+        auto const x = static_cast<T>((ul >> UT{std::numeric_limits<T>::digits})
+            + UT{std::numeric_limits<T>::max()});
+        return (static_cast<T>((ul^ur) | ~(ur^res)) >= 0) ? x : static_cast<T>(res);
     }
     else
     {
+        /* For unsigned addition, the result overflowed if it is less than
+         * either of the operands. In which case, calculate -T{1} to set all
+         * bits to 1, which is or'd with the result to return the unsigned max.
+         * Otherwise, calculate -T{0} (i.e. 0) to get all 0 bits, which is or'd
+         * with the result to return it unchanged.
+         */
         const auto res = static_cast<T>(lhs + rhs);
-        if(res < lhs)
-            return std::numeric_limits<T>::max();
-        return res;
+        return static_cast<T>(res | -T{res < lhs});
     }
 }
 #endif

@@ -27,20 +27,26 @@
 namespace al {
 
 template<typename T>
-concept signed_integral = std::same_as<std::remove_cv_t<T>, signed char>
+inline auto constexpr is_signed_v = std::same_as<std::remove_cv_t<T>, signed char>
     or std::same_as<std::remove_cv_t<T>, signed short>
     or std::same_as<std::remove_cv_t<T>, signed int>
     or std::same_as<std::remove_cv_t<T>, signed long>
     or std::same_as<std::remove_cv_t<T>, signed long long>;
 template<typename T>
-concept unsigned_integral = std::same_as<std::remove_cv_t<T>, unsigned char>
+inline auto constexpr is_unsigned_v = std::same_as<std::remove_cv_t<T>, unsigned char>
     or std::same_as<std::remove_cv_t<T>, unsigned short>
     or std::same_as<std::remove_cv_t<T>, unsigned int>
     or std::same_as<std::remove_cv_t<T>, unsigned long>
     or std::same_as<std::remove_cv_t<T>, unsigned long long>;
+template<typename T>
+inline auto constexpr is_integral_v = is_signed_v<T> or is_unsigned_v<T>;
 
 template<typename T>
-concept integral = signed_integral<T> or unsigned_integral<T>;
+concept signed_integral = is_signed_v<T>;
+template<typename T>
+concept unsigned_integral = is_unsigned_v<T>;
+template<typename T>
+concept integral = is_integral_v<T>;
 
 template<typename T>
 concept number = integral<T> or std::floating_point<T>;
@@ -136,7 +142,7 @@ auto saturating_cast(T const val) noexcept -> R
 {
     if constexpr(std::floating_point<T>)
     {
-        if constexpr(std::integral<R>) /* fp -> integer */
+        if constexpr(integral<R>) /* fp -> integer */
         {
             /* mantbits is the number of mantissa bits physically stored in the
              * variable. 32- and 64-bit fp formats (float and double) have an
@@ -318,11 +324,11 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 
 } /* namespace al */
 
-template<std::integral T> [[nodiscard]] constexpr
+template<al::integral T> [[nodiscard]] constexpr
 auto as_unsigned(T const value) noexcept
 { return static_cast<std::make_unsigned_t<T>>(value); }
 
-template<std::integral T> [[nodiscard]] constexpr
+template<al::integral T> [[nodiscard]] constexpr
 auto as_signed(T const value) noexcept
 { return static_cast<std::make_signed_t<T>>(value); }
 
@@ -347,7 +353,7 @@ auto lerpf(float const val1, float const val2, float const mu) noexcept -> float
  * If the value is not already a multiple of r, round toward zero to the next
  * multiple.
  */
-template<std::integral T> [[nodiscard]] constexpr
+template<al::integral T> [[nodiscard]] constexpr
 auto RoundToZero(T value, std::type_identity_t<T> r) noexcept -> T
 { return value - (value%r); }
 
@@ -355,7 +361,7 @@ auto RoundToZero(T value, std::type_identity_t<T> r) noexcept -> T
  * If the value is not already a multiple of r, round away from zero to the
  * next multiple.
  */
-template<std::integral T> [[nodiscard]] constexpr
+template<al::integral T> [[nodiscard]] constexpr
 auto RoundFromZero(T value, std::type_identity_t<T> r) noexcept -> T
 {
     if(value >= 0)

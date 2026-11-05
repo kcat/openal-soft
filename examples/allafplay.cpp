@@ -589,11 +589,12 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         throw std::runtime_error{fmt::format("Invalid mode: {}", mode)};
     });
 
-    laf->mNumTracks = std::invoke([input=std::span{header}.subspan<6,4>()]
+    laf->mNumTracks = std::invoke([input=std::as_bytes(std::span{header}).subspan<6,4>()]
     {
-        return std::uint32_t{as_unsigned(input[0])} | (std::uint32_t{as_unsigned(input[1])}<<8)
-            | (std::uint32_t{as_unsigned(input[2])}<<16)
-            | (std::uint32_t{as_unsigned(input[3])}<<24);
+        return std::to_integer<std::uint32_t>(input[0])
+            | (std::to_integer<std::uint32_t>(input[1])<<8)
+            | (std::to_integer<std::uint32_t>(input[2])<<16)
+            | (std::to_integer<std::uint32_t>(input[3])<<24);
     });
 
     fmt::println("Filename: {}", fname);
@@ -627,24 +628,24 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         laf->mPosTracks.resize(numpostracks);
     }
 
-    static constexpr auto read_float = [](std::span<char,4> const input)
+    static constexpr auto read_float = [](std::span<std::byte const,4> const input)
     {
-        return std::bit_cast<float>(std::uint32_t{as_unsigned(input[0])}
-            | (std::uint32_t{as_unsigned(input[1])}<<8)
-            | (std::uint32_t{as_unsigned(input[2])}<<16)
-            | (std::uint32_t{as_unsigned(input[3])}<<24));
+        return std::bit_cast<float>(std::to_integer<std::uint32_t>(input[0])
+            | (std::to_integer<std::uint32_t>(input[1])<<8)
+            | (std::to_integer<std::uint32_t>(input[2])<<16)
+            | (std::to_integer<std::uint32_t>(input[3])<<24));
     };
 
     /* C++23 can use chandata | std::views::chunk(9) | std::views::enumerate to
      * get a range of ~std::pair<size_t index, std::span<char> chunk>.
      */
-    auto chanspan = std::span{chandata}.first(laf->mChannels.size()*9_uz);
-    std::ranges::generate(laf->mChannels, [&chandata,&chanspan]
+    auto chanspan = std::as_bytes(std::span{chandata}).first(laf->mChannels.size()*9_uz);
+    std::ranges::transform(std::views::iota(0_uz, laf->mChannels.size()), laf->mChannels.begin(),
+        [&chanspan](std::size_t const idx)
     {
-        const auto idx = (chanspan.data()-chandata.data()) / 9_z;
-        auto x_axis = read_float(chanspan.first<4>());
-        auto y_axis = read_float(chanspan.subspan<4,4>());
-        auto lfe_flag = int{chanspan[8]};
+        auto x_axis = read_float(std::as_bytes(chanspan).first<4>());
+        auto y_axis = read_float(std::as_bytes(chanspan).subspan<4,4>());
+        auto lfe_flag = std::to_integer<int>(chanspan[8]);
         chanspan = chanspan.subspan(9);
 
         fmt::println("Track {}: E={:f}, A={:f} (LFE: {})", idx, x_axis, y_axis, lfe_flag);
@@ -656,13 +657,14 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
         channel.mIsLfe = lfe_flag != 0;
         return channel;
     });
-    chanspan = std::span{chandata}.last(laf->mPosTracks.size()*9_uz);
-    std::ranges::for_each(laf->mPosTracks, [&chandata,&chanspan](auto&&)
+    chanspan = std::as_bytes(std::span{chandata}).last(laf->mPosTracks.size()*9_uz);
+    std::ranges::for_each(std::views::iota(0_uz, laf->mPosTracks.size()),
+        [&laf, &chanspan](std::size_t const posidx)
     {
-        const auto idx = (chanspan.data()-chandata.data()) / 9_z;
+        const auto idx = posidx + laf->mChannels.size();
         auto x_axis = read_float(chanspan.first<4>());
         auto y_axis = read_float(chanspan.subspan<4,4>());
-        auto lfe_flag = int{chanspan[8]};
+        auto lfe_flag = std::to_integer<int>(chanspan[8]);
         chanspan = chanspan.subspan(9);
 
         fmt::println("Track {}: E={:f}, A={:f} (LFE: {})", idx, x_axis, y_axis, lfe_flag);
@@ -680,21 +682,23 @@ auto LoadLAF(const fs::path &fname) -> std::unique_ptr<LafStream>
     auto footer = std::array<char,12>{};
     infile.read(footer.data(), footer.size());
 
-    laf->mSampleRate = std::invoke([input=std::span{footer}.first<4>()]
+    laf->mSampleRate = std::invoke([input=std::as_bytes(std::span{footer}).first<4>()]
     {
-        return std::uint32_t{as_unsigned(input[0])} | (std::uint32_t{as_unsigned(input[1])}<<8)
-            | (std::uint32_t{as_unsigned(input[2])}<<16)
-            | (std::uint32_t{as_unsigned(input[3])}<<24);
+        return std::to_integer<std::uint32_t>(input[0])
+            | (std::to_integer<std::uint32_t>(input[1])<<8)
+            | (std::to_integer<std::uint32_t>(input[2])<<16)
+            | (std::to_integer<std::uint32_t>(input[3])<<24);
     });
-    laf->mSampleCount = std::invoke([input=std::span{footer}.last<8>()]
+    laf->mSampleCount = std::invoke([input=std::as_bytes(std::span{footer}).last<8>()]
     {
-        return std::uint64_t{as_unsigned(input[0])} | (std::uint64_t{as_unsigned(input[1])}<<8)
-            | (std::uint64_t{as_unsigned(input[2])}<<16)
-            | (std::uint64_t{as_unsigned(input[3])}<<24)
-            | (std::uint64_t{as_unsigned(input[4])}<<32)
-            | (std::uint64_t{as_unsigned(input[5])}<<40)
-            | (std::uint64_t{as_unsigned(input[6])}<<48)
-            | (std::uint64_t{as_unsigned(input[7])}<<56);
+        return std::to_integer<std::uint64_t>(input[0])
+            | (std::to_integer<std::uint64_t>(input[1])<<8)
+            | (std::to_integer<std::uint64_t>(input[2])<<16)
+            | (std::to_integer<std::uint64_t>(input[3])<<24)
+            | (std::to_integer<std::uint64_t>(input[4])<<32)
+            | (std::to_integer<std::uint64_t>(input[5])<<40)
+            | (std::to_integer<std::uint64_t>(input[6])<<48)
+            | (std::to_integer<std::uint64_t>(input[7])<<56);
     });
     fmt::println("Sample rate: {}", laf->mSampleRate);
     if(laf->mSampleCount < ~std::uint64_t{0})

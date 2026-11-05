@@ -122,7 +122,7 @@ auto validate_utf8(const std::string_view str) -> bool
         /* Get the number of bytes that make up this codepoint (must be at
          * least 2). This includes the current byte.
          */
-        const auto tocheck = std::countl_one(as_unsigned(*current));
+        const auto tocheck = std::countl_one(static_cast<unsigned char>(*current));
         if(tocheck < 2 || tocheck > remaining)
             return false;
 
@@ -218,8 +218,7 @@ void LoadConfigFromFile(std::istream &f)
         if(not validate_utf8(buffer))
         {
             ERR(" config parse error: non-UTF-8 characters on line {}", linenum);
-            ERR("{}", fmt::format("  {::#04x}",
-                buffer|std::views::transform([](auto c) { return as_unsigned(c); })));
+            ERR("{}", fmt::format("  {::#04x}", std::as_bytes(std::span{buffer})));
             continue;
         }
 

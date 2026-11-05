@@ -100,7 +100,7 @@ void DirectorySearch(fs::path const& path, fs::path const& ext,
 
             if(fs::status(entrypath).type() != fs::file_type::regular)
                 continue;
-            if(is_eq(al::ci_compare(entrypath.extension().native(), ext.native())))
+            if(al::ci_equal(entrypath.extension().native(), ext.native()))
                 results->emplace_back(entrypath);
         }
     }

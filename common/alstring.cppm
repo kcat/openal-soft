@@ -12,6 +12,8 @@ export {
 
     namespace al {
         using al::ci_compare;
+        using al::ci_equal;
+        using al::ci_nequal;
         using al::char_as_u8;
         using al::contains;
         using al::u8_as_char;

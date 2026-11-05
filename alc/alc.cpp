@@ -460,7 +460,7 @@ void alc_initconfig()
 
     if(auto const suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))
     {
-        if(is_eq(al::ci_compare(*suspendmode, "ignore"sv)))
+        if(al::ci_equal(*suspendmode, "ignore"sv))
         {
             SuspendDefers = false;
             TRACE("Selected context suspend behavior, \"ignore\"");
@@ -484,8 +484,7 @@ void alc_initconfig()
 #endif
     if(auto cpuopt = ConfigValueStr({}, {}, "disable-cpu-exts"sv))
     {
-        if(auto const cpulist = std::string_view{*cpuopt};
-            is_eq(al::ci_compare(cpulist, "all"sv)))
+        if(auto const cpulist = std::string_view{*cpuopt}; al::ci_equal(cpulist, "all"sv))
             capfilter.reset();
         else
         {
@@ -500,15 +499,15 @@ void alc_initconfig()
                 if(entry.empty())
                     return;
 
-                if(is_eq(al::ci_compare(entry, "sse"sv)))
+                if(al::ci_equal(entry, "sse"sv))
                     capfilter.reset(CPUCap::SSE);
-                else if(is_eq(al::ci_compare(entry, "sse2"sv)))
+                else if(al::ci_equal(entry, "sse2"sv))
                     capfilter.reset(CPUCap::SSE2);
-                else if(is_eq(al::ci_compare(entry, "sse3"sv)))
+                else if(al::ci_equal(entry, "sse3"sv))
                     capfilter.reset(CPUCap::SSE3);
-                else if(is_eq(al::ci_compare(entry, "sse4.1"sv)))
+                else if(al::ci_equal(entry, "sse4.1"sv))
                     capfilter.reset(CPUCap::SSE4_1);
-                else if(is_eq(al::ci_compare(entry, "neon"sv)))
+                else if(al::ci_equal(entry, "neon"sv))
                     capfilter.reset(CPUCap::NEON);
                 else
                     WARN("Invalid CPU extension \"{}\"", entry);
@@ -550,7 +549,7 @@ void alc_initconfig()
         {
             if(auto const optval = al::getenv(envname))
             {
-                return is_eq(al::ci_compare(*optval, "true"sv))
+                return al::ci_equal(*optval, "true"sv)
                     or strtol(optval->c_str(), nullptr, 0) == 1;
             }
             return GetConfigValueBool({}, "game_compat", optname, false);
@@ -566,22 +565,22 @@ void alc_initconfig()
 
     if(auto uhjfiltopt = ConfigValueStr({}, "uhj"sv, "decode-filter"sv))
     {
-        if(is_eq(al::ci_compare(*uhjfiltopt, "fir256"sv)))
+        if(al::ci_equal(*uhjfiltopt, "fir256"sv))
             UhjDecodeQuality = UhjQualityType::FIR256;
-        else if(is_eq(al::ci_compare(*uhjfiltopt, "fir512"sv)))
+        else if(al::ci_equal(*uhjfiltopt, "fir512"sv))
             UhjDecodeQuality = UhjQualityType::FIR512;
-        else if(is_eq(al::ci_compare(*uhjfiltopt, "iir"sv)))
+        else if(al::ci_equal(*uhjfiltopt, "iir"sv))
             UhjDecodeQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/decode-filter: {}", *uhjfiltopt);
     }
     if(auto uhjfiltopt = ConfigValueStr({}, "uhj"sv, "encode-filter"sv))
     {
-        if(is_eq(al::ci_compare(*uhjfiltopt, "fir256"sv)))
+        if(al::ci_equal(*uhjfiltopt, "fir256"sv))
             UhjEncodeQuality = UhjQualityType::FIR256;
-        else if(is_eq(al::ci_compare(*uhjfiltopt, "fir512"sv)))
+        else if(al::ci_equal(*uhjfiltopt, "fir512"sv))
             UhjEncodeQuality = UhjQualityType::FIR512;
-        else if(is_eq(al::ci_compare(*uhjfiltopt, "iir"sv)))
+        else if(al::ci_equal(*uhjfiltopt, "iir"sv))
             UhjEncodeQuality = UhjQualityType::IIR;
         else
             WARN("Unsupported uhj/encode-filter: {}", *uhjfiltopt);
@@ -589,29 +588,29 @@ void alc_initconfig()
 
     if(auto tsmefiltopt = ConfigValueStr({}, "tsme"sv, "decode-filter"sv))
     {
-        if(is_eq(al::ci_compare(*tsmefiltopt, "fir256"sv)))
+        if(al::ci_equal(*tsmefiltopt, "fir256"sv))
             TsmeDecodeQuality = TsmeQualityType::FIR256;
-        else if(is_eq(al::ci_compare(*tsmefiltopt, "fir512"sv)))
+        else if(al::ci_equal(*tsmefiltopt, "fir512"sv))
             TsmeDecodeQuality = TsmeQualityType::FIR512;
-        else if(is_eq(al::ci_compare(*tsmefiltopt, "iir"sv)))
+        else if(al::ci_equal(*tsmefiltopt, "iir"sv))
             TsmeDecodeQuality = TsmeQualityType::IIR;
         else
             WARN("Unsupported tsme/decode-filter: {}", *tsmefiltopt);
     }
     if(auto tsmefiltopt = ConfigValueStr({}, "tsme"sv, "encode-filter"sv))
     {
-        if(is_eq(al::ci_compare(*tsmefiltopt, "fir256"sv)))
+        if(al::ci_equal(*tsmefiltopt, "fir256"sv))
             TsmeEncodeQuality = TsmeQualityType::FIR256;
-        else if(is_eq(al::ci_compare(*tsmefiltopt, "fir512"sv)))
+        else if(al::ci_equal(*tsmefiltopt, "fir512"sv))
             TsmeEncodeQuality = TsmeQualityType::FIR512;
-        else if(is_eq(al::ci_compare(*tsmefiltopt, "iir"sv)))
+        else if(al::ci_equal(*tsmefiltopt, "iir"sv))
             TsmeEncodeQuality = TsmeQualityType::IIR;
         else
             WARN("Unsupported tsme/encode-filter: {}", *tsmefiltopt);
     }
 
     if(auto traperr = al::getenv("ALSOFT_TRAP_ERROR"); traperr
-        and (is_eq(al::ci_compare(*traperr, "true"sv))
+        and (al::ci_equal(*traperr, "true"sv)
             or std::strtol(traperr->c_str(), nullptr, 0) == 1))
     {
         TrapALError  = true;
@@ -621,14 +620,14 @@ void alc_initconfig()
     {
         traperr = al::getenv("ALSOFT_TRAP_AL_ERROR");
         if(traperr)
-            TrapALError = is_eq(al::ci_compare(*traperr, "true"sv))
+            TrapALError = al::ci_equal(*traperr, "true"sv)
                 or strtol(traperr->c_str(), nullptr, 0) == 1;
         else
             TrapALError = GetConfigValueBool({}, {}, "trap-al-error"sv, false);
 
         traperr = al::getenv("ALSOFT_TRAP_ALC_ERROR");
         if(traperr)
-            al::Device::sTrapALCError = is_eq(al::ci_compare(*traperr, "true"sv))
+            al::Device::sTrapALCError = al::ci_equal(*traperr, "true"sv)
                 or strtol(traperr->c_str(), nullptr, 0) == 1;
         else
             al::Device::sTrapALCError = GetConfigValueBool({}, {}, "trap-alc-error"sv, false);
@@ -778,7 +777,7 @@ void alc_initconfig()
     {
         if(auto optval = al::getenv("ALSOFT_EAX_TRACE_COMMITS"))
         {
-            EaxTraceCommits = is_eq(al::ci_compare(*optval, "true"sv))
+            EaxTraceCommits = al::ci_equal(*optval, "true"sv)
                 or strtol(optval->c_str(), nullptr, 0) == 1;
         }
         else
@@ -1196,14 +1195,14 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
 
             const auto iter = std::ranges::find_if(typelist,
                 [svfmt=std::string_view{*typeopt}](TypeMap const &entry) -> bool
-                { return is_eq(al::ci_compare(entry.name, svfmt)); });
+                { return al::ci_equal(entry.name, svfmt); });
             if(iter == typelist.end())
                 ERR("Unsupported sample-type: {}", *typeopt);
             else
                 opttype = iter->type;
         }
         if(auto const chanopt = device.configValue<std::string>({}, "channels"); chanopt
-            and is_neq(al::ci_compare(*chanopt, "surround3d71"sv)))
+            and al::ci_nequal(*chanopt, "surround3d71"sv))
         {
             struct ChannelMap {
                 std::string_view name;
@@ -1229,7 +1228,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
 
             const auto iter = std::ranges::find_if(chanlist,
                 [svfmt=std::string_view{*chanopt}](ChannelMap const &entry) -> bool
-                { return is_eq(al::ci_compare(entry.name, svfmt)); });
+                { return al::ci_equal(entry.name, svfmt); });
             if(iter == chanlist.end())
                 ERR("Unsupported channels: {}", *chanopt);
             else
@@ -1246,23 +1245,22 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         }
         if(auto ambiopt = device.configValue<std::string>({}, "ambi-format"sv))
         {
-            if(is_eq(al::ci_compare(*ambiopt, "fuma"sv)))
+            if(al::ci_equal(*ambiopt, "fuma"sv))
             {
                 optlayout = DevAmbiLayout::FuMa;
                 optscale = DevAmbiScaling::FuMa;
             }
-            else if(is_eq(al::ci_compare(*ambiopt, "acn+fuma"sv)))
+            else if(al::ci_equal(*ambiopt, "acn+fuma"sv))
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::FuMa;
             }
-            else if(is_eq(al::ci_compare(*ambiopt, "ambix"sv))
-                or is_eq(al::ci_compare(*ambiopt, "acn+sn3d"sv)))
+            else if(al::ci_equal(*ambiopt, "ambix"sv) or al::ci_equal(*ambiopt, "acn+sn3d"sv))
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::SN3D;
             }
-            else if(is_eq(al::ci_compare(*ambiopt, "acn+n3d"sv)))
+            else if(al::ci_equal(*ambiopt, "acn+n3d"sv))
             {
                 optlayout = DevAmbiLayout::ACN;
                 optscale = DevAmbiScaling::N3D;
@@ -1282,28 +1280,27 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         {
             WARN("general/hrtf is deprecated, please use stereo-encoding instead");
 
-            if(is_eq(al::ci_compare(*hrtfopt, "true"sv)))
+            if(al::ci_equal(*hrtfopt, "true"sv))
                 stereomode = StereoEncoding::Hrtf;
-            else if(is_eq(al::ci_compare(*hrtfopt, "false"sv)))
+            else if(al::ci_equal(*hrtfopt, "false"sv))
             {
                 if(!stereomode || *stereomode == StereoEncoding::Hrtf)
                     stereomode = StereoEncoding::Default;
             }
-            else if(is_neq(al::ci_compare(*hrtfopt, "auto"sv)))
+            else if(al::ci_nequal(*hrtfopt, "auto"sv))
                 ERR("Unexpected hrtf value: {}", *hrtfopt);
         }
     }
 
     if(auto encopt = device.configValue<std::string>({}, "stereo-encoding"sv))
     {
-        if(is_eq(al::ci_compare(*encopt, "basic"sv))
-            or is_eq(al::ci_compare(*encopt, "panpot"sv)))
+        if(al::ci_equal(*encopt, "basic"sv) or al::ci_equal(*encopt, "panpot"sv))
             stereomode = StereoEncoding::Basic;
-        else if(is_eq(al::ci_compare(*encopt, "uhj"sv)))
+        else if(al::ci_equal(*encopt, "uhj"sv))
             stereomode = StereoEncoding::Uhj;
-        else if(is_eq(al::ci_compare(*encopt, "tsme"sv)))
+        else if(al::ci_equal(*encopt, "tsme"sv))
             stereomode = StereoEncoding::Tsme;
-        else if(is_eq(al::ci_compare(*encopt, "hrtf"sv)))
+        else if(al::ci_equal(*encopt, "hrtf"sv))
             stereomode = StereoEncoding::Hrtf;
         else
             ERR("Unexpected stereo-encoding: {}", *encopt);
@@ -1639,11 +1636,11 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     {
         if(auto modeopt = device.configValue<std::string>({}, "stereo-mode"))
         {
-            if(is_eq(al::ci_compare(*modeopt, "headphones"sv)))
+            if(al::ci_equal(*modeopt, "headphones"sv))
                 device.mFlags.set(DeviceFlag::DirectEar);
-            else if(is_eq(al::ci_compare(*modeopt, "speakers"sv)))
+            else if(al::ci_equal(*modeopt, "speakers"sv))
                 device.mFlags.reset(DeviceFlag::DirectEar);
-            else if(is_neq(al::ci_compare(*modeopt, "auto"sv)))
+            else if(al::ci_nequal(*modeopt, "auto"sv))
                 ERR("Unexpected stereo-mode: {}", *modeopt);
         }
     }
@@ -2779,7 +2776,7 @@ try {
 
     const auto extlist = dev ? std::span{extarray}.subspan(0) : std::span{nodevextarray};
     const auto matchext = [tofind = std::string_view{extName}](const std::string_view entry)
-    { return tofind.size() == entry.size() and is_eq(al::ci_compare(tofind, entry)); };
+    { return al::ci_equal(tofind, entry); };
     return std::ranges::any_of(extlist, matchext) ? ALC_TRUE : ALC_FALSE;
 }
 catch(al::base_exception&) {
@@ -3087,22 +3084,22 @@ try {
     if(!devname.empty())
     {
         TRACE("Opening playback device \"{}\"", devname);
-        if(is_eq(al::ci_compare(devname, GetDefaultName()))
+        if(al::ci_equal(devname, GetDefaultName())
 #ifdef _WIN32
             /* Some old Windows apps hardcode these expecting OpenAL to use a
              * specific audio API, even when they're not enumerated. Creative's
              * router effectively ignores them too.
              */
-            or is_eq(al::ci_compare(devname, "DirectSound3D"sv))
-            or is_eq(al::ci_compare(devname, "DirectSound"sv))
-            or is_eq(al::ci_compare(devname, "MMSYSTEM"sv))
+            or al::ci_equal(devname, "DirectSound3D"sv)
+            or al::ci_equal(devname, "DirectSound"sv)
+            or al::ci_equal(devname, "MMSYSTEM"sv)
 #endif
             /* Some old Linux apps hardcode configuration strings that were
              * supported by the OpenAL SI. We can't really do anything useful
              * with them, so just ignore.
              */
             or devname.starts_with("'("sv)
-            or is_eq(al::ci_compare(devname, "openal-soft"sv)))
+            or al::ci_equal(devname, "openal-soft"sv))
             devname = {};
         else
         {
@@ -3273,8 +3270,7 @@ try {
     if(!devname.empty())
     {
         TRACE("Opening capture device \"{}\"", devname);
-        if(is_eq(al::ci_compare(devname, GetDefaultName()))
-            or is_eq(al::ci_compare(devname, "openal-soft"sv)))
+        if(al::ci_equal(devname, GetDefaultName()) or al::ci_equal(devname, "openal-soft"sv))
             devname = {};
         else
         {
@@ -3748,7 +3744,7 @@ try {
     auto devname = std::string_view{deviceName ? deviceName : ""};
     if(!devname.empty())
     {
-        if(is_eq(al::ci_compare(devname, GetDefaultName())))
+        if(al::ci_equal(devname, GetDefaultName()))
             devname = {};
         else
         {

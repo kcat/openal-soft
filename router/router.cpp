@@ -88,7 +88,7 @@ void AddModule(HMODULE const module, std::wstring_view const name)
     if(!gAcceptList.empty())
     {
         if(std::ranges::none_of(gAcceptList, [name](std::wstring_view const accept)
-            { return is_eq(al::ci_compare(name, accept)); }))
+            { return al::ci_equal(name, accept); }))
         {
             TRACE("{} not found in ALROUTER_ACCEPT, skipping", wstr_to_utf8(name));
             FreeLibrary(module);
@@ -96,7 +96,7 @@ void AddModule(HMODULE const module, std::wstring_view const name)
         }
     }
     if(std::ranges::any_of(gRejectList, [name](std::wstring_view const reject)
-        { return is_eq(al::ci_compare(name, reject)); }))
+        { return al::ci_equal(name, reject); }))
     {
         TRACE("{} found in ALROUTER_REJECT, skipping", wstr_to_utf8(name));
         FreeLibrary(module);
@@ -453,8 +453,7 @@ void LoadDriverList()
      * where it gets used for the default device, the default device will fail
      * to open. Move it down so it's not used for the default device.
      */
-    if(DriverList.size() > 1
-        and is_eq(al::ci_compare(DriverList.front()->Name, L"rapture3d_oal.dll")))
+    if(DriverList.size() > 1 and al::ci_equal(DriverList.front()->Name, L"rapture3d_oal.dll"))
         std::swap(*DriverList.begin(), *(DriverList.begin()+1));
 }
 

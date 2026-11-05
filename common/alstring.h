@@ -65,6 +65,30 @@ auto ci_compare(std::wstring_view const& str0, std::wstring_view const& str1) no
     -> std::weak_ordering
 { return detail::ci_compare(str0, str1); }
 
+[[nodiscard]] inline
+auto ci_equal(std::string_view const& str0, std::string_view const& str1) noexcept -> bool
+{ return str0.size() == str1.size() and is_eq(detail::ci_compare(str0, str1)); }
+
+[[nodiscard]] inline
+auto ci_equal(std::u8string_view const& str0, std::u8string_view const& str1) noexcept -> bool
+{ return str0.size() == str1.size() and is_eq(detail::ci_compare(str0, str1)); }
+
+[[nodiscard]] inline
+auto ci_equal(std::wstring_view const& str0, std::wstring_view const& str1) noexcept -> bool
+{ return str0.size() == str1.size() and is_eq(detail::ci_compare(str0, str1)); }
+
+[[nodiscard]] inline
+auto ci_nequal(std::string_view const& str0, std::string_view const& str1) noexcept -> bool
+{ return !ci_equal(str0, str1); }
+
+[[nodiscard]] inline
+auto ci_nequal(std::u8string_view const& str0, std::u8string_view const& str1) noexcept -> bool
+{ return !ci_equal(str0, str1); }
+
+[[nodiscard]] inline
+auto ci_nequal(std::wstring_view const& str0, std::wstring_view const& str1) noexcept -> bool
+{ return !ci_equal(str0, str1); }
+
 
 /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
  * C++20 changes path::u8string() to return a string using a new/distinct

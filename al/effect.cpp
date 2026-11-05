@@ -666,7 +666,7 @@ static constexpr auto reverblist = std::array{
 
 void LoadReverbPreset(std::string_view const name, al::Effect& effect)
 {
-    if(is_eq(al::ci_compare(name, "NONE"sv)))
+    if(al::ci_equal(name, "NONE"sv))
     {
         InitEffectParams(effect, AL_EFFECT_NULL);
         TRACE("Loading reverb '{}'", "NONE");
@@ -685,7 +685,7 @@ void LoadReverbPreset(std::string_view const name, al::Effect& effect)
     }
 
     const auto preset = std::ranges::find_if(reverblist, [name](EffectPreset const &item) -> bool
-    { return is_eq(al::ci_compare(name, item.name)); });
+    { return al::ci_equal(name, item.name); });
     if(preset == reverblist.end())
     {
         WARN("Reverb preset '{}' not found", name);

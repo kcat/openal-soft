@@ -259,9 +259,9 @@ auto WaveBackend::reset() -> bool
     mCAFOutput = false;
     if(const auto formatopt = ConfigValueStr({}, "wave"sv, "format"sv))
     {
-        if(is_eq(al::ci_compare(*formatopt, "caf"sv)))
+        if(al::ci_equal(*formatopt, "caf"sv))
             mCAFOutput = true;
-        else if(is_neq(al::ci_compare(*formatopt, "wav"sv)))
+        else if(al::ci_nequal(*formatopt, "wav"sv))
             WARN("Unsupported wave file format: \"{}\"", *formatopt);
     }
 

@@ -26,32 +26,33 @@
 
 namespace al {
 
-namespace detail {
-    template<typename T>
-    concept signed_integral = std::same_as<std::remove_cv_t<T>, signed char>
-        or std::same_as<std::remove_cv_t<T>, signed short>
-        or std::same_as<std::remove_cv_t<T>, signed int>
-        or std::same_as<std::remove_cv_t<T>, signed long>
-        or std::same_as<std::remove_cv_t<T>, signed long long>;
-    template<typename T>
-    concept unsigned_integral = std::same_as<std::remove_cv_t<T>, unsigned char>
-        or std::same_as<std::remove_cv_t<T>, unsigned short>
-        or std::same_as<std::remove_cv_t<T>, unsigned int>
-        or std::same_as<std::remove_cv_t<T>, unsigned long>
-        or std::same_as<std::remove_cv_t<T>, unsigned long long>;
+template<typename T>
+concept signed_integral = std::same_as<std::remove_cv_t<T>, signed char>
+    or std::same_as<std::remove_cv_t<T>, signed short>
+    or std::same_as<std::remove_cv_t<T>, signed int>
+    or std::same_as<std::remove_cv_t<T>, signed long>
+    or std::same_as<std::remove_cv_t<T>, signed long long>;
+template<typename T>
+concept unsigned_integral = std::same_as<std::remove_cv_t<T>, unsigned char>
+    or std::same_as<std::remove_cv_t<T>, unsigned short>
+    or std::same_as<std::remove_cv_t<T>, unsigned int>
+    or std::same_as<std::remove_cv_t<T>, unsigned long>
+    or std::same_as<std::remove_cv_t<T>, unsigned long long>;
 
-    template<typename T>
-    concept integral = signed_integral<T> or unsigned_integral<T>;
-}
+template<typename T>
+concept integral = signed_integral<T> or unsigned_integral<T>;
+
+template<typename T>
+concept number = integral<T> or std::floating_point<T>;
 
 #if HAS_BUILTIN(__builtin_add_overflow)
-template<detail::integral T> [[nodiscard]] constexpr
+template<integral T> [[nodiscard]] constexpr
 auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
     T res;
     if(__builtin_add_overflow(lhs, rhs, &res))
     {
-        if constexpr(detail::signed_integral<T>)
+        if constexpr(signed_integral<T>)
         {
             using UT = std::make_unsigned_t<T>;
             /* Signed addition under/overflow can only occur if both operands
@@ -72,10 +73,10 @@ auto saturating_add(T const lhs, T const rhs) noexcept -> T
 
 #else
 
-template<detail::integral T> [[nodiscard]] constexpr
+template<integral T> [[nodiscard]] constexpr
 auto saturating_add(T const lhs, T const rhs) noexcept -> T
 {
-    if constexpr(detail::signed_integral<T>)
+    if constexpr(signed_integral<T>)
     {
         using UT = std::make_unsigned_t<T>;
         auto const ul = static_cast<UT>(lhs);
@@ -107,9 +108,6 @@ auto saturating_add(T const lhs, T const rhs) noexcept -> T
 
 namespace detail {
 
-    template<typename T>
-    concept number = integral<T> or std::floating_point<T>;
-
     template<std::floating_point T> [[nodiscard]] constexpr
     auto unsigned_from_fp(T const& val) noexcept
     {
@@ -133,7 +131,7 @@ namespace detail {
 /* Our saturating_cast supports floating point (currently requires radix == 2,
  * and doesn't support larger than 64-bit types).
  */
-template<detail::number R, detail::number T> [[nodiscard]] constexpr
+template<number R, number T> [[nodiscard]] constexpr
 auto saturating_cast(T const val) noexcept -> R
 {
     if constexpr(std::floating_point<T>)
@@ -184,7 +182,7 @@ auto saturating_cast(T const val) noexcept -> R
             if(exponent < expbias)
                 return R{0};
 
-            if constexpr(detail::signed_integral<R>) /* fp -> signed integer */
+            if constexpr(signed_integral<R>) /* fp -> signed integer */
             {
                 if(exponent > expmax) [[unlikely]]
                 {
@@ -201,7 +199,7 @@ auto saturating_cast(T const val) noexcept -> R
                     return static_cast<R>(static_cast<R>(mant >> (expoffset-exponent)) * sign);
                 return static_cast<R>(static_cast<R>(mant << (exponent-expoffset)) * sign);
             }
-            else if constexpr(detail::unsigned_integral<R>) /* fp -> unsigned integer */
+            else if constexpr(unsigned_integral<R>) /* fp -> unsigned integer */
             {
                 if(exponent > expmax) [[unlikely]]
                 {
@@ -231,11 +229,11 @@ auto saturating_cast(T const val) noexcept -> R
             return static_cast<R>(val);
         }
     }
-    else if constexpr(detail::integral<R>) /* integer -> integer */
+    else if constexpr(integral<R>) /* integer -> integer */
     {
         if constexpr(std::numeric_limits<R>::digits < std::numeric_limits<T>::digits)
         {
-            if constexpr(detail::signed_integral<R> && detail::signed_integral<T>)
+            if constexpr(signed_integral<R> && signed_integral<T>)
             {
                 if(val < std::numeric_limits<R>::min())
                     return std::numeric_limits<R>::min();
@@ -243,7 +241,7 @@ auto saturating_cast(T const val) noexcept -> R
             if(val > T{std::numeric_limits<R>::max()})
                 return std::numeric_limits<R>::max();
         }
-        if constexpr(detail::unsigned_integral<R> && detail::signed_integral<T>)
+        if constexpr(unsigned_integral<R> && signed_integral<T>)
         {
             if(val < 0)
                 return R{0};
@@ -253,7 +251,7 @@ auto saturating_cast(T const val) noexcept -> R
     else
     {
         /* integer -> fp automatically saturates. */
-        static_assert(detail::integral<T> and std::floating_point<R>,
+        static_assert(integral<T> and std::floating_point<R>,
             "Unexpected numeric type conversion");
         return static_cast<R>(val);
     }
@@ -263,7 +261,7 @@ auto saturating_cast(T const val) noexcept -> R
  * types, but for simplicity we require the operand types to be convertible to
  * the result type without narrowing.
  */
-template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
+template<integral ResT, integral LhT, integral RhT>
     requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
 auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 {
@@ -272,7 +270,7 @@ auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 
 #else
 
-    if constexpr(detail::signed_integral<ResT>)
+    if constexpr(signed_integral<ResT>)
     {
         using UT = std::make_unsigned_t<ResT>;
         auto const ul = static_cast<UT>(ResT{lhs});
@@ -282,7 +280,7 @@ auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
         *result = static_cast<ResT>(res);
         return static_cast<ResT>((ul^ur) | ~(ur^res)) >= 0;
     }
-    else /*if constexpr(detail::unsigned_integral<ResT>)*/
+    else /*if constexpr(unsigned_integral<ResT>)*/
     {
         /* For unsigned types do the operation and check if it wrapped. */
         *result = static_cast<ResT>(ResT{lhs} + ResT{rhs});
@@ -291,7 +289,7 @@ auto ckd_add(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 #endif
 }
 
-template<detail::integral ResT, detail::integral LhT, detail::integral RhT>
+template<integral ResT, integral LhT, integral RhT>
     requires requires(LhT& lhs, RhT& rhs) { ResT{lhs}; ResT{rhs}; } [[nodiscard]] constexpr
 auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 {
@@ -300,7 +298,7 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 
 #else
 
-    if constexpr(detail::signed_integral<ResT>)
+    if constexpr(signed_integral<ResT>)
     {
         using UT = std::make_unsigned_t<ResT>;
         auto const ul = static_cast<UT>(ResT{lhs});
@@ -310,7 +308,7 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
         *result = static_cast<ResT>(res);
         return static_cast<ResT>((ul^ur) & (ul^res)) < 0;
     }
-    else /*if constexpr(detail::unsigned_integral<ResT>)*/
+    else /*if constexpr(unsigned_integral<ResT>)*/
     {
         *result = static_cast<ResT>(ResT{lhs} - ResT{rhs});
         return *result > lhs;

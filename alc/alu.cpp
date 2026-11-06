@@ -28,6 +28,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -84,11 +85,9 @@ import cubic_tables;
 import format;
 import hrtfstore;
 import numeric;
-import types;
 #else
 #include "alformat.hpp"
 #include "alstring.h"
-#include "altypes.hpp"
 #include "cemath.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/context.h"
@@ -810,32 +809,33 @@ auto constexpr RotatorCoeffArray = RotatorCoeffs{};
 
 namespace rotator {
 
+    using ssize_t = std::make_signed_t<std::size_t>;
     [[nodiscard]] constexpr
-    auto P(isize const i, isize const l, isize const a, isize const n, usize const last_base,
-        AmbiRotateMatrix const &R) noexcept -> float
+    auto P(ssize_t const i, ssize_t const l, ssize_t const a, ssize_t const n,
+        std::size_t const last_base, AmbiRotateMatrix const &R) noexcept -> float
     {
-        auto const ip2 = (i+2).reinterpret_as<usize>().c_val;
+        auto const ip2 = as_unsigned(i+2);
         auto const ri1 =  R[ 1+2][ip2];
         auto const rim1 = R[-1+2][ip2];
         auto const ri0 =  R[ 0+2][ip2];
 
-        auto const lm1 = (l-1).reinterpret_as<usize>().c_val;
-        auto const x = (last_base + lm1 + a.reinterpret_as<usize>()).c_val;
+        auto const lm1 = as_unsigned(l-1);
+        auto const x = last_base + lm1 + as_unsigned(a);
         if(n == -l)
-            return ri1*R[last_base.c_val][x] + rim1*R[last_base.c_val + lm1*2][x];
+            return ri1*R[last_base][x] + rim1*R[last_base + lm1*2][x];
         if(n == l)
-            return ri1*R[last_base.c_val + lm1*2][x] - rim1*R[last_base.c_val][x];
-        return ri0*R[(last_base + lm1 + n.reinterpret_as<usize>()).c_val][x];
+            return ri1*R[last_base + lm1*2][x] - rim1*R[last_base][x];
+        return ri0*R[last_base + lm1 + as_unsigned(n)][x];
     }
 
     [[nodiscard]] constexpr
-    auto U(isize const l, isize const m, isize const n, usize const last_base,
+    auto U(ssize_t const l, ssize_t const m, ssize_t const n, std::size_t const last_base,
         AmbiRotateMatrix const &R) noexcept -> float
     {
         return P(0, l, m, n, last_base, R);
     }
     [[nodiscard]] constexpr
-    auto V(isize const l, isize const m, isize const n, usize const last_base,
+    auto V(ssize_t const l, ssize_t const m, ssize_t const n, std::size_t const last_base,
         AmbiRotateMatrix const &R) noexcept -> float
     {
         using namespace std::numbers;
@@ -852,7 +852,7 @@ namespace rotator {
         return d ? p1*sqrt2_v<float> : (p0 + p1);
     }
     [[nodiscard]] constexpr
-    auto W(isize const l, isize const m, isize const n, usize const last_base,
+    auto W(ssize_t const l, ssize_t const m, ssize_t const n, std::size_t const last_base,
         AmbiRotateMatrix const &R) noexcept -> float
     {
         Expects(m != 0);
@@ -883,7 +883,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order) noexcept NONBLOCKING
     auto coeffs = RotatorCoeffArray.cbegin();
     auto base_idx = 4_uz;
     auto last_base = 1_uz;
-    for(auto const l : std::views::iota(2_isize, isize{order}+1))
+    for(auto const l : std::views::iota(2_z, order+1))
     {
         auto y = base_idx;
         for(auto const n : std::views::iota(-l, l+1))
@@ -908,7 +908,7 @@ void AmbiRotator(AmbiRotateMatrix &matrix, int const order) noexcept NONBLOCKING
             ++y;
         }
         last_base = base_idx;
-        base_idx += (l*2 + 1).reinterpret_as<usize>().c_val;
+        base_idx += as_unsigned(l*2 + 1);
     }
 }
 /* End ambisonic rotation helpers. */

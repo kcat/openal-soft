@@ -39,6 +39,7 @@
 #include <cmath>
 #include <csignal>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -180,13 +181,11 @@ import fmtlib;
 import format;
 import logging;
 import numeric;
-import types;
 #else
 #include "alc/backends/exception.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
-#include "alformattypes.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
@@ -1099,8 +1098,9 @@ auto CreateDeviceLimiter(al::Device const& device, float const threshold)
         .NumChans = gsl::narrow<std::uint32_t>(device.RealOut.Buffer.size()),
         .SampleRate = gsl::narrow_cast<float>(device.mSampleRate), .AutoFlags = flags,
         .LookAheadTime = 0.001f, .HoldTime = 0.002f, .PreGainDb = 0.0f,
-        .PostGainDb = 0.0f, .ThresholdDb = threshold, .Ratio = f32::infinity().c_val,
-        .KneeDb = 0.0f, .AttackTime = 0.02f, .ReleaseTime = 0.2f});
+        .PostGainDb = 0.0f, .ThresholdDb = threshold,
+        .Ratio = std::numeric_limits<float>::infinity(), .KneeDb = 0.0f, .AttackTime = 0.02f,
+        .ReleaseTime = 0.2f});
 }
 
 /**
@@ -1207,23 +1207,23 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             struct ChannelMap {
                 std::string_view name;
                 DevFmtChannels chans;
-                u8 order;
+                std::uint8_t order;
             };
             constexpr auto chanlist = std::array{
-                ChannelMap{"mono"sv,       DevFmtMono,   0_u8},
-                ChannelMap{"stereo"sv,     DevFmtStereo, 0_u8},
-                ChannelMap{"quad"sv,       DevFmtQuad,   0_u8},
-                ChannelMap{"surround51"sv, DevFmtX51,    0_u8},
-                ChannelMap{"surround61"sv, DevFmtX61,    0_u8},
-                ChannelMap{"surround71"sv, DevFmtX71,    0_u8},
-                ChannelMap{"3d71"sv,         DevFmtX3D71, 0_u8},
-                ChannelMap{"surround714"sv,  DevFmtX714,  0_u8},
-                ChannelMap{"surround7144"sv, DevFmtX7144, 0_u8},
-                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1_u8},
-                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2_u8},
-                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3_u8},
-                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4_u8},
-                ChannelMap{"surround51rear"sv, DevFmtX51, 0_u8},
+                ChannelMap{"mono"sv,       DevFmtMono,   0},
+                ChannelMap{"stereo"sv,     DevFmtStereo, 0},
+                ChannelMap{"quad"sv,       DevFmtQuad,   0},
+                ChannelMap{"surround51"sv, DevFmtX51,    0},
+                ChannelMap{"surround61"sv, DevFmtX61,    0},
+                ChannelMap{"surround71"sv, DevFmtX71,    0},
+                ChannelMap{"3d71"sv,         DevFmtX3D71, 0},
+                ChannelMap{"surround714"sv,  DevFmtX714,  0},
+                ChannelMap{"surround7144"sv, DevFmtX7144, 0},
+                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
+                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
+                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
+                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
+                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
             };
 
             const auto iter = std::ranges::find_if(chanlist,
@@ -1234,7 +1234,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             else
             {
                 optchans = iter->chans;
-                aorder = iter->order.c_val;
+                aorder = iter->order;
             }
         }
         else if(chanopt)
@@ -1697,17 +1697,15 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     case DevFmtAmbi3D: break;
     }
 
-    auto sample_delay = usize{
-        std::visit(overloaded {
-            [](std::monostate const&) { return 0_uz; },
-            [](AmbiDecPostProcess const&) { return 0_uz; },
-            [](HrtfPostProcess const&) { return 0_uz; },
-            [](UhjPostProcess const &pp) { return pp.mUhjEncoder->getDelay(); },
-            [](TsmePostProcess const &pp) { return pp.mTsmeEncoder->getDelay(); },
-            [](StablizerPostProcess const&) { return 0_uz; },
-            [](Bs2bPostProcess const&) { return 0_uz; },
-        }, device.mPostProcess)
-    };
+    auto sample_delay = std::visit(overloaded {
+        [](std::monostate const&) { return 0_uz; },
+        [](AmbiDecPostProcess const&) { return 0_uz; },
+        [](HrtfPostProcess const&) { return 0_uz; },
+        [](UhjPostProcess const &pp) { return pp.mUhjEncoder->getDelay(); },
+        [](TsmePostProcess const &pp) { return pp.mTsmeEncoder->getDelay(); },
+        [](StablizerPostProcess const&) { return 0_uz; },
+        [](Bs2bPostProcess const&) { return 0_uz; },
+    }, device.mPostProcess);
 
     if(device.getConfigValueBool({}, "dither"sv, true))
     {
@@ -1798,8 +1796,8 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     }
 
     /* Convert the sample delay from samples to nanosamples to nanoseconds. */
-    sample_delay = std::min(sample_delay, i32::max().as<usize>());
-    device.FixedLatency += nanoseconds{seconds{sample_delay.c_val}} / device.mSampleRate;
+    sample_delay = std::min(sample_delay, std::size_t{std::numeric_limits<std::int32_t>::max()});
+    device.FixedLatency += nanoseconds{seconds{sample_delay}} / device.mSampleRate;
     TRACE("Fixed device latency: {}ns", device.FixedLatency.count());
 
     auto mixer_mode = FPUCtl{};
@@ -2347,13 +2345,13 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
     auto NumAttrsForDevice = [device]
     {
         if(device->Type == DeviceType::Loopback && device->FmtChans == DevFmtAmbi3D)
-            return 39_u8;
-        return 33_u8;
+            return std::uint8_t{39};
+        return std::uint8_t{33};
     };
     switch(param)
     {
     case ALC_ATTRIBUTES_SIZE:
-        values[0] = NumAttrsForDevice().c_val;
+        values[0] = NumAttrsForDevice();
         return 1;
 
     case ALC_ALL_ATTRIBUTES:
@@ -2618,13 +2616,13 @@ try {
     auto NumAttrsForDevice = [&dev]
     {
         if(dev->Type == DeviceType::Loopback && dev->FmtChans == DevFmtAmbi3D)
-            return 43_u8;
-        return 37_u8;
+            return std::uint8_t{43};
+        return std::uint8_t{37};
     };
     switch(pname)
     {
     case ALC_ATTRIBUTES_SIZE:
-        valuespan[0] = ALCint64SOFT{NumAttrsForDevice().c_val};
+        valuespan[0] = ALCint64SOFT{NumAttrsForDevice()};
         break;
 
     case ALC_ALL_ATTRIBUTES:

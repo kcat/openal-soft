@@ -16,16 +16,15 @@
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "flexarray.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.device;
 import gsl;
 import logging;
 import numeric;
-import types;
 #else
 #include "alc/device.h"
-#include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
@@ -55,21 +54,22 @@ Device::~Device()
 
     Backend = nullptr;
 
-    auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_usize,
-        [](usize const cur, const BufferSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount(); });
+    using ssize_t = std::make_signed_t<std::size_t>;
+    auto count = std::accumulate(BufferList.cbegin(), BufferList.cend(), 0_z,
+        [](ssize_t const cur, BufferSubList const& sublist) noexcept -> ssize_t
+        { return cur + std::popcount(~sublist.mFreeMask); });
     if(count > 0)
         WARN("{} Buffer{} not deleted", count, (count==1)?"":"s");
 
-    count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_usize,
-        [](usize const cur, const EffectSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount(); });
+    count = std::accumulate(EffectList.cbegin(), EffectList.cend(), 0_z,
+        [](ssize_t const cur, EffectSubList const& sublist) noexcept -> ssize_t
+        { return cur + std::popcount(~sublist.mFreeMask); });
     if(count > 0)
         WARN("{} Effect{} not deleted", count, (count==1)?"":"s");
 
-    count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_usize,
-        [](usize const cur, const FilterSubList &sublist) noexcept -> usize
-        { return cur + (~sublist.mFreeMask).popcount(); });
+    count = std::accumulate(FilterList.cbegin(), FilterList.cend(), 0_z,
+        [](ssize_t const cur, FilterSubList const& sublist) noexcept -> ssize_t
+        { return cur + std::popcount(~sublist.mFreeMask); });
     if(count > 0)
         WARN("{} Filter{} not deleted", count, (count==1)?"":"s");
 }

@@ -9,7 +9,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "altypes.hpp"
 #include "disable_alloc.hpp"
 #include "gsl/gsl"
 
@@ -77,13 +76,13 @@ struct Filter {
 } /* namespace al */
 
 struct FilterSubList {
-    u64 mFreeMask{~0_u64};
+    std::uint64_t mFreeMask{~std::uint64_t{0}};
     gsl::owner<std::array<al::Filter,64>*> mFilters{nullptr};
 
     FilterSubList() noexcept = default;
     FilterSubList(const FilterSubList&) = delete;
     FilterSubList(FilterSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mFilters{rhs.mFilters}
-    { rhs.mFreeMask = ~0_u64; rhs.mFilters = nullptr; }
+    { rhs.mFreeMask = ~std::uint64_t{0}; rhs.mFilters = nullptr; }
     ~FilterSubList();
 
     FilterSubList& operator=(const FilterSubList&) = delete;

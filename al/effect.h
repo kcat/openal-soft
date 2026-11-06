@@ -3,6 +3,7 @@
 
 #include <array>
 #include <bitset>
+#include <cstdint>
 #include <string_view>
 #include <utility>
 #include <variant>
@@ -10,7 +11,6 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "altypes.hpp"
 #include "core/effects/base.h"
 #include "disable_alloc.hpp"
 #include "effects/effects.h"
@@ -84,13 +84,13 @@ void LoadReverbPreset(std::string_view name, al::Effect& effect);
 bool IsValidEffectType(ALenum type) noexcept;
 
 struct EffectSubList {
-    u64 mFreeMask{~0_u64};
+    std::uint64_t mFreeMask{~std::uint64_t{0}};
     gsl::owner<std::array<al::Effect,64>*> mEffects{nullptr}; /* 64 */
 
     EffectSubList() noexcept = default;
     EffectSubList(const EffectSubList&) = delete;
     EffectSubList(EffectSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mEffects{rhs.mEffects}
-    { rhs.mFreeMask = ~0_u64; rhs.mEffects = nullptr; }
+    { rhs.mFreeMask = ~std::uint64_t{0}; rhs.mEffects = nullptr; }
     ~EffectSubList();
 
     EffectSubList& operator=(const EffectSubList&) = delete;

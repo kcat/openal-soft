@@ -1853,9 +1853,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             auto usemask = ~sublist.mFreeMask;
             while(usemask != 0)
             {
-                const auto idx = usemask.countr_zero();
-                auto &slot = (*sublist.mEffectSlots)[idx.c_val];
-                usemask &= ~(1_u64 << idx);
+                const auto idx = as_unsigned(std::countr_zero(usemask));
+                auto &slot = (*sublist.mEffectSlots)[idx];
+                usemask &= ~(std::uint64_t{1} << idx);
 
                 const auto slotbase = slot.mSlot;
                 aluInitEffectPanning(slotbase, context);
@@ -1882,9 +1882,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             auto usemask = ~sublist.mFreeMask;
             while(usemask != 0)
             {
-                const auto idx = usemask.countr_zero();
-                auto &source = (*sublist.mSources)[idx.c_val];
-                usemask &= ~(1_u64 << idx);
+                const auto idx = as_unsigned(std::countr_zero(usemask));
+                auto &source = (*sublist.mSources)[idx];
+                usemask &= ~(std::uint64_t{1} << idx);
 
                 const auto sendrange = source.mSend | std::views::drop(num_sends);
                 std::ranges::fill(sendrange, al::Source::SendData{.mSlot={}, .mGain=1.0f,

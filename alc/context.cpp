@@ -25,6 +25,7 @@
 #include "flexarray.h"
 #include "ringbuffer.h"
 #include "vecmat.h"
+#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include <compare>
@@ -47,11 +48,9 @@ import fmtlib;
 import gsl;
 import logging;
 import numeric;
-import types;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
-#include "alformattypes.hpp"
 #include "core/logging.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -181,9 +180,10 @@ Context::~Context()
     TRACE("Freeing context {}", voidp{this});
     deinit();
 
-    auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_usize,
-        [](usize const cur, SourceSubList const &sublist) noexcept -> usize
-    { return cur + (~sublist.mFreeMask).popcount(); });
+    using ssize_t = std::make_signed_t<std::size_t>;
+    auto count = std::accumulate(mSourceList.cbegin(), mSourceList.cend(), 0_z,
+        [](ssize_t const cur, SourceSubList const& sublist) noexcept -> ssize_t
+    { return cur + std::popcount(~sublist.mFreeMask); });
     if(count > 0)
         WARN("{} Source{} not deleted", count, (count==1)?"":"s");
     mSourceList.clear();
@@ -194,9 +194,9 @@ Context::~Context()
 #endif // ALSOFT_EAX
 
     mDefaultSlot = nullptr;
-    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_usize,
-        [](usize const cur, const EffectSlotSubList &sublist) noexcept -> usize
-    { return cur + (~sublist.mFreeMask).popcount(); });
+    count = std::accumulate(mEffectSlotList.cbegin(), mEffectSlotList.cend(), 0_z,
+        [](ssize_t const cur, const EffectSlotSubList &sublist) noexcept -> ssize_t
+    { return cur + std::popcount(~sublist.mFreeMask); });
     if(count > 0)
         WARN("{} AuxiliaryEffectSlot{} not deleted", count, (count==1)?"":"s");
     mEffectSlotList.clear();
@@ -344,10 +344,10 @@ void ForEachSource(al::Context *context, std::invocable<al::Source&> auto&& func
         auto usemask = ~sublist.mFreeMask;
         while(usemask != 0)
         {
-            const auto idx = usemask.countr_zero();
-            usemask ^= 1_u64 << idx;
+            const auto idx = as_unsigned(std::countr_zero(usemask));
+            usemask ^= std::uint64_t{1} << idx;
 
-            std::invoke(func, (*sublist.mSources)[idx.c_val]);
+            std::invoke(func, (*sublist.mSources)[idx]);
         }
     });
 }

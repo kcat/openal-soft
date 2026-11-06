@@ -6,12 +6,12 @@
 #include <array>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <functional>
 #include <string_view>
 
 #include "AL/al.h"
 
-#include "altypes.hpp"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
 #include "gsl/gsl"
@@ -218,14 +218,14 @@ auto eax_create_al_effect_slot(al::Context& context) -> EaxAlEffectSlotUPtr;
 #endif // ALSOFT_EAX
 
 struct EffectSlotSubList {
-    u64 mFreeMask{~0_u64};
+    std::uint64_t mFreeMask{~std::uint64_t{0}};
     gsl::owner<std::array<al::EffectSlot,64>*> mEffectSlots{nullptr};
 
     EffectSlotSubList() noexcept = default;
     EffectSlotSubList(const EffectSlotSubList&) = delete;
     EffectSlotSubList(EffectSlotSubList&& rhs) noexcept
       : mFreeMask{rhs.mFreeMask}, mEffectSlots{rhs.mEffectSlots}
-    { rhs.mFreeMask = ~0_u64; rhs.mEffectSlots = nullptr; }
+    { rhs.mFreeMask = ~std::uint64_t{0}; rhs.mEffectSlots = nullptr; }
     ~EffectSlotSubList();
 
     EffectSlotSubList& operator=(const EffectSlotSubList&) = delete;

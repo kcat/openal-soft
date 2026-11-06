@@ -12,7 +12,6 @@
 #include "AL/al.h"
 
 #include "alc/inprogext.h"
-#include "altypes.hpp"
 #include "core/buffer_storage.h"
 #include "disable_alloc.hpp"
 #include "gsl/gsl"
@@ -90,13 +89,13 @@ struct Buffer : BufferStorage {
 } /* namespace al */
 
 struct BufferSubList {
-    u64 mFreeMask{~0_u64};
+    std::uint64_t mFreeMask{~std::uint64_t{0}};
     gsl::owner<std::array<al::Buffer,64>*> mBuffers{nullptr};
 
     BufferSubList() noexcept = default;
     BufferSubList(const BufferSubList&) = delete;
     BufferSubList(BufferSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mBuffers{rhs.mBuffers}
-    { rhs.mFreeMask = ~0_u64; rhs.mBuffers = nullptr; }
+    { rhs.mFreeMask = ~std::uint64_t{0}; rhs.mBuffers = nullptr; }
     ~BufferSubList();
 
     BufferSubList& operator=(const BufferSubList&) = delete;

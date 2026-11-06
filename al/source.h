@@ -6,6 +6,7 @@
 #include <array>
 #include <bitset>
 #include <concepts>
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <limits>
@@ -17,12 +18,12 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "altypes.hpp"
 #include "core/context.h"
 #include "core/voice.h"
 #include "disable_alloc.hpp"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
+#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "eax/api.h"
@@ -35,7 +36,7 @@ struct Context;
 struct Buffer;
 struct EffectSlot;
 } // namespace al
-enum class Resampler : u8::value_t;
+enum class Resampler : std::uint8_t;
 
 enum class SourceStereo : bool {
     Normal = AL_NORMAL_SOFT,
@@ -432,13 +433,13 @@ private:
 void UpdateAllSourceProps(al::Context& context);
 
 struct SourceSubList {
-    u64 mFreeMask{~0_u64};
+    std::uint64_t mFreeMask{~std::uint64_t{0}};
     gsl::owner<std::array<al::Source,64>*> mSources{nullptr};
 
     SourceSubList() noexcept = default;
     SourceSubList(const SourceSubList&) = delete;
     SourceSubList(SourceSubList&& rhs) noexcept : mFreeMask{rhs.mFreeMask}, mSources{rhs.mSources}
-    { rhs.mFreeMask = ~0_u64; rhs.mSources = nullptr; }
+    { rhs.mFreeMask = ~std::uint64_t{0}; rhs.mSources = nullptr; }
     ~SourceSubList();
 
     SourceSubList& operator=(const SourceSubList&) = delete;

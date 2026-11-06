@@ -23,6 +23,8 @@
 #include "filter.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -38,6 +40,7 @@
 #include "core/except.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
+#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alc.context;
@@ -288,11 +291,11 @@ void InitFilterParams(al::Filter& filter, ALenum const type)
 }
 
 [[nodiscard]]
-auto EnsureFilters(al::Device& device, usize const needed) noexcept -> bool
+auto EnsureFilters(al::Device& device, std::size_t const needed) noexcept -> bool
 try {
-    auto count = std::accumulate(device.FilterList.cbegin(), device.FilterList.cend(), 0_usize,
-        [](usize const cur, const FilterSubList &sublist) noexcept -> usize
-        { return cur + sublist.mFreeMask.popcount(); });
+    auto count = std::accumulate(device.FilterList.cbegin(), device.FilterList.cend(), 0_uz,
+        [](std::size_t const cur, const FilterSubList &sublist) noexcept -> std::size_t
+        { return cur + as_unsigned(std::popcount(sublist.mFreeMask)); });
 
     while(needed > count)
     {
@@ -300,7 +303,6 @@ try {
             return false;
 
         auto sublist = FilterSubList{};
-        sublist.mFreeMask = ~0_u64;
         sublist.mFilters = SubListAllocator{}.allocate(1);
         device.FilterList.emplace_back(std::move(sublist));
         count += std::tuple_size_v<SubListAllocator::value_type>;
@@ -318,7 +320,7 @@ auto AllocFilter(al::Device& device) noexcept -> gsl::not_null<al::Filter*>
     auto const sublist = std::ranges::find_if(device.FilterList,
         [](FilterSubList const &slist) { return slist.mFreeMask != 0; });
     auto const lidx = gsl::narrow_cast<ALuint>(std::distance(device.FilterList.begin(), sublist));
-    auto const slidx = sublist->mFreeMask.countr_zero().c_val;
+    auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
     auto filter = gsl::make_not_null(std::construct_at(
@@ -328,7 +330,7 @@ auto AllocFilter(al::Device& device) noexcept -> gsl::not_null<al::Filter*>
     /* Add 1 to avoid filter ID 0. */
     filter->mId = ((lidx<<6) | slidx) + 1;
 
-    sublist->mFreeMask &= ~(1_u64 << slidx);
+    sublist->mFreeMask &= ~(std::uint64_t{1} << slidx);
 
     return filter;
 }
@@ -343,7 +345,7 @@ void FreeFilter(al::Device& device, al::Filter& filter)
 
     std::destroy_at(&filter);
 
-    device.FilterList[lidx].mFreeMask |= 1_u64 << slidx;
+    device.FilterList[lidx].mFreeMask |= std::uint64_t{1} << slidx;
 }
 
 [[nodiscard]]
@@ -356,7 +358,7 @@ auto LookupFilter(std::nothrow_t, al::Device const& device, ALuint const id) noe
     if(lidx >= device.FilterList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device.FilterList[lidx];
-    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
+    if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mFilters->begin(), as_signed(slidx)));
 }
@@ -628,9 +630,9 @@ FilterSubList::~FilterSubList()
     auto usemask = ~mFreeMask;
     while(usemask != 0)
     {
-        auto const idx = usemask.countr_zero();
-        std::destroy_at(std::to_address(std::next(mFilters->begin(), as_signed(idx.c_val))));
-        usemask &= ~(1_u64 << idx);
+        auto const idx = std::countr_zero(usemask);
+        std::destroy_at(std::to_address(std::next(mFilters->begin(), idx)));
+        usemask &= ~(std::uint64_t{1} << as_unsigned(idx));
     }
     mFreeMask = ~usemask;
     SubListAllocator{}.deallocate(mFilters, 1);

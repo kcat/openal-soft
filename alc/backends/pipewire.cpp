@@ -25,10 +25,10 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <cinttypes>
 #include <cmath>
 #include <concepts>
 #include <cstdlib>
+#include <cstdint>
 #include <cstring>
 #include <cerrno>
 #include <chrono>
@@ -138,12 +138,10 @@ import gsl;
 import logging;
 import numeric;
 import spanstream;
-import types;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
-#include "alformattypes.hpp"
 #include "alformatzsv.hpp"
 #include "alstring.h"
 #include "core/device.h"
@@ -616,7 +614,7 @@ constexpr auto InvalidChannelConfig = gsl::narrow<DevFmtChannels>(255);
 struct DeviceNode {
     uint32_t mId{};
 
-    u64 mSerial{};
+    std::uint64_t mSerial{};
     std::string mName;
     std::string mDevName;
 
@@ -1090,7 +1088,7 @@ void NodeProxy::infoCallback(void*, const pw_node_info *info) noexcept
         if(!nodeName || !*nodeName) nodeName = spa_dict_lookup(info->props, PW_KEY_NODE_NICK);
         if(!nodeName || !*nodeName) nodeName = devName;
 
-        auto serial_id = u64{info->id};
+        auto serial_id = std::uint64_t{info->id};
 #ifdef PW_KEY_OBJECT_SERIAL
         if(auto *serial_str = spa_dict_lookup(info->props, PW_KEY_OBJECT_SERIAL))
         {
@@ -1521,7 +1519,7 @@ auto make_spa_info(DeviceBase &device, bool const is51rear, use_f32p_e const use
 }
 
 class PipeWirePlayback final : public BackendBase {
-    u64 mTargetId{PwIdAny};
+    std::uint64_t mTargetId{PwIdAny};
     nanoseconds mTimeBase{0};
     ThreadMainloop mLoop;
     PwContextPtr mContext;
@@ -1619,7 +1617,7 @@ void PipeWirePlayback::open(std::string_view name)
 {
     static auto OpenCount = std::atomic{0u};
 
-    auto targetid = u64{PwIdAny};
+    auto targetid = std::uint64_t{PwIdAny};
     auto devname = std::string{};
     gEventHandler.waitForInit();
     if(name.empty())
@@ -1779,9 +1777,9 @@ auto PipeWirePlayback::reset() -> bool
         mDevice.mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice.mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
 #else
-    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId.c_val).c_str());
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
 #endif
 
     auto plock = MainloopUniqueLock{mLoop};
@@ -2020,7 +2018,7 @@ auto PipeWirePlayback::getClockLatency() -> ClockLatency
 
 
 class PipeWireCapture final : public BackendBase {
-    u64 mTargetId{PwIdAny};
+    std::uint64_t mTargetId{PwIdAny};
     ThreadMainloop mLoop;
     PwContextPtr mContext;
     PwCorePtr mCore;
@@ -2068,7 +2066,7 @@ void PipeWireCapture::open(std::string_view name)
 {
     static auto OpenCount = std::atomic{0u};
 
-    auto targetid = u64{PwIdAny};
+    auto targetid = std::uint64_t{PwIdAny};
     auto devname = std::string{};
     gEventHandler.waitForInit();
     if(name.empty())
@@ -2199,9 +2197,9 @@ void PipeWireCapture::open(std::string_view name)
         mDevice.mSampleRate);
     pw_properties_setf(props, PW_KEY_NODE_RATE, "1/%u", mDevice.mSampleRate);
 #ifdef PW_KEY_TARGET_OBJECT
-    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId.c_val).c_str());
+    pw_properties_set(props, PW_KEY_TARGET_OBJECT, std::to_string(mTargetId).c_str());
 #else
-    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId.c_val).c_str());
+    pw_properties_set(props, PW_KEY_NODE_TARGET, std::to_string(mTargetId).c_str());
 #endif
 
     auto plock = MainloopUniqueLock{mLoop};

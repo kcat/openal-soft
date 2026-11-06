@@ -24,6 +24,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <ranges>
 #include <span>
@@ -54,11 +55,9 @@ import format;
 import gsl;
 import logging;
 import numeric;
-import types;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
-#include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
@@ -103,15 +102,15 @@ struct DeviceEntry {
 void EnumerateDevices(std::invocable<int*> auto&& get_devices, std::vector<DeviceEntry> &list)
     requires(std::same_as<std::invoke_result_t<decltype(get_devices), int*>, SDL_AudioDeviceID*>)
 {
-    auto numdevs = sys_int{};
-    auto const devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{get_devices(&numdevs.c_val)};
+    auto numdevs = int{};
+    auto const devicelist = unique_sdl_ptr<SDL_AudioDeviceID>{get_devices(&numdevs)};
     if(!devicelist || numdevs < 0)
     {
         ERR("Failed to get playback devices: {}", SDL_GetError());
         return;
     }
 
-    auto devids = std::span{devicelist.get(), numdevs.cast_to<usize>().c_val};
+    auto devids = std::span{devicelist.get(), gsl::narrow<std::size_t>(numdevs)};
     auto newlist = std::vector<DeviceEntry>{};
 
     newlist.reserve(devids.size());
@@ -436,13 +435,12 @@ Sdl3Capture::~Sdl3Capture()
 auto Sdl3Capture::audioCallback(SDL_AudioStream *stream, int /*additional_amount*/,
     int /*total_amount*/) noexcept -> void
 try {
-    auto const avail = sys_int{SDL_GetAudioStreamAvailable(stream)};
-    if(auto const uavail = avail.cast_to<sys_uint>(); uavail != mBuffer.size())
-        mBuffer.resize(uavail.c_val);
+    auto const avail = SDL_GetAudioStreamAvailable(stream);
+    if(auto const uavail = gsl::narrow<unsigned>(avail); uavail != mBuffer.size())
+        mBuffer.resize(uavail);
 
-    auto const got = sys_int{SDL_GetAudioStreamData(stream, mBuffer.data(), avail.c_val)};
-    if(got != avail)
-        mBuffer.resize(got.cast_to<sys_uint>().c_val);
+    if(auto const got = SDL_GetAudioStreamData(stream, mBuffer.data(), avail); got != avail)
+        mBuffer.resize(gsl::narrow<unsigned>(got));
 
     std::ignore = mRing->write(mBuffer);
 }

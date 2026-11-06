@@ -25,6 +25,7 @@
 #include <exception>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <thread>
 
 #include "althrd_setname.h"
@@ -33,10 +34,8 @@
 import backends.exception;
 import core.device;
 import core.helpers;
-import types;
 #else
 #include "alc/backends/exception.hpp"
-#include "altypes.hpp"
 #include "core/device.h"
 #include "core/helpers.hpp"
 #endif
@@ -73,7 +72,7 @@ void NullBackend::mixerProc() const
     SetRTPriority();
     althrd_setname(GetMixerThreadName());
 
-    auto done = 0_i64;
+    auto done = std::int64_t{0};
     auto start = std::chrono::steady_clock::now();
     while(!mKillNow.load(std::memory_order_acquire)
         && mDevice.Connected.load(std::memory_order_acquire))
@@ -81,7 +80,7 @@ void NullBackend::mixerProc() const
         auto now = std::chrono::steady_clock::now();
 
         /* This converts from nanoseconds to nanosamples, then to samples. */
-        const auto avail = i64{std::chrono::duration_cast<seconds>((now-start)
+        const auto avail = std::int64_t{std::chrono::duration_cast<seconds>((now-start)
             * mDevice.mSampleRate).count()};
         if(avail-done < mDevice.mUpdateSize)
         {
@@ -91,7 +90,7 @@ void NullBackend::mixerProc() const
         while(avail-done >= mDevice.mUpdateSize)
         {
             mDevice.renderSamples(nullptr, mDevice.mUpdateSize, 0u);
-            done += i64{mDevice.mUpdateSize};
+            done += mDevice.mUpdateSize;
         }
 
         /* For every completed second, increment the start time and reduce the
@@ -101,9 +100,9 @@ void NullBackend::mixerProc() const
          */
         if(done >= mDevice.mSampleRate)
         {
-            const auto s = seconds{(done/i64{mDevice.mSampleRate}).c_val};
+            const auto s = seconds{done / mDevice.mSampleRate};
             start += s;
-            done -= i64{mDevice.mSampleRate * s.count()};
+            done -= mDevice.mSampleRate * s.count();
         }
     }
 }

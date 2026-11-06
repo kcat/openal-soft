@@ -90,12 +90,10 @@ import format;
 import gsl;
 import logging;
 import numeric;
-import types;
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
-#include "alformattypes.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
@@ -320,12 +318,12 @@ auto GetClockLatency(DeviceBase const *const device, BackendBase *const backend)
  * the current buffer).
  */
 auto GetSourceSampleOffset(al::Source& Source, al::Context const& context)
-    -> std::pair<i64, nanoseconds>
+    -> std::pair<std::int64_t, nanoseconds>
 {
     auto const& device = *context.mALDevice;
     auto const *Current = LPVoiceBufferItem{};
-    auto readPos = i64{};
-    auto readPosFrac = u32{};
+    auto readPos = std::int64_t{};
+    auto readPosFrac = std::uint32_t{};
     auto refcount = unsigned{};
     auto clocktime = nanoseconds{};
 
@@ -333,30 +331,30 @@ auto GetSourceSampleOffset(al::Source& Source, al::Context const& context)
         refcount = device.waitForMix();
         clocktime = device.getClockTime();
         auto const *const voice = GetSourceVoice(Source, context);
-        if(not voice) return {0_i64, clocktime};
+        if(not voice) return {std::int64_t{0}, clocktime};
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
+        readPos = std::int64_t{voice->mPosition.load(std::memory_order_relaxed)};
+        readPosFrac = std::uint32_t{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device.mMixCount.load(std::memory_order_relaxed));
 
     if(readPos < 0)
-        return {(readPos * (u32::max()+1_i64)) + (readPosFrac.as<i64>() << (32-MixerFracBits)),
-            clocktime};
+        return {readPos*(std::int64_t{std::numeric_limits<std::uint32_t>::max()}+1)
+            + (std::int64_t{readPosFrac} << (32-MixerFracBits)), clocktime};
 
     std::ignore = std::ranges::find_if(Source.mQueue,
         [Current,&readPos](const VoiceBufferItem &item)
     {
         if(&item == Current)
             return true;
-        readPos += i64{item.mSampleLen};
+        readPos += std::int64_t{item.mSampleLen};
         return false;
     });
-    if(readPos >= i64::max()>>32)
-        return {i64::max(), clocktime};
-    return {(readPos<<32) + (readPosFrac.as<i64>() << (32-MixerFracBits)), clocktime};
+    if(readPos >= std::numeric_limits<std::int64_t>::max()>>32)
+        return {std::numeric_limits<std::int64_t>::max(), clocktime};
+    return {(readPos<<32) + (std::int64_t{readPosFrac} << (32-MixerFracBits)), clocktime};
 }
 
 /* GetSourceSecOffset
@@ -369,8 +367,8 @@ auto GetSourceSecOffset(al::Source& Source, al::Context const& context)
 {
     auto const& device = *context.mALDevice;
     auto const *Current = LPVoiceBufferItem{};
-    auto readPos = i64{};
-    auto readPosFrac = u32{};
+    auto readPos = std::int64_t{};
+    auto readPosFrac = std::uint32_t{};
     auto refcount = unsigned{};
     auto clocktime = nanoseconds{};
 
@@ -381,8 +379,8 @@ auto GetSourceSecOffset(al::Source& Source, al::Context const& context)
         if(not voice) return {0.0, clocktime};
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
+        readPos = std::int64_t{voice->mPosition.load(std::memory_order_relaxed)};
+        readPosFrac = std::uint32_t{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device.mMixCount.load(std::memory_order_relaxed));
@@ -401,11 +399,12 @@ auto GetSourceSecOffset(al::Source& Source, al::Context const& context)
     {
         if(&item == Current)
             return true;
-        readPos += i64{item.mSampleLen};
+        readPos += std::int64_t{item.mSampleLen};
         return false;
     });
-    return {(readPos.cast_to<f64>() + readPosFrac.as<f64>()/MixerFracOne).c_val
-        / BufferFmt->mSampleRate, clocktime};
+    auto const splpos = gsl::narrow_cast<double>(readPos)
+        + gsl::narrow_cast<double>(readPosFrac)/MixerFracOne;
+    return {splpos/BufferFmt->mSampleRate, clocktime};
 }
 
 /* GetSourceOffset
@@ -419,8 +418,8 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
 {
     auto const& device = *context.mALDevice;
     auto const *Current = LPVoiceBufferItem{};
-    auto readPos = i64{};
-    auto readPosFrac = u32{};
+    auto readPos = std::int64_t{};
+    auto readPosFrac = std::uint32_t{};
     auto refcount = unsigned{};
 
     do {
@@ -429,8 +428,8 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
         if(not voice) return T{0};
 
         Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
-        readPos = i64{voice->mPosition.load(std::memory_order_relaxed)};
-        readPosFrac = u32{voice->mPositionFrac.load(std::memory_order_relaxed)};
+        readPos = std::int64_t{voice->mPosition.load(std::memory_order_relaxed)};
+        readPosFrac = std::uint32_t{voice->mPositionFrac.load(std::memory_order_relaxed)};
 
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device.mMixCount.load(std::memory_order_relaxed));
@@ -449,7 +448,7 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
     {
         if(&item == Current)
             return true;
-        readPos += i64{item.mSampleLen};
+        readPos += std::int64_t{item.mSampleLen};
         return false;
     });
 
@@ -458,19 +457,19 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
     case SourceProp::SecOffset:
         if constexpr(std::floating_point<T>)
         {
-            const auto offset = gsl::narrow_cast<T>(readPos.c_val)
-                + gsl::narrow_cast<T>(readPosFrac.c_val)/T{MixerFracOne};
+            const auto offset = gsl::narrow_cast<T>(readPos)
+                + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
             return offset / gsl::narrow_cast<T>(BufferFmt->mSampleRate);
         }
         else
-            return al::saturating_cast<T>(readPos.c_val / BufferFmt->mSampleRate);
+            return al::saturating_cast<T>(readPos / BufferFmt->mSampleRate);
 
     case SourceProp::SampleOffset:
         if constexpr(std::floating_point<T>)
-            return gsl::narrow_cast<T>(readPos.c_val)
-                + gsl::narrow_cast<T>(readPosFrac.c_val)/T{MixerFracOne};
+            return gsl::narrow_cast<T>(readPos)
+                + gsl::narrow_cast<T>(readPosFrac)/T{MixerFracOne};
         else
-            return al::saturating_cast<T>(readPos.c_val);
+            return al::saturating_cast<T>(readPos);
 
     case SourceProp::ByteOffset:
         {
@@ -479,7 +478,7 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
             readPos = readPos / BufferFmt->mBlockAlign * BlockSize;
 
             if constexpr(std::floating_point<T>)
-                return gsl::narrow_cast<T>(readPos.c_val);
+                return gsl::narrow_cast<T>(readPos);
             else
             {
                 if(readPos > std::numeric_limits<T>::max())
@@ -488,7 +487,7 @@ auto GetSourceOffset(al::Source& Source, SourceProp const name, al::Context& con
                 if(readPos < std::numeric_limits<T>::min())
                     return RoundToZero(std::numeric_limits<T>::min(),
                         gsl::narrow_cast<T>(BlockSize));
-                return gsl::narrow_cast<T>(readPos.c_val);
+                return gsl::narrow_cast<T>(readPos);
             }
         }
 
@@ -561,8 +560,8 @@ auto GetSourceLength(al::Source const& source, SourceProp const name) -> T
 
 
 struct VoicePos {
-    i32 pos;
-    u32 frac;
+    std::int32_t pos;
+    std::uint32_t frac;
     al::BufferQueueItem *bufferitem;
 };
 
@@ -574,7 +573,7 @@ struct VoicePos {
  * returns an empty optional.
  */
 auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, SourceProp const OffsetType,
-    f64 const Offset) -> std::optional<VoicePos>
+    double const Offset) -> std::optional<VoicePos>
 {
     /* Find the first valid Buffer in the Queue */
     const auto BufferFmt = std::invoke([&BufferList]() -> al::Buffer*
@@ -588,14 +587,15 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, SourceProp con
         return std::nullopt;
 
     /* Get sample frame offset */
-    auto [offset, frac] = std::invoke([OffsetType,Offset,BufferFmt]() -> std::pair<i64,u32>
+    auto [offset, frac] = std::invoke([OffsetType, Offset, BufferFmt]()
+        -> std::pair<std::int64_t, std::uint32_t>
     {
-        auto dbloff = f64{};
-        auto dblfrac = f64{};
+        auto dbloff = double{};
+        auto dblfrac = double{};
         switch(OffsetType)
         {
         case SourceProp::SecOffset:
-            dblfrac = (Offset*BufferFmt->mSampleRate).modf(dbloff);
+            dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
             if(dblfrac < 0.0)
             {
                 /* If there's a negative fraction, reduce the offset to "floor"
@@ -605,56 +605,57 @@ auto GetSampleOffset(std::deque<al::BufferQueueItem> &BufferList, SourceProp con
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {dbloff.reinterpret_as<i64>(),
-                std::min(dblfrac*MixerFracOne, MixerFracOne-1.0_f64).reinterpret_as<u32>()};
+            return {al::saturating_cast<std::int64_t>(dbloff),
+                gsl::narrow_cast<std::uint32_t>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case SourceProp::SampleOffset:
-            dblfrac = Offset.modf(dbloff);
+            dblfrac = std::modf(Offset, &dbloff);
             if(dblfrac < 0.0)
             {
                 dbloff -= 1.0;
                 dblfrac += 1.0;
             }
-            return {dbloff.reinterpret_as<i64>(),
-                std::min(dblfrac*MixerFracOne, MixerFracOne-1.0_f64).reinterpret_as<u32>()};
+            return {al::saturating_cast<std::int64_t>(dbloff),
+                gsl::narrow_cast<std::uint32_t>(std::min(dblfrac*MixerFracOne, MixerFracOne-1.0))};
 
         case SourceProp::ByteOffset:
             {
                 /* Determine the ByteOffset (and ensure it is block aligned) */
-                const auto blockoffset = (Offset / BufferFmt->blockSizeFromFmt()).floor();
-                return {blockoffset.reinterpret_as<i64>()*i64{BufferFmt->mBlockAlign},
-                    0_u32};
+                const auto blockoffset = std::floor(Offset / BufferFmt->blockSizeFromFmt());
+                return {al::saturating_cast<std::int64_t>(blockoffset) * BufferFmt->mBlockAlign,
+                    std::uint32_t{0}};
             }
 
         default:
             break;
         }
-        return {0_i64, 0_u32};
+        return {std::int64_t{0}, std::uint32_t{0}};
     });
 
     /* Find the bufferlist item this offset belongs to. */
     if(offset < 0)
     {
-        if(offset < i32::min())
+        if(offset < std::numeric_limits<std::int32_t>::min())
             return std::nullopt;
-        return VoicePos{.pos = offset.reinterpret_as<i32>(), .frac = frac,
+        return VoicePos{.pos = gsl::narrow_cast<std::int32_t>(offset), .frac = frac,
             .bufferitem = &BufferList.front()};
     }
 
     if(BufferFmt->mCallback)
         return std::nullopt;
 
-    const auto iter = std::ranges::find_if(BufferList, [&offset](al::BufferQueueItem const &item)
+    const auto iter = std::ranges::find_if(BufferList, [&offset](al::BufferQueueItem const& item)
     {
         if(item.mSampleLen > offset)
             return true;
-        offset -= i64{item.mSampleLen};
+        offset -= std::int64_t{item.mSampleLen};
         return false;
     });
     if(iter != BufferList.end())
     {
         /* Offset is in this buffer */
-        return VoicePos{.pos = offset.reinterpret_as<i32>(), .frac = frac, .bufferitem = &*iter};
+        return VoicePos{.pos = gsl::narrow_cast<std::int32_t>(offset), .frac = frac,
+            .bufferitem = &*iter};
     }
 
     /* Offset is out of range of the queue */
@@ -783,14 +784,14 @@ auto SetVoiceOffset(Voice *const oldvoice, VoicePos const& vpos, al::Source& sou
 
     /* Initialize the new voice and set its starting offset.
      * TODO: It might be better to have the VoiceChange processing copy the old
-     * voice's mixing parameters (and pending update) insead of initializing it
-     * all here. This would just need to set the minimum properties to link the
-     * voice to the source and its position-dependent properties (including the
-     * fading flag).
+     * voice's mixing parameters (and pending update) instead of initializing
+     * it all here. This would just need to set the minimum properties to link
+     * the voice to the source and its position-dependent properties (including
+     * the fading flag).
      */
     newvoice->mPlayState.store(Voice::Pending, std::memory_order_relaxed);
-    newvoice->mPosition.store(vpos.pos.c_val, std::memory_order_relaxed);
-    newvoice->mPositionFrac.store(vpos.frac.c_val, std::memory_order_relaxed);
+    newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
+    newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
     newvoice->mStartTime = oldvoice->mStartTime;
     newvoice->mFlags.reset();
@@ -968,7 +969,7 @@ auto LookupBuffer(std::nothrow_t, al::Device const& device, std::unsigned_integr
     if(lidx >= device.BufferList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device.BufferList[gsl::narrow_cast<std::size_t>(lidx)];
-    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
+    if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mBuffers->begin(),
         gsl::narrow_cast<std::ptrdiff_t>(slidx)));
@@ -992,7 +993,7 @@ auto LookupFilter(std::nothrow_t, al::Device const& device, std::unsigned_integr
     if(lidx >= device.FilterList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = device.FilterList[gsl::narrow_cast<std::size_t>(lidx)];
-    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
+    if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mFilters->begin(),
         gsl::narrow_cast<std::ptrdiff_t>(slidx)));
@@ -1016,7 +1017,7 @@ auto LookupEffectSlot(std::nothrow_t, al::Context const& context,
     if(lidx >= context.mEffectSlotList.size()) [[unlikely]]
         return nullptr;
     auto &sublist = context.mEffectSlotList[gsl::narrow_cast<std::size_t>(lidx)];
-    if((sublist.mFreeMask & (1_u64 << slidx)) != 0) [[unlikely]]
+    if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
     return std::to_address(std::next(sublist.mEffectSlots->begin(),
         gsl::narrow_cast<std::ptrdiff_t>(slidx)));
@@ -1768,7 +1769,7 @@ void SetProperty(al::Source& Source, al::Context& Context, SourceProp const prop
         if(auto *voice = GetSourceVoice(Source, Context))
         {
             auto const vpos = GetSampleOffset(Source.mQueue, prop,
-                f64{gsl::narrow_cast<double>(values[0])});
+                gsl::narrow_cast<double>(values[0]));
             if(!vpos) Context.throw_error(AL_INVALID_VALUE, "Invalid offset");
 
             if(SetVoiceOffset(voice, *vpos, Source, Context, device))
@@ -2267,7 +2268,7 @@ void GetProperty(al::Source& Source, al::Context& Context, SourceProp const prop
              * clock time with the device latency. Order is important.
              */
             auto const [offset, srcclock] = GetSourceSampleOffset(Source, Context);
-            values[0] = offset.c_val;
+            values[0] = offset;
             const auto clocktime = std::invoke([&device]() -> ClockLatency
             {
                 auto statelock = std::lock_guard{device.StateLock};
@@ -2293,7 +2294,7 @@ void GetProperty(al::Source& Source, al::Context& Context, SourceProp const prop
         {
             CheckSize(2);
             auto const [offset, srcclock] = GetSourceSampleOffset(Source, Context);
-            values[0] = offset.c_val;
+            values[0] = offset;
             values[1] = srcclock.count();
             return;
         }
@@ -2715,13 +2716,13 @@ void StartSources(al::Context& context,
          */
         if(const auto offsettype = source.mOffsetType)
         {
-            auto const offset = f64{source.mOffset};
+            auto const offset = source.mOffset;
             source.mOffsetType = AL_NONE;
             source.mOffset = 0.0;
             if(auto const vpos = GetSampleOffset(source.mQueue, SourceProp{offsettype}, offset))
             {
-                voice->mPosition.store(vpos->pos.c_val, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac.c_val, std::memory_order_relaxed);
+                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
                 voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
                 if(vpos->pos > 0 || (vpos->pos == 0 && vpos->frac > 0)
                     || vpos->bufferitem != &source.mQueue.front())
@@ -3579,7 +3580,7 @@ try {
 
     /* Make sure enough buffers have been processed to unqueue. */
     const auto bids = std::views::counted(buffers, nb);
-    auto processed = 0_usize;
+    auto processed = 0_uz;
     if(source.mState != AL_INITIAL) [[likely]]
     {
         const auto Current = std::invoke([&source,&context]() -> const VoiceBufferItem*
@@ -3590,7 +3591,7 @@ try {
         });
         const auto qiter = std::ranges::find(source.mQueue, Current,
             [](al::BufferQueueItem const &item) { return &item; });
-        processed = isize{std::distance(source.mQueue.begin(), qiter)}.reinterpret_as<usize>();
+        processed = gsl::narrow<std::size_t>(std::distance(source.mQueue.begin(), qiter));
     }
     if(processed < bids.size())
         context.throw_error(AL_INVALID_VALUE, "Unqueueing {} buffer{} (only {} processed)",

@@ -6,6 +6,7 @@
 #endif
 
 #include <algorithm>
+#include <bit>
 #include <csignal>
 
 #include "al/buffer.h"

@@ -23,6 +23,7 @@
 #include "effect.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>

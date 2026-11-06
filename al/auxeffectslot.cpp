@@ -23,6 +23,7 @@
 #include "auxeffectslot.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <iterator>
 #include <memory>

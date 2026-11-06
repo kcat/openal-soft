@@ -23,6 +23,7 @@
 #include "filter.h"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>

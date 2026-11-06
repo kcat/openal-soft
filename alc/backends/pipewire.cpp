@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cmath>
 #include <concepts>
 #include <cstdlib>
@@ -1727,7 +1728,7 @@ auto PipeWirePlayback::reset() -> bool
                  * be scaled to 470 samples, which gets rounded down to 256
                  * when 512 would be closer to the requested size.
                  */
-                if(scale < 0.75 && std::popcount(mDevice.mUpdateSize) == 1)
+                if(scale < 0.75 && std::has_single_bit(mDevice.mUpdateSize))
                 {
                     const auto updatesize = std::round(mDevice.mUpdateSize * scale);
                     const auto buffersize = std::round(mDevice.mBufferSize * scale);

@@ -228,15 +228,22 @@ using std::chrono::nanoseconds;
 
 using voidp = void*;
 
-
-[[gnu::used, maybe_unused]] auto gProcessRunning = true;
+#if __has_cpp_attribute(gnu::used)
+#define DECL_USED [[gnu::used]]
+#else
+#define DECL_USED
+#endif
+DECL_USED [[maybe_unused]] auto gProcessRunning = true;
 struct ProcessWatcher {
-    ProcessWatcher() = default;
-    ProcessWatcher(const ProcessWatcher&) = delete;
+    /* Force a non-trivial constructor so the destructor is set to run at the
+     * appropriate time.
+     * NOLINTNEXTLINE(modernize-use-equals-default) */
+    ProcessWatcher() noexcept { gProcessRunning = true; }
     ~ProcessWatcher() { gProcessRunning = false; }
+    ProcessWatcher(const ProcessWatcher&) = delete;
     auto operator=(const ProcessWatcher&) -> ProcessWatcher& = delete;
 };
-[[gnu::used, maybe_unused]] auto gProcessWatcher = ProcessWatcher{};
+DECL_USED [[maybe_unused]] auto gProcessWatcher = ProcessWatcher{};
 
 /************************************************
  * Backends
@@ -783,6 +790,12 @@ void alc_initconfig()
             EaxTraceCommits = GetConfigValueBool({}, "eax"sv, "trace-commits"sv, false);
     }
 #endif // ALSOFT_EAX
+
+    /* Place a static process watcher after initialization, so gProcessRunning
+     * is cleared early during teardown.
+     */
+    DECL_USED [[maybe_unused]] static const
+    auto sProcessWatcher = ProcessWatcher{};
 }
 void InitConfig()
 {

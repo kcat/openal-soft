@@ -5,6 +5,13 @@ module;
 export module numeric;
 
 export namespace al {
+    using al::is_integral_v;
+    using al::is_signed_v;
+    using al::is_unsigned_v;
+    using al::integral;
+    using al::signed_integral;
+    using al::unsigned_integral;
+
     using al::saturating_add;
     using al::saturating_cast;
 

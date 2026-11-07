@@ -26,25 +26,37 @@
 
 namespace al {
 
-template<typename T>
-inline auto constexpr is_signed_v = std::same_as<std::remove_cv_t<T>, signed char>
-    or std::same_as<std::remove_cv_t<T>, signed short>
-    or std::same_as<std::remove_cv_t<T>, signed int>
-    or std::same_as<std::remove_cv_t<T>, signed long>
-    or std::same_as<std::remove_cv_t<T>, signed long long>;
-template<typename T>
-inline auto constexpr is_unsigned_v = std::same_as<std::remove_cv_t<T>, unsigned char>
-    or std::same_as<std::remove_cv_t<T>, unsigned short>
-    or std::same_as<std::remove_cv_t<T>, unsigned int>
-    or std::same_as<std::remove_cv_t<T>, unsigned long>
-    or std::same_as<std::remove_cv_t<T>, unsigned long long>;
-template<typename T>
-inline auto constexpr is_integral_v = is_signed_v<T> or is_unsigned_v<T>;
+namespace detail {
+    template<typename>
+    struct number_traits { };
+
+    template<> struct number_traits<signed char> { enum { integral, signed_ }; };
+    template<> struct number_traits<unsigned char> { enum { integral, unsigned_ }; };
+    template<> struct number_traits<signed short> { enum { integral, signed_ }; };
+    template<> struct number_traits<unsigned short> { enum { integral, unsigned_ }; };
+    template<> struct number_traits<signed int> { enum { integral, signed_ }; };
+    template<> struct number_traits<unsigned int> { enum { integral, unsigned_ }; };
+    template<> struct number_traits<signed long> { enum { integral, signed_ }; };
+    template<> struct number_traits<unsigned long> { enum { integral, unsigned_ }; };
+    template<> struct number_traits<signed long long> { enum { integral, signed_ }; };
+    template<> struct number_traits<unsigned long long> { enum { integral, unsigned_ }; };
+
+    template<> struct number_traits<float> { enum { floating_point, signed_ }; };
+    template<> struct number_traits<double> { enum { floating_point, signed_ }; };
+    template<> struct number_traits<long double> { enum { floating_point, signed_ }; };
+}
+
+template<typename T> inline
+auto constexpr is_signed_v = requires { detail::number_traits<std::remove_cv_t<T>>::signed_; };
+template<typename T> inline
+auto constexpr is_unsigned_v = requires { detail::number_traits<std::remove_cv_t<T>>::unsigned_; };
+template<typename T> inline
+auto constexpr is_integral_v = requires { detail::number_traits<std::remove_cv_t<T>>::integral; };
 
 template<typename T>
-concept signed_integral = is_signed_v<T>;
+concept signed_integral = is_signed_v<T> and is_integral_v<T>;
 template<typename T>
-concept unsigned_integral = is_unsigned_v<T>;
+concept unsigned_integral = is_unsigned_v<T> and is_integral_v<T>;
 template<typename T>
 concept integral = is_integral_v<T>;
 
@@ -134,9 +146,7 @@ namespace detail {
 
 }
 
-/* Our saturating_cast supports floating point (currently requires radix == 2,
- * and doesn't support larger than 64-bit types).
- */
+/* Our saturating_cast supports floating point (binary16/32/64). */
 template<number R, number T> [[nodiscard]] constexpr
 auto saturating_cast(T const val) noexcept -> R
 {
@@ -144,6 +154,18 @@ auto saturating_cast(T const val) noexcept -> R
     {
         if constexpr(integral<R>) /* fp -> integer */
         {
+            auto constexpr is_binary16 = sizeof(T) == 2 and std::numeric_limits<T>::radix == 2
+                and std::numeric_limits<T>::digits == 11
+                and std::numeric_limits<T>::max_exponent == 16;
+            auto constexpr is_binary32 = sizeof(T) == 4 and std::numeric_limits<T>::radix == 2
+                and std::numeric_limits<T>::digits == 24
+                and std::numeric_limits<T>::max_exponent == 128;
+            auto constexpr is_binary64 = sizeof(T) == 8 and std::numeric_limits<T>::radix == 2
+                and std::numeric_limits<T>::digits == 53
+                and std::numeric_limits<T>::max_exponent == 1024;
+            static_assert(is_binary16 or is_binary32 or is_binary64,
+                "Only binary16/32/64 floating point to integer is supported");
+
             /* mantbits is the number of mantissa bits physically stored in the
              * variable. 32- and 64-bit fp formats (float and double) have an
              * implied 1 bit that is included in the digits count but not

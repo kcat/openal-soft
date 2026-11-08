@@ -13,9 +13,8 @@ auto eax_validate_range(std::string_view const value_name, TValue const& value,
     if(value >= min_value && value <= max_value) [[likely]]
         return;
 
-    const auto message = al::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
-        value, min_value, max_value);
-    throw TException{message};
+    throw TException{al::format("{} out of range (value: {}; min: {}; max: {}).", value_name,
+        value, min_value, max_value)};
 }
 
 #endif /* EAX_VALIDATOR_HPP */

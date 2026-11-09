@@ -90,10 +90,10 @@ public:
     out_ptr_t(const out_ptr_t&) = delete;
     out_ptr_t& operator=(const out_ptr_t&) = delete;
 
-    explicit(false) constexpr /* NOLINTNEXTLINE(google-explicit-constructor) */
+    explicit(false) constexpr /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator PT*() && noexcept { return std::addressof(mPtr); }
 
-    explicit(false) /* NOLINTNEXTLINE(google-explicit-constructor) */
+    explicit(false) /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator void**() && noexcept requires(std::is_pointer_v<PT> and not std::same_as<PT,void*>)
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
@@ -160,10 +160,10 @@ public:
     inout_ptr_t(const inout_ptr_t&) = delete;
     inout_ptr_t& operator=(const inout_ptr_t&) = delete;
 
-    explicit(false) constexpr /* NOLINTNEXTLINE(google-explicit-constructor) */
+    explicit(false) constexpr /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator PT*() && noexcept { return std::addressof(mPtr); }
 
-    explicit(false) /* NOLINTNEXTLINE(google-explicit-constructor) */
+    explicit(false) /* NOLINTNEXTLINE(*-explicit-constructor) */
     operator void**() && noexcept requires(std::is_pointer_v<PT> and not std::same_as<PT,void*>)
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */

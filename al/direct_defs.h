@@ -1,7 +1,7 @@
 #ifndef AL_DIRECT_DEFS_H
 #define AL_DIRECT_DEFS_H
 
-#include <concepts>
+#include <type_traits>
 
 #include "opthelper_macros.hpp"
 
@@ -10,7 +10,7 @@ namespace detail {
 template<typename T>
 constexpr auto DefaultVal() noexcept -> T
 {
-    if constexpr(std::same_as<T, void>)
+    if constexpr(std::is_void_v<T>)
         return;
     else
         return T{};

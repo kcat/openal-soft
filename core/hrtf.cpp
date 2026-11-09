@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <functional>
@@ -42,11 +43,9 @@ import hrtfstore;
 import logging;
 import numeric;
 import spanstream;
-import types;
 #else
 #include "alformat.hpp"
 #include "alformatpath.hpp"
-#include "alformattypes.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/hrtfstore.hpp"
@@ -496,9 +495,9 @@ try {
         auto const rate_scale = gsl::narrow_cast<float>(devrate)
             / gsl::narrow_cast<float>(unsigned{hrtf->mSampleRate});
         std::ranges::transform(hrtf->mDelays | std::views::join, new_delays.begin(),
-            [&max_delay,rate_scale](u8 const oldval)
+            [&max_delay,rate_scale](std::uint8_t const oldval)
         {
-            auto const ret = std::round(gsl::narrow_cast<float>(oldval.c_val) * rate_scale)
+            auto const ret = std::round(gsl::narrow_cast<float>(oldval) * rate_scale)
                 / float{HrirDelayFracOne};
             max_delay = std::max(max_delay, ret);
             return ret;
@@ -529,7 +528,7 @@ try {
          */
         auto const newIrSize = std::round(gsl::narrow_cast<float>(unsigned{hrtf->mIrSize})
             * rate_scale);
-        hrtf->mIrSize = gsl::narrow_cast<u8::value_t>(std::min(float{HrirLength}, newIrSize));
+        hrtf->mIrSize = gsl::narrow_cast<std::uint8_t>(std::min(float{HrirLength}, newIrSize));
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 

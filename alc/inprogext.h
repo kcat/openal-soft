@@ -100,7 +100,7 @@ void AL_APIENTRY alGetInteger64vDirectSOFT(ALCcontext *context, ALenum pname, AL
 
 #ifndef ALC_SOFTX_auxiliary_slot_request
 #define ALC_SOFTX_auxiliary_slot_request 1
-#define ALC_MAX_AUXILIARY_SLOTS_SOFT             0x19D0
+#define ALC_AUXILIARY_EFFECT_SLOTS_SOFT          0x19EE
 #endif
 
 #ifdef __cplusplus

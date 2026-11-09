@@ -1411,7 +1411,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 /* Ignored attribute */
                 break;
 
-            case ATTRIBUTE(ALC_MAX_AUXILIARY_SLOTS_SOFT)
+            case ATTRIBUTE(ALC_AUXILIARY_EFFECT_SLOTS_SOFT)
                 numSlots = static_cast<ALCuint>(std::max<ALCint>(attrvalue, 0));
                 break;
 
@@ -2296,7 +2296,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         case ALC_AMBISONIC_SCALING_SOFT:
         case ALC_AMBISONIC_ORDER_SOFT:
         case ALC_MAX_AMBISONIC_ORDER_SOFT:
-        case ALC_MAX_AUXILIARY_SLOTS_SOFT:
+        case ALC_AUXILIARY_EFFECT_SLOTS_SOFT:
             al::Device::SetGlobalError(ALC_INVALID_DEVICE);
             return 0;
 
@@ -2435,7 +2435,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
             values[i++] = ALC_OUTPUT_MODE_SOFT;
             values[i++] = al::to_underlying(device->getOutputMode1());
 
-            values[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            values[i++] = ALC_AUXILIARY_EFFECT_SLOTS_SOFT;
             values[i++] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
 
             values[i++] = 0;
@@ -2569,7 +2569,7 @@ auto GetIntegerv(al::Device *const device, ALCenum const param, std::span<ALCint
         values[0] = al::to_underlying(device->getOutputMode1());
         return 1;
 
-    case ALC_MAX_AUXILIARY_SLOTS_SOFT:
+    case ALC_AUXILIARY_EFFECT_SLOTS_SOFT:
         values[0] = gsl::narrow_cast<ALCint>(device->AuxiliaryEffectSlotMax);
         return 1;
 
@@ -2715,7 +2715,7 @@ try {
             valuespan[i++] = ALC_DEVICE_LATENCY_SOFT;
             valuespan[i++] = clock.Latency.count();
 
-            valuespan[i++] = ALC_MAX_AUXILIARY_SLOTS_SOFT;
+            valuespan[i++] = ALC_AUXILIARY_EFFECT_SLOTS_SOFT;
             valuespan[i++] = dev->AuxiliaryEffectSlotMax;
 
             valuespan[i++] = 0;

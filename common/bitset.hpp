@@ -12,13 +12,13 @@
 
 namespace al {
 
-namespace detail_ {
+namespace detail {
     void test_int_conversion(...);
     void test_int_conversion(int) = delete;
 }
 
 template<typename T>
-concept scoped_enum = std::is_enum_v<T> and requires(T t) { detail_::test_int_conversion(t); };
+concept scoped_enum = std::is_enum_v<T> and requires(T t) { detail::test_int_conversion(t); };
 
 template<scoped_enum EnumType>
 class bitset {

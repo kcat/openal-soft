@@ -14,6 +14,7 @@
 
 #include "gsl/gsl"
 #include "hrtf.h"
+#include "opthelpers.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES

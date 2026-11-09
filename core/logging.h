@@ -7,7 +7,7 @@
 #include "alformat.hpp"
 #include "filesystem.h"
 #include "gsl/gsl"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 enum class LogLevel : std::uint8_t {

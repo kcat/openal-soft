@@ -12,7 +12,7 @@
 
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "zudl.hpp"
 
 struct HrtfChannelState;

@@ -1,7 +1,7 @@
 #ifndef CORE_FPU_CTRL_H
 #define CORE_FPU_CTRL_H
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 class FPUCtl {
     unsigned int sse_state{};

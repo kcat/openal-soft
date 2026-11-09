@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "effects.h"
+#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"

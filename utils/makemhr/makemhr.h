@@ -9,8 +9,7 @@
 #include <vector>
 
 #include "alcomplex.h"
-#include "opthelpers.h"
-#include "polyphase_resampler.h"
+#include "opthelper_macros.hpp"
 
 
 // The limit to the number of 'distances' listed in the data set definition.

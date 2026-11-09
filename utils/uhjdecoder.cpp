@@ -38,7 +38,6 @@
 #include <system_error>
 #include <vector>
 
-#include "opthelpers.h"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -210,8 +209,6 @@ auto const &PShift = gPShifter<UhjDecoder::sFilterDelay*2>;
 void UhjDecoder::decode(std::span<float const> const InSamples, std::size_t const InChannels,
     std::span<FloatBufferLine> const OutSamples, std::size_t const SamplesToDo)
 {
-    ASSUME(SamplesToDo > 0);
-
     auto woutput = std::span{OutSamples[0]};
     auto xoutput = std::span{OutSamples[1]};
     auto youtput = std::span{OutSamples[2]};
@@ -307,8 +304,6 @@ void UhjDecoder::decode(std::span<float const> const InSamples, std::size_t cons
 void UhjDecoder::decode2(std::span<float const> const InSamples,
     std::span<FloatBufferLine> const OutSamples, std::size_t const SamplesToDo)
 {
-    ASSUME(SamplesToDo > 0);
-
     auto woutput = std::span{OutSamples[0]};
     auto xoutput = std::span{OutSamples[1]};
     auto youtput = std::span{OutSamples[2]};

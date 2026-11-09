@@ -72,7 +72,7 @@
 #include <utility>
 #include <vector>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "pragmadefs.h"
 #include "zudl.hpp"
 

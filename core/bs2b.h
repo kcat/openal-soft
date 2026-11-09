@@ -28,7 +28,7 @@
 #include <span>
 
 #include "bufferline.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 namespace Bs2b {

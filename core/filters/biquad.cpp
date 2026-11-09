@@ -11,7 +11,7 @@
 #include <numbers>
 #include <ranges>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;

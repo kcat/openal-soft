@@ -6,7 +6,7 @@
 #include <string>
 #include <variant>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 struct EffectState;
 

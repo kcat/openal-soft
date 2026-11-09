@@ -29,6 +29,7 @@
 #include "hrtf_loader.hpp"
 #include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
+#include "opthelpers.h"
 #include "polyphase_resampler.h"
 #include "zudl.hpp"
 

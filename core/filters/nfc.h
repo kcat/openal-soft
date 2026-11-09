@@ -4,7 +4,7 @@
 #include <array>
 #include <span>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 struct NfcFilter1 {

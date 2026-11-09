@@ -8,7 +8,7 @@
 
 #include "AL/al.h"
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 /* Somewhat arbitrary. Avoid letting it get out of control if the app enables

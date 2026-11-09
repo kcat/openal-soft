@@ -28,7 +28,7 @@
 #include "core/context.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "zstring_view.hpp"
 
 #if ALSOFT_EAX

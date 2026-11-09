@@ -2,7 +2,6 @@
 #define CORE_AMBDEC_H
 
 #include <array>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -10,7 +9,7 @@
 
 #include "expected.hpp"
 #include "core/ambidefs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 /* Helpers to read .ambdec configuration files. */
 

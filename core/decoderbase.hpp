@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <span>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 struct DecoderBase {

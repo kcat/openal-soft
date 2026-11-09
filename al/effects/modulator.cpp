@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "effects.h"
+#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -53,7 +54,7 @@ constexpr auto EnumFromWaveform(ModulatorWaveform type) -> ALenum
     case ModulatorWaveform::Square: return AL_RING_MODULATOR_SQUARE;
     }
     throw std::runtime_error{al::format("Invalid modulator waveform: {}",
-        int{al::to_underlying(type)})};
+        al::to_underlying(type))};
 }
 
 consteval auto genDefaultProps() noexcept -> EffectProps

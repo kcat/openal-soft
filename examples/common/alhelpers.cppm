@@ -5,7 +5,7 @@ module;
 #include <stdexcept>
 #include <utility>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 export module alhelpers;
 

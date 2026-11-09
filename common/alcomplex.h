@@ -4,7 +4,7 @@
 #include <complex>
 #include <span>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 /**
  * Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is

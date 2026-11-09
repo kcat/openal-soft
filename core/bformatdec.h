@@ -11,15 +11,15 @@
 #include "bufferline.h"
 #include "devformat.h"
 #include "filters/splitter.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 using ChannelDec = std::array<float,MaxAmbiChannels>;
 
 class BFormatDec {
-    static constexpr size_t sHFBand{0};
-    static constexpr size_t sLFBand{1};
-    static constexpr size_t sNumBands{2};
+    static constexpr std::size_t sHFBand{0};
+    static constexpr std::size_t sLFBand{1};
+    static constexpr std::size_t sNumBands{2};
 
     struct ChannelDecoderSingle {
         std::array<float,MaxOutputChannels> mGains{};

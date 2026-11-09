@@ -6,7 +6,7 @@
 #include "AL/al.h"
 
 #include "core/effects/base.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 namespace al {
 struct Context;

@@ -756,6 +756,7 @@ set(COMMON_HDRS
     common/instance_of.hpp
     common/intrusive_ptr.h
     common/numeric.hpp
+    common/opthelper_macros.hpp
     common/opthelpers.h
     common/pffft.h
     common/polyphase_resampler.h

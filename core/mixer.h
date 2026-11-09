@@ -8,7 +8,7 @@
 
 #include "ambidefs.h"
 #include "bufferline.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 struct MixParams;
 

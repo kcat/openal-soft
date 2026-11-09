@@ -11,7 +11,7 @@
 #include "gsl/pointers"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 constexpr inline auto MaxHrirDelay = unsigned{HrtfHistoryLength - 1};

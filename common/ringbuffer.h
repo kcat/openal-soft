@@ -16,7 +16,7 @@
 
 #include "flexarray.h"
 #include "gsl/gsl"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "zudl.hpp"
 
 

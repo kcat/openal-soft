@@ -3,12 +3,13 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <variant>
 
 #include "core/bufferline.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 struct BufferStorage;
 struct ContextBase;
@@ -24,7 +25,7 @@ inline constexpr float ReverbDecayGain{0.001f}; /* -60 dB */
 inline constexpr float ReverbMaxReflectionsDelay{0.3f};
 inline constexpr float ReverbMaxLateReverbDelay{0.1f};
 
-enum class ChorusWaveform {
+enum class ChorusWaveform : bool {
     Sinusoid,
     Triangle
 };
@@ -35,25 +36,25 @@ inline constexpr float FlangerMaxDelay{0.004f};
 inline constexpr float EchoMaxDelay{0.207f};
 inline constexpr float EchoMaxLRDelay{0.404f};
 
-enum class FShifterDirection {
+enum class FShifterDirection : std::uint8_t {
     Down,
     Up,
     Off
 };
 
-enum class ModulatorWaveform {
+enum class ModulatorWaveform : std::uint8_t {
     Sinusoid,
     Sawtooth,
     Square
 };
 
-enum class VMorpherPhenome {
+enum class VMorpherPhenome : std::uint8_t {
     A, E, I, O, U,
     AA, AE, AH, AO, EH, ER, IH, IY, UH, UW,
     B, D, F, G, J, K, L, M, N, P, R, S, T, V, Z
 };
 
-enum class VMorpherWaveform {
+enum class VMorpherWaveform : std::uint8_t {
     Sinusoid,
     Triangle,
     Sawtooth

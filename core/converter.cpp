@@ -15,6 +15,7 @@
 
 #include "fpu_ctrl.h"
 #include "gsl/assert"
+#include "opthelpers.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES

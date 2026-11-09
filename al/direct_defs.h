@@ -1,10 +1,11 @@
 #ifndef AL_DIRECT_DEFS_H
 #define AL_DIRECT_DEFS_H
 
-#include "opthelpers.h"
+#include <concepts>
 
+#include "opthelper_macros.hpp"
 
-namespace detail_ {
+namespace detail {
 
 template<typename T>
 constexpr auto DefaultVal() noexcept -> T
@@ -15,7 +16,7 @@ constexpr auto DefaultVal() noexcept -> T
         return T{};
 }
 
-} // namespace detail_
+} /* namespace detail */
 
 #if defined(__linux__) && !defined(AL_LIBTYPE_STATIC) && __has_cpp_attribute(gnu::alias)
 #define DefineFuncAlias(Name) extern "C" DECL_HIDDEN [[gnu::alias(#Name)]] decltype(Name) Name##_;
@@ -27,7 +28,7 @@ constexpr auto DefaultVal() noexcept -> T
 ATTR auto AL_APIENTRY Name(T1 n1) noexcept -> R                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##_(*context, n1);                                             \
 }                                                                             \
 DefineFuncAlias(Name)                                                         \
@@ -42,7 +43,7 @@ DefineFuncAlias(Name##Direct)
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2) noexcept -> R                        \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##_(*context, n1, n2);                                         \
 }                                                                             \
 DefineFuncAlias(Name)                                                         \
@@ -57,7 +58,7 @@ DefineFuncAlias(Name##Direct)
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3) noexcept -> R                 \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##_(*context, n1, n2, n3);                                     \
 }                                                                             \
 DefineFuncAlias(Name)                                                         \
@@ -72,7 +73,7 @@ DefineFuncAlias(Name##Direct)
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R          \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##_(*context, n1, n2, n3, n4);                                 \
 }                                                                             \
 DefineFuncAlias(Name)                                                         \
@@ -87,7 +88,7 @@ DefineFuncAlias(Name##Direct)
 ATTR auto AL_APIENTRY Name(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R   \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##_(*context, n1, n2, n3, n4, n5);                             \
 }                                                                             \
 DefineFuncAlias(Name)                                                         \
@@ -108,7 +109,7 @@ DefineFuncAlias(Name##Direct)
 ATTR auto AL_APIENTRY Name##Ext() noexcept -> R                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context);                                            \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -123,7 +124,7 @@ DefineFuncAlias(Name##Direct##Ext)
 ATTR auto AL_APIENTRY Name##Ext(T1 n1) noexcept -> R                          \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1);                                        \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -138,7 +139,7 @@ DefineFuncAlias(Name##Direct##Ext)
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2) noexcept -> R                   \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2);                                    \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -153,7 +154,7 @@ DefineFuncAlias(Name##Direct##Ext)
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3) noexcept -> R            \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2, n3);                                \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -168,7 +169,7 @@ DefineFuncAlias(Name##Direct##Ext)
 ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4) noexcept -> R     \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2, n3, n4);                            \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -184,7 +185,7 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5) noexcept   \
     -> R                                                                      \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2, n3, n4, n5);                        \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -201,7 +202,7 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6)     \
     noexcept -> R                                                             \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2, n3, n4, n5, n6);                    \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \
@@ -218,7 +219,7 @@ ATTR auto AL_APIENTRY Name##Ext(T1 n1, T2 n2, T3 n3, T4 n4, T5 n5, T6 n6,     \
     T7 n7, T8 n8) noexcept -> R                                               \
 {                                                                             \
     auto const context = GetContextRef();                                     \
-    if(!context) [[unlikely]] return detail_::DefaultVal<R>();                \
+    if(!context) [[unlikely]] return detail::DefaultVal<R>();                 \
     return Name##Ext##_(*context, n1, n2, n3, n4, n5, n6, n7, n8);            \
 }                                                                             \
 DefineFuncAlias(Name##Ext)                                                    \

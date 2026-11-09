@@ -30,7 +30,7 @@
 #include "mixer.h"
 #include "mixer/defs.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "resampler_limits.hpp"
 #include "ringbuffer.h"
 #include "uhjfilter.h"

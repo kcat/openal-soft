@@ -8,6 +8,7 @@
 #include "AL/efx.h"
 
 #include "effects.h"
+#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
@@ -110,7 +111,7 @@ constexpr ALenum EnumFromPhenome(VMorpherPhenome phenome)
     HANDLE_PHENOME(V);
     HANDLE_PHENOME(Z);
     }
-    throw std::runtime_error{al::format("Invalid phenome: {}", int{al::to_underlying(phenome)})};
+    throw std::runtime_error{al::format("Invalid phenome: {}", al::to_underlying(phenome))};
 #undef HANDLE_PHENOME
 }
 
@@ -133,7 +134,7 @@ constexpr ALenum EnumFromWaveform(VMorpherWaveform type)
     case VMorpherWaveform::Sawtooth: return AL_VOCAL_MORPHER_WAVEFORM_SAWTOOTH;
     }
     throw std::runtime_error{al::format("Invalid vocal morpher waveform: {}",
-        int{al::to_underlying(type)})};
+        al::to_underlying(type))};
 }
 
 consteval auto genDefaultProps() noexcept -> EffectProps

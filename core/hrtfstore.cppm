@@ -8,7 +8,7 @@ module;
 
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 export module hrtfstore;
 

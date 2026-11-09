@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string_view>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxException : public std::runtime_error {

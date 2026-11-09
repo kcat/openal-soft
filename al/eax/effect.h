@@ -11,7 +11,7 @@
 #include "api.h"
 #include "core/effects/base.h"
 #include "call.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 inline bool EaxTraceCommits{false};
 

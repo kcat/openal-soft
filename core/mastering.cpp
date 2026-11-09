@@ -12,7 +12,7 @@
 #include <ranges>
 #include <span>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
 import numeric;

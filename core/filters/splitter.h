@@ -3,7 +3,7 @@
 
 #include <span>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 class BandSplitter {

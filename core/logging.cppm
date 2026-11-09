@@ -3,7 +3,7 @@ module;
 #include <cstdint>
 #include <string_view>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 export module logging;

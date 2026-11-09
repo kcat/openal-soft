@@ -32,6 +32,7 @@
 #include <string_view>
 #include <utility>
 
+#include "opthelpers.h"
 #include "pragmadefs.h"
 #include "ringbuffer.h"
 #include "zudl.hpp"

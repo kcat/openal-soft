@@ -13,7 +13,7 @@
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 extern "C" {

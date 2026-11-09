@@ -8,7 +8,7 @@
 #include "defs.h"
 #include "gsl/gsl"
 #include "hrtfdefs.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 using ApplyCoeffsT = void(*)(std::span<f32x2> Values, std::size_t irSize, ConstHrirSpan Coeffs,

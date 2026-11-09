@@ -16,7 +16,7 @@
 #include "core/resampler_limits.hpp"
 #include "defs.h"
 #include "hrtfbase.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;

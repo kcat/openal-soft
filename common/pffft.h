@@ -84,7 +84,7 @@
 #include <memory>
 
 #include "gsl/gsl"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 
 /* opaque struct holding internal stuff (precomputed twiddle factors) this

@@ -2,10 +2,11 @@
 #define AL_EXPECTED_HPP
 
 #include <exception>
+#include <functional>
 #include <type_traits>
 #include <utility>
 
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 
 namespace al {
 

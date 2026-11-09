@@ -11,7 +11,7 @@
 #include "AL/alext.h"
 
 #include "inprogext.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #if ALSOFT_EAX
 #include "al/eax/alapi.hpp"
 #endif

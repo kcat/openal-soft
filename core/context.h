@@ -15,7 +15,7 @@
 #include "atomic.h"
 #include "bitset.hpp"
 #include "flexarray.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "ringbuffer.h"
 #include "vecmat.h"
 

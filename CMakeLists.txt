@@ -796,7 +796,6 @@ if(HAVE_CXXMODULES)
 else()
     list(APPEND COMMON_HDRS
         common/alformatpath.hpp
-        common/alformattypes.hpp
         common/alformatzsv.hpp
         common/hann_window.hpp
         common/phase_shifter.hpp

@@ -724,7 +724,6 @@ set(COMMON_SRCS
     common/almalloc.cpp
     common/alstring.cpp
     common/althrd_setname.cpp
-    common/altypes.cpp
     common/dynload.cpp
     common/envutils.cpp
     common/filesystem.cpp
@@ -739,7 +738,6 @@ set(COMMON_HDRS
     common/alstring.h
     common/althrd_setname.h
     common/althreads.h
-    common/altypes.hpp
     common/atomic.h
     common/bitset.hpp
     common/cemath.hpp
@@ -784,7 +782,6 @@ if(HAVE_CXXMODULES)
         alsoft-modules/gsl.cppm
         common/alformat.cppm
         common/alstring.cppm
-        common/altypes.cppm
         common/cemath.cppm
         common/filesystem.cppm
         common/hann_window.cppm

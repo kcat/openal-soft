@@ -15,9 +15,7 @@
 
 #if HAVE_CXXMODULES
 import gsl;
-import types;
 #else
-#include "altypes.hpp"
 #include "gsl/gsl"
 #endif
 
@@ -37,15 +35,15 @@ auto BitReverseCounter(std::size_t const log2_size) noexcept -> std::size_t
 }
 
 
-template<std::size_t N> requires(N <= sizeof(u16)*8)
+template<std::size_t N> requires(N <= sizeof(std::uint16_t)*8)
 struct BitReverser : std::array<u16x2, BitReverseCounter(N)> {
     constexpr BitReverser()
     {
-        auto const fftsize = 1_usize << N;
+        auto const fftsize = 1_uz << N;
         auto iter = this->begin();
 
         /* Bit-reversal permutation applied to a sequence of fftsize items. */
-        for(auto const idx : std::views::iota(1_usize, fftsize-1u))
+        for(auto const idx : std::views::iota(1_uz, fftsize-1u))
         {
             auto revidx = idx;
             revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
@@ -57,8 +55,8 @@ struct BitReverser : std::array<u16x2, BitReverseCounter(N)> {
 
             if(idx < revidx)
             {
-                (*iter)[0] = idx.cast_to<u16>().c_val;
-                (*iter)[1] = revidx.cast_to<u16>().c_val;
+                (*iter)[0] = gsl::narrow<std::uint16_t>(idx);
+                (*iter)[1] = gsl::narrow<std::uint16_t>(revidx);
                 ++iter;
             }
         }

@@ -72,6 +72,7 @@
 #include <utility>
 #include <vector>
 
+#include "gsl/assert"
 #include "opthelper_macros.hpp"
 #include "pragmadefs.h"
 #include "zudl.hpp"
@@ -79,9 +80,7 @@
 #if HAVE_CXXMODULES
 import fmtlib;
 import gsl;
-import types;
 #else
-#include "altypes.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
@@ -1396,28 +1395,28 @@ void rffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
     static constexpr auto ntryh = std::array{4u, 2u, 3u, 5u};
 
-    auto const nfm1 = usize{decompose(n, ifac, ntryh)} - 1;
-    auto const argh = 2.0_f64*std::numbers::pi / n;
-    auto is = 0_usize;
-    auto l1 = 1_usize;
+    auto const nfm1 = std::size_t{decompose(n, ifac, ntryh)} - 1;
+    auto const argh = 2.0*std::numbers::pi / n;
+    auto is = 0_uz;
+    auto l1 = 1_uz;
     for(auto k1 = 0_uz;k1 < nfm1;++k1)
     {
-        const auto ip = usize{ifac[k1+2]};
+        const auto ip = std::size_t{ifac[k1+2]};
         const auto l2 = l1 * ip;
         const auto ido = n / l2;
         const auto ipm = ip - 1;
-        auto ld = 0_usize;
+        auto ld = 0_uz;
         for(auto j = 0_uz;j < ipm;++j)
         {
-            auto i = is.c_val;
+            auto i = is;
             ld += l1;
-            const auto argld = ld.reinterpret_as<f64>() * argh;
+            const auto argld = gsl::narrow_cast<double>(ld) * argh;
             auto fi = 0.0;
             for(auto ii = 2_uz;ii < ido;ii += 2)
             {
                 fi += 1.0;
-                wa[i++] = cos(fi*argld).cast_to<f32>().c_val;
-                wa[i++] = sin(fi*argld).cast_to<f32>().c_val;
+                wa[i++] = gsl::narrow_cast<float>(std::cos(fi*argld));
+                wa[i++] = gsl::narrow_cast<float>(std::sin(fi*argld));
             }
             is += ido;
         }
@@ -1429,31 +1428,31 @@ void cffti1_ps(unsigned const n, float *wa, std::span<unsigned, 15> const ifac)
 {
     static constexpr auto ntryh = std::array{5u, 3u, 4u, 2u};
 
-    const auto nf = usize{decompose(n, ifac, ntryh)};
-    const auto argh = 2.0_f64*std::numbers::pi / n;
+    const auto nf = std::size_t{decompose(n, ifac, ntryh)};
+    const auto argh = 2.0*std::numbers::pi / n;
     auto i = 1_uz;
-    auto l1 = 1_usize;
+    auto l1 = 1_uz;
     for(auto k1 = 0_uz;k1 < nf;++k1)
     {
-        const auto ip = usize{ifac[k1+2]};
+        const auto ip = std::size_t{ifac[k1+2]};
         const auto l2 = l1 * ip;
         const auto ido = n / l2;
         const auto idot = ido + ido + 2_uz;
         const auto ipm = ip - 1_uz;
-        auto ld = 0_usize;
+        auto ld = 0_uz;
         for(auto j = 0_uz;j < ipm;++j)
         {
             auto const i1 = i;
             wa[i-1] = 1.0f;
             wa[i] = 0.0f;
             ld += l1;
-            const auto argld = ld.reinterpret_as<f64>()*argh;
+            const auto argld = gsl::narrow_cast<double>(ld)*argh;
             auto fi = 0.0;
             for(auto ii = 3_uz;ii < idot;ii += 2)
             {
                 fi += 1.0;
-                wa[++i] = cos(fi*argld).reinterpret_as<f32>().c_val;
-                wa[++i] = sin(fi*argld).reinterpret_as<f32>().c_val;
+                wa[++i] = gsl::narrow_cast<float>(std::cos(fi*argld));
+                wa[++i] = gsl::narrow_cast<float>(std::sin(fi*argld));
             }
             if(ip > 5)
             {

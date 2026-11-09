@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <cstdlib>
 #include <iterator>
 #include <limits>
@@ -41,17 +42,26 @@ import alstring;
 import core.device;
 import logging;
 import numeric;
-import types;
 #else
 #include "alstring.h"
-#include "altypes.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "numeric.hpp"
 #endif
 
 
+namespace al {
+    using ssize_t = std::make_signed_t<std::size_t>;
+}
+
 namespace {
+
+[[nodiscard]] constexpr
+auto make_i16(std::byte const hi, std::byte const lo) noexcept -> std::int16_t
+{
+    return static_cast<std::int16_t>((std::to_integer<std::uint16_t>(hi)<<8)
+        | std::to_integer<std::uint16_t>(lo));
+}
 
 static_assert((DeviceBase::MixerLineSize&3) == 0, "MixerLineSize must be a multiple of 4");
 static_assert((MaxResamplerEdge&3) == 0, "MaxResamplerEdge is not a multiple of 4");
@@ -199,7 +209,7 @@ void Voice::InitMixer(std::optional<std::string> const &resopt)
 namespace {
 
 /* IMA ADPCM Stepsize table */
-constexpr auto IMAStep_size = std::to_array<i32>({
+constexpr auto IMAStep_size = std::to_array<std::int32_t>({
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
       21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
       60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
@@ -212,32 +222,32 @@ constexpr auto IMAStep_size = std::to_array<i32>({
 });
 
 /* IMA4 ADPCM Codeword decode table */
-constexpr auto IMA4Codeword = std::to_array<i32>({
+constexpr auto IMA4Codeword = std::to_array<std::int32_t>({
     1, 3, 5, 7, 9, 11, 13, 15,
    -1,-3,-5,-7,-9,-11,-13,-15,
 });
 
 /* IMA4 ADPCM Step index adjust decode table */
-constexpr auto IMA4Index_adjust = std::to_array<i32>({
+constexpr auto IMA4Index_adjust = std::to_array<std::int32_t>({
    -1,-1,-1,-1, 2, 4, 6, 8,
    -1,-1,-1,-1, 2, 4, 6, 8
 });
 
 /* MSADPCM Adaption table */
-constexpr auto MSADPCMAdaption = std::to_array<i32>({
+constexpr auto MSADPCMAdaption = std::to_array<std::int32_t>({
     230, 230, 230, 230, 307, 409, 512, 614,
     768, 614, 512, 409, 307, 230, 230, 230
 });
 
 /* MSADPCM Adaption Coefficient tables */
 constexpr auto MSADPCMAdaptionCoeff = std::array{
-    std::array<i32, 2>{{256,    0}},
-    std::array<i32, 2>{{512, -256}},
-    std::array<i32, 2>{{  0,    0}},
-    std::array<i32, 2>{{192,   64}},
-    std::array<i32, 2>{{240,    0}},
-    std::array<i32, 2>{{460, -208}},
-    std::array<i32, 2>{{392, -232}}
+    std::array<std::int32_t, 2>{{256,    0}},
+    std::array<std::int32_t, 2>{{512, -256}},
+    std::array<std::int32_t, 2>{{  0,    0}},
+    std::array<std::int32_t, 2>{{192,   64}},
+    std::array<std::int32_t, 2>{{240,    0}},
+    std::array<std::int32_t, 2>{{460, -208}},
+    std::array<std::int32_t, 2>{{392, -232}}
 };
 
 
@@ -293,7 +303,7 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
     std::size_t const srcChan, std::size_t const srcOffset, std::size_t const srcStep,
     std::size_t const samplesPerBlock) noexcept
 {
-    static constexpr auto MaxStepIndex = isize{std::ssize(IMAStep_size) - 1};
+    static constexpr auto MaxStepIndex = al::ssize_t{std::ssize(IMAStep_size) - 1};
 
     Expects(srcStep > 0 && srcStep <= 2);
     Expects(srcChan < srcStep);
@@ -311,17 +321,16 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
         /* Each IMA4 block starts with a signed 16-bit sample, and a signed(?)
          * 16-bit table index. The table index needs to be clamped.
          */
-        auto sample = i16::bit_pack(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value).as<i32>();
-        auto ima_idx = i16::bit_pack(src[srcChan*4 + 3].value, src[srcChan*4 + 2].value)
-            .as<isize>();
-        ima_idx = std::clamp(ima_idx, 0_isize, MaxStepIndex);
+        auto sample = std::int32_t{make_i16(src[srcChan*4 + 1].value, src[srcChan*4 + 0].value)};
+        auto ima_idx = al::ssize_t{make_i16(src[srcChan*4 + 3].value, src[srcChan*4 + 2].value)};
+        ima_idx = std::clamp(ima_idx, 0_z, MaxStepIndex);
 
         auto const nibbleData = src.subspan((srcStep+srcChan)*4);
         src = src.subspan(blockBytes);
 
         if(skip == 0)
         {
-            dstSamples[0] = sample.cast_to<f32>().c_val / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sample) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -333,7 +342,7 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
          * skip 4 bytes per channel to get the next nibbles for this channel.
          */
         auto decode_nibble = [&sample,&ima_idx,srcStep,nibbleData](std::size_t const nibbleOffset)
-            noexcept -> i32
+            noexcept -> std::int32_t
         {
             static constexpr auto NibbleMask = std::byte{0xf};
             auto const byteShift = (nibbleOffset&1) * 4;
@@ -343,10 +352,10 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
             auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
             auto const codeidx = to_integer<std::size_t>(nibble);
 
-            sample += IMA4Codeword[codeidx] * IMAStep_size[as_unsigned(ima_idx.c_val)] / 8;
-            sample = std::clamp(sample, -32768_i32, 32767_i32);
+            sample += IMA4Codeword[codeidx] * IMAStep_size[as_unsigned(ima_idx)] / 8;
+            sample = std::clamp(sample, -32768, 32767);
 
-            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[codeidx], 0_isize,
+            ima_idx = std::clamp(ima_idx + IMA4Index_adjust[codeidx], 0_z,
                 MaxStepIndex);
 
             return sample;
@@ -373,7 +382,7 @@ void LoadSamples<IMA4Data>(std::span<float> dstSamples, std::span<IMA4Data const
             auto const decspl = decode_nibble(nibbleOffset);
             ++nibbleOffset;
 
-            return decspl.cast_to<f32>().c_val / 32768.0f;
+            return gsl::narrow_cast<float>(decspl) / 32768.0f;
         });
         dstSamples = dstSamples.subspan(written);
     }
@@ -400,37 +409,37 @@ void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData
          * nibble sample value. This is followed by the two initial 16-bit
          * sample history values.
          */
-        auto const blockpred = std::min(u8::bit_pack(src[srcChan].value),
-            u8{MSADPCMAdaptionCoeff.size()-1});
-        auto scale = i16::bit_pack(src[srcStep + 2*srcChan + 1].value,
-            src[srcStep + 2*srcChan + 0].value).as<i32>();
+        auto const blockpred = std::min(std::to_integer<std::uint8_t>(src[srcChan].value),
+            std::uint8_t{MSADPCMAdaptionCoeff.size()-1});
+        auto scale = std::int32_t{make_i16(src[srcStep + 2*srcChan + 1].value,
+            src[srcStep + 2*srcChan + 0].value)};
 
         auto sampleHistory = std::array{
-            i16::bit_pack(src[3*srcStep + 2*srcChan + 1].value,
-                src[3*srcStep + 2*srcChan + 0].value).as<i32>(),
-            i16::bit_pack(src[5*srcStep + 2*srcChan + 1].value,
-                src[5*srcStep + 2*srcChan + 0].value).as<i32>()};
+            std::int32_t{make_i16(src[3*srcStep + 2*srcChan + 1].value,
+                src[3*srcStep + 2*srcChan + 0].value)},
+            std::int32_t{make_i16(src[5*srcStep + 2*srcChan + 1].value,
+                src[5*srcStep + 2*srcChan + 0].value)}};
 
         auto const nibbleData = src.subspan(7*srcStep);
         src = src.subspan(blockBytes);
 
-        auto const coeffs = std::span{MSADPCMAdaptionCoeff[blockpred.c_val]};
+        auto const coeffs = std::span{MSADPCMAdaptionCoeff[blockpred]};
 
         /* The second history sample is "older", so it's the first to be
          * written out.
          */
         if(skip == 0)
         {
-            dstSamples[0] = sampleHistory[1].cast_to<f32>().c_val / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[1]) / 32768.0f;
             if(dstSamples.size() < 2) return;
-            dstSamples[1] = sampleHistory[0].cast_to<f32>().c_val / 32768.0f;
+            dstSamples[1] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(2);
             if(dstSamples.empty()) return;
         }
         else if(skip == 1)
         {
             --skip;
-            dstSamples[0] = sampleHistory[0].cast_to<f32>().c_val / 32768.0f;
+            dstSamples[0] = gsl::narrow_cast<float>(sampleHistory[0]) / 32768.0f;
             dstSamples = dstSamples.subspan(1);
             if(dstSamples.empty()) return;
         }
@@ -441,23 +450,23 @@ void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData
          * channel.
          */
         auto decode_nibble = [&sampleHistory,&scale,coeffs,nibbleData]
-            (std::size_t const nibbleOffset) noexcept -> i32
+            (std::size_t const nibbleOffset) noexcept -> std::int32_t
         {
             static constexpr auto NibbleMask = std::byte{0xf};
             auto const byteOffset = nibbleOffset>>1;
             auto const byteShift = ((nibbleOffset&1)^1) * 4;
 
             auto const nibble = (nibbleData[byteOffset].value >> byteShift) & NibbleMask;
-            auto const nval = to_integer<u8::value_t>(nibble);
+            auto const nval = to_integer<std::uint8_t>(nibble);
 
-            auto const pred = ((i32{nval}^0x08) - 0x08) * scale;
+            auto const pred = ((std::int32_t{nval}^0x08) - 0x08) * scale;
             auto const diff = (sampleHistory[0]*coeffs[0] + sampleHistory[1]*coeffs[1]) / 256;
-            auto const sample = std::clamp(pred + diff, -32768_i32, 32767_i32);
+            auto const sample = std::clamp(pred + diff, -32768, 32767);
 
             sampleHistory[1] = sampleHistory[0];
             sampleHistory[0] = sample;
 
-            scale = std::max(MSADPCMAdaption[nval] * scale / 256_i32, 16_i32);
+            scale = std::max(MSADPCMAdaption[nval] * scale / 256, 16);
 
             return sample;
         };
@@ -480,7 +489,7 @@ void LoadSamples<MSADPCMData>(std::span<float> dstSamples, std::span<MSADPCMData
             auto const sample = decode_nibble(nibbleOffset);
             nibbleOffset += srcStep;
 
-            return sample.cast_to<f32>().c_val / 32768.0f;
+            return gsl::narrow_cast<float>(sample) / 32768.0f;
         });
         dstSamples = dstSamples.subspan(written);
     }
@@ -621,23 +630,23 @@ auto CalculateBufferSize(unsigned const fracPos, unsigned const increment,
      */
     auto const ext = increment <= MixerFracOne;
 
-    auto const srcSize64 = ((u64{dstRemaining - ext}*increment + fracPos) >> MixerFracBits) + ext
-        + MaxResamplerEdge;
+    auto const srcSize64 = ((std::uint64_t{dstRemaining - ext}*increment + fracPos)
+        >> MixerFracBits) + ext + MaxResamplerEdge;
     if(srcSize64 <= SrcSizeMax)
-        return BufferSize{.dst=dstRemaining, .src=gsl::narrow_cast<unsigned>(srcSize64.c_val)};
+        return BufferSize{.dst=dstRemaining, .src=gsl::narrow_cast<unsigned>(srcSize64)};
 
     /* If the source size got saturated, we can't fill the desired dst size.
      * Figure out how many dst samples we can fill.
      */
-    auto const dstSize64 = ((u64{SrcSizeMax - MaxResamplerEdge}<<MixerFracBits) - fracPos)
-        / increment;
+    auto const dstSize64 = ((std::uint64_t{SrcSizeMax - MaxResamplerEdge}<<MixerFracBits)
+        - fracPos) / increment;
     if(dstSize64 < dstRemaining)
     {
         /* Some resamplers require the destination being 16-byte aligned, so
          * limit to a multiple of 4 samples to maintain alignment if we need to
          * do another iteration after this.
          */
-        return BufferSize{.dst=gsl::narrow_cast<unsigned>(dstSize64.c_val)&~3u, .src=SrcSizeMax};
+        return BufferSize{.dst=gsl::narrow_cast<unsigned>(dstSize64)&~3u, .src=SrcSizeMax};
     }
     return BufferSize{.dst=dstRemaining, .src=SrcSizeMax};
 }
@@ -1355,9 +1364,9 @@ void Voice::prepare(DeviceBase *device)
         const auto splitter = BandSplitter{device->mXOverFreq
             / gsl::narrow_cast<float>(device->mSampleRate)};
         std::ignore = std::ranges::mismatch(mChans, ordersSpan,
-            [&scales,splitter,device](ChannelData &chandata, u8 const scaleidx)
+            [&scales,splitter,device](ChannelData &chandata, std::uint8_t const scaleidx)
         {
-            chandata.mAmbiHFScale = scales[scaleidx.c_val];
+            chandata.mAmbiHFScale = scales[scaleidx];
             chandata.mAmbiLFScale = 1.0f;
             chandata.mAmbiSplitter = splitter;
             chandata.mDryParams = DirectParams{};

@@ -29,6 +29,7 @@
 #include <bit>
 #include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <memory>
@@ -52,12 +53,10 @@ import fmtlib;
 import gsl;
 import numeric;
 import phase_shifter;
-import types;
 import zstring_view;
 #else
 #include "alformatzsv.hpp"
 #include "alstring.h"
-#include "altypes.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"
@@ -76,11 +75,11 @@ using SndFilePtr = std::unique_ptr<SNDFILE, decltype([](SNDFILE *sndfile) { sf_c
 
 
 constexpr auto SUBTYPE_BFORMAT_FLOAT = std::bit_cast<std::array<char,16>>(
-    std::to_array<u8::value_t>({
+    std::to_array<std::uint8_t>({
         0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
         0xca, 0x00, 0x00, 0x00}));
 
-void fwrite16le(u16 const value, std::ostream &f)
+void fwrite16le(std::uint16_t const value, std::ostream &f)
 {
     auto data = std::bit_cast<std::array<char,2>>(value);
     if constexpr(std::endian::native == std::endian::big)
@@ -88,7 +87,7 @@ void fwrite16le(u16 const value, std::ostream &f)
     f.write(data.data(), std::ssize(data));
 }
 
-void fwrite32le(u32 const value, std::ostream &f)
+void fwrite32le(std::uint32_t const value, std::ostream &f)
 {
     auto data = std::bit_cast<std::array<char,4>>(value);
     if constexpr(std::endian::native == std::endian::big)
@@ -395,8 +394,8 @@ auto main(std::span<al::zstring_view> args) -> int
             return;
         }
 
-        auto const inchannels = u32::from(ininfo.channels);
-        auto outchans = u32{};
+        auto const inchannels = gsl::narrow<std::uint32_t>(ininfo.channels);
+        auto outchans = std::uint32_t{};
         if(inchannels == 2)
             outchans = 3;
         else if(inchannels == 3 || inchannels == 4)
@@ -406,7 +405,7 @@ auto main(std::span<al::zstring_view> args) -> int
             fmt::println(std::cerr, "{} is not a 2-, 3-, or 4-channel file", arg);
             return;
         }
-        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels.c_val,
+        fmt::println("Converting {} from {}-channel UHJ{}...", arg, inchannels,
             (inchannels == 2) ? use_general ? " (general)" : " (alternative)" : "");
 
         auto outname = fs::path(al::char_as_u8(arg)).stem().replace_extension(u8".amb");
@@ -418,35 +417,35 @@ auto main(std::span<al::zstring_view> args) -> int
         }
 
         outfile.write("RIFF", 4);
-        fwrite32le(0xFFFFFFFF_u32, outfile); // 'RIFF' header len; filled in at close
+        fwrite32le(0xFFFFFFFFu, outfile); // 'RIFF' header len; filled in at close
         outfile.write("WAVE", 4);
 
         outfile.write("fmt ", 4);
-        fwrite32le(40_u32, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
+        fwrite32le(40, outfile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
         // 16-bit val, format type id (extensible: 0xFFFE)
-        fwrite16le(0xFFFE_u16, outfile);
+        fwrite16le(0xFFFE, outfile);
         // 16-bit val, channel count
-        fwrite16le(outchans.cast_to<u16>(), outfile);
+        fwrite16le(gsl::narrow<std::uint16_t>(outchans), outfile);
         // 32-bit val, frequency
-        fwrite32le(u32::from(ininfo.samplerate), outfile);
+        fwrite32le(gsl::narrow<std::uint32_t>(ininfo.samplerate), outfile);
         // 32-bit val, bytes per second
-        fwrite32le(u32::from(ininfo.samplerate)*outchans*sizeof(float), outfile);
+        fwrite32le(gsl::narrow<std::uint32_t>(ininfo.samplerate)*outchans*sizeof(float), outfile);
         // 16-bit val, frame size
-        fwrite16le((sizeof(float)*outchans).cast_to<u16>(), outfile);
+        fwrite16le(gsl::narrow<std::uint16_t>(sizeof(float)*outchans), outfile);
         // 16-bit val, bits per sample
-        fwrite16le(u16{sizeof(float)*8}, outfile);
+        fwrite16le(std::uint16_t{sizeof(float)*8}, outfile);
         // 16-bit val, extra byte count
-        fwrite16le(22_u16, outfile);
+        fwrite16le(22, outfile);
         // 16-bit val, valid bits per sample
-        fwrite16le(u16{sizeof(float)*8}, outfile);
+        fwrite16le(std::uint16_t{sizeof(float)*8}, outfile);
         // 32-bit val, channel mask
-        fwrite32le(0_u32, outfile);
+        fwrite32le(0, outfile);
         // 16 byte GUID, sub-type format
         outfile.write(SUBTYPE_BFORMAT_FLOAT.data(), std::ssize(SUBTYPE_BFORMAT_FLOAT));
 
         outfile.write("data", 4);
-        fwrite32le(0xFFFFFFFF_u32, outfile); // 'data' header len; filled in at close
+        fwrite32le(0xFFFFFFFFu, outfile); // 'data' header len; filled in at close
         if(!outfile)
         {
             fmt::println(std::cerr, "Error writing wave file header: {} ({})",
@@ -457,9 +456,9 @@ auto main(std::span<al::zstring_view> args) -> int
         const auto DataStart = std::streamoff{outfile.tellp()};
 
         auto decoder = std::make_unique<UhjDecoder>();
-        auto inmem = std::vector<float>(std::size_t{BufferLineSize} * inchannels.c_val);
-        auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans.c_val);
-        auto outmem = std::vector<char>(std::size_t{BufferLineSize}*outchans.c_val*sizeof(float));
+        auto inmem = std::vector<float>(std::size_t{BufferLineSize} * inchannels);
+        auto decmem = al::vector<std::array<float, BufferLineSize>, 16>(outchans);
+        auto outmem = std::vector<char>(std::size_t{BufferLineSize}*outchans*sizeof(float));
 
         /* A number of initial samples need to be skipped to cut the lead-in
          * from the all-pass filter delay. The same number of samples need to
@@ -475,13 +474,13 @@ auto main(std::span<al::zstring_view> args) -> int
             if(got < BufferLineSize)
             {
                 auto const remaining = std::min(BufferLineSize - got, LeadOut);
-                std::ranges::fill(inmem | std::views::drop(got*inchannels.c_val), 0.0f);
+                std::ranges::fill(inmem | std::views::drop(got*inchannels), 0.0f);
                 got += remaining;
                 LeadOut -= remaining;
             }
 
             if(inchannels > 2 || use_general)
-                decoder->decode(inmem, inchannels.c_val, decmem, got);
+                decoder->decode(inmem, inchannels, decmem, got);
             else
                 decoder->decode2(inmem, decmem, got);
             if(LeadIn >= got)
@@ -514,9 +513,9 @@ auto main(std::span<al::zstring_view> args) -> int
         {
             auto const dataLen = DataEnd - DataStart;
             if(outfile.seekp(4))
-                fwrite32le(u32::from(DataEnd-8), outfile); // 'WAVE' header len
+                fwrite32le(gsl::narrow<std::uint32_t>(DataEnd-8), outfile); // 'WAVE' header len
             if(outfile.seekp(DataStart-4))
-                fwrite32le(u32::from(dataLen), outfile); // 'data' header len
+                fwrite32le(gsl::narrow<std::uint32_t>(dataLen), outfile); // 'data' header len
         }
         outfile.flush();
         ++num_decoded;

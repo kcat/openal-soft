@@ -34,7 +34,7 @@ namespace {
 #endif
 
 using EventBitSet = al::bitset<alc::EventType>;
-auto gEventsEnabled = EventBitSet{0};
+auto gEventsEnabled = EventBitSet{};
 
 [[nodiscard]] constexpr
 auto EnumFromEventType(const alc::EventType type) -> ALCenum

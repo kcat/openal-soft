@@ -52,23 +52,26 @@ class bitset {
 
     integer_t mBits{0u};
 
+    explicit constexpr
+    bitset(integer_t const arg) noexcept : mBits{static_cast<integer_t>(arg&AllBits)} { }
+
+    [[nodiscard]] static constexpr
+    auto flag_from_enum(EnumType const e) noexcept -> integer_t
+    { return integer_t{1u} << static_cast<UnderlyingType>(e); }
+
 public:
     constexpr bitset() noexcept = default;
     constexpr bitset(bitset const &rhs) noexcept = default;
     constexpr ~bitset() noexcept = default;
 
-    explicit constexpr
-    bitset(unsigned long long const arg) noexcept : mBits{static_cast<integer_t>(arg&AllBits)} { }
-
     [[nodiscard]] explicit constexpr
     operator bool() const noexcept { return mBits != 0u; }
-
 
     constexpr
     auto set(EnumType const e, bool const s=true) noexcept LIFETIMEBOUND -> bitset&
     {
-        if(s) mBits |= integer_t{1u} << static_cast<UnderlyingType>(e);
-        else mBits &= ~(integer_t{1u} << static_cast<UnderlyingType>(e));
+        if(s) mBits |= flag_from_enum(e);
+        else mBits &= ~flag_from_enum(e);
         return *this;
     }
 
@@ -77,14 +80,14 @@ public:
 
     constexpr
     auto reset(EnumType const e) noexcept LIFETIMEBOUND -> bitset&
-    { mBits &= ~(1u << static_cast<UnderlyingType>(e)); return *this; }
+    { mBits &= ~flag_from_enum(e); return *this; }
 
     constexpr
     auto reset() noexcept LIFETIMEBOUND -> bitset& { mBits = 0u; return *this; }
 
     [[nodiscard]] constexpr
     auto test(EnumType const e) const noexcept -> bool
-    { return (mBits & (integer_t{1u} << static_cast<UnderlyingType>(e))) != 0u; }
+    { return (mBits & flag_from_enum(e)) != 0u; }
 
     [[nodiscard]] constexpr
     auto any() const noexcept -> bool { return mBits != 0u; }
@@ -97,7 +100,7 @@ public:
     auto flip() noexcept LIFETIMEBOUND -> bitset& { mBits ^= AllBits; return *this; }
     [[nodiscard]] constexpr
     auto flip(EnumType const e) noexcept LIFETIMEBOUND -> bitset&
-    { mBits ^= integer_t{1u} << static_cast<UnderlyingType>(e); return *this; }
+    { mBits ^= flag_from_enum(e); return *this; }
 
     [[nodiscard]] constexpr
     auto count() const noexcept -> std::size_t
@@ -105,12 +108,9 @@ public:
     [[nodiscard]] static constexpr
     auto size() noexcept -> std::size_t { return num_bits; }
 
-    /* Cast to ull before bit flipping to passify MSVC. The constructor input
-     * will have invalid bits masked out to get the same result regardless.
-     */
+    /* NOTE: The constructor masks out invalid input bits. */
     [[nodiscard]] constexpr
-    auto operator~() const noexcept -> bitset
-    { return bitset{~static_cast<unsigned long long>(mBits)}; }
+    auto operator~() const noexcept -> bitset { return bitset{~mBits}; }
 
     constexpr
     auto operator|=(bitset const &rhs) noexcept LIFETIMEBOUND -> bitset&

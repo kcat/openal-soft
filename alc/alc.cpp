@@ -458,10 +458,9 @@ void alc_initconfig()
     TRACE("Initializing library v{}-{} {}", ALSOFT_VERSION,
         std::string_view{ALSOFT_GIT_COMMIT_HASH}.empty() ? "unknown" : ALSOFT_GIT_COMMIT_HASH,
         std::string_view{ALSOFT_GIT_BRANCH}.empty() ? "unknown" : ALSOFT_GIT_BRANCH);
-    {
-        auto const names = BackendList | std::views::transform(&BackendInfo::name);
-        TRACE("{}", fmt::format("Supported backends: {}", fmt::join(names, ", ")));
-    }
+    TRACE("{}", fmt::format("Supported backends: {}",
+        fmt::join(BackendList | std::views::transform(&BackendInfo::name), ", ")));
+
     ReadALConfig();
 
     if(auto const suspendmode = al::getenv("__ALSOFT_SUSPEND_CONTEXT"))

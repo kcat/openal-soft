@@ -959,7 +959,7 @@ auto EnumFromDevFmt(DevFmtType const type) -> ALCenum
     case DevFmtUInt: return ALC_UNSIGNED_INT_SOFT;
     case DevFmtFloat: return ALC_FLOAT_SOFT;
     }
-    throw std::runtime_error{al::format("Invalid DevFmtType: {}", int{al::to_underlying(type)})};
+    throw std::runtime_error{al::format("Invalid DevFmtType: {:#x}", al::to_underlying(type))};
 }
 
 auto DevFmtChannelsFromEnum(ALCenum const channels) -> std::optional<DevFmtChannels>
@@ -994,8 +994,8 @@ auto EnumFromDevFmt(DevFmtChannels const channels) -> ALCenum
     case DevFmtX3D71:
         break;
     }
-    throw std::runtime_error{al::format("Invalid DevFmtChannels: {}",
-        int{al::to_underlying(channels)})};
+    throw std::runtime_error{al::format("Invalid DevFmtChannels: {:#x}",
+        al::to_underlying(channels))};
 }
 
 auto DevAmbiLayoutFromEnum(ALCenum const layout) -> std::optional<DevAmbiLayout>
@@ -1015,8 +1015,8 @@ auto EnumFromDevAmbi(DevAmbiLayout const layout) -> ALCenum
     case DevAmbiLayout::FuMa: return ALC_FUMA_SOFT;
     case DevAmbiLayout::ACN: return ALC_ACN_SOFT;
     }
-    throw std::runtime_error{al::format("Invalid DevAmbiLayout: {}",
-        int{al::to_underlying(layout)})};
+    throw std::runtime_error{al::format("Invalid DevAmbiLayout: {:#x}",
+        al::to_underlying(layout))};
 }
 
 auto DevAmbiScalingFromEnum(ALCenum const scaling) -> std::optional<DevAmbiScaling>
@@ -1038,8 +1038,8 @@ auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
     case DevAmbiScaling::SN3D: return ALC_SN3D_SOFT;
     case DevAmbiScaling::N3D: return ALC_N3D_SOFT;
     }
-    throw std::runtime_error{al::format("Invalid DevAmbiScaling: {}",
-        int{al::to_underlying(scaling)})};
+    throw std::runtime_error{al::format("Invalid DevAmbiScaling: {:#x}",
+        al::to_underlying(scaling))};
 }
 
 
@@ -1195,19 +1195,19 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 std::string_view name;
                 DevFmtType type;
             };
-            constexpr std::array typelist{
-                TypeMap{"int8"sv,    DevFmtByte  },
-                TypeMap{"uint8"sv,   DevFmtUByte },
-                TypeMap{"int16"sv,   DevFmtShort },
-                TypeMap{"uint16"sv,  DevFmtUShort},
-                TypeMap{"int32"sv,   DevFmtInt   },
-                TypeMap{"uint32"sv,  DevFmtUInt  },
-                TypeMap{"float32"sv, DevFmtFloat },
-            };
+            auto constexpr typelist = std::to_array<TypeMap>({
+                {.name="int8"sv,    .type=DevFmtByte  },
+                {.name="uint8"sv,   .type=DevFmtUByte },
+                {.name="int16"sv,   .type=DevFmtShort },
+                {.name="uint16"sv,  .type=DevFmtUShort},
+                {.name="int32"sv,   .type=DevFmtInt   },
+                {.name="uint32"sv,  .type=DevFmtUInt  },
+                {.name="float32"sv, .type=DevFmtFloat },
+            });
 
             const auto iter = std::ranges::find_if(typelist,
-                [svfmt=std::string_view{*typeopt}](TypeMap const &entry) -> bool
-                { return al::ci_equal(entry.name, svfmt); });
+                [svfmt=std::string_view{*typeopt}](std::string_view const entry) -> bool
+                { return al::ci_equal(entry, svfmt); }, &TypeMap::name);
             if(iter == typelist.end())
                 ERR("Unsupported sample-type: {}", *typeopt);
             else
@@ -1221,26 +1221,26 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 DevFmtChannels chans;
                 std::uint8_t order;
             };
-            constexpr auto chanlist = std::array{
-                ChannelMap{"mono"sv,       DevFmtMono,   0},
-                ChannelMap{"stereo"sv,     DevFmtStereo, 0},
-                ChannelMap{"quad"sv,       DevFmtQuad,   0},
-                ChannelMap{"surround51"sv, DevFmtX51,    0},
-                ChannelMap{"surround61"sv, DevFmtX61,    0},
-                ChannelMap{"surround71"sv, DevFmtX71,    0},
-                ChannelMap{"3d71"sv,         DevFmtX3D71, 0},
-                ChannelMap{"surround714"sv,  DevFmtX714,  0},
-                ChannelMap{"surround7144"sv, DevFmtX7144, 0},
-                ChannelMap{"ambi1"sv, DevFmtAmbi3D, 1},
-                ChannelMap{"ambi2"sv, DevFmtAmbi3D, 2},
-                ChannelMap{"ambi3"sv, DevFmtAmbi3D, 3},
-                ChannelMap{"ambi4"sv, DevFmtAmbi3D, 4},
-                ChannelMap{"surround51rear"sv, DevFmtX51, 0},
-            };
+            auto constexpr chanlist = std::to_array<ChannelMap>({
+                {.name="mono"sv,       .chans=DevFmtMono,   .order=0},
+                {.name="stereo"sv,     .chans=DevFmtStereo, .order=0},
+                {.name="quad"sv,       .chans=DevFmtQuad,   .order=0},
+                {.name="surround51"sv, .chans=DevFmtX51,    .order=0},
+                {.name="surround61"sv, .chans=DevFmtX61,    .order=0},
+                {.name="surround71"sv, .chans=DevFmtX71,    .order=0},
+                {.name="3d71"sv,         .chans=DevFmtX3D71, .order=0},
+                {.name="surround714"sv,  .chans=DevFmtX714,  .order=0},
+                {.name="surround7144"sv, .chans=DevFmtX7144, .order=0},
+                {.name="ambi1"sv, .chans=DevFmtAmbi3D, .order=1},
+                {.name="ambi2"sv, .chans=DevFmtAmbi3D, .order=2},
+                {.name="ambi3"sv, .chans=DevFmtAmbi3D, .order=3},
+                {.name="ambi4"sv, .chans=DevFmtAmbi3D, .order=4},
+                {.name="surround51rear"sv, .chans=DevFmtX51, .order=0},
+            });
 
             const auto iter = std::ranges::find_if(chanlist,
-                [svfmt=std::string_view{*chanopt}](ChannelMap const &entry) -> bool
-                { return al::ci_equal(entry.name, svfmt); });
+                [svfmt=std::string_view{*chanopt}](std::string_view const entry) -> bool
+                { return al::ci_equal(entry, svfmt); }, &ChannelMap::name);
             if(iter == chanlist.end())
                 ERR("Unsupported channels: {}", *chanopt);
             else
@@ -1257,28 +1257,29 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         }
         if(auto ambiopt = device.configValue<std::string>({}, "ambi-format"sv))
         {
-            if(al::ci_equal(*ambiopt, "fuma"sv))
-            {
-                optlayout = DevAmbiLayout::FuMa;
-                optscale = DevAmbiScaling::FuMa;
-            }
-            else if(al::ci_equal(*ambiopt, "acn+fuma"sv))
-            {
-                optlayout = DevAmbiLayout::ACN;
-                optscale = DevAmbiScaling::FuMa;
-            }
-            else if(al::ci_equal(*ambiopt, "ambix"sv) or al::ci_equal(*ambiopt, "acn+sn3d"sv))
-            {
-                optlayout = DevAmbiLayout::ACN;
-                optscale = DevAmbiScaling::SN3D;
-            }
-            else if(al::ci_equal(*ambiopt, "acn+n3d"sv))
-            {
-                optlayout = DevAmbiLayout::ACN;
-                optscale = DevAmbiScaling::N3D;
-            }
-            else
+            struct FormatMap {
+                std::string_view name;
+                DevAmbiLayout layout;
+                DevAmbiScaling scaling;
+            };
+            auto constexpr ambimap = std::to_array<FormatMap>({
+                {.name="fuma"sv, .layout=DevAmbiLayout::FuMa, .scaling=DevAmbiScaling::FuMa},
+                {.name="anc+fuma"sv, .layout=DevAmbiLayout::ACN, .scaling=DevAmbiScaling::FuMa},
+                {.name="ambix"sv, .layout=DevAmbiLayout::ACN, .scaling=DevAmbiScaling::SN3D},
+                {.name="acn+sn3d"sv, .layout=DevAmbiLayout::ACN, .scaling=DevAmbiScaling::SN3D},
+                {.name="acn+n3d"sv, .layout=DevAmbiLayout::ACN, .scaling=DevAmbiScaling::N3D},
+            });
+
+            auto const iter = std::ranges::find_if(ambimap,
+                [svfmt=std::string_view{*ambiopt}](std::string_view const entry) -> bool
+                { return al::ci_equal(entry, svfmt); }, &FormatMap::name);
+            if(iter == ambimap.end())
                 ERR("Unsupported ambi-format: {}", *ambiopt);
+            else
+            {
+                optlayout = iter->layout;
+                optscale = iter->scaling;
+            }
         }
 
         if(aorder > 3 && (optlayout == DevAmbiLayout::FuMa || optscale == DevAmbiScaling::FuMa))

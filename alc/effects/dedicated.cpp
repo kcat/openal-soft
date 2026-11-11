@@ -33,8 +33,10 @@
 #include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES
+import core.ambi_utils;
 import core.device;
 #else
+#include "core/ambi_utils.hpp"
 #include "core/device.h"
 #endif
 

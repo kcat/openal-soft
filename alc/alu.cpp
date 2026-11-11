@@ -43,7 +43,6 @@
 #include <variant>
 
 #include "atomic.h"
-#include "core/ambidefs.h"
 #include "core/async_event.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
@@ -79,6 +78,7 @@
 import alstring;
 import bsinc_tables;
 import cemath;
+import core.ambi_utils;
 import core.context;
 import core.device;
 import cubic_tables;
@@ -89,6 +89,7 @@ import numeric;
 #include "alformat.hpp"
 #include "alstring.h"
 #include "cemath.hpp"
+#include "core/ambi_utils.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"

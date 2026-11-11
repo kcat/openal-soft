@@ -55,8 +55,9 @@ inline void MixSamples(std::span<float const> const InSamples, std::span<float> 
  * The components are ordered such that OpenAL's X, Y, and Z are the first,
  * second, and third parameters respectively -- simply negate X and Z.
  */
-std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(float y, float z, float x, float spread) noexcept
-    NONBLOCKING;
+[[nodiscard]]
+auto CalcAmbiCoeffs(float y, float z, float x, float spread) noexcept NONBLOCKING
+    -> std::array<float,MaxAmbiChannels>;
 
 /**
  * CalcDirectionCoeffs
@@ -65,24 +66,12 @@ std::array<float,MaxAmbiChannels> CalcAmbiCoeffs(float y, float z, float x, floa
  * vector must be normalized (unit length), and the spread is the angular width
  * of the sound (0...tau).
  */
-inline auto CalcDirectionCoeffs(const std::span<const float,3> dir, const float spread) noexcept
+[[nodiscard]] inline
+auto CalcDirectionCoeffs(const std::span<const float,3> dir, const float spread) noexcept
     NONBLOCKING -> std::array<float,MaxAmbiChannels>
 {
     /* Convert from OpenAL coords to Ambisonics. */
     return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2], spread);
-}
-
-/**
- * CalcDirectionCoeffs
- *
- * Calculates ambisonic coefficients based on an OpenAL direction vector. The
- * vector must be normalized (unit length).
- */
-constexpr auto CalcDirectionCoeffs(const std::span<const float,3> dir) noexcept NONBLOCKING
-    -> std::array<float,MaxAmbiChannels>
-{
-    /* Convert from OpenAL coords to Ambisonics. */
-    return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2]);
 }
 
 /**
@@ -92,8 +81,9 @@ constexpr auto CalcDirectionCoeffs(const std::span<const float,3> dir) noexcept 
  * azimuth and elevation parameters are in radians, going right and up
  * respectively.
  */
-inline auto CalcAngleCoeffs(const float azimuth, const float elevation, const float spread)
-    noexcept NONBLOCKING -> std::array<float,MaxAmbiChannels>
+[[nodiscard]] inline
+auto CalcAngleCoeffs(const float azimuth, const float elevation, const float spread) noexcept
+    NONBLOCKING -> std::array<float, MaxAmbiChannels>
 {
     const float x{-std::sin(azimuth) * std::cos(elevation)};
     const float y{ std::sin(elevation)};
@@ -111,7 +101,7 @@ inline auto CalcAngleCoeffs(const float azimuth, const float elevation, const fl
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-void ComputePanGains(const MixParams *mix, std::span<float const, MaxAmbiChannels> coeffs,
-    float ingain, std::span<float, MaxAmbiChannels> gains) noexcept NONBLOCKING;
+auto ComputePanGains(const MixParams *mix, std::span<float const, MaxAmbiChannels> coeffs,
+    float ingain, std::span<float, MaxAmbiChannels> gains) noexcept NONBLOCKING -> void;
 
 #endif /* CORE_MIXER_H */

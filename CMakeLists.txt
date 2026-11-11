@@ -804,7 +804,6 @@ endif()
 set(CORE_MODS )
 set(CORE_SRCS
     core/ambdec.cpp
-    core/ambidefs.cpp
     core/bformatdec.cpp
     core/bs2b.cpp
     core/context.cpp
@@ -835,6 +834,7 @@ set(CORE_HDRS
     core/allpass_iir.hpp
     core/ambdec.h
     core/ambidefs.h
+    core/ambi_utils.hpp
     core/async_event.h
     core/bformatdec.h
     core/bs2b.h
@@ -875,6 +875,7 @@ set(CORE_HDRS
     core/voice_change.h)
 if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
+        core/ambi_utils.cppm
         core/bsinc_tables.cppm
         core/context.cppm
         core/cubic_tables.cppm

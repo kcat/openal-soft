@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "ambidefs.h"
 #include "filters/splitter.h"
 #include "gsl/gsl"
 #include "hrtf_loader.hpp"
@@ -36,6 +35,7 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import core.ambi_utils;
 import core.helpers;
 import filesystem;
 import format;
@@ -47,6 +47,7 @@ import spanstream;
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alstring.h"
+#include "core/ambi_utils.hpp"
 #include "core/helpers.hpp"
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"

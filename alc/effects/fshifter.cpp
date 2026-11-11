@@ -33,7 +33,6 @@
 
 #include "alc/effects/base.h"
 #include "alcomplex.h"
-#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
@@ -44,11 +43,13 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import core.ambi_utils;
 import core.context;
 import core.device;
 import numeric;
 import window.hann;
 #else
+#include "core/ambi_utils.hpp"
 #include "core/context.h"
 #include "core/device.h"
 #include "hann_window.hpp"

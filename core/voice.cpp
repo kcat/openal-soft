@@ -18,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include "ambidefs.h"
 #include "async_event.h"
 #include "buffer_storage.h"
 #include "context.h"
@@ -39,11 +38,13 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import core.ambi_utils;
 import core.device;
 import logging;
 import numeric;
 #else
 #include "alstring.h"
+#include "core/ambi_utils.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "numeric.hpp"

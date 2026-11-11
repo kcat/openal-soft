@@ -8,17 +8,18 @@
 #include <numbers>
 #include <utility>
 
-#include "core/ambidefs.h"
 #include "mixer/defs.h"
 #include "mixparams.hpp"
 
 #if HAVE_CXXMODULES
+import core.ambi_utils;
 import core.device;
 #else
+#include "core/ambi_utils.hpp"
 #include "core/device.h"
 #endif
 
-
+[[nodiscard]]
 auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spread) noexcept
     NONBLOCKING -> std::array<float,MaxAmbiChannels>
 {
@@ -96,8 +97,8 @@ auto CalcAmbiCoeffs(const float y, const float z, const float x, const float spr
     return coeffs;
 }
 
-void ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
-    const float ingain, const std::span<float,MaxAmbiChannels> gains) noexcept NONBLOCKING
+auto ComputePanGains(const MixParams *mix, const std::span<const float,MaxAmbiChannels> coeffs,
+    const float ingain, const std::span<float,MaxAmbiChannels> gains) noexcept NONBLOCKING -> void
 {
     auto ambimap = std::span{std::as_const(mix->AmbiMap)}.first(mix->Buffer.size());
 

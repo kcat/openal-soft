@@ -31,7 +31,6 @@
 #include <span>
 
 #include "alc/effects/base.h"
-#include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
@@ -46,11 +45,13 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import core.ambi_utils;
 import core.context;
 import core.device;
 import cubic_tables;
 import numeric;
 #else
+#include "core/ambi_utils.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"

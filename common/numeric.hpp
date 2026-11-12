@@ -14,12 +14,6 @@
 #include <numeric>
 #include <string_view>
 #include <type_traits>
-#ifdef HAVE_INTRIN_H
-#include <intrin.h>
-#endif
-#if HAVE_SSE_INTRINSICS
-#include <emmintrin.h>
-#endif
 
 #include "opthelpers.h"
 
@@ -390,42 +384,6 @@ auto RoundFromZero(T value, std::type_identity_t<T> r) noexcept -> T
         return RoundToZero(value + r-1, r);
     return RoundToZero(value - r+1, r);
 }
-
-
-/**
- * Fast float-to-int conversion. No particular rounding mode is assumed; the
- * IEEE-754 default is round-to-nearest with ties-to-even, though an app could
- * change it on its own threads. On some systems, a truncating conversion may
- * always be the fastest method.
- */
-[[nodiscard]] inline
-auto fastf2i(float const f) noexcept -> int
-{
-#if HAVE_SSE_INTRINSICS
-    return _mm_cvt_ss2si(_mm_set_ss(f));
-
-#elif defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0
-
-    int i;
-    __asm fld f
-    __asm fistp i
-    return i;
-
-#elif (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) \
-    && !defined(__SSE_MATH__)
-
-    int i;
-    __asm__ __volatile__("fistpl %0" : "=m"(i) : "t"(f) : "st");
-    return i;
-
-#else
-
-    return static_cast<int>(f);
-#endif
-}
-[[nodiscard]] inline
-auto fastf2u(float const f) noexcept -> unsigned
-{ return static_cast<unsigned>(fastf2i(f)); }
 
 
 namespace detail {

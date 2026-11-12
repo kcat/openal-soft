@@ -1708,7 +1708,7 @@ void CalcNonAttnVoiceParams(Voice *const voice, ContextBase const *const context
     if(pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
-        voice->mStep = std::max(fastf2u(pitch * MixerFracOne), 1u);
+        voice->mStep = std::max(al::saturating_cast<unsigned>(pitch*MixerFracOne + 0.5f), 1u);
     voice->mResampler = PrepareResampler(props.mResampler, voice->mStep, &voice->mResampleState);
 
     /* Calculate gains */
@@ -2022,7 +2022,7 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context) n
     if(pitch > float{MaxPitch})
         voice->mStep = MaxPitch<<MixerFracBits;
     else
-        voice->mStep = std::max(fastf2u(pitch * MixerFracOne), 1u);
+        voice->mStep = std::max(al::saturating_cast<unsigned>(pitch*MixerFracOne + 0.5f), 1u);
     voice->mResampler = PrepareResampler(props.mResampler, voice->mStep, &voice->mResampleState);
 
     auto spread = 0.0f;

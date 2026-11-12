@@ -182,9 +182,9 @@ void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
     const EffectProps *props_, const EffectTarget target) noexcept NONBLOCKING
 {
     auto &props = IGNORE_FUNCTION_EFFECTS(std::get<PshifterProps>(*props_));
-    const auto tune = props.CoarseTune*100 + props.FineTune;
-    const auto pitch = std::pow(2.0f, static_cast<float>(tune) / 1200.0f);
-    mPitchShiftI = fastf2u(std::clamp(pitch, 0.5f, 2.0f)*MixerFracOne);
+    const auto tune = static_cast<float>(props.CoarseTune*100 + props.FineTune);
+    const auto pitch = std::clamp(std::pow(2.0f, tune/1200.0f), 0.5f, 2.0f);
+    mPitchShiftI = al::saturating_cast<unsigned>(pitch*MixerFracOne + 0.5f);
     mPitchShift = static_cast<float>(mPitchShiftI) * float{1.0f/MixerFracOne};
 
     mOutTarget = target.Main->Buffer;

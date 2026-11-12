@@ -989,7 +989,7 @@ void Modulation::updateModulator(float const modTime, float const modDepth, floa
      * appropriate step size to generate an LFO, which will vary the feedback
      * delay over time.
      */
-    Step = std::max(fastf2u(MOD_FRACONE / (frequency * modTime)), 1u);
+    Step = std::max(al::saturating_cast<unsigned>(MOD_FRACONE/(frequency*modTime) + 0.5f), 1u);
 
     /* The modulation depth effects the amount of frequency change over the
      * range of the sinus. It needs to be scaled by the modulation time so that

@@ -38,9 +38,6 @@ export {
     using ::RoundFromZero;
     using ::RoundToZero;
 
-    using ::fastf2i;
-    using ::fastf2u;
-
     using ::fast_roundf;
 
     using ::level_mb_to_gain;

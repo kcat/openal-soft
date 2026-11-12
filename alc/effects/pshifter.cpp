@@ -27,7 +27,6 @@
 #include <complex>
 #include <cstdint>
 #include <numbers>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <variant>
@@ -36,11 +35,11 @@
 #include "core/bufferline.h"
 #include "core/effects/base.h"
 #include "core/effectslot.h"
-#include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 #include "pffft.h"
+#include "vector.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
@@ -60,14 +59,6 @@ struct ContextBase;
 
 
 namespace {
-
-/* To keep from being too intensive with these FFTs, only process up to second
- * order (9 channels) and upsample higher orders.
- */
-constexpr auto EffectMaxOrder = 2u;
-constexpr auto UpsampleMatrix = std::span{AmbiScale::SecondOrderUp};
-constexpr auto NumLines = AmbiChannelsFromOrder(EffectMaxOrder);
-
 
 using complex_f = std::complex<float>;
 
@@ -116,21 +107,9 @@ struct PshifterState final : EffectState {
         float mCurrentGain{};
         float mTargetGain{};
     };
-    std::array<ProcessParams, NumLines> mChans;
+    std::vector<ProcessParams> mChans;
 
-    alignas(16) std::array<FloatBufferLine, NumLines> mBBuffer{};
-
-    /* When the device is mixing to higher-order B-Format, the output needs
-     * high-frequency adjustment and (potentially) mixing into higher order
-     * channels to compensate.
-     */
-    struct UpsampleParams {
-        float mHfScale{1.0f};
-        BandSplitter mSplitter;
-        std::array<float, MaxAmbiChannels> mCurrentGains{};
-        std::array<float, MaxAmbiChannels> mTargetGains{};
-    };
-    std::optional<std::array<UpsampleParams, NumLines>> mUpsampler;
+    al::vector<FloatBufferLine, 16> mBBuffer{};
 
     void deviceUpdate(const DeviceBase *device, const BufferStorage *buffer) override;
     void update(const ContextBase *context, const EffectSlotBase *slot, const EffectProps *props,
@@ -150,32 +129,13 @@ void PshifterState::deviceUpdate(DeviceBase const *device, BufferStorage const*)
     mPitchShiftI = MixerFracOne;
     mPitchShift  = 1.0f;
 
-    mLastPhase.fill(0.0f);
-    mSumPhase.fill(0.0f);
-    mChans.fill(ProcessParams{});
     mFftBuffer.fill(0.0f);
     mSynthesisBuffer.fill(FrequencyBin{});
-
-    mUpsampler.reset();
-    if(device->mAmbiOrder > EffectMaxOrder)
-    {
-        auto const hfscales = AmbiScale::GetHFOrderScales(EffectMaxOrder, device->mAmbiOrder,
-            device->m2DMixing);
-        auto idx = 0_uz;
-
-        auto const splitter = BandSplitter{device->mXOverFreq
-            / static_cast<float>(device->mSampleRate)};
-
-        using upsampler_t = decltype(mUpsampler)::value_type;
-        auto &upsampler = mUpsampler.emplace(upsampler_t{});
-        for(auto &chandata : upsampler)
-        {
-            chandata.mHfScale = hfscales[idx];
-            idx = 1;
-
-            chandata.mSplitter = splitter;
-        }
-    }
+    mLastPhase.fill(0.0f);
+    mSumPhase.fill(0.0f);
+    decltype(mChans)(AmbiChannelsFromOrder(device->mAmbiOrder)).swap(mChans);
+    decltype(mBBuffer)(AmbiChannelsFromOrder(device->mAmbiOrder)).swap(mBBuffer);
+    std::ranges::fill(mBBuffer | std::views::join, 0.0f);
 }
 
 void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
@@ -197,19 +157,6 @@ void PshifterState::update(const ContextBase*, const EffectSlotBase *slot,
             mChans[idx].mTargetGain = outgain;
         }
     });
-
-    if(mUpsampler.has_value())
-    {
-        auto &upsampler = *mUpsampler;
-
-        auto const outgain = slot->Gain;
-        for(auto const idx : std::views::iota(0_uz, mChans.size()))
-        {
-            if(mChans[idx].mTargetChannel != InvalidChannelIndex)
-                ComputePanGains(target.Main, UpsampleMatrix[idx], outgain,
-                    upsampler[idx].mTargetGains);
-        }
-    }
 }
 
 void PshifterState::process(const size_t samplesToDo,
@@ -225,7 +172,7 @@ void PshifterState::process(const size_t samplesToDo,
      */
     constexpr auto expected_cycles = std::numbers::pi_v<float>*2.0f / OversampleFactor;
 
-    auto const numInput = std::min(samplesIn.size(), NumLines);
+    auto const numInput = std::min(samplesIn.size(), mChans.size());
     for(auto base = 0_uz;base < samplesToDo;)
     {
         const auto todo = std::min(StftStep-mCount, samplesToDo-base);
@@ -448,33 +395,13 @@ void PshifterState::process(const size_t samplesToDo,
     }
 
     /* Now, mix the processed sound data to the output. */
-    if(mUpsampler.has_value())
+    auto chandata = mChans.begin();
+    for(const auto c : std::views::iota(0_uz, numInput))
     {
-        auto &upsampler = *mUpsampler;
-        auto chandata = mChans.begin();
-        for(const auto c : std::views::iota(0_uz, numInput))
-        {
-            auto &upchan = upsampler[c];
-            if(chandata->mTargetChannel != InvalidChannelIndex)
-            {
-                auto src = std::span{mBBuffer[c]}.first(samplesToDo);
-                upchan.mSplitter.processHfScale(src, src, upchan.mHfScale);
-                MixSamples(src, samplesOut, upchan.mCurrentGains, upchan.mTargetGains, samplesToDo,
-                    0);
-            }
-            ++chandata;
-        }
-    }
-    else
-    {
-        auto chandata = mChans.begin();
-        for(const auto c : std::views::iota(0_uz, numInput))
-        {
-            if(auto const outidx = chandata->mTargetChannel; outidx != InvalidChannelIndex)
-                MixSamples(std::span{mBBuffer[c]}.first(samplesToDo), samplesOut[outidx],
-                    chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
-            ++chandata;
-        }
+        if(auto const outidx = chandata->mTargetChannel; outidx != InvalidChannelIndex)
+            MixSamples(std::span{mBBuffer[c]}.first(samplesToDo), samplesOut[outidx],
+                chandata->mCurrentGain, chandata->mTargetGain, samplesToDo);
+        ++chandata;
     }
 }
 

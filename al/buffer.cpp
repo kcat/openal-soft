@@ -61,6 +61,17 @@
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+/* HACK: GCC 16 has an issue with declaring std::array<al::Buffer, 64> after
+ * the module imports.
+ */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ <= 16
+#include "al/buffer.h"
+namespace {
+    using SubListAllocator = al::allocator<std::array<al::Buffer, 64>>;
+}
+#define BUFFER_SUBLIST_HACK
+#endif
+
 import openal;
 
 import al.iface;
@@ -87,7 +98,9 @@ import numeric;
 
 namespace {
 
-using SubListAllocator = al::allocator<std::array<al::Buffer,64>>;
+#if !defined(BUFFER_SUBLIST_HACK)
+using SubListAllocator = al::allocator<std::array<al::Buffer, 64>>;
+#endif
 
 constexpr auto AmbiLayoutFromEnum(ALenum const layout) noexcept -> std::optional<AmbiLayout>
 {

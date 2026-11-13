@@ -25,9 +25,7 @@
 #include "alcomplex.h"
 #include "base.h"
 #include "core/bufferline.h"
-#include "core/buffer_storage.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/filters/splitter.h"
 #include "core/fmt_traits.h"
 #include "core/mixer.h"
@@ -41,14 +39,18 @@
 
 #if HAVE_CXXMODULES
 import core.ambi_utils;
+import core.buffer_storage;
 import core.context;
 import core.device;
+import core.effectslot;
 import gsl;
 import numeric;
 #else
 #include "core/ambi_utils.hpp"
+#include "core/buffer_storage.h"
 #include "core/context.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

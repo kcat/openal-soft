@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "filter.h"
-
 #include <algorithm>
 #include <bit>
 #include <cstddef>
@@ -32,10 +30,8 @@
 #include <new>
 #include <ranges>
 #include <unordered_map>
+#include <variant>
 #include <vector>
-
-#include "AL/al.h"
-#include "AL/alext.h"
 
 #include "almalloc.h"
 #include "core/except.h"
@@ -44,12 +40,24 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import openal;
+#if defined(_WIN32)
+#define AL_APIENTRY __cdecl
+#else
+#define AL_APIENTRY
+#endif
+
+import al.iface;
 import alc.context;
 import alc.device;
 import gsl;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "al/filter.h"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "core/logging.h"

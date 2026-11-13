@@ -11,13 +11,14 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "alc/inprogext.h"
 #include "core/effects/base.h"
 #include "disable_alloc.hpp"
 #include "effects/effects.h"
 #include "gsl/gsl"
 
 
-enum {
+enum EffectTypeFlag {
     EAXREVERB_EFFECT = 0,
     REVERB_EFFECT,
     AUTOWAH_EFFECT,
@@ -36,14 +37,31 @@ enum {
 
     MAX_EFFECTS
 };
-inline std::bitset<MAX_EFFECTS> DisabledEffects;
+inline auto DisabledEffects = std::bitset<MAX_EFFECTS>{};
 
 struct EffectList {
     std::string_view name;
     ALuint type;
     ALenum val;
 };
-DECL_HIDDEN constinit extern const std::array<EffectList,16> gEffectList;
+inline auto constexpr gEffectList = std::to_array<EffectList>({
+    {.name="eaxreverb",   .type=EAXREVERB_EFFECT,   .val=AL_EFFECT_EAXREVERB },
+    {.name="reverb",      .type=REVERB_EFFECT,      .val=AL_EFFECT_REVERB },
+    {.name="autowah",     .type=AUTOWAH_EFFECT,     .val=AL_EFFECT_AUTOWAH },
+    {.name="chorus",      .type=CHORUS_EFFECT,      .val=AL_EFFECT_CHORUS },
+    {.name="compressor",  .type=COMPRESSOR_EFFECT,  .val=AL_EFFECT_COMPRESSOR },
+    {.name="distortion",  .type=DISTORTION_EFFECT,  .val=AL_EFFECT_DISTORTION },
+    {.name="echo",        .type=ECHO_EFFECT,        .val=AL_EFFECT_ECHO },
+    {.name="equalizer",   .type=EQUALIZER_EFFECT,   .val=AL_EFFECT_EQUALIZER },
+    {.name="flanger",     .type=FLANGER_EFFECT,     .val=AL_EFFECT_FLANGER },
+    {.name="fshifter",    .type=FSHIFTER_EFFECT,    .val=AL_EFFECT_FREQUENCY_SHIFTER },
+    {.name="modulator",   .type=MODULATOR_EFFECT,   .val=AL_EFFECT_RING_MODULATOR },
+    {.name="pshifter",    .type=PSHIFTER_EFFECT,    .val=AL_EFFECT_PITCH_SHIFTER },
+    {.name="vmorpher",    .type=VMORPHER_EFFECT,    .val=AL_EFFECT_VOCAL_MORPHER },
+    {.name="dedicated",   .type=DEDICATED_EFFECT,   .val=AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
+    {.name="dedicated",   .type=DEDICATED_EFFECT,   .val=AL_EFFECT_DEDICATED_DIALOGUE },
+    {.name="convolution", .type=CONVOLUTION_EFFECT, .val=AL_EFFECT_CONVOLUTION_SOFT },
+});
 
 using EffectHandlerVariant = std::variant<NullEffectHandler,ReverbEffectHandler,
     StdReverbEffectHandler,AutowahEffectHandler,ChorusEffectHandler,CompressorEffectHandler,

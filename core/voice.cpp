@@ -2,8 +2,6 @@
 #include "config.h"
 #include "config_simd.h"
 
-#include "voice.h"
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -19,7 +17,6 @@
 #include <vector>
 
 #include "async_event.h"
-#include "buffer_storage.h"
 #include "context.h"
 #include "cpu_caps.h"
 #include "filters/biquad.h"
@@ -39,14 +36,18 @@
 #if HAVE_CXXMODULES
 import alstring;
 import core.ambi_utils;
+import core.buffer_storage;
 import core.device;
+import core.voice;
 import logging;
 import numeric;
 #else
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
+#include "core/buffer_storage.h"
 #include "core/device.h"
 #include "core/logging.h"
+#include "core/voice.h"
 #include "numeric.hpp"
 #endif
 

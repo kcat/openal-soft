@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "event.h"
-
 #include <atomic>
 #include <exception>
 #include <mutex>
@@ -15,9 +13,6 @@
 #include <tuple>
 #include <variant>
 
-#include "AL/al.h"
-#include "AL/alext.h"
-
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/effects/base.h"
@@ -27,12 +22,24 @@
 #include "ringbuffer.h"
 
 #if HAVE_CXXMODULES
+import openal;
+#if defined(_WIN32)
+#define AL_APIENTRY __cdecl
+#else
+#define AL_APIENTRY
+#endif
+
+import al.iface;
 import alc.context;
 import format;
 import gsl;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "al/event.h"
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/logging.h"

@@ -887,12 +887,15 @@ if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
         core/ambi_utils.cppm
         core/bsinc_tables.cppm
+        core/buffer_storage.cppm
         core/context.cppm
         core/cubic_tables.cppm
         core/device.cppm
+        core/effectslot.cppm
         core/helpers.cppm
         core/hrtfstore.cppm
-        core/logging.cppm)
+        core/logging.cppm
+        core/voice.cppm)
 else()
     list(APPEND CORE_HDRS
         core/helpers.hpp
@@ -989,6 +992,9 @@ set(OPENAL_HDRS
     al/filter.h
     al/listener.h
     al/source.h)
+if(HAVE_CXXMODULES)
+    list(APPEND CORE_MODS  al/iface.cppm)
+endif()
 
 # ALC and related routines
 set(ALC_SRCS
@@ -1868,8 +1874,8 @@ else()
     # FIXME: Can't have the modules as part of ${IMPL_TARGET} directly for some
     # reason, causing problems with the private alsoft.common and alsoft.fmt
     # libs, so they're added through this target to work around the bug.
-    if(TARGET alsoft.core-modules)
-        target_link_libraries(${IMPL_TARGET} PRIVATE alsoft.core-modules)
+    if(HAVE_CXXMODULES)
+        target_link_libraries(${IMPL_TARGET} PRIVATE alsoft::buildapi-modules alsoft.core-modules)
     endif()
 
     if(ALSOFT_UWP)

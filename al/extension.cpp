@@ -23,16 +23,23 @@
 #include <algorithm>
 #include <string_view>
 
+#include "direct_defs.h"
+
+#if HAVE_CXXMODULES
+import openal;
+#if defined(_WIN32)
+#define AL_APIENTRY __cdecl
+#else
+#define AL_APIENTRY
+#endif
+
+import alc.context;
+import alstring;
+#else
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-#include "direct_defs.h"
-
-#if HAVE_CXXMODULES
-import alc.context;
-import alstring;
-#else
 #include "alc/context.hpp"
 #include "alstring.h"
 #endif

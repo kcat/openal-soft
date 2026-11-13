@@ -48,10 +48,8 @@
 #include "core/bs2b.h"
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
-#include "core/buffer_storage.h"
 #include "core/cpu_caps.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
@@ -60,10 +58,10 @@
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/mixparams.hpp"
 #include "core/resampler_limits.hpp"
 #include "core/storage_formats.h"
 #include "core/uhjfilter.h"
-#include "core/voice.h"
 #include "core/voice_change.h"
 #include "core/front_stablizer.h"
 #include "envutils.hpp"
@@ -79,8 +77,11 @@ import alstring;
 import bsinc_tables;
 import cemath;
 import core.ambi_utils;
+import core.buffer_storage;
 import core.context;
 import core.device;
+import core.effectslot;
+import core.voice;
 import cubic_tables;
 import format;
 import hrtfstore;
@@ -93,9 +94,12 @@ import numeric;
 #include "core/bsinc_tables.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"
+#include "core/buffer_storage.h"
 #include "core/device.h"
 #include "core/devfmttraits.hpp"
+#include "core/effectslot.h"
 #include "core/hrtfstore.hpp"
+#include "core/voice.h"
 #include "numeric.hpp"
 #endif
 

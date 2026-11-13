@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "source.h"
-
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -32,6 +30,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <iterator>
 #include <functional>
 #include <limits>
@@ -50,23 +49,15 @@
 #include <utility>
 #include <vector>
 
-#include "AL/al.h"
-#include "AL/alext.h"
-#include "AL/efx.h"
-
 #include "alc/backends/base.hpp"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "auxeffectslot.h"
-#include "buffer.h"
-#include "core/buffer_storage.h"
 #include "core/except.h"
 #include "core/mixer/defs.h"
+#include "core/storage_formats.h"
 #include "core/voice_change.h"
-#include "debug.h"
 #include "direct_defs.h"
-#include "filter.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
@@ -85,17 +76,31 @@ import eax.validator;
 #endif
 
 #if HAVE_CXXMODULES
+import openal;
+
+import al.iface;
 import alc.context;
 import alc.device;
+import core.voice;
 import format;
 import gsl;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alext.h"
+#include "AL/efx.h"
+
+#include "al/auxeffectslot.h"
+#include "al/buffer.h"
+#include "al/debug.h"
+#include "al/filter.h"
+#include "al/source.h"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "core/logging.h"
+#include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

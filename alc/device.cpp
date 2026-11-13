@@ -8,10 +8,8 @@
 #include <algorithm>
 #include <bit>
 #include <csignal>
+#include <variant>
 
-#include "al/buffer.h"
-#include "al/effect.h"
-#include "al/filter.h"
 #include "atomic.h"
 #include "backends/base.hpp"
 #include "core/hrtf.h"
@@ -20,11 +18,15 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import al.iface;
 import alc.device;
 import gsl;
 import logging;
 import numeric;
 #else
+#include "al/buffer.h"
+#include "al/effect.h"
+#include "al/filter.h"
 #include "alc/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

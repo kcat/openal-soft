@@ -1,14 +1,20 @@
 
 #include "config.h"
 
-#include "effectslot.h"
-
 #include <cstddef>
+#include <memory>
 
+#include "flexarray.h"
+
+#if HAVE_CXXMODULES
+import core.context;
+import core.effectslot;
+#else
 #include "context.h"
+#include "effectslot.h"
+#endif
 
-
-std::unique_ptr<EffectSlotArray> EffectSlotBase::CreatePtrArray(std::size_t const count)
+auto EffectSlotBase::CreatePtrArray(std::size_t const count) -> std::unique_ptr<EffectSlotArray>
 {
     return std::unique_ptr<EffectSlotArray>{new(FamCount{count}) EffectSlotArray(count)};
 }

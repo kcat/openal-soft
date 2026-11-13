@@ -78,8 +78,8 @@ struct EffectSlotBase {
     /* Mixing buffer used by the Wet mix. */
     al::vector<FloatBufferLine,16> mWetBuffer;
 
-
-    static std::unique_ptr<EffectSlotArray> CreatePtrArray(size_t count);
+    [[nodiscard]] static
+    auto CreatePtrArray(size_t count) -> std::unique_ptr<EffectSlotArray>;
 };
 
 #endif /* CORE_EFFECTSLOT_H */

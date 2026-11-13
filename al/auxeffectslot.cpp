@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "auxeffectslot.h"
-
 #include <algorithm>
 #include <bit>
 #include <cstdint>
@@ -36,20 +34,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "AL/al.h"
-#include "AL/alext.h"
-#include "AL/efx.h"
-
 #include "alc/alu.h"
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "buffer.h"
 #include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
-#include "effect.h"
 #include "flexarray.h"
 #include "opthelpers.h"
 #include "zudl.hpp"
@@ -68,6 +60,9 @@ import eax.validator;
 #endif
 
 #if HAVE_CXXMODULES
+import openal;
+
+import al.iface;
 import alc.context;
 import alc.device;
 import format;
@@ -75,6 +70,13 @@ import gsl;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alext.h"
+#include "AL/efx.h"
+
+#include "al/auxeffectslot.h"
+#include "al/buffer.h"
+#include "al/effect.h"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"

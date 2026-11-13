@@ -62,18 +62,6 @@
 #include <utility>
 #include <vector>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
-#include "AL/efx.h"
-
-#include "al/auxeffectslot.h"
-#include "al/buffer.h"
-#include "al/debug.h"
-#include "al/eax/effect.h"
-#include "al/effect.h"
-#include "al/filter.h"
-#include "al/source.h"
 #include "alc/events.h"
 #include "alconfig.h"
 #include "alu.h"
@@ -92,7 +80,6 @@
 #include "core/mastering.h"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
-#include "core/voice.h"
 #include "core/voice_change.h"
 #include "effects/base.h"
 #include "envutils.hpp"
@@ -161,6 +148,7 @@
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
+#include "al/eax/effect.h"
 #include "al/eax/globals.h"
 #endif
 
@@ -172,16 +160,31 @@
 #if !defined(__INTEL_COMPILER) && !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 16
 #include "alc/device.h"
 #endif
+import openal;
+
+import al.iface;
 import alc.context;
 import alc.device;
 import alstring;
 import backends.exception;
 import core.helpers;
+import core.voice;
 import fmtlib;
 import format;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+#include "AL/efx.h"
+
+#include "al/auxeffectslot.h"
+#include "al/buffer.h"
+#include "al/debug.h"
+#include "al/effect.h"
+#include "al/filter.h"
+#include "al/source.h"
 #include "alc/backends/exception.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
@@ -189,6 +192,7 @@ import numeric;
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "core/voice.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "numeric.hpp"

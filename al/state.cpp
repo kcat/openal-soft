@@ -33,17 +33,10 @@
 #include <string>
 #include <utility>
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
-
-#include "al/debug.h"
-#include "al/listener.h"
 #include "alc/alu.h"
 #include "alc/inprogext.h"
 #include "atomic.h"
 #include "core/mixer/defs.h"
-#include "core/voice.h"
 #include "direct_defs.h"
 #include "envutils.hpp"
 #include "intrusive_ptr.h"
@@ -56,17 +49,28 @@
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import openal;
+
+import al.iface;
 import alc.context;
 import alc.device;
+import core.voice;
 import format;
 import gsl;
 import logging;
 import numeric;
 #else
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
+#include "al/debug.h"
+#include "al/listener.h"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "core/logging.h"
+#include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

@@ -3,6 +3,16 @@
 cmake_minimum_required(VERSION 3.13...3.31)
 enable_testing()
 
+if(POLICY CMP0219)
+    # CMP0219: macro() invocations preserve backslashes in arguments.
+    # CMake 4.4+ prefers to preserve backslashes through macro() invocations,
+    # where this policy was added, but as long as we support earlier versions
+    # of CMake, this can't be set to NEW since there's no way to compensate for
+    # backslashes in those earlier versions without adversely affecting newer
+    # versions.
+    cmake_policy(SET CMP0219 OLD)
+endif()
+
 if(APPLE)
     # The workaround for try_compile failing with code signing
     # since cmake-3.18.2, not required

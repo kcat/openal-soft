@@ -764,6 +764,7 @@ set(COMMON_HDRS
     common/instance_of.hpp
     common/intrusive_ptr.h
     common/numeric.hpp
+    common/openal_apientry.h
     common/opthelper_macros.hpp
     common/opthelpers.h
     common/pffft.h

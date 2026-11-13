@@ -24,7 +24,7 @@ import alstring;
 import gsl;
 import openal;
 
-#define ALC_APIENTRY __cdecl
+#include "openal_apientry.h"
 
 #else
 

@@ -7,20 +7,23 @@
 #include <guiddef.h>
 #endif
 
-#include "AL/al.h"
-#include "AL/alc.h"
-#include "AL/alext.h"
-
 #include "direct_defs.h"
 #include "eax/alapi.hpp"
 #include "eax/api.h"
 #include "eax/exception.h"
 
 #if HAVE_CXXMODULES
+import openal;
+#include "openal_apientry.h"
+
 import alc.context;
 import gsl;
 import logging;
 #else
+#include "AL/al.h"
+#include "AL/alc.h"
+#include "AL/alext.h"
+
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

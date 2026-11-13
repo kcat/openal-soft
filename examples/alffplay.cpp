@@ -74,11 +74,7 @@ import openal;
 import zstring_view;
 
 /* AL_APIENTRY is needed, but not exported from the module. */
-#ifdef _WIN32
- #define AL_APIENTRY __cdecl
-#else
- #define AL_APIENTRY
-#endif
+#include "openal_apientry.h"
 
 #else
 

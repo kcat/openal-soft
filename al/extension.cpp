@@ -27,11 +27,7 @@
 
 #if HAVE_CXXMODULES
 import openal;
-#if defined(_WIN32)
-#define AL_APIENTRY __cdecl
-#else
-#define AL_APIENTRY
-#endif
+#include "openal_apientry.h"
 
 import alc.context;
 import alstring;

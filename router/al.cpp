@@ -9,7 +9,7 @@ import openal.al;
 import openal.efx;
 import gsl;
 
-#define AL_APIENTRY __cdecl
+#include "openal_apientry.h"
 
 #else
 

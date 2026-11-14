@@ -796,6 +796,7 @@ if(HAVE_CXXMODULES)
         common/cemath.cppm
         common/filesystem.cppm
         common/hann_window.cppm
+        common/inout_ptr.cppm
         common/numeric.cppm
         common/phase_shifter.cppm
         common/ringbuffer.cppm

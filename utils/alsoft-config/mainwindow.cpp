@@ -22,16 +22,20 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
-
-#include "inout_ptr.hpp"
 #endif
 
 #if HAVE_CXXMODULES
 import gsl;
 import numeric;
+#ifdef _WIN32
+import inout_ptr;
+#endif
 #else
 #include "gsl/gsl"
 #include "numeric.hpp"
+#ifdef _WIN32
+#include "inout_ptr.hpp"
+#endif
 #endif
 
 namespace {

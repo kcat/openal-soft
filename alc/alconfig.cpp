@@ -45,7 +45,6 @@
 #include <vector>
 
 #include "envutils.hpp"
-#include "inout_ptr.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -61,6 +60,7 @@ import core.helpers;
 import filesystem;
 import fmtlib;
 import gsl;
+import inout_ptr;
 import logging;
 import numeric;
 #else
@@ -72,6 +72,7 @@ import numeric;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "inout_ptr.hpp"
 #include "numeric.hpp"
 #endif
 

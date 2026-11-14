@@ -69,7 +69,6 @@
 #include "comptr.h"
 #include "core/converter.h"
 #include "gsl/gsl"
-#include "inout_ptr.hpp"
 #include "opthelpers.h"
 #include "zudl.hpp"
 
@@ -103,6 +102,7 @@ import alstring;
 import backends.exception;
 import core.device;
 import format;
+import inout_ptr;
 import logging;
 import numeric;
 import ringbuffer;
@@ -112,6 +112,7 @@ import ringbuffer;
 #include "alformat.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "inout_ptr.hpp"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
 #endif

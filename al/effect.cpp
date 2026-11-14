@@ -284,7 +284,7 @@ try {
     case AL_EFFECT_TYPE:
         if(value != AL_EFFECT_NULL)
         {
-            auto check_effect = [value](const EffectList &item) -> bool
+            auto check_effect = [value](EffectList const& item) -> bool
             { return value == item.val && !DisabledEffects.test(item.type); };
             if(!std::ranges::any_of(gEffectList, check_effect))
                 context.throw_error(AL_INVALID_VALUE, "Effect type {:#04x} not supported",
@@ -659,9 +659,9 @@ void LoadReverbPreset(std::string_view const name, al::Effect& effect)
         return;
     }
 
-    if(!DisabledEffects.test(EAXREVERB_EFFECT))
+    if(!DisabledEffects.test(EffectTypeFlag::EaxReverb))
         InitEffectParams(effect, AL_EFFECT_EAXREVERB);
-    else if(!DisabledEffects.test(REVERB_EFFECT))
+    else if(!DisabledEffects.test(EffectTypeFlag::Reverb))
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
     {

@@ -771,15 +771,16 @@ void alc_initconfig()
     else
         eax_g_is_enabled = true;
 
-    if((DisabledEffects.test(EAXREVERB_EFFECT) || DisabledEffects.test(CHORUS_EFFECT))
-        && eax_g_is_enabled)
+    if((DisabledEffects.test(EffectTypeFlag::EaxReverb)
+            || DisabledEffects.test(EffectTypeFlag::Chorus)) && eax_g_is_enabled)
     {
         eax_g_is_enabled = false;
         TRACE("EAX disabled because {} disabled.",
-            (DisabledEffects.test(EAXREVERB_EFFECT) && DisabledEffects.test(CHORUS_EFFECT))
+            (DisabledEffects.test(EffectTypeFlag::EaxReverb)
+                && DisabledEffects.test(EffectTypeFlag::Chorus))
                 ? "EAXReverb and Chorus are"sv :
-            DisabledEffects.test(EAXREVERB_EFFECT) ? "EAXReverb is"sv :
-            DisabledEffects.test(CHORUS_EFFECT) ? "Chorus is"sv : ""sv);
+            DisabledEffects.test(EffectTypeFlag::EaxReverb) ? "EAXReverb is"sv :
+            DisabledEffects.test(EffectTypeFlag::Chorus) ? "Chorus is"sv : ""sv);
     }
 
     if(eax_g_is_enabled)

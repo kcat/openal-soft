@@ -1132,35 +1132,6 @@ struct Eax5AllValidator {
 
 }
 
-[[nodiscard]]
-auto al::EffectSlot::eax_dispatch(EaxCall const& call) -> bool
-{ return call.is_get() ? eax_get(call) : eax_set(call); }
-
-
-template<typename TValidator>
-auto al::EffectSlot::eax_fx_slot_update(EaxCall const& call, auto &dst,
-    EaxDirtyBit const dirty_bit) -> void
-{
-    const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
-    TValidator{}(src);
-    if(dst != src)
-    {
-        mEaxDf.set(dirty_bit);
-        dst = src;
-    }
-}
-
-template<typename TValidator>
-void al::EffectSlot::eax_fx_slot_set_dirty(EaxCall const &call, auto &dst,
-    EaxDirtyBit const dirty_bit)
-{
-    const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
-    TValidator{}(src);
-    mEaxDf.set(dirty_bit);
-    dst = src;
-}
-
-
 void al::EffectSlot::eax_initialize(EaxFxSlotIndexValue const index)
 {
     if(index >= EAX_MAX_FXSLOTS)

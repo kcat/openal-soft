@@ -16,5 +16,7 @@ using gsl::narrowing_error;
 using gsl::narrow_cast;
 using gsl::not_null;
 using gsl::owner;
+using gsl::wzstring;
+using gsl::zstring;
 
 } /* namespace gsl */

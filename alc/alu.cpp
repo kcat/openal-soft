@@ -69,7 +69,6 @@
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "ringbuffer.h"
 #include "vecmat.h"
 #include "zudl.hpp"
 

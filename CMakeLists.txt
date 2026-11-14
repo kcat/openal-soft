@@ -770,7 +770,7 @@ set(COMMON_HDRS
     common/pffft.h
     common/polyphase_resampler.h
     common/pragmadefs.h
-    common/ringbuffer.h
+    common/ringbuffer.hpp
     common/spanstream.hpp
     common/vecmat.h
     common/vector.h
@@ -798,6 +798,7 @@ if(HAVE_CXXMODULES)
         common/hann_window.cppm
         common/numeric.cppm
         common/phase_shifter.cppm
+        common/ringbuffer.cppm
         common/spanstream.cppm
         common/zstring_view.cppm
     )

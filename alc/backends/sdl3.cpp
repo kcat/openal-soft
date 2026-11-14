@@ -22,6 +22,7 @@
 
 #include "sdl3.hpp"
 
+#include <algorithm>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -34,7 +35,6 @@
 
 #include "opthelpers.h"
 #include "pragmadefs.h"
-#include "ringbuffer.h"
 #include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
@@ -56,6 +56,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
@@ -63,6 +64,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 

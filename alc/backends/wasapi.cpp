@@ -71,7 +71,6 @@
 #include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "opthelpers.h"
-#include "ringbuffer.h"
 #include "zudl.hpp"
 
 #if ALSOFT_UWP
@@ -106,6 +105,7 @@ import core.device;
 import format;
 import logging;
 import numeric;
+import ringbuffer;
 #else
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
@@ -113,6 +113,7 @@ import numeric;
 #include "core/device.h"
 #include "core/logging.h"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 namespace {

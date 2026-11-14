@@ -22,6 +22,7 @@
 
 #include "jack.hpp"
 
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstring>
@@ -37,11 +38,9 @@
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
-#include "ringbuffer.h"
 #include "zudl.hpp"
 
 #include <jack/jack.h>
-#include <jack/ringbuffer.h>
 
 #if HAVE_CXXMODULES
 import backends.exception;
@@ -52,6 +51,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
@@ -63,6 +63,7 @@ import zstring_view;
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 

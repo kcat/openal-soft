@@ -1,12 +1,11 @@
-#ifndef RINGBUFFER_H
-#define RINGBUFFER_H
+#ifndef RINGBUFFER_HPP
+#define RINGBUFFER_HPP
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <new>
 #include <ranges>
@@ -20,7 +19,7 @@
 #include "zudl.hpp"
 
 
-/* NOTE: This lockless ringbuffer implementation is copied from JACK, extended
+/* NOTE: This lockless ringbuffer implementation is adapted from JACK, extended
  * to include a storage type and an element size. Consequently, parameters and
  * return values for a size or count are in 'elements', not bytes. Also, it
  * only supports single-consumer/single-provider operation.
@@ -256,8 +255,8 @@ template<typename T>
 using RingBufferPtr = std::unique_ptr<RingBuffer<T>>;
 
 
-/* A FIFO buffer, modelled after the above but retains type information, and
- * can work with non-trivial types, and does not support multiple values per
+/* A FIFO buffer, modeled after the above but retains type information, and can
+ * work with non-trivial types, and does not support multiple values per
  * element. Unreadable elements are in a destructed state.
  */
 template<typename T>
@@ -545,4 +544,4 @@ public:
 template<typename T>
 using FifoBufferPtr = std::unique_ptr<FifoBuffer<T>, typename FifoBuffer<T>::Deleter>;
 
-#endif /* RINGBUFFER_H */
+#endif /* RINGBUFFER_HPP */

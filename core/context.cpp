@@ -11,7 +11,6 @@
 #include "context.h"
 #include "effectslot.h"
 #include "gsl/gsl"
-#include "ringbuffer.h"
 #include "voice.h"
 #include "voice_change.h"
 #include "zudl.hpp"

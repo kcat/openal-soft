@@ -16,7 +16,6 @@
 #include "core/voice_change.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
-#include "ringbuffer.h"
 #include "vecmat.h"
 #include "zudl.hpp"
 
@@ -42,6 +41,7 @@ import fmtlib;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 #else
 #include "al/auxeffectslot.h"
 #include "al/debug.h"
@@ -56,6 +56,7 @@ import numeric;
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 namespace {

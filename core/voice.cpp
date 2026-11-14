@@ -29,7 +29,6 @@
 #include "mixer/hrtfdefs.h"
 #include "opthelper_macros.hpp"
 #include "resampler_limits.hpp"
-#include "ringbuffer.h"
 #include "uhjfilter.h"
 #include "zudl.hpp"
 

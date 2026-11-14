@@ -16,7 +16,7 @@
 #include "bitset.hpp"
 #include "flexarray.h"
 #include "opthelper_macros.hpp"
-#include "ringbuffer.h"
+#include "ringbuffer.hpp"
 #include "vecmat.h"
 
 struct DeviceBase;

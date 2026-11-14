@@ -41,7 +41,6 @@
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
-#include "ringbuffer.h"
 #include "zudl.hpp"
 
 #include <SLES/OpenSLES.h>
@@ -54,6 +53,7 @@ import core.device;
 import core.helpers;
 import gsl;
 import logging;
+import ringbuffer;
 import zstring_view;
 #else
 #include "alc/backends/exception.hpp"
@@ -62,6 +62,7 @@ import zstring_view;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "ringbuffer.hpp"
 #endif
 
 

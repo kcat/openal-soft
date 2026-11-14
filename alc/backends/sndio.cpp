@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "althrd_setname.h"
-#include "ringbuffer.h"
 
 #include <sndio.h>
 
@@ -42,12 +41,14 @@ import core.device;
 import core.helpers;
 import gsl;
 import logging;
+import ringbuffer;
 #else
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "ringbuffer.hpp"
 #endif
 
 

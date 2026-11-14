@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "althrd_setname.h"
-#include "ringbuffer.h"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -54,6 +53,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
@@ -63,6 +63,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 namespace {

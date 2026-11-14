@@ -50,7 +50,6 @@
 #include "dynload.h"
 #include "opthelpers.h"
 #include "pragmadefs.h"
-#include "ringbuffer.h"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
  * doesn't support ignoring -Weverything, so we have the list the individual
@@ -138,6 +137,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 import spanstream;
 import zstring_view;
 #else
@@ -153,6 +153,7 @@ import zstring_view;
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #include "spanstream.hpp"
 #include "zstring_view.hpp"
 #endif

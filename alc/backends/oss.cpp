@@ -36,6 +36,7 @@
 #include <exception>
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -46,7 +47,6 @@
 
 #include "alc/alconfig.h"
 #include "althrd_setname.h"
-#include "ringbuffer.h"
 
 #include <sys/soundcard.h>
 
@@ -81,6 +81,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import ringbuffer;
 #else
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
@@ -89,6 +90,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "ringbuffer.hpp"
 #endif
 
 namespace {

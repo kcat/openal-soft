@@ -228,15 +228,15 @@ void Compressor::gainCompressor(unsigned const SamplesToDo)
          * above to compensate for the chained operating mode.
          */
         const auto x_L = -slope * y_G;
-        y_1 = std::max(x_L, lerpf(x_L, y_1, a_rel));
-        y_L = lerpf(y_1, y_L, a_att);
+        y_1 = std::max(x_L, al::lerp(x_L, y_1, a_rel));
+        y_L = al::lerp(y_1, y_L, a_att);
 
         /* Knee width and make-up gain automation make use of a smoothed
          * measurement of deviation between the control signal and estimate.
          * The estimate is also used to bias the measurement to hot-start its
          * average.
          */
-        c_dev = lerpf(-(y_L+c_est), c_dev, a_adp);
+        c_dev = al::lerp(-(y_L+c_est), c_dev, a_adp);
 
         if(autoPostGain)
         {
@@ -303,8 +303,8 @@ void Compressor::process(unsigned const SamplesToDo, std::span<FloatBufferLine> 
         {
             const auto x2 = std::clamp(x_abs*x_abs, 0.000001f, 1000000.0f);
 
-            y2_peak = std::max(x2, lerpf(x2, y2_peak, a_crest));
-            y2_rms = lerpf(x2, y2_rms, a_crest);
+            y2_peak = std::max(x2, al::lerp(x2, y2_peak, a_crest));
+            y2_rms = al::lerp(x2, y2_rms, a_crest);
             return y2_peak / y2_rms;
         });
 

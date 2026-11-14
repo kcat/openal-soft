@@ -17,6 +17,8 @@ export namespace al {
 
     using al::ckd_add;
     using al::ckd_sub;
+
+    using al::lerp;
 }
 
 export namespace std {
@@ -32,8 +34,6 @@ export {
     using ::as_unsigned;
 
     using ::GetCounterSuffix;
-
-    using ::lerpf;
 
     using ::RoundFromZero;
     using ::RoundToZero;

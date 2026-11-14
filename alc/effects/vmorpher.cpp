@@ -330,7 +330,7 @@ void VmorpherState::process(const size_t samplesToDo,
             vowelB[3].process(&input[base], mSampleBufferB.data(), td);
 
             for(auto i=0_uz;i < td;++i)
-                blended[i] = lerpf(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
+                blended[i] = al::lerp(mSampleBufferA[i], mSampleBufferB[i], mLfo[i]);
 
             /* Now, mix the processed sound data to the output. */
             MixSamples(std::span{blended}.first(td), std::span{samplesOut[outidx]}.subspan(base),

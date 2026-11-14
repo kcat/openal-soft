@@ -1270,9 +1270,9 @@ void CalcHrtfPanning(Voice *const voice, float const xpos, float const ypos, flo
              */
             auto const a = 1.0f - (std::numbers::inv_pi_v<float>*0.5f)*spread;
             auto pos = std::array{
-                lerpf(chans[c].pos[0], xpos, a),
-                lerpf(chans[c].pos[1], ypos, a),
-                lerpf(chans[c].pos[2], zpos, a)};
+                std::lerp(chans[c].pos[0], xpos, a),
+                std::lerp(chans[c].pos[1], ypos, a),
+                std::lerp(chans[c].pos[2], zpos, a)};
             if(auto const len = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
                 len < 1.0f)
             {
@@ -1416,9 +1416,9 @@ void CalcNormalPanning(Voice *const voice, float const xpos, float const ypos, f
              */
             auto const a = 1.0f - (std::numbers::inv_pi_v<float>*0.5f)*spread;
             auto pos = std::array{
-                lerpf(chans[c].pos[0], xpos, a),
-                lerpf(chans[c].pos[1], ypos, a),
-                lerpf(chans[c].pos[2], zpos, a)};
+                std::lerp(chans[c].pos[0], xpos, a),
+                std::lerp(chans[c].pos[1], ypos, a),
+                std::lerp(chans[c].pos[2], zpos, a)};
             if(auto const len = std::sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]);
                 len < 1.0f)
             {
@@ -1828,7 +1828,7 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context) n
     case DistanceModel::InverseClamped:
         if(props.RefDistance > 0.0f)
         {
-            if(auto const dist = lerpf(props.RefDistance, attenDistance, props.RolloffFactor);
+            if(auto const dist = std::lerp(props.RefDistance, attenDistance, props.RolloffFactor);
                 dist > 0.0f)
             {
                 dryAttnBase = props.RefDistance / dist;
@@ -1839,7 +1839,7 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context) n
             std::ranges::transform(wetbase | std::views::take(numsends), roomrolloff,
                 wetbase.begin(), [&props,attenDistance](float const gain, float const rolloff)
             {
-                if(auto const dist = lerpf(props.RefDistance, attenDistance, rolloff);
+                if(auto const dist = std::lerp(props.RefDistance, attenDistance, rolloff);
                     dist > 0.0f)
                     return gain * (props.RefDistance / dist);
                 return gain;
@@ -1899,8 +1899,8 @@ void CalcAttnVoiceParams(Voice *const voice, ContextBase const *const context) n
         else if(angle >= props.InnerAngle)
         {
             const auto scale = (angle-props.InnerAngle) / (props.OuterAngle-props.InnerAngle);
-            conegain = lerpf(1.0f, props.OuterGain, scale);
-            conehf = lerpf(1.0f, props.OuterGainHF, scale);
+            conegain = std::lerp(1.0f, props.OuterGain, scale);
+            conehf = std::lerp(1.0f, props.OuterGainHF, scale);
         }
 
         drygain.Base *= conegain;

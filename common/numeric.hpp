@@ -338,6 +338,13 @@ auto ckd_sub(ResT* result, LhT const lhs, RhT const rhs) noexcept -> bool
 #endif
 }
 
+/* A slightly faster version of std::lerp, that in particular doesn't guarantee
+ * a return value of exactly 'b' when t=1.
+ */
+template<typename T> requires std::floating_point<T> [[nodiscard]] constexpr
+auto lerp(T const a, T const b, T const t) noexcept -> float
+{ return a + (b-a)*t; }
+
 } /* namespace al */
 
 template<al::integral T> [[nodiscard]] constexpr
@@ -358,11 +365,6 @@ auto GetCounterSuffix(std::size_t const count) noexcept -> std::string_view
         ((count%10) == 2) ? "nd"sv :
         ((count%10) == 3) ? "rd"sv : "th"sv;
 }
-
-
-[[nodiscard]] constexpr
-auto lerpf(float const val1, float const val2, float const mu) noexcept -> float
-{ return val1 + (val2-val1)*mu; }
 
 
 /**

@@ -110,7 +110,7 @@ void Resample_Linear_SSE4(InterpState const*, std::span<float const> const src, 
 
         std::ranges::generate(dst.last(todo), [&pos,&frac,src,increment]
         {
-            auto const smp = lerpf(src[pos+0], src[pos+1],
+            auto const smp = al::lerp(src[pos+0], src[pos+1],
                 gsl::narrow_cast<float>(frac) * (1.0f/MixerFracOne));
 
             frac += increment;

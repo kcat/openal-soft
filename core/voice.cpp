@@ -871,7 +871,7 @@ void DoHrtfMix(std::span<float const> const samples, DirectParams &parms, float 
         if(counter > fademix)
         {
             auto const a = gsl::narrow_cast<float>(fademix) / gsl::narrow_cast<float>(counter);
-            gain = lerpf(parms.Hrtf.Old.Gain, targetGain, a);
+            gain = al::lerp(parms.Hrtf.Old.Gain, targetGain, a);
         }
 
         auto const hrtfparams = MixHrtfFilter{
@@ -899,7 +899,7 @@ void DoHrtfMix(std::span<float const> const samples, DirectParams &parms, float 
         {
             auto const a = gsl::narrow_cast<float>(todo)
                 / gsl::narrow_cast<float>(counter-fademix);
-            gain = lerpf(parms.Hrtf.Old.Gain, targetGain, a);
+            gain = al::lerp(parms.Hrtf.Old.Gain, targetGain, a);
         }
 
         auto const hrtfparams = MixHrtfFilter{

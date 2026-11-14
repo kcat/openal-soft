@@ -153,7 +153,7 @@ void AutowahState::process(const size_t samplesToDo,
          */
         const auto sample = peak_gain * std::fabs(x);
         const auto a = (sample > env_delay) ? attack_rate : release_rate;
-        env_delay = lerpf(sample, env_delay, a);
+        env_delay = al::lerp(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
         const auto w0 = std::min(bandwidth*env_delay + freq_min, 0.46f) *

@@ -49,7 +49,7 @@ auto do_point(std::span<float const> const vals, std::size_t const pos, unsigned
 [[nodiscard]] constexpr
 auto do_lerp(std::span<float const> const vals, std::size_t const pos, unsigned const frac)
     noexcept NONBLOCKING -> float
-{ return lerpf(vals[pos+0], vals[pos+1], gsl::narrow_cast<float>(frac)*(1.0f/MixerFracOne)); }
+{ return al::lerp(vals[pos+0], vals[pos+1], gsl::narrow_cast<float>(frac)*(1.0f/MixerFracOne)); }
 [[nodiscard]] constexpr
 auto do_cubic(CubicState const &istate, std::span<float const> const vals, std::size_t const pos,
     unsigned const frac) noexcept NONBLOCKING -> float

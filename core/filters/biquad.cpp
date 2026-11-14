@@ -36,7 +36,7 @@ constexpr auto InterpSteps = 8;
 constexpr auto SamplesPerStep = 32;
 constexpr auto SamplesPerStepMask = SamplesPerStep-1;
 
-static_assert(std::popcount(gsl::narrow<unsigned>(SamplesPerStep)) == 1,
+static_assert(std::has_single_bit(unsigned{SamplesPerStep}),
     "SamplesPerStep must be a power of 2");
 
 /* Sets dst to the given value, returns true if it's meaningfully different. */
@@ -239,11 +239,11 @@ void BiquadInterpFilter::process(std::span<float const> src, std::span<float> ds
             }
 
             auto const a = 1.0f / static_cast<float>(counter+1);
-            mCoeffs.mB0 = lerpf(mCoeffs.mB0, mTargetCoeffs.mB0, a);
-            mCoeffs.mB1 = lerpf(mCoeffs.mB1, mTargetCoeffs.mB1, a);
-            mCoeffs.mB2 = lerpf(mCoeffs.mB2, mTargetCoeffs.mB2, a);
-            mCoeffs.mA1 = lerpf(mCoeffs.mA1, mTargetCoeffs.mA1, a);
-            mCoeffs.mA2 = lerpf(mCoeffs.mA2, mTargetCoeffs.mA2, a);
+            mCoeffs.mB0 = al::lerp(mCoeffs.mB0, mTargetCoeffs.mB0, a);
+            mCoeffs.mB1 = al::lerp(mCoeffs.mB1, mTargetCoeffs.mB1, a);
+            mCoeffs.mB2 = al::lerp(mCoeffs.mB2, mTargetCoeffs.mB2, a);
+            mCoeffs.mA1 = al::lerp(mCoeffs.mA1, mTargetCoeffs.mA1, a);
+            mCoeffs.mA2 = al::lerp(mCoeffs.mA2, mTargetCoeffs.mA2, a);
 
             if(src.empty())
             {
@@ -325,16 +325,16 @@ void BiquadInterpFilter::dualProcess(BiquadInterpFilter &other, std::span<float 
             }
 
             auto const a = 1.0f / static_cast<float>(counter+1);
-            mCoeffs.mB0 = lerpf(mCoeffs.mB0, mTargetCoeffs.mB0, a);
-            mCoeffs.mB1 = lerpf(mCoeffs.mB1, mTargetCoeffs.mB1, a);
-            mCoeffs.mB2 = lerpf(mCoeffs.mB2, mTargetCoeffs.mB2, a);
-            mCoeffs.mA1 = lerpf(mCoeffs.mA1, mTargetCoeffs.mA1, a);
-            mCoeffs.mA2 = lerpf(mCoeffs.mA2, mTargetCoeffs.mA2, a);
-            other.mCoeffs.mB0 = lerpf(other.mCoeffs.mB0, other.mTargetCoeffs.mB0, a);
-            other.mCoeffs.mB1 = lerpf(other.mCoeffs.mB1, other.mTargetCoeffs.mB1, a);
-            other.mCoeffs.mB2 = lerpf(other.mCoeffs.mB2, other.mTargetCoeffs.mB2, a);
-            other.mCoeffs.mA1 = lerpf(other.mCoeffs.mA1, other.mTargetCoeffs.mA1, a);
-            other.mCoeffs.mA2 = lerpf(other.mCoeffs.mA2, other.mTargetCoeffs.mA2, a);
+            mCoeffs.mB0 = al::lerp(mCoeffs.mB0, mTargetCoeffs.mB0, a);
+            mCoeffs.mB1 = al::lerp(mCoeffs.mB1, mTargetCoeffs.mB1, a);
+            mCoeffs.mB2 = al::lerp(mCoeffs.mB2, mTargetCoeffs.mB2, a);
+            mCoeffs.mA1 = al::lerp(mCoeffs.mA1, mTargetCoeffs.mA1, a);
+            mCoeffs.mA2 = al::lerp(mCoeffs.mA2, mTargetCoeffs.mA2, a);
+            other.mCoeffs.mB0 = al::lerp(other.mCoeffs.mB0, other.mTargetCoeffs.mB0, a);
+            other.mCoeffs.mB1 = al::lerp(other.mCoeffs.mB1, other.mTargetCoeffs.mB1, a);
+            other.mCoeffs.mB2 = al::lerp(other.mCoeffs.mB2, other.mTargetCoeffs.mB2, a);
+            other.mCoeffs.mA1 = al::lerp(other.mCoeffs.mA1, other.mTargetCoeffs.mA1, a);
+            other.mCoeffs.mA2 = al::lerp(other.mCoeffs.mA2, other.mTargetCoeffs.mA2, a);
 
             if(src.empty())
             {

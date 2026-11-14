@@ -1068,8 +1068,11 @@ void LateReverb::updateLines(float const density_mult, float const diffusion,
      */
     std::ranges::transform(LATE_ALLPASS_LENGTHS, lengths, lengths.begin(),
         [density_mult,diffusion,moddepth=Mod.Depth/frequency](float const length,
-        float const curlength) -> float
-    { return lerpf(length, LateAllpassAverage, diffusion)*density_mult + moddepth + curlength; });
+            float const curlength) -> float
+        {
+            return al::lerp(length, LateAllpassAverage, diffusion)*density_mult + moddepth
+                + curlength;
+        });
 
     /* Calculate the T60 damping coefficients for each line. */
     std::ignore = std::ranges::mismatch(T60, lengths,
@@ -1607,9 +1610,10 @@ void ReverbPipeline::processEarly(DelayLineU const &main_delay, std::size_t offs
                 tmp = std::ranges::transform(input.subspan(early_delay_tap0, td),
                     input.subspan(early_delay_tap1, td), tmp,
                     [earlycoeff0,earlycoeff1,fadeStep,&fadeCount](float const in0, float const in1)
-                    noexcept -> float
+                        noexcept -> float
                 {
-                    const auto ret = lerpf(in0*earlycoeff0, in1*earlycoeff1, fadeStep*fadeCount);
+                    auto const ret = al::lerp(in0*earlycoeff0, in1*earlycoeff1,
+                        fadeStep*fadeCount);
                     fadeCount += 1.0f;
                     return ret;
                 }).out;

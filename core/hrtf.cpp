@@ -161,13 +161,13 @@ void HrtfStore::getCoeffs(float const elevation, float const azimuth, float cons
         + mDelays[idx[1]][0]*blend[1]
         + mDelays[idx[2]][0]*blend[2]
         + mDelays[idx[3]][0]*blend[3];
-    delays[0] = al::saturating_cast<unsigned>(d*float{1.0f/HrirDelayFracOne} + 0.5f);
+    delays[0] = al::saturating_round<unsigned>(d * float{1.0f/HrirDelayFracOne});
 
     d = mDelays[idx[0]][1]*blend[0]
         + mDelays[idx[1]][1]*blend[1]
         + mDelays[idx[2]][1]*blend[2]
         + mDelays[idx[3]][1]*blend[3];
-    delays[1] = al::saturating_cast<unsigned>(d*float{1.0f/HrirDelayFracOne} + 0.5f);
+    delays[1] = al::saturating_round<unsigned>(d * float{1.0f/HrirDelayFracOne});
 
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
@@ -521,15 +521,14 @@ try {
         std::ranges::transform(new_delays, (delays | std::views::join).begin(),
             [delay_scale](float const fdelay) -> std::uint8_t
         {
-            return al::saturating_cast<std::uint8_t>(fdelay*delay_scale + 0.5f);
+            return al::saturating_round<std::uint8_t>(fdelay*delay_scale);
         });
 
         /* Scale the IR size for the new sample rate and update the stored
          * sample rate.
          */
-        auto const newIrSize = std::round(gsl::narrow_cast<float>(unsigned{hrtf->mIrSize})
-            * rate_scale);
-        hrtf->mIrSize = gsl::narrow_cast<std::uint8_t>(std::min(float{HrirLength}, newIrSize));
+        auto const newIrSize = al::saturating_round<std::uint8_t>(hrtf->mIrSize * rate_scale);
+        hrtf->mIrSize = std::min(std::uint8_t{HrirLength}, newIrSize);
         hrtf->mSampleRate = devrate & 0xff'ff'ff;
     }
 

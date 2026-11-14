@@ -1184,7 +1184,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             optsrate = std::clamp<unsigned>(*freqopt, MinOutputRate, MaxOutputRate);
 
             auto const scale = gsl::narrow_cast<double>(*optsrate) / double{DefaultOutputRate};
-            period_size = gsl::narrow_cast<ALCuint>(std::lround(period_size * scale));
+            period_size = al::saturating_round<ALCuint>(period_size * scale);
         }
 
         if(auto persizeopt = device.configValue<unsigned>({}, "period_size"))
@@ -1513,9 +1513,9 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 freqAttr = std::clamp<int>(freqAttr, MinOutputRate, MaxOutputRate);
 
                 const auto scale = gsl::narrow_cast<double>(freqAttr) / oldrate;
-                period_size = gsl::narrow_cast<ALCuint>(std::lround(period_size * scale));
-                buffer_size = gsl::narrow_cast<ALCuint>(std::lround(buffer_size * scale));
-                optsrate = gsl::narrow_cast<ALCuint>(freqAttr);
+                period_size = al::saturating_round<ALCuint>(period_size * scale);
+                buffer_size = al::saturating_round<ALCuint>(buffer_size * scale);
+                optsrate = gsl::narrow<ALCuint>(freqAttr);
             }
         }
 
@@ -1757,7 +1757,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         TRACE("Dithering disabled");
     else
         TRACE("Dithering enabled ({}-bit, {:g})",
-            al::saturating_cast<int>(std::log2(device.DitherDepth)+0.5f)+1, device.DitherDepth);
+            al::saturating_round<int>(std::log2(device.DitherDepth))+1, device.DitherDepth);
 
     if(!optlimit)
         optlimit = device.configValue<bool>({}, "output-limiter");

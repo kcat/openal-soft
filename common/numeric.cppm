@@ -19,6 +19,8 @@ export namespace al {
     using al::ckd_sub;
 
     using al::lerp;
+
+    using al::saturating_round;
 }
 
 export namespace std {

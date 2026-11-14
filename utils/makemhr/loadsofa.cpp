@@ -46,6 +46,7 @@
 #include "sofa-support.h"
 
 #include "mysofa.h"
+#include "numeric.hpp"
 
 #if HAVE_CXXMODULES
 import fmtlib;
@@ -481,7 +482,7 @@ bool LoadSofaFile(std::string_view const filename, unsigned const numThreads,
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
 
-    hData->mIrRate = static_cast<unsigned>(std::lround(GetSampleRate(sofaHrtf.get())));
+    hData->mIrRate = al::saturating_round<unsigned>(GetSampleRate(sofaHrtf.get()));
     if(!hData->mIrRate)
         return false;
 

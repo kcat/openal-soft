@@ -183,7 +183,7 @@ void FshifterState::update(const ContextBase *context, const EffectSlotBase *slo
 
     const auto step = props.Frequency / static_cast<float>(device.mSampleRate);
     std::ranges::fill(mChans | std::views::transform(&ProcessParams::mPhaseStep),
-        al::saturating_cast<unsigned>(std::min(step, 1.0f)*MixerFracOne + 0.5f));
+        al::saturating_round<unsigned>(std::min(step, 1.0f) * MixerFracOne));
 
     auto const lchans = std::span{mChans}.first(2);
     switch(props.LeftDirection)

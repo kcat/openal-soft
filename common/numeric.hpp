@@ -345,6 +345,89 @@ template<typename T> requires std::floating_point<T> [[nodiscard]] constexpr
 auto lerp(T const a, T const b, T const t) noexcept -> float
 { return a + (b-a)*t; }
 
+
+template<integral R, std::floating_point T> [[nodiscard]] constexpr
+auto saturating_round(T const val) noexcept -> R
+{
+    auto constexpr is_binary16 = sizeof(T) == 2 and std::numeric_limits<T>::radix == 2
+        and std::numeric_limits<T>::digits == 11
+        and std::numeric_limits<T>::max_exponent == 16;
+    auto constexpr is_binary32 = sizeof(T) == 4 and std::numeric_limits<T>::radix == 2
+        and std::numeric_limits<T>::digits == 24
+        and std::numeric_limits<T>::max_exponent == 128;
+    auto constexpr is_binary64 = sizeof(T) == 8 and std::numeric_limits<T>::radix == 2
+        and std::numeric_limits<T>::digits == 53
+        and std::numeric_limits<T>::max_exponent == 1024;
+    static_assert(is_binary16 or is_binary32 or is_binary64,
+        "Only binary16/32/64 floating point to integer is supported");
+
+    auto constexpr mantbits = unsigned{std::numeric_limits<T>::digits - 1};
+    auto constexpr max_exponent = unsigned{std::numeric_limits<T>::max_exponent};
+    auto constexpr expbits = unsigned{std::bit_width(max_exponent)};
+    auto constexpr expbias = unsigned{(1<<(expbits-1)) - 1};
+    auto constexpr expoffset = unsigned{int{expbias} + std::numeric_limits<T>::digits - 1};
+    auto constexpr expmax = unsigned{std::numeric_limits<R>::digits
+        - std::numeric_limits<T>::digits + int{expoffset}};
+
+    using tmpint_t = std::common_type_t<unsigned, std::make_unsigned_t<R>,
+        decltype(detail::unsigned_from_fp(val))>;
+    auto constexpr expmask = ((tmpint_t{1}<<expbits) - 1) << mantbits;
+    auto constexpr signmask = tmpint_t{1} << (mantbits+expbits);
+    auto constexpr impliedbit = tmpint_t{1} << mantbits;
+    auto constexpr mantissamask = tmpint_t{impliedbit - 1};
+
+    auto const conv_u = detail::unsigned_from_fp(val);
+    auto const exponent = (conv_u&expmask) >> mantbits;
+    /* The minimum exponent in one less than the bias since [0.5...1.0) will
+     * gain another mantissa bit and have a non-0 result.
+     */
+    if(exponent < expbias-1)
+        return R{0};
+
+    /* Add 0.5 for values that can hold a fraction, which will be shifted out
+     * for the truncation to have a rounding effect.
+     */
+    auto const mant = tmpint_t{((conv_u&mantissamask) | impliedbit)
+        + ((exponent < expoffset) ? tmpint_t{1} << (expoffset-exponent-1) : 0u)};
+    /* If another mantissa bit was added, reduce the max exponent limit by 1. */
+    auto const excessbit = mant >> std::numeric_limits<T>::digits;
+
+    if constexpr(signed_integral<R>)
+    {
+        if(exponent+excessbit > expmax) [[unlikely]]
+        {
+            if(exponent == (expmask>>mantbits) and (conv_u&mantissamask) != 0)
+                return R{0};
+            return (conv_u&signmask) ? std::numeric_limits<R>::min()
+                : std::numeric_limits<R>::max();
+        }
+
+        auto const sign = (conv_u&signmask) ? R{-1} : R{1};
+        if(exponent < expoffset) [[likely]]
+            return static_cast<R>(static_cast<R>(mant >> (expoffset-exponent)) * sign);
+        return static_cast<R>(static_cast<R>(mant << (exponent-expoffset)) * sign);
+    }
+    else if constexpr(unsigned_integral<R>)
+    {
+        if(exponent+excessbit > expmax) [[unlikely]]
+        {
+            if(exponent == (expmask>>mantbits) and (conv_u&mantissamask) != 0)
+                return R{0};
+            return (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();
+        }
+
+        auto const mask = (conv_u&signmask) ? R{0} : std::numeric_limits<R>::max();
+        if(exponent < expoffset) [[likely]]
+            return static_cast<R>((mant >> (expoffset-exponent)) & mask);
+        return static_cast<R>((mant << (exponent-expoffset)) & mask);
+    }
+    else
+    {
+        static_assert(al::dependent_false<R>, "Unexpected numeric type conversion");
+        return R{};
+    }
+}
+
 } /* namespace al */
 
 template<al::integral T> [[nodiscard]] constexpr

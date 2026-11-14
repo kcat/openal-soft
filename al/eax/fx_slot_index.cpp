@@ -11,13 +11,18 @@ namespace {
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 class EaxFxSlotIndexException final : public EaxException {
 public:
-    explicit EaxFxSlotIndexException(const std::string_view message)
+    explicit EaxFxSlotIndexException(std::string_view const message)
         : EaxException{"EAX_FX_SLOT_INDEX", message}
     { }
 };
 
 } // namespace
 
+[[noreturn]]
+void EaxFxSlotIndex::fail(std::string_view const message)
+{
+    throw EaxFxSlotIndexException{message};
+}
 
 void EaxFxSlotIndex::set(EaxFxSlotIndexValue index)
 {
@@ -41,10 +46,4 @@ void EaxFxSlotIndex::set(AL_GUID const& guid)
         emplace(3u);
     else
         fail("Unsupported GUID.");
-}
-
-[[noreturn]]
-void EaxFxSlotIndex::fail(std::string_view const message)
-{
-    throw EaxFxSlotIndexException{message};
 }

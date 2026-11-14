@@ -1138,7 +1138,8 @@ auto al::EffectSlot::eax_dispatch(EaxCall const& call) -> bool
 
 
 template<typename TValidator>
-void al::EffectSlot::eax_fx_slot_set(EaxCall const &call, auto &dst, EaxDirtyBit const dirty_bit)
+auto al::EffectSlot::eax_fx_slot_update(EaxCall const& call, auto &dst,
+    EaxDirtyBit const dirty_bit) -> void
 {
     const auto &src = call.load<const std::remove_cvref_t<decltype(dst)>>();
     TValidator{}(src);
@@ -1422,14 +1423,14 @@ auto al::EffectSlot::eax4_fx_slot_set(const EaxCall& call) -> bool
             eax_fx_slot_load_effect(4, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
+        eax_fx_slot_update<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
         break;
     case EAXFXSLOT_LOCK:
         eax4_fx_slot_ensure_unlocked();
-        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
+        eax_fx_slot_update<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax4FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
+        eax_fx_slot_update<Eax4FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
         break;
     default:
         eax_fail_unknown_property_id();
@@ -1459,19 +1460,19 @@ auto al::EffectSlot::eax5_fx_slot_set(const EaxCall& call) -> bool
             eax_fx_slot_load_effect(5, eax_get_efx_effect_type(dst.guidLoadEffect));
         break;
     case EAXFXSLOT_VOLUME:
-        eax_fx_slot_set<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
+        eax_fx_slot_update<Eax4VolumeValidator>(call, dst.lVolume, EaxDirtyBit::Volume);
         break;
     case EAXFXSLOT_LOCK:
-        eax_fx_slot_set<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
+        eax_fx_slot_update<Eax4LockValidator>(call, dst.lLock, EaxDirtyBit::Lock);
         break;
     case EAXFXSLOT_FLAGS:
-        eax_fx_slot_set<Eax5FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
+        eax_fx_slot_update<Eax5FlagsValidator>(call, dst.ulFlags, EaxDirtyBit::Flags);
         break;
     case EAXFXSLOT_OCCLUSION:
-        eax_fx_slot_set<Eax5OcclusionValidator>(call, dst.lOcclusion, EaxDirtyBit::Occlusion);
+        eax_fx_slot_update<Eax5OcclusionValidator>(call, dst.lOcclusion, EaxDirtyBit::Occlusion);
         break;
     case EAXFXSLOT_OCCLUSIONLFRATIO:
-        eax_fx_slot_set<Eax5OcclusionLfRatioValidator>(call, dst.flOcclusionLFRatio,
+        eax_fx_slot_update<Eax5OcclusionLfRatioValidator>(call, dst.flOcclusionLFRatio,
             EaxDirtyBit::OcclusionLfRatio);
         break;
     default:

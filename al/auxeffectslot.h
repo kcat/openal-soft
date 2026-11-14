@@ -14,7 +14,7 @@
 
 #include "core/effects/base.h"
 #include "core/effectslot.h"
-#include "gsl/gsl"
+#include "gsl/pointers"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
@@ -98,7 +98,7 @@ struct EffectSlot {
     void eax_commit();
 
 private:
-    enum class EaxDirtyBit {
+    enum class EaxDirtyBit : std::uint8_t {
         LoadEffect,
         Volume,
         Lock,
@@ -130,7 +130,7 @@ private:
      * the new value differs form the old one, and assigns the new value.
      */
     template<typename TValidator>
-    void eax_fx_slot_set(const EaxCall &call, auto &dst, EaxDirtyBit dirty_bit);
+    void eax_fx_slot_update(const EaxCall &call, auto &dst, EaxDirtyBit dirty_bit);
 
     /* Gets a new value from EAX call, validates it, sets a dirty flag without
      * comparing the values, and assigns the new value.

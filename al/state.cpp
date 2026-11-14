@@ -108,7 +108,11 @@ auto GetResamplerName() noexcept -> const ALchar*
     else if constexpr(rtype == Resampler::BSinc24) return "23rd order Sinc";
     else if constexpr(rtype == Resampler::FastBSinc48) return "47th order Sinc (fast)";
     else if constexpr(rtype == Resampler::BSinc48) return "47th order Sinc";
-    else ASSUME(false);
+    else
+    {
+        static_assert(al::dependent_false_v<rtype>, "Invalid resampler type");
+        return "";
+    }
 }
 
 [[nodiscard]] constexpr

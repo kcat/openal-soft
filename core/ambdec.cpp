@@ -7,9 +7,7 @@
 #include <bit>
 #include <cctype>
 #include <cmath>
-#include <cstdarg>
 #include <cstddef>
-#include <cstdio>
 #include <istream>
 #include <iterator>
 #include <span>
@@ -79,6 +77,7 @@ auto AmbDecConf::load(std::string_view const fname) noexcept -> al::expected<voi
     auto lfmatrix_pos = 0_uz;
     auto hfmatrix_pos = 0_uz;
     auto linenum = 0_uz;
+    auto has_coeffscale = false;
 
     auto buffer = std::string{};
     while(f.good() && std::getline(f, buffer))
@@ -186,7 +185,7 @@ auto AmbDecConf::load(std::string_view const fname) noexcept -> al::expected<voi
 
             if(!ChanMask || ChanMask > Ambi4OrderMask)
                 return make_error(linenum, "Invalid chan_mask: {:#x}", ChanMask);
-            if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
+            if(ChanMask > Ambi3OrderMask && has_coeffscale && CoeffScale == AmbDecScale::FuMa)
                 return make_error(linenum, "FuMa not compatible with over third-order");
         }
         else if(command == "/dec/freq_bands")
@@ -209,15 +208,15 @@ auto AmbDecConf::load(std::string_view const fname) noexcept -> al::expected<voi
         }
         else if(command == "/dec/coeff_scale")
         {
-            if(CoeffScale != AmbDecScale::Unset)
+            if(has_coeffscale)
                 return make_error(linenum, "Duplicate coeff_scale");
 
             auto scale = read_word(istr);
             if(scale == "n3d") CoeffScale = AmbDecScale::N3D;
             else if(scale == "sn3d") CoeffScale = AmbDecScale::SN3D;
             else if(scale == "fuma") CoeffScale = AmbDecScale::FuMa;
-            else
-                return make_error(linenum, "Unexpected coeff_scale: {}", scale);
+            else return make_error(linenum, "Unexpected coeff_scale: {}", scale);
+            has_coeffscale = true;
 
             if(ChanMask > Ambi3OrderMask && CoeffScale == AmbDecScale::FuMa)
                 return make_error(linenum, "FuMa not compatible with over third-order");
@@ -284,7 +283,7 @@ auto AmbDecConf::load(std::string_view const fname) noexcept -> al::expected<voi
             if(speaker_pos < Speakers.size() || hfmatrix_pos < Speakers.size()
                 || (FreqBands == 2 && lfmatrix_pos < Speakers.size()))
                 return make_error(linenum, "Incomplete decoder definition");
-            if(CoeffScale == AmbDecScale::Unset)
+            if(!has_coeffscale)
                 return make_error(linenum, "No coefficient scaling defined");
 
             return {};

@@ -14,7 +14,6 @@
 /* Helpers to read .ambdec configuration files. */
 
 enum class AmbDecScale {
-    Unset,
     N3D,
     SN3D,
     FuMa,
@@ -25,7 +24,7 @@ struct AmbDecConf {
 
     unsigned int ChanMask{0u};
     unsigned int FreqBands{0u}; /* Must be 1 or 2 */
-    AmbDecScale CoeffScale{AmbDecScale::Unset};
+    AmbDecScale CoeffScale{};
 
     float XOverFreq{0.0f};
     float XOverRatio{0.0f};

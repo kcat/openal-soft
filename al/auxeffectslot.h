@@ -26,7 +26,16 @@
 #include "eax/fx_slot_index.h"
 
 class EaxEffect;
-using EaxEffectUPtr = std::unique_ptr<EaxEffect>;
+
+enum class EaxEffectSlotDirtyBit : std::uint8_t {
+    LoadEffect,
+    Volume,
+    Lock,
+    Flags,
+    Occlusion,
+    OcclusionLfRatio,
+    MaxValue = OcclusionLfRatio
+};
 #endif // ALSOFT_EAX
 
 
@@ -99,16 +108,6 @@ struct EffectSlot {
     void eax_commit();
 
 private:
-    enum class EaxDirtyBit : std::uint8_t {
-        LoadEffect,
-        Volume,
-        Lock,
-        Flags,
-        Occlusion,
-        OcclusionLfRatio,
-        MaxValue = OcclusionLfRatio
-    };
-
     struct Eax4State {
         EAX40FXSLOTPROPERTIES i; // Immediate.
     };
@@ -120,8 +119,8 @@ private:
     Context& mEaxALContext;
     EaxFxSlotIndexValue mEaxFXSlotIndex{};
     int mEaxVersion{}; // Current EAX version.
-    al::bitset<EaxDirtyBit> mEaxDf; // Dirty flags for the current EAX version.
-    EaxEffectUPtr mEaxEffect;
+    al::bitset<EaxEffectSlotDirtyBit> mEaxDf; // Dirty flags for the current EAX version.
+    std::unique_ptr<EaxEffect> mEaxEffect;
     Eax5State mEax123{}; // EAX1/EAX2/EAX3 state.
     Eax4State mEax4{}; // EAX4 state.
     Eax5State mEax5{}; // EAX5 state.
@@ -131,7 +130,8 @@ private:
      * the new value differs form the old one, and assigns the new value.
      */
     template<typename TValidator>
-    auto eax_fx_slot_update(EaxCall const& call, auto &dst, EaxDirtyBit const dirty_bit) -> void
+    auto eax_fx_slot_update(EaxCall const& call, auto &dst, EaxEffectSlotDirtyBit const dirty_bit)
+        -> void
     {
         auto const& src = call.load<const std::remove_cvref_t<decltype(dst)>>();
         TValidator{}(src);
@@ -146,7 +146,8 @@ private:
      * comparing the values, and assigns the new value.
      */
     template<typename TValidator>
-    auto eax_fx_slot_set_dirty(EaxCall const& call, auto &dst, EaxDirtyBit const dirty_bit) -> void
+    auto eax_fx_slot_set_dirty(EaxCall const& call, auto &dst,
+        EaxEffectSlotDirtyBit const dirty_bit) -> void
     {
         auto const& src = call.load<const std::remove_cvref_t<decltype(dst)>>();
         TValidator{}(src);
@@ -193,8 +194,8 @@ private:
     // Returns `true` if all sources should be updated, or `false` otherwise.
     bool eax_set(const EaxCall& call);
 
-    void eax_fx_slot_commit_property(auto &state, al::bitset<EaxDirtyBit> &dst_df,
-        EaxDirtyBit const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
+    void eax_fx_slot_commit_property(auto &state, al::bitset<EaxEffectSlotDirtyBit> &dst_df,
+        EaxEffectSlotDirtyBit const dirty_bit, std::invocable<decltype(mEax)> auto member) noexcept
     {
         if(mEaxDf.test(dirty_bit))
         {
@@ -203,8 +204,8 @@ private:
         }
     }
 
-    void eax4_fx_slot_commit(al::bitset<EaxDirtyBit>& dst_df);
-    void eax5_fx_slot_commit(Eax5State& state, al::bitset<EaxDirtyBit>& dst_df);
+    void eax4_fx_slot_commit(al::bitset<EaxEffectSlotDirtyBit>& dst_df);
+    void eax5_fx_slot_commit(Eax5State& state, al::bitset<EaxEffectSlotDirtyBit>& dst_df);
 
     // `alAuxiliaryEffectSloti(effect_slot, AL_EFFECTSLOT_EFFECT, effect)`
     void eax_set_efx_slot_effect(EaxEffect const &effect);

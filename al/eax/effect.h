@@ -363,6 +363,4 @@ public:
 #undef EAXCALL
 }; // EaxEffect
 
-using EaxEffectUPtr = std::unique_ptr<EaxEffect>;
-
 #endif // !EAX_EFFECT_INCLUDED

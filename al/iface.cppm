@@ -32,6 +32,7 @@ export {
 
 #if ALSOFT_EAX
     using ::EaxAlEffectSlotUPtr;
+    using ::EaxEffectSlotDirtyBit;
     using ::eax_create_al_effect_slot;
 
     using ::EaxStorage;

@@ -57,6 +57,21 @@ concept integral = is_integral_v<T>;
 template<typename T>
 concept number = integral<T> or std::floating_point<T>;
 
+
+template<std::floating_point T> inline
+auto constexpr is_binary16_v = sizeof(T) == 2 and std::numeric_limits<T>::radix == 2
+    and std::numeric_limits<T>::digits == 11
+    and std::numeric_limits<T>::max_exponent == 16;
+template<std::floating_point T> inline
+auto constexpr is_binary32_v = sizeof(T) == 4 and std::numeric_limits<T>::radix == 2
+    and std::numeric_limits<T>::digits == 24
+    and std::numeric_limits<T>::max_exponent == 128;
+template<std::floating_point T> inline
+auto constexpr is_binary64_v = sizeof(T) == 8 and std::numeric_limits<T>::radix == 2
+    and std::numeric_limits<T>::digits == 53
+    and std::numeric_limits<T>::max_exponent == 1024;
+
+
 #if HAS_BUILTIN(__builtin_add_overflow)
 template<integral T> [[nodiscard]] constexpr
 auto saturating_add(T const lhs, T const rhs) noexcept -> T
@@ -148,16 +163,7 @@ auto saturating_cast(T const val) noexcept -> R
     {
         if constexpr(integral<R>) /* fp -> integer */
         {
-            auto constexpr is_binary16 = sizeof(T) == 2 and std::numeric_limits<T>::radix == 2
-                and std::numeric_limits<T>::digits == 11
-                and std::numeric_limits<T>::max_exponent == 16;
-            auto constexpr is_binary32 = sizeof(T) == 4 and std::numeric_limits<T>::radix == 2
-                and std::numeric_limits<T>::digits == 24
-                and std::numeric_limits<T>::max_exponent == 128;
-            auto constexpr is_binary64 = sizeof(T) == 8 and std::numeric_limits<T>::radix == 2
-                and std::numeric_limits<T>::digits == 53
-                and std::numeric_limits<T>::max_exponent == 1024;
-            static_assert(is_binary16 or is_binary32 or is_binary64,
+            static_assert(is_binary16_v<T> or is_binary32_v<T> or is_binary64_v<T>,
                 "Only binary16/32/64 floating point to integer is supported");
 
             /* mantbits is the number of mantissa bits physically stored in the
@@ -349,16 +355,7 @@ auto lerp(T const a, T const b, T const t) noexcept -> float
 template<integral R, std::floating_point T> [[nodiscard]] constexpr
 auto saturating_round(T const val) noexcept -> R
 {
-    auto constexpr is_binary16 = sizeof(T) == 2 and std::numeric_limits<T>::radix == 2
-        and std::numeric_limits<T>::digits == 11
-        and std::numeric_limits<T>::max_exponent == 16;
-    auto constexpr is_binary32 = sizeof(T) == 4 and std::numeric_limits<T>::radix == 2
-        and std::numeric_limits<T>::digits == 24
-        and std::numeric_limits<T>::max_exponent == 128;
-    auto constexpr is_binary64 = sizeof(T) == 8 and std::numeric_limits<T>::radix == 2
-        and std::numeric_limits<T>::digits == 53
-        and std::numeric_limits<T>::max_exponent == 1024;
-    static_assert(is_binary16 or is_binary32 or is_binary64,
+    static_assert(is_binary16_v<T> or is_binary32_v<T> or is_binary64_v<T>,
         "Only binary16/32/64 floating point to integer is supported");
 
     auto constexpr mantbits = unsigned{std::numeric_limits<T>::digits - 1};

@@ -23,6 +23,7 @@
 #include "wave.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bit>
 #include <cerrno>

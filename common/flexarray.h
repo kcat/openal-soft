@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include "gsl/pointers"
+#include "opthelper_macros.hpp"
 
 
 enum FamCount : std::size_t { };
@@ -106,42 +107,55 @@ struct FlexArray {
     [[nodiscard]] auto size() const noexcept -> index_type { return mStore.size(); }
     [[nodiscard]] auto empty() const noexcept -> bool { return mStore.empty(); }
 
-    [[nodiscard]] auto data() noexcept -> pointer { return mStore.data(); }
-    [[nodiscard]] auto data() const noexcept -> const_pointer { return mStore.data(); }
+    [[nodiscard]]
+    auto subspan(index_type const offset, index_type const count=std::dynamic_extent) const
+        noexcept LIFETIMEBOUND
+    { return mStore.subspan(offset, count); }
 
-    [[nodiscard]] auto operator[](index_type i) noexcept -> reference { return mStore[i]; }
-    [[nodiscard]] auto operator[](index_type i) const noexcept -> const_reference { return mStore[i]; }
+    [[nodiscard]]
+    auto first(index_type const count) const noexcept LIFETIMEBOUND
+    { return mStore.first(count); }
 
-    [[nodiscard]] auto front() noexcept -> reference { return mStore.front(); }
-    [[nodiscard]] auto front() const noexcept -> const_reference { return mStore.front(); }
+    [[nodiscard]]
+    auto last(index_type const count) const noexcept LIFETIMEBOUND
+    { return mStore.last(count); }
 
-    [[nodiscard]] auto back() noexcept -> reference { return mStore.back(); }
-    [[nodiscard]] auto back() const noexcept -> const_reference { return mStore.back(); }
+    [[nodiscard]] auto data() noexcept LIFETIMEBOUND -> pointer { return mStore.data(); }
+    [[nodiscard]] auto data() const noexcept LIFETIMEBOUND -> const_pointer { return mStore.data(); }
+
+    [[nodiscard]] auto operator[](index_type i) noexcept LIFETIMEBOUND -> reference { return mStore[i]; }
+    [[nodiscard]] auto operator[](index_type i) const noexcept LIFETIMEBOUND -> const_reference { return mStore[i]; }
+
+    [[nodiscard]] auto front() noexcept LIFETIMEBOUND -> reference { return mStore.front(); }
+    [[nodiscard]] auto front() const noexcept LIFETIMEBOUND -> const_reference { return mStore.front(); }
+
+    [[nodiscard]] auto back() noexcept LIFETIMEBOUND -> reference { return mStore.back(); }
+    [[nodiscard]] auto back() const noexcept LIFETIMEBOUND -> const_reference { return mStore.back(); }
 
     /* FIXME: We want to act like a container here, rather than a container
      * view. A const FlexArray should return const iterators, but std::span
      * doesn't have those until C++23. So for now, don't bother with them.
      */
 #if 0
-    [[nodiscard]] auto begin() noexcept -> iterator { return mStore.begin(); }
-    [[nodiscard]] auto begin() const noexcept -> const_iterator { return mStore.cbegin(); }
-    [[nodiscard]] auto cbegin() const noexcept -> const_iterator { return mStore.cbegin(); }
-    [[nodiscard]] auto end() noexcept -> iterator { return mStore.end(); }
-    [[nodiscard]] auto end() const noexcept -> const_iterator { return mStore.cend(); }
-    [[nodiscard]] auto cend() const noexcept -> const_iterator { return mStore.cend(); }
+    [[nodiscard]] auto begin() noexcept LIFETIMEBOUND -> iterator { return mStore.begin(); }
+    [[nodiscard]] auto begin() const noexcept LIFETIMEBOUND -> const_iterator { return mStore.cbegin(); }
+    [[nodiscard]] auto cbegin() const noexcept LIFETIMEBOUND -> const_iterator { return mStore.cbegin(); }
+    [[nodiscard]] auto end() noexcept LIFETIMEBOUND -> iterator { return mStore.end(); }
+    [[nodiscard]] auto end() const noexcept LIFETIMEBOUND -> const_iterator { return mStore.cend(); }
+    [[nodiscard]] auto cend() const noexcept LIFETIMEBOUND -> const_iterator { return mStore.cend(); }
 
-    [[nodiscard]] auto rbegin() noexcept -> reverse_iterator { return mStore.rbegin(); }
-    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator { return mStore.crbegin(); }
-    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator { return mStore.crbegin(); }
-    [[nodiscard]] auto rend() noexcept -> reverse_iterator { return mStore.rend(); }
-    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
-    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator { return mStore.crend(); }
+    [[nodiscard]] auto rbegin() noexcept LIFETIMEBOUND -> reverse_iterator { return mStore.rbegin(); }
+    [[nodiscard]] auto rbegin() const noexcept LIFETIMEBOUND -> const_reverse_iterator { return mStore.crbegin(); }
+    [[nodiscard]] auto crbegin() const noexcept LIFETIMEBOUND -> const_reverse_iterator { return mStore.crbegin(); }
+    [[nodiscard]] auto rend() noexcept LIFETIMEBOUND -> reverse_iterator { return mStore.rend(); }
+    [[nodiscard]] auto rend() const noexcept LIFETIMEBOUND -> const_reverse_iterator { return mStore.crend(); }
+    [[nodiscard]] auto crend() const noexcept LIFETIMEBOUND -> const_reverse_iterator { return mStore.crend(); }
 #else
-    [[nodiscard]] auto begin() const noexcept -> iterator { return mStore.begin(); }
-    [[nodiscard]] auto end() const noexcept -> iterator { return mStore.end(); }
+    [[nodiscard]] auto begin() const noexcept LIFETIMEBOUND -> iterator { return mStore.begin(); }
+    [[nodiscard]] auto end() const noexcept LIFETIMEBOUND -> iterator { return mStore.end(); }
 
-    [[nodiscard]] auto rbegin() const noexcept -> reverse_iterator { return mStore.rbegin(); }
-    [[nodiscard]] auto rend() const noexcept -> reverse_iterator { return mStore.rend(); }
+    [[nodiscard]] auto rbegin() const noexcept LIFETIMEBOUND -> reverse_iterator { return mStore.rbegin(); }
+    [[nodiscard]] auto rend() const noexcept LIFETIMEBOUND -> reverse_iterator { return mStore.rend(); }
 #endif
 
     auto operator new(std::size_t, FamCount const count) -> gsl::owner<void*>

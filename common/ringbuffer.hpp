@@ -91,9 +91,9 @@ public:
         const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
             : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-        auto outiter = std::ranges::copy(mBuffer | std::views::drop(read_idx*mElemSize)
+        auto outiter = std::ranges::copy(std::span{mBuffer} | std::views::drop(read_idx*mElemSize)
             | std::views::take(n1*mElemSize), dest.begin()).out;
-        std::ranges::copy(mBuffer | std::views::take(n2*mElemSize), outiter);
+        std::ranges::copy(std::span{mBuffer} | std::views::take(n2*mElemSize), outiter);
         mReadCount.store(r+n1+n2, std::memory_order_release);
         return to_read;
     }
@@ -117,9 +117,9 @@ public:
         const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
             : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-        auto outiter = std::ranges::copy(mBuffer | std::views::drop(read_idx*mElemSize)
+        auto outiter = std::ranges::copy(std::span{mBuffer} | std::views::drop(read_idx*mElemSize)
             | std::views::take(n1*mElemSize), dest.begin()).out;
-        std::ranges::copy(mBuffer | std::views::take(n2*mElemSize), outiter);
+        std::ranges::copy(std::span{mBuffer} | std::views::take(n2*mElemSize), outiter);
 
         return to_read;
     }
@@ -185,7 +185,7 @@ public:
             : std::array{mSizeMask+1 - write_idx, wrend&mSizeMask};
 
         std::ranges::copy(src.first(n1*mElemSize),
-            (mBuffer | std::views::drop(write_idx*mElemSize)).begin());
+            (std::span{mBuffer} | std::views::drop(write_idx*mElemSize)).begin());
         std::ranges::copy(src.subspan(n1*mElemSize, n2*mElemSize), mBuffer.begin());
         mWriteCount.store(w+n1+n2, std::memory_order_release);
         return to_write;

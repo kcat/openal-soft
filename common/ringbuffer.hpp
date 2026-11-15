@@ -14,7 +14,7 @@
 #include <type_traits>
 
 #include "flexarray.h"
-#include "gsl/gsl"
+#include "gsl/pointers"
 #include "opthelper_macros.hpp"
 #include "zudl.hpp"
 

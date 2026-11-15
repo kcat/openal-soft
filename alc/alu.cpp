@@ -66,7 +66,6 @@
 #include "core/voice_change.h"
 #include "core/front_stablizer.h"
 #include "envutils.hpp"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vecmat.h"
@@ -84,8 +83,10 @@ import core.effectslot;
 import core.voice;
 import cubic_tables;
 import format;
+import gsl;
 import hrtfstore;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "alformat.hpp"
 #include "alstring.h"
@@ -100,6 +101,7 @@ import numeric;
 #include "core/effectslot.h"
 #include "core/hrtfstore.hpp"
 #include "core/voice.h"
+#include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 

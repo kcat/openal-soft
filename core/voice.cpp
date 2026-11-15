@@ -23,7 +23,6 @@
 #include "filters/nfc.h"
 #include "filters/splitter.h"
 #include "fmt_traits.h"
-#include "gsl/gsl"
 #include "mixer.h"
 #include "mixer/defs.h"
 #include "mixer/hrtfdefs.h"
@@ -38,8 +37,10 @@ import core.ambi_utils;
 import core.buffer_storage;
 import core.device;
 import core.voice;
+import gsl;
 import logging;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
@@ -47,6 +48,7 @@ import numeric;
 #include "core/device.h"
 #include "core/logging.h"
 #include "core/voice.h"
+#include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 

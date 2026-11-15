@@ -7,8 +7,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "gsl/gsl"
-
 namespace al {
 
 template<typename T, typename D=std::default_delete<T>>
@@ -26,7 +24,7 @@ public:
     {
         auto const ref = mRef.fetch_sub(1, std::memory_order_acq_rel)-1;
         if(ref == 0) [[unlikely]]
-            D::operator()(static_cast<gsl::owner<T*>>(this));
+            D::operator()(static_cast<T*>(this));
         return ref;
     }
 
@@ -63,7 +61,7 @@ public:
     { if(mPtr) mPtr->inc_ref(); }
     constexpr intrusive_ptr(intrusive_ptr&& rhs) noexcept : mPtr{rhs.mPtr}
     { rhs.mPtr = nullptr; }
-    constexpr intrusive_ptr(std::nullptr_t) noexcept { } /* NOLINT(google-explicit-constructor) */
+    constexpr intrusive_ptr(std::nullptr_t) noexcept { } /* NOLINT(*-explicit-constructor) */
     explicit constexpr intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
     constexpr ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 

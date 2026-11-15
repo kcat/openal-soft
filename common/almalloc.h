@@ -7,7 +7,7 @@
 #include <new>
 #include <type_traits>
 
-#include "gsl/gsl"
+#include "gsl/pointers"
 
 
 namespace al {

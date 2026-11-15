@@ -2,7 +2,7 @@
 #define EFFECTS_BASE_H
 
 #include "core/effects/base.h"
-#include "gsl/gsl"
+#include "gsl/pointers"
 
 
 /* This is a user config option for modifying the overall output of the reverb

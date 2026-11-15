@@ -73,6 +73,7 @@ import gsl;
 import hrtfstore;
 import logging;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "alc/context.hpp"
 #include "alc/device.h"

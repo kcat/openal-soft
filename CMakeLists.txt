@@ -760,6 +760,7 @@ set(COMMON_HDRS
     common/filesystem.h
     common/flexarray.h
     common/ghc_filesystem.h
+    common/gsl_macros.hpp
     common/inout_ptr.hpp
     common/instance_of.hpp
     common/intrusive_ptr.h

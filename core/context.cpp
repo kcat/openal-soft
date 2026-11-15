@@ -10,17 +10,19 @@
 
 #include "context.h"
 #include "effectslot.h"
-#include "gsl/gsl"
 #include "voice.h"
 #include "voice_change.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;
+import gsl;
 import logging;
+#include "gsl_macros.hpp"
 #else
 #include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #endif
 
 

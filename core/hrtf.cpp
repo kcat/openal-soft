@@ -25,7 +25,6 @@
 #include <vector>
 
 #include "filters/splitter.h"
-#include "gsl/gsl"
 #include "hrtf_loader.hpp"
 #include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
@@ -39,10 +38,12 @@ import core.ambi_utils;
 import core.helpers;
 import filesystem;
 import format;
+import gsl;
 import hrtfstore;
 import logging;
 import numeric;
 import spanstream;
+#include "gsl_macros.hpp"
 #else
 #include "alformat.hpp"
 #include "alformatpath.hpp"
@@ -52,6 +53,7 @@ import spanstream;
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "gsl/gsl"
 #include "numeric.hpp"
 #include "spanstream.hpp"
 #endif

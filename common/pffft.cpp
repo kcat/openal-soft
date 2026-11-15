@@ -72,7 +72,6 @@
 #include <utility>
 #include <vector>
 
-#include "gsl/assert"
 #include "opthelper_macros.hpp"
 #include "pragmadefs.h"
 #include "zudl.hpp"
@@ -80,6 +79,7 @@
 #if HAVE_CXXMODULES
 import fmtlib;
 import gsl;
+#include "gsl_macros.hpp"
 #else
 #include "fmt/format.h"
 #include "fmt/ranges.h"

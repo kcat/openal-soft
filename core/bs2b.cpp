@@ -23,6 +23,8 @@
 
 #include "config.h"
 
+#include "bs2b.h"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -32,8 +34,11 @@
 #include <span>
 #include <stdexcept>
 
-#include "bs2b.h"
+#if HAVE_CXXMODULES
+import gsl;
+#else
 #include "gsl/gsl"
+#endif
 
 namespace {
 

@@ -38,7 +38,6 @@
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
-#include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vector.h"
@@ -49,12 +48,15 @@ import core.ambi_utils;
 import core.context;
 import core.device;
 import cubic_tables;
+import gsl;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "core/ambi_utils.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
+#include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 

@@ -83,7 +83,6 @@
 #include <iterator>
 #include <memory>
 
-#include "gsl/gsl"
 #include "opthelper_macros.hpp"
 
 
@@ -99,9 +98,9 @@ enum pffft_direction_t : bool { PFFFT_FORWARD, PFFFT_BACKWARD };
 enum pffft_transform_t : bool { PFFFT_REAL, PFFFT_COMPLEX };
 
 struct PFFFTSetupDeleter {
-    void operator()(gsl::owner<PFFFT_Setup*> setup) const noexcept;
+    void operator()(PFFFT_Setup* setup) const noexcept;
 };
-using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup,PFFFTSetupDeleter>;
+using PFFFTSetupPtr = std::unique_ptr<PFFFT_Setup, PFFFTSetupDeleter>;
 
 /**
  * Prepare for performing transforms of size N -- the returned PFFFT_Setup

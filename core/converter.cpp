@@ -14,7 +14,6 @@
 #include <span>
 
 #include "fpu_ctrl.h"
-#include "gsl/assert"
 #include "opthelpers.h"
 #include "zudl.hpp"
 
@@ -22,6 +21,7 @@
 import core.device;
 import gsl;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "core/devfmttraits.hpp"
 #include "gsl/gsl"

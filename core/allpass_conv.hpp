@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "alcomplex.h"
-#include "gsl/gsl"
 #include "pffft.h"
 #include "vector.h"
 #include "zudl.hpp"
@@ -60,17 +59,17 @@ struct SegmentedFilter {
         auto tmpBuffer = std::vector(FilterSize, 0.0);
         for(const auto i : std::views::iota(0_uz, FilterHalfSize))
         {
-            const auto k = int{FilterHalfSize} - gsl::narrow_cast<int>(i*2 + 1);
+            const auto k = int{FilterHalfSize} - static_cast<int>(i*2 + 1);
 
             /* Calculate the Blackman-Nuttall window value for this
              * coefficient.
              */
             const auto w = 2.0*std::numbers::pi/double{FilterHalfSize-1}
-                * gsl::narrow_cast<double>(i);
+                * static_cast<double>(i);
             const auto window = 0.3635819 - 0.4891775*std::cos(w) + 0.1365995*std::cos(2.0*w)
                 - 0.0106411*std::cos(3.0*w);
 
-            const auto pk = std::numbers::pi * gsl::narrow_cast<double>(k);
+            const auto pk = std::numbers::pi * static_cast<double>(k);
             tmpBuffer[i*2 + 1] = window * 2.0 / pk;
         }
 
@@ -93,8 +92,8 @@ struct SegmentedFilter {
              */
             for(const auto i : std::views::iota(0_uz, sSampleLength))
             {
-                fftTmp[i*2 + 0] = gsl::narrow_cast<float>(fftBuffer[i].real()) / float{sFftLength};
-                fftTmp[i*2 + 1] = gsl::narrow_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
+                fftTmp[i*2 + 0] = static_cast<float>(fftBuffer[i].real()) / float{sFftLength};
+                fftTmp[i*2 + 1] = static_cast<float>((i==0) ? fftBuffer[sSampleLength].real()
                     : fftBuffer[i].imag()) / float{sFftLength};
             }
             mFft.zreorder(fftTmp.begin(), filter, PFFFT_BACKWARD);

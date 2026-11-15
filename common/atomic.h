@@ -4,7 +4,7 @@
 #include <atomic>
 #include <memory>
 
-#include "gsl/gsl"
+#include "gsl/pointers"
 
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>

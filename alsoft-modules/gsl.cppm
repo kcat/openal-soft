@@ -5,18 +5,20 @@ module;
 export module gsl;
 
 export namespace gsl {
+    using gsl::at;
+    using gsl::cwzstring;
+    using gsl::czstring;
+    using gsl::finally;
+    using gsl::make_not_null;
+    using gsl::narrow;
+    using gsl::narrowing_error;
+    using gsl::narrow_cast;
+    using gsl::not_null;
+    using gsl::owner;
+    using gsl::wzstring;
+    using gsl::zstring;
 
-using gsl::at;
-using gsl::cwzstring;
-using gsl::czstring;
-using gsl::finally;
-using gsl::make_not_null;
-using gsl::narrow;
-using gsl::narrowing_error;
-using gsl::narrow_cast;
-using gsl::not_null;
-using gsl::owner;
-using gsl::wzstring;
-using gsl::zstring;
-
+    namespace details {
+        using gsl::details::terminate;
+    }
 } /* namespace gsl */

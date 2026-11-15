@@ -6,7 +6,6 @@
 #include <ranges>
 
 #include "defs.h"
-#include "gsl/gsl"
 #include "hrtfdefs.h"
 #include "opthelper_macros.hpp"
 
@@ -51,7 +50,7 @@ void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> c
     ASSUME(IrSize <= HrirLength);
 
     auto const OldCoeffs = ConstHrirSpan{oldparams->Coeffs};
-    auto const oldGainStep = oldparams->Gain / gsl::narrow_cast<float>(SamplesToDo);
+    auto const oldGainStep = oldparams->Gain / static_cast<float>(SamplesToDo);
     auto const NewCoeffs = ConstHrirSpan{newparams->Coeffs};
     auto const newGainStep = newparams->GainStep;
 
@@ -59,7 +58,7 @@ void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> c
     {
         auto ldelay = std::size_t{HrtfHistoryLength} - oldparams->Delay[0];
         auto rdelay = std::size_t{HrtfHistoryLength} - oldparams->Delay[1];
-        auto stepcount = gsl::narrow_cast<float>(SamplesToDo);
+        auto stepcount = static_cast<float>(SamplesToDo);
         for(auto i = 0_uz;i < SamplesToDo;++i)
         {
             auto const g = oldGainStep*stepcount;
@@ -71,7 +70,7 @@ void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> c
         }
     }
 
-    if(newGainStep*gsl::narrow_cast<float>(SamplesToDo) > GainSilenceThreshold) [[likely]]
+    if(newGainStep*static_cast<float>(SamplesToDo) > GainSilenceThreshold) [[likely]]
     {
         auto ldelay = std::size_t{HrtfHistoryLength+1} - newparams->Delay[0];
         auto rdelay = std::size_t{HrtfHistoryLength+1} - newparams->Delay[1];

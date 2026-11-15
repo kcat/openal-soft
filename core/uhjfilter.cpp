@@ -12,13 +12,14 @@
 #include <span>
 
 #include "allpass_conv.hpp"
-#include "gsl/gsl"
 #include "pffft.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import gsl;
 import phase_shifter;
 #else
+#include "gsl/gsl"
 #include "phase_shifter.hpp"
 #endif
 

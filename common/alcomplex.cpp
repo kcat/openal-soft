@@ -10,11 +10,11 @@
 #include <numbers>
 #include <ranges>
 
-#include "gsl/assert"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import gsl;
+#include "gsl_macros.hpp"
 #else
 #include "gsl/gsl"
 #endif

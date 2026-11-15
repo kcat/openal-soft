@@ -85,7 +85,6 @@
 #include "envutils.hpp"
 #include "export_list.h"
 #include "flexarray.h"
-#include "gsl/gsl"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
@@ -171,8 +170,10 @@ import core.helpers;
 import core.voice;
 import fmtlib;
 import format;
+import gsl;
 import logging;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -195,6 +196,7 @@ import numeric;
 #include "core/voice.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
+#include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 

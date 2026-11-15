@@ -44,7 +44,6 @@
 #include <vector>
 
 #include "albit.h"
-#include "gsl/assert"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -56,6 +55,7 @@ import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
+#include "gsl_macros.hpp"
 #else
 #include "alstring.h"
 #include "filesystem.h"

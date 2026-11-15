@@ -86,6 +86,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "AL/al.h"
 #include "AL/alext.h"

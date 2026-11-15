@@ -84,7 +84,6 @@
 #include <vector>
 
 #include "alcomplex.h"
-#include "gsl/assert"
 #include "loaddef.h"
 #include "loadsofa.h"
 
@@ -97,6 +96,7 @@ import fmtlib;
 import gsl;
 import numeric;
 import zstring_view;
+#include "gsl_macros.hpp"
 #else
 #include "alformatzsv.hpp"
 #include "alstring.h"

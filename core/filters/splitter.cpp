@@ -8,11 +8,10 @@
 #include <limits>
 #include <numbers>
 
-#include "gsl/assert"
-
 #if HAVE_CXXMODULES
 import gsl;
 import numeric;
+#include "gsl_macros.hpp"
 #else
 #include "gsl/gsl"
 #include "numeric.hpp"

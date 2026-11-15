@@ -161,22 +161,21 @@ void Voice::InitMixer(std::optional<std::string> const &resopt)
             std::string_view const name;
             Resampler const resampler;
         };
-        constexpr auto ResamplerList = std::array{
-            ResamplerEntry{"none"sv, Resampler::Point},
-            ResamplerEntry{"point"sv, Resampler::Point},
-            ResamplerEntry{"linear"sv, Resampler::Linear},
-            ResamplerEntry{"spline"sv, Resampler::Spline},
-            ResamplerEntry{"gaussian"sv, Resampler::Gaussian},
-            ResamplerEntry{"bsinc12"sv, Resampler::BSinc12},
-            ResamplerEntry{"fast_bsinc12"sv, Resampler::FastBSinc12},
-            ResamplerEntry{"bsinc24"sv, Resampler::BSinc24},
-            ResamplerEntry{"fast_bsinc24"sv, Resampler::FastBSinc24},
-            ResamplerEntry{"bsinc48"sv, Resampler::BSinc48},
-            ResamplerEntry{"fast_bsinc48"sv, Resampler::FastBSinc48},
-        };
+        auto constexpr ResamplerList = std::to_array<ResamplerEntry>({
+            {.name="none"sv, .resampler=Resampler::Point},
+            {.name="point"sv, .resampler=Resampler::Point},
+            {.name="linear"sv, .resampler=Resampler::Linear},
+            {.name="spline"sv, .resampler=Resampler::Spline},
+            {.name="gaussian"sv, .resampler=Resampler::Gaussian},
+            {.name="bsinc12"sv, .resampler=Resampler::BSinc12},
+            {.name="fast_bsinc12"sv, .resampler=Resampler::FastBSinc12},
+            {.name="bsinc24"sv, .resampler=Resampler::BSinc24},
+            {.name="fast_bsinc24"sv, .resampler=Resampler::FastBSinc24},
+            {.name="bsinc48"sv, .resampler=Resampler::BSinc48},
+            {.name="fast_bsinc48"sv, .resampler=Resampler::FastBSinc48},
+        });
 
         auto resampler = std::string_view{*resopt};
-		
         if(al::ci_equal(resampler, "cubic"sv))
         {
             WARN("Resampler option \"{}\" is deprecated, using spline", *resopt);

@@ -91,9 +91,9 @@ public:
         const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
             : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-        auto outiter = std::ranges::copy(std::span{mBuffer} | std::views::drop(read_idx*mElemSize)
+        auto outiter = std::ranges::copy(mBuffer | std::views::drop(read_idx*mElemSize)
             | std::views::take(n1*mElemSize), dest.begin()).out;
-        std::ranges::copy(std::span{mBuffer} | std::views::take(n2*mElemSize), outiter);
+        std::ranges::copy(mBuffer | std::views::take(n2*mElemSize), outiter);
         mReadCount.store(r+n1+n2, std::memory_order_release);
         return to_read;
     }
@@ -117,9 +117,9 @@ public:
         const auto [n1, n2] = (rdend <= mSizeMask+1) ? std::array{to_read, 0_uz}
             : std::array{mSizeMask+1 - read_idx, rdend&mSizeMask};
 
-        auto outiter = std::ranges::copy(std::span{mBuffer} | std::views::drop(read_idx*mElemSize)
+        auto outiter = std::ranges::copy(mBuffer | std::views::drop(read_idx*mElemSize)
             | std::views::take(n1*mElemSize), dest.begin()).out;
-        std::ranges::copy(std::span{mBuffer} | std::views::take(n2*mElemSize), outiter);
+        std::ranges::copy(mBuffer | std::views::take(n2*mElemSize), outiter);
 
         return to_read;
     }
@@ -142,10 +142,10 @@ public:
             /* Two part vector: the rest of the buffer after the current read
              * ptr, plus some from the start of the buffer.
              */
-            return DataPair{std::span{mBuffer}.subspan(read_idx*mElemSize),
-                std::span{mBuffer}.first((rdend&mSizeMask)*mElemSize)};
+            return DataPair{mBuffer.subspan(read_idx*mElemSize),
+                mBuffer.first((rdend&mSizeMask)*mElemSize)};
         }
-        return DataPair{std::span{mBuffer}.subspan(read_idx*mElemSize, readable*mElemSize), {}};
+        return DataPair{mBuffer.subspan(read_idx*mElemSize, readable*mElemSize), {}};
     }
 
     /** Advance the read pointer `count' places. */
@@ -184,8 +184,7 @@ public:
         const auto [n1, n2] = (wrend <= mSizeMask+1) ? std::array{to_write, 0_uz}
             : std::array{mSizeMask+1 - write_idx, wrend&mSizeMask};
 
-        std::ranges::copy(src.first(n1*mElemSize),
-            (std::span{mBuffer} | std::views::drop(write_idx*mElemSize)).begin());
+        std::ranges::copy(src.first(n1*mElemSize), mBuffer.subspan(write_idx*mElemSize).begin());
         std::ranges::copy(src.subspan(n1*mElemSize, n2*mElemSize), mBuffer.begin());
         mWriteCount.store(w+n1+n2, std::memory_order_release);
         return to_write;
@@ -209,10 +208,10 @@ public:
             /* Two part vector: the rest of the buffer after the current write
              * ptr, plus some from the start of the buffer.
              */
-            return DataPair{std::span{mBuffer}.subspan(write_idx*mElemSize),
-                std::span{mBuffer}.first((wrend&mSizeMask)*mElemSize)};
+            return DataPair{mBuffer.subspan(write_idx*mElemSize),
+                mBuffer.first((wrend&mSizeMask)*mElemSize)};
         }
-        return DataPair{std::span{mBuffer}.subspan(write_idx*mElemSize, writable*mElemSize), {}};
+        return DataPair{mBuffer.subspan(write_idx*mElemSize, writable*mElemSize), {}};
     }
 
     /** Advance the write pointer `count' places. */

@@ -33,7 +33,6 @@
 #include <cstring>
 #include <exception>
 #include <functional>
-#include <ostream>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -46,11 +45,13 @@
 #if HAVE_CXXMODULES
 import alstring;
 import backends.exception;
+import common.std;
 import core.device;
 import filesystem;
 import gsl;
 import logging;
 #else
+#include <ostream>
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"

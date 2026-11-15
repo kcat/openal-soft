@@ -62,7 +62,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <iterator>
 #include <memory>
 #include <numbers>
@@ -91,6 +90,7 @@
 #if HAVE_CXXMODULES
 import alhelpers;
 import alstring;
+import common.std;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -99,6 +99,8 @@ import openal;
 import zstring_view;
 
 #else
+
+#include <iostream>
 
 #include "AL/alc.h"
 #include "AL/al.h"

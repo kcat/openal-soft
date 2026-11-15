@@ -32,7 +32,6 @@
 #include <chrono>
 #include <cstddef>
 #include <limits>
-#include <iostream>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -48,12 +47,15 @@
 
 #if HAVE_CXXMODULES
 import alhelpers;
+import common.std;
 import fmtlib;
 import gsl;
 import openal;
 import zstring_view;
 
 #else
+
+#include <iostream>
 
 #include "AL/al.h"
 #include "AL/alc.h"

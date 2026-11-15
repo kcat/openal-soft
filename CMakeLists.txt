@@ -792,6 +792,7 @@ if(HAVE_CXXMODULES)
     list(APPEND COMMON_MODS
         alsoft-modules/fmtlib.cppm
         alsoft-modules/gsl.cppm
+        alsoft-modules/std.cppm
         common/alformat.cppm
         common/alstring.cppm
         common/cemath.cppm

@@ -4,7 +4,6 @@
 #include <windows.h>
 
 #include <atomic>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>

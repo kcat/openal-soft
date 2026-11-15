@@ -36,7 +36,6 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
-#include <istream>
 #include <limits>
 #include <ranges>
 #include <string>
@@ -56,6 +55,7 @@ using namespace winrt;
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import core.helpers;
 import filesystem;
 import fmtlib;
@@ -64,6 +64,7 @@ import inout_ptr;
 import logging;
 import numeric;
 #else
+#include <istream>
 #include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"

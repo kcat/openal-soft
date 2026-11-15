@@ -8,21 +8,22 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <istream>
 #include <iterator>
 #include <span>
-#include <sstream>
 #include <string>
 
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import filesystem;
 import format;
 import gsl;
 import numeric;
 #else
+#include <istream>
+#include <sstream>
 #include "alformat.hpp"
 #include "alstring.h"
 #include "filesystem.h"

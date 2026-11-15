@@ -11,7 +11,6 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
-#include <istream>
 #include <iterator>
 #include <memory>
 #include <mutex>
@@ -34,6 +33,7 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import core.ambi_utils;
 import core.helpers;
 import filesystem;
@@ -45,6 +45,7 @@ import numeric;
 import spanstream;
 #include "gsl_macros.hpp"
 #else
+#include <istream>
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alstring.h"

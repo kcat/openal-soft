@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -19,6 +18,7 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import filesystem;
 import fmtlib;
 import format;
@@ -26,6 +26,7 @@ import logging;
 import numeric;
 import zstring_view;
 #else
+#include <iostream>
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alformatzsv.hpp"

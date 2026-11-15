@@ -552,7 +552,7 @@ auto GetSourceLength(al::Source const& source, SourceProp const name) -> T
                 return gsl::narrow_cast<T>(alignedlen);
             else
             {
-                if(alignedlen > std::numeric_limits<T>::max())
+                if(alignedlen > std::uint64_t{std::numeric_limits<T>::max()})
                     return RoundToZero(std::numeric_limits<T>::max(),
                         gsl::narrow_cast<T>(BlockSize));
                 return gsl::narrow_cast<T>(alignedlen);

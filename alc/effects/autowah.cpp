@@ -215,8 +215,8 @@ struct AutowahStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto AutowahStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto AutowahStateFactory_getFactory() -> EffectStateFactory&
 {
-    static AutowahStateFactory AutowahFactory{};
-    return gsl::make_not_null(&AutowahFactory);
+    static auto AutowahFactory = AutowahStateFactory{};
+    return AutowahFactory;
 }

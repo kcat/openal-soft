@@ -122,8 +122,8 @@ struct DedicatedStateFactory final : EffectStateFactory {
 
 } // namespace
 
-auto DedicatedStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto DedicatedStateFactory_getFactory() -> EffectStateFactory&
 {
-    static DedicatedStateFactory DedicatedFactory{};
-    return gsl::make_not_null(&DedicatedFactory);
+    static auto DedicatedFactory = DedicatedStateFactory{};
+    return DedicatedFactory;
 }

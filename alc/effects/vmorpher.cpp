@@ -350,8 +350,8 @@ struct VmorpherStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto VmorpherStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto VmorpherStateFactory_getFactory() -> EffectStateFactory&
 {
-    static VmorpherStateFactory VmorpherFactory{};
-    return gsl::make_not_null(&VmorpherFactory);
+    static auto VmorpherFactory = VmorpherStateFactory{};
+    return VmorpherFactory;
 }

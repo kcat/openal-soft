@@ -90,7 +90,7 @@ namespace {
 using SubListAllocator = al::allocator<std::array<al::EffectSlot,64>>;
 
 [[nodiscard]]
-auto getFactoryByType(EffectSlotType const type) -> gsl::not_null<EffectStateFactory*>
+auto getFactoryByType(EffectSlotType const type) -> EffectStateFactory&
 {
     switch(type)
     {
@@ -552,7 +552,7 @@ try {
 
         if(slot.mState == SlotState::Playing)
         {
-            auto state = getFactoryByType(slot.mEffect.Type)->create();
+            auto state = getFactoryByType(slot.mEffect.Type).create();
 
             auto& device = *context.mALDevice;
             auto bufferlock = std::unique_lock{device.BufferLock};
@@ -826,7 +826,7 @@ al::EffectSlot::EffectSlot(al::Context& context) : mSlot{&context.getEffectSlot(
 {
     mSlot->InUse = true;
     try {
-        auto state = getFactoryByType(EffectSlotType::None)->create();
+        auto state = getFactoryByType(EffectSlotType::None).create();
         mEffect.State = state;
         mSlot->mEffectState = std::move(state);
     }
@@ -851,7 +851,7 @@ auto al::EffectSlot::initEffect(ALuint const effectId, ALenum const effectType,
     const auto newtype = EffectSlotTypeFromEnum(effectType);
     if(newtype != mEffect.Type)
     {
-        auto state = getFactoryByType(newtype)->create();
+        auto state = getFactoryByType(newtype).create();
 
         auto const& device = *context.mALDevice;
         state->mOutTarget = device.Dry.Buffer;

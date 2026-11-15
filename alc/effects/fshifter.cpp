@@ -377,8 +377,8 @@ struct FshifterStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto FshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto FshifterStateFactory_getFactory() -> EffectStateFactory&
 {
-    static FshifterStateFactory FshifterFactory{};
-    return gsl::make_not_null(&FshifterFactory);
+    static auto FshifterFactory = FshifterStateFactory{};
+    return FshifterFactory;
 }

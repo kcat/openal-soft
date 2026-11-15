@@ -1,6 +1,7 @@
 
 #include "config.h"
 
+#include <algorithm>
 #include <atomic>
 #include <exception>
 #include <mutex>

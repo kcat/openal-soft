@@ -413,8 +413,8 @@ struct PshifterStateFactory final : EffectStateFactory {
 
 } // namespace
 
-auto PshifterStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto PshifterStateFactory_getFactory() -> EffectStateFactory&
 {
-    static PshifterStateFactory PshifterFactory{};
-    return gsl::make_not_null(&PshifterFactory);
+    static auto PshifterFactory = PshifterStateFactory{};
+    return PshifterFactory;
 }

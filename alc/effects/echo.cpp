@@ -176,8 +176,8 @@ struct EchoStateFactory final : public EffectStateFactory {
 
 } // namespace
 
-auto EchoStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto EchoStateFactory_getFactory() -> EffectStateFactory&
 {
-    static EchoStateFactory EchoFactory{};
-    return gsl::make_not_null(&EchoFactory);
+    static auto EchoFactory = EchoStateFactory{};
+    return EchoFactory;
 }

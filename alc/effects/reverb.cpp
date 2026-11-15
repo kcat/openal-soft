@@ -1907,8 +1907,8 @@ struct ReverbStateFactory final : EffectStateFactory {
 
 } // namespace
 
-auto ReverbStateFactory_getFactory() -> gsl::not_null<EffectStateFactory*>
+auto ReverbStateFactory_getFactory() -> EffectStateFactory&
 {
-    static ReverbStateFactory ReverbFactory{};
-    return gsl::make_not_null(&ReverbFactory);
+    static auto ReverbFactory = ReverbStateFactory{};
+    return ReverbFactory;
 }

@@ -18,6 +18,11 @@ export namespace std {
     using std::clog;
     using std::cout;
 
+	using std::hex;
+	using std::dec;
+	using std::oct;
+	using std::fixed;
+	using std::flush;
     using std::endl;
 
 	using std::ios_base;

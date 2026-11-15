@@ -16,6 +16,7 @@
 
 #include "atomic.h"
 #include "core/async_event.h"
+#include "core/effects/base.h"
 #include "core/except.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"

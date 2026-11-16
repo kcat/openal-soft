@@ -69,7 +69,6 @@
 #include <new>
 #include <numbers>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "opthelper_macros.hpp"
@@ -77,10 +76,12 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
 import fmtlib;
 import gsl;
 #include "gsl_macros.hpp"
 #else
+#include <utility>
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"

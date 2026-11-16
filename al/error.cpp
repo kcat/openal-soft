@@ -31,7 +31,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include "alc/alconfig.h"
 #include "core/except.h"
@@ -40,6 +39,7 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
@@ -50,6 +50,8 @@ import gsl;
 import logging;
 import numeric;
 #else
+#include <utility>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"

@@ -27,7 +27,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <utility>
 #include <variant>
 #include <vector>
 
@@ -66,6 +65,7 @@ struct SwsContext;
 #if HAVE_CXXMODULES
 import alhelpers;
 import alstring;
+import common.std;
 import fmtlib;
 import gsl;
 import inout_ptr;
@@ -77,6 +77,8 @@ import zstring_view;
 #include "openal_apientry.h"
 
 #else
+
+#include <utility>
 
 #include "AL/al.h"
 #include "AL/alc.h"

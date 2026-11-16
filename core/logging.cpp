@@ -6,7 +6,6 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <utility>
 
 #include "envutils.hpp"
 
@@ -27,6 +26,7 @@ import numeric;
 import zstring_view;
 #else
 #include <iostream>
+#include <utility>
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alformatzsv.hpp"

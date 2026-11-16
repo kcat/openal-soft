@@ -13,7 +13,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "async_event.h"
@@ -33,6 +32,7 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import core.ambi_utils;
 import core.buffer_storage;
 import core.device;
@@ -42,6 +42,7 @@ import logging;
 import numeric;
 #include "gsl_macros.hpp"
 #else
+#include <utility>
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
 #include "core/buffer_storage.h"

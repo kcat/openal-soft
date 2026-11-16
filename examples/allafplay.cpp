@@ -71,7 +71,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <utility>
 #include <variant>
 #include <vector>
 
@@ -101,6 +100,7 @@ import zstring_view;
 #else
 
 #include <iostream>
+#include <utility>
 
 #include "AL/alc.h"
 #include "AL/al.h"

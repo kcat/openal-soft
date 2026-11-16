@@ -37,7 +37,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -51,6 +50,7 @@
 
 #if HAVE_CXXMODULES
 import backends.exception;
+import common.std;
 import core.device;
 import format;
 import gsl;
@@ -58,6 +58,7 @@ import logging;
 import numeric;
 import zstring_view;
 #else
+#include <utility>
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

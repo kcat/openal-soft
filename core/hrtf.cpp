@@ -20,7 +20,6 @@
 #include <span>
 #include <string_view>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "filters/splitter.h"
@@ -46,6 +45,7 @@ import spanstream;
 #include "gsl_macros.hpp"
 #else
 #include <istream>
+#include <utility>
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alstring.h"

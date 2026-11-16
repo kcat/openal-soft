@@ -15,7 +15,6 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <utility>
 
 #include "core/except.h"
 #include "direct_defs.h"
@@ -23,6 +22,7 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
@@ -35,6 +35,8 @@ import logging;
 import numeric;
 import zstring_view;
 #else
+#include <utility>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 

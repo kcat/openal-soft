@@ -40,7 +40,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <variant>
 
 #include "atomic.h"
@@ -75,6 +74,7 @@
 import alstring;
 import bsinc_tables;
 import cemath;
+import common.std;
 import core.ambi_utils;
 import core.buffer_storage;
 import core.context;
@@ -88,6 +88,7 @@ import hrtfstore;
 import numeric;
 #include "gsl_macros.hpp"
 #else
+#include <utility>
 #include "alformat.hpp"
 #include "alstring.h"
 #include "cemath.hpp"

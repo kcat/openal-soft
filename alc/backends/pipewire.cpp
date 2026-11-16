@@ -43,7 +43,6 @@
 #include <string_view>
 #include <thread>
 #include <tuple>
-#include <utility>
 
 #include "alc/alconfig.h"
 #include "dlopennote.h"
@@ -129,6 +128,7 @@ DIAGNOSTIC_POP;
 #if HAVE_CXXMODULES
 import alstring;
 import backends.exception;
+import common.std;
 import core.device;
 import core.helpers;
 import filesystem;
@@ -141,6 +141,7 @@ import ringbuffer;
 import spanstream;
 import zstring_view;
 #else
+#include <utility>
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

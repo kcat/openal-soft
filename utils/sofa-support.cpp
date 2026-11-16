@@ -31,14 +31,15 @@
 #include <cmath>
 #include <cstdio>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
+import common.std;
 import fmtlib;
 #else
+#include <utility>
 #include "fmt/base.h"
 #include "fmt/ranges.h"
 #endif

@@ -46,7 +46,6 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "alc/backends/base.hpp"
@@ -76,6 +75,7 @@ import eax.validator;
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 
 import al.iface;
@@ -88,6 +88,8 @@ import logging;
 import numeric;
 #include "gsl_macros.hpp"
 #else
+#include <utility>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 #include "AL/efx.h"

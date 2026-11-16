@@ -34,7 +34,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "AL/alext.h"
@@ -68,6 +67,7 @@
 import alc.context;
 import alc.device;
 import alstring;
+import common.std;
 import core.ambi_utils;
 import gsl;
 import hrtfstore;
@@ -75,6 +75,7 @@ import logging;
 import numeric;
 #include "gsl_macros.hpp"
 #else
+#include <utility>
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"

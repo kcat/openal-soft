@@ -7,7 +7,6 @@
 #include <functional>
 #include <optional>
 #include <string_view>
-#include <utility>
 
 #include "alc/alu.h"
 #include "alc/backends/base.hpp"
@@ -37,12 +36,14 @@ import eax.validator;
 import al.iface;
 import alc.context;
 import alc.device;
+import common.std;
 import fmtlib;
 import gsl;
 import logging;
 import numeric;
 import ringbuffer;
 #else
+#include <utility>
 #include "al/auxeffectslot.h"
 #include "al/debug.h"
 #include "al/effect.h"

@@ -14,7 +14,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <utility>
 #include <vector>
 
 #ifdef _WIN32
@@ -58,12 +57,14 @@
 
 #if HAVE_CXXMODULES
 import alstring;
+import common.std;
 import core.helpers;
 import filesystem;
 import logging;
 import numeric;
 import zstring_view;
 #else
+#include <utility>
 #include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"

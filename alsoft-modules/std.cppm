@@ -7,12 +7,14 @@ module;
 #include <ostream>
 #include <sstream>
 #include <streambuf>
+#include <utility>
 
 export module common.std;
 
 /* NOLINTBEGIN(bugprone-std-namespace-modification, cert-dcl58-cpp) */
 export namespace std {
 
+	/* ios, iostream, etc... */
     using std::cerr;
     using std::cin;
     using std::clog;
@@ -65,6 +67,43 @@ export namespace std {
 
 	using std::io_errc;
 	using std::iostream_category;
+
+	/* utility */
+	using std::cmp_equal;
+	using std::cmp_not_equal;
+	using std::cmp_greater;
+	using std::cmp_less;
+	using std::cmp_greater_equal;
+	using std::cmp_less_equal;
+
+	using std::swap;
+	using std::forward;
+	using std::exchange;
+	using std::move;
+	using std::move_if_noexcept;
+	using std::as_const;
+	using std::declval;
+	using std::in_range;
+	using std::make_pair;
+	using std::operator==;
+	using std::operator<=>;
+	using std::get;
+	using std::pair;
+	using std::tuple;
+	using std::tuple_size;
+	using std::tuple_element;
+	using std::tuple_size;
+	using std::tuple_element;
+	using std::integer_sequence;
+	using std::ignore;
+	using std::piecewise_construct;
+	using std::piecewise_construct_t;
+	using std::in_place;
+	using std::in_place_type;
+	using std::in_place_index;
+	using std::in_place_t;
+	using std::in_place_type_t;
+	using std::in_place_index_t;
 
 	using std::operator>>;
 	using std::operator<<;

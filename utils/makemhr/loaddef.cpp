@@ -39,7 +39,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "albit.h"
@@ -58,6 +57,7 @@ import gsl;
 #include "gsl_macros.hpp"
 #else
 #include <iostream>
+#include <utility>
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"

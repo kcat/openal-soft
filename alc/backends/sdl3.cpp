@@ -31,7 +31,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include "opthelpers.h"
 #include "pragmadefs.h"
@@ -51,6 +50,7 @@ DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
 import backends.exception;
+import common.std;
 import core.device;
 import format;
 import gsl;
@@ -58,6 +58,7 @@ import logging;
 import numeric;
 import ringbuffer;
 #else
+#include <utility>
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

@@ -7,19 +7,20 @@ module;
 #include <memory>
 #include <mutex>
 #include <string>
-#include <utility>
 #include <vector>
 
 
 export module alsoft.router;
 
+import common.std;
 import filesystem;
 import fmtlib;
 import openal;
 
 export {
 
-constexpr auto MakeALCVer(int major, int minor) noexcept -> int { return (major<<8) | minor; }
+[[nodiscard]] constexpr
+auto MakeALCVer(int const major, int const minor) noexcept -> int { return (major<<8) | minor; }
 
 struct DriverIface {
     LPALCCREATECONTEXT alcCreateContext{nullptr};

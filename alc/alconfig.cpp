@@ -41,7 +41,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "envutils.hpp"
@@ -66,6 +65,7 @@ import logging;
 import numeric;
 #else
 #include <istream>
+#include <utility>
 #include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"

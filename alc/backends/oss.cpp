@@ -42,7 +42,6 @@
 #include <string_view>
 #include <system_error>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -75,6 +74,7 @@
 
 #if HAVE_CXXMODULES
 import backends.exception;
+import common.std;
 import core.device;
 import core.helpers;
 import format;
@@ -83,6 +83,7 @@ import logging;
 import numeric;
 import ringbuffer;
 #else
+#include <utility>
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

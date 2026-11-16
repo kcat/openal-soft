@@ -4,15 +4,16 @@
 #include "base.hpp"
 
 #include <atomic>
-#include <utility>
 
 #include "core/mixparams.hpp"
 
 #if HAVE_CXXMODULES
 import backends.exception;
+import common.std;
 import core.device;
 import format;
 #else
+#include <utility>
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

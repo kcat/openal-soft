@@ -171,8 +171,7 @@ using namespace std::string_view_literals;
 [[noreturn]]
 void do_assert(const char *message, const std::source_location loc=std::source_location::current())
 {
-    auto errstr = fmt::format("{}:{}: {}", loc.file_name(), loc.line(), message);
-    throw std::runtime_error{errstr};
+    throw std::runtime_error{fmt::format("{}:{}: {}", loc.file_name(), loc.line(), message)};
 }
 
 #define MyAssert(cond) do {                                                   \

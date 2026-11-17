@@ -68,6 +68,7 @@
 #include <ranges>
 #include <source_location>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -82,6 +83,7 @@
 #include <fcntl.h>
 #endif
 
+#include "opthelpers.h"
 #include "zudl.hpp"
 
 #include "win_main_utf8.h"
@@ -192,6 +194,7 @@ enum class Mode : bool {
     Channels, Objects
 };
 
+[[nodiscard]] constexpr
 auto GetQualityName(Quality const quality) noexcept -> std::string_view
 {
     switch(quality)
@@ -204,6 +207,7 @@ auto GetQualityName(Quality const quality) noexcept -> std::string_view
     return "<unknown>"sv;
 }
 
+[[nodiscard]] constexpr
 auto GetModeName(Mode const mode) noexcept -> std::string_view
 {
     switch(mode)
@@ -214,7 +218,8 @@ auto GetModeName(Mode const mode) noexcept -> std::string_view
     return "<unknown>"sv;
 }
 
-auto BytesFromQuality(Quality const quality) noexcept -> std::size_t
+[[nodiscard]] constexpr
+auto BytesFromQuality(Quality const quality) -> std::size_t
 {
     switch(quality)
     {
@@ -223,7 +228,8 @@ auto BytesFromQuality(Quality const quality) noexcept -> std::size_t
     case Quality::f32: return 4u;
     case Quality::s24: return 3u;
     }
-    return 4u;
+    throw std::runtime_error{fmt::format("Unexpected quality value: {}",
+        al::to_underlying(quality))};
 }
 
 

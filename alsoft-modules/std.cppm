@@ -5,6 +5,7 @@ module;
 #include <iostream>
 #include <istream>
 #include <ostream>
+#include <source_location>
 #include <sstream>
 #include <streambuf>
 #include <utility>
@@ -85,8 +86,6 @@ export namespace std {
     using std::declval;
     using std::in_range;
     using std::make_pair;
-    using std::operator==;
-    using std::operator<=>;
     using std::get;
     using std::pair;
     using std::tuple;
@@ -105,8 +104,12 @@ export namespace std {
     using std::in_place_type_t;
     using std::in_place_index_t;
 
+    using std::source_location;
+
     using std::operator>>;
     using std::operator<<;
+    using std::operator==;
+    using std::operator<=>;
 
 }
 /* NOLINTEND(bugprone-std-namespace-modification, cert-dcl58-cpp) */

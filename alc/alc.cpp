@@ -53,7 +53,6 @@
 #include <numbers>
 #include <optional>
 #include <ranges>
-#include <source_location>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -174,7 +173,10 @@ import gsl;
 import logging;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <source_location>
 #include <utility>
 
 #include "AL/al.h"

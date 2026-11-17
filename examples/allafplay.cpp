@@ -66,7 +66,6 @@
 #include <memory>
 #include <numbers>
 #include <ranges>
-#include <source_location>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -89,19 +88,21 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+
 import alhelpers;
 import alstring;
-import common.std;
 import filesystem;
 import fmtlib;
 import gsl;
 import numeric;
-import openal;
 import zstring_view;
 
 #else
 
 #include <iostream>
+#include <source_location>
 #include <utility>
 
 #include "AL/alc.h"

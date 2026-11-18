@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -53,7 +52,10 @@ import alstring;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <algorithm>
 #include <utility>
 
 #include "AL/al.h"

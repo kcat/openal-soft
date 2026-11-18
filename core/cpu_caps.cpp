@@ -17,13 +17,17 @@
 #include <intrin.h>
 #endif
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cctype>
 #include <ranges>
 #include <string>
 
+#if HAVE_CXXMODULES
+import common.std;
+#else
+#include <algorithm>
+#endif
 
 namespace {
 

@@ -3,7 +3,6 @@
 
 #include "uhjfilter.h"
 
-#include <algorithm>
 #include <complex>
 #include <functional>
 #include <iterator>
@@ -16,9 +15,15 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import phase_shifter;
+
 #else
+
+#include <algorithm>
+
 #include "gsl/gsl"
 #include "phase_shifter.hpp"
 #endif

@@ -25,7 +25,6 @@
 
 #include "loaddef.h"
 
-#include <algorithm>
 #include <bit>
 #include <cctype>
 #include <cmath>
@@ -49,15 +48,20 @@
 #include "mysofa.h"
 
 #if HAVE_CXXMODULES
-import alstring;
 import common.std;
+
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <iostream>
 #include <utility>
+
 #include "alstring.h"
 #include "filesystem.h"
 #include "fmt/base.h"

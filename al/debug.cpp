@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -36,6 +35,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 

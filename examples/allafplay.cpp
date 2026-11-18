@@ -55,7 +55,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cmath>
@@ -100,6 +99,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <iostream>
 #include <source_location>
 #include <stdexcept>

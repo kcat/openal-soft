@@ -26,7 +26,6 @@
 
 #include "sofa-support.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -37,9 +36,14 @@
 
 #if HAVE_CXXMODULES
 import common.std;
+
 import fmtlib;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "fmt/base.h"
 #include "fmt/ranges.h"
 #endif

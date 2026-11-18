@@ -22,7 +22,6 @@
 
 #include "wave.hpp"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -43,15 +42,20 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
-import common.std;
 import core.device;
 import filesystem;
 import gsl;
 import logging;
+
 #else
+
+#include <algorithm>
 #include <ostream>
+
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"

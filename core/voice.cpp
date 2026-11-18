@@ -2,7 +2,6 @@
 #include "config.h"
 #include "config_simd.h"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -31,8 +30,9 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
-import alstring;
 import common.std;
+
+import alstring;
 import core.ambi_utils;
 import core.buffer_storage;
 import core.device;
@@ -41,8 +41,12 @@ import gsl;
 import logging;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
 #include "core/buffer_storage.h"

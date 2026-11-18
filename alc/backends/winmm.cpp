@@ -26,7 +26,6 @@
 #include <mmsystem.h>
 #include <mmreg.h>
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -45,6 +44,8 @@
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
 import core.device;
@@ -54,7 +55,11 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include <algorithm>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alstring.h"

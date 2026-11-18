@@ -20,18 +20,22 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <string_view>
 
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
 import alc.context;
 import alstring;
+
 #else
+
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"

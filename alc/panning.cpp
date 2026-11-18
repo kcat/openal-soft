@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <charconv>
 #include <chrono>
@@ -77,6 +76,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <utility>
 
 #include "AL/alext.h"

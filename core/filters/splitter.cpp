@@ -3,16 +3,21 @@
 
 #include "splitter.h"
 
-#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <numbers>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
+
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

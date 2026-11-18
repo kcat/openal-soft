@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdlib>
@@ -19,14 +18,17 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+#include "openal_apientry.h"
+
 import alsoft.router;
 import alstring;
 import gsl;
-import openal;
-
-#include "openal_apientry.h"
 
 #else
+
+#include <algorithm>
 
 #include "AL/alc.h"
 #include "AL/al.h"

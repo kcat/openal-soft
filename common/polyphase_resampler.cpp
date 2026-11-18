@@ -3,7 +3,6 @@
 
 #include "polyphase_resampler.h"
 
-#include <algorithm>
 #include <cmath>
 #include <numbers>
 #include <ranges>
@@ -17,6 +16,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <stdexcept>
 
 #include "gsl/gsl"

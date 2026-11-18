@@ -3,8 +3,11 @@
 
 #include "nfc.h"
 
+#if HAVE_CXXMODULES
+import common.std;
+#else
 #include <algorithm>
-
+#endif
 
 /* Near-field control filters are the basis for handling the near-field effect.
  * The near-field effect is a bass-boost present in the directional components

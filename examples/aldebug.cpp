@@ -26,7 +26,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <memory>
@@ -38,16 +37,18 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alhelpers;
 import common.std;
+import openal;
+
+import alhelpers;
 import fmtlib;
 import gsl;
 import numeric;
-import openal;
 import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <iostream>
 
 #include "AL/alc.h"

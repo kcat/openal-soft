@@ -45,7 +45,6 @@
 #include <ksmedia.h>
 #endif
 
-#include <algorithm>
 #include <atomic>
 #include <bit>
 #include <chrono>
@@ -98,6 +97,8 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
 import core.device;
@@ -106,7 +107,11 @@ import inout_ptr;
 import logging;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include <algorithm>
+
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "alformat.hpp"

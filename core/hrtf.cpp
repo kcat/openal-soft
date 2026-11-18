@@ -3,7 +3,6 @@
 
 #include "hrtf.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -31,8 +30,9 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
-import alstring;
 import common.std;
+
+import alstring;
 import core.ambi_utils;
 import core.helpers;
 import filesystem;
@@ -43,9 +43,13 @@ import logging;
 import numeric;
 import spanstream;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <istream>
 #include <utility>
+
 #include "alformat.hpp"
 #include "alformatpath.hpp"
 #include "alstring.h"

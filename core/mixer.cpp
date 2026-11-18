@@ -3,7 +3,6 @@
 
 #include "mixer.h"
 
-#include <algorithm>
 #include <cmath>
 #include <numbers>
 
@@ -12,10 +11,15 @@
 
 #if HAVE_CXXMODULES
 import common.std;
+
 import core.ambi_utils;
 import core.device;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "core/ambi_utils.hpp"
 #include "core/device.h"
 #endif

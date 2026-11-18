@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <cmath>
 #include <mutex>
 #include <ranges>
@@ -31,6 +30,7 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
@@ -39,7 +39,11 @@ import alc.context;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 

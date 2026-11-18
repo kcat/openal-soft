@@ -8,7 +8,6 @@
 #include <windows.h>
 #include <winnt.h>
 
-#include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <cstring>
@@ -24,13 +23,17 @@
 #include "version.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal.alc;
+
 import alsoft.router;
 import alstring;
 import filesystem;
 import gsl;
-import openal.alc;
 
 #else
+
+#include <algorithm>
 
 #include "AL/alc.h"
 

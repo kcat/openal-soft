@@ -26,7 +26,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -56,6 +55,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 

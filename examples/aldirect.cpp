@@ -28,7 +28,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <limits>
@@ -55,6 +54,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 

@@ -64,7 +64,6 @@
 
 #include "makemhr.h"
 
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -88,16 +87,21 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alstring;
 import common.std;
+
+import alstring;
 import filesystem;
 import fmtlib;
 import gsl;
 import numeric;
 import zstring_view;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <iostream>
+
 #include "alformatzsv.hpp"
 #include "alstring.h"
 #include "filesystem.h"

@@ -2,7 +2,6 @@
 #include "config.h"
 #include "config_simd.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <complex>
@@ -38,6 +37,8 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import core.ambi_utils;
 import core.buffer_storage;
 import core.context;
@@ -48,6 +49,8 @@ import numeric;
 #include "gsl_macros.hpp"
 
 #else
+
+#include <algorithm>
 
 #include "core/ambi_utils.hpp"
 #include "core/buffer_storage.h"

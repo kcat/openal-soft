@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <bit>
 #include <iterator>
 #include <ranges>
@@ -27,6 +26,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <istream>
 #include <stdexcept>
 

@@ -31,7 +31,6 @@
 #include <ksmedia.h>
 #endif
 
-#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -78,6 +77,8 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
 import core.device;
@@ -89,7 +90,11 @@ import logging;
 import numeric;
 import ringbuffer;
 import zstring_view;
+
 #else
+
+#include <algorithm>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

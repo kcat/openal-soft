@@ -63,7 +63,6 @@ int my_main(int, char**);
 #define main my_main
 
 #ifdef __cplusplus
-#include <algorithm>
 #include <cstdlib>
 #include <span>
 #include <string>
@@ -79,6 +78,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <stdexcept>
 
 #include "fmt/base.h"

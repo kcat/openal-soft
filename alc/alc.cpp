@@ -28,7 +28,6 @@
 #include <windows.h>
 #endif
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -176,6 +175,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <source_location>
 #include <stdexcept>
 #include <utility>

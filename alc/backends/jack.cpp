@@ -22,7 +22,6 @@
 
 #include "jack.hpp"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstring>
@@ -43,6 +42,8 @@
 #include <jack/jack.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -53,7 +54,11 @@ import logging;
 import numeric;
 import ringbuffer;
 import zstring_view;
+
 #else
+
+#include <algorithm>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <functional>
@@ -34,17 +33,22 @@ import eax.validator;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import al.iface;
 import alc.context;
 import alc.device;
-import common.std;
 import fmtlib;
 import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "al/auxeffectslot.h"
 #include "al/debug.h"
 #include "al/effect.h"

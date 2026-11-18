@@ -28,7 +28,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <atomic>
 #include <bit>
 #include <cerrno>
@@ -73,8 +72,9 @@
 #endif
 
 #if HAVE_CXXMODULES
-import backends.exception;
 import common.std;
+
+import backends.exception;
 import core.device;
 import core.helpers;
 import format;
@@ -82,8 +82,12 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

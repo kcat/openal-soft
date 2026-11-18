@@ -3,7 +3,6 @@
 
 #include "alcomplex.h"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstdint>
@@ -13,9 +12,15 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
+
 #include "gsl/gsl"
 #endif
 

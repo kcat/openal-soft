@@ -1,6 +1,5 @@
 module;
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <numbers>
@@ -8,6 +7,7 @@ module;
 
 export module window.hann;
 
+import common.std;
 import cemath;
 
 /* Define a Hann window, used to filter the STFT input and output. */

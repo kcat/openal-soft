@@ -1,15 +1,19 @@
 
 #include "config.h"
 
-#include <algorithm>
-
 #include "allpass_conv.hpp"
 #include "tsmefilter.hpp"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import phase_shifter;
+
 #else
+
+#include <algorithm>
+
 #include "phase_shifter.hpp"
 #endif
 

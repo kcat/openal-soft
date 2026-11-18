@@ -59,7 +59,6 @@
 
 #include "pffft.h"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cmath>
@@ -77,11 +76,16 @@
 
 #if HAVE_CXXMODULES
 import common.std;
+
 import fmtlib;
 import gsl;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"

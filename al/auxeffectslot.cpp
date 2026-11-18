@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <iterator>
@@ -73,6 +72,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <stdexcept>
 
 #include "AL/al.h"

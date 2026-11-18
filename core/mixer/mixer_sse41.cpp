@@ -24,7 +24,6 @@
 #include <emmintrin.h>
 #include <smmintrin.h>
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <span>
@@ -36,9 +35,15 @@
 #include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import numeric;
+
 #else
+
+#include <algorithm>
+
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

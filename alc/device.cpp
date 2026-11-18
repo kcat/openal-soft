@@ -5,7 +5,6 @@
 #include <windows.h>
 #endif
 
-#include <algorithm>
 #include <bit>
 #include <csignal>
 #include <variant>
@@ -18,12 +17,18 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import al.iface;
 import alc.device;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <algorithm>
+
 #include "al/buffer.h"
 #include "al/effect.h"
 #include "al/filter.h"

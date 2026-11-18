@@ -24,7 +24,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -43,6 +42,8 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import filesystem;
 import fmtlib;
@@ -50,7 +51,11 @@ import gsl;
 import numeric;
 import phase_shifter;
 import zstring_view;
+
 #else
+
+#include <algorithm>
+
 #include "alformatzsv.hpp"
 #include "alstring.h"
 #include "filesystem.h"

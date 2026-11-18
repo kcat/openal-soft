@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <atomic>
 #include <exception>
 #include <mutex>
@@ -22,6 +21,7 @@
 #include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
@@ -31,7 +31,10 @@ import format;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <algorithm>
 #include "AL/al.h"
 #include "AL/alext.h"
 

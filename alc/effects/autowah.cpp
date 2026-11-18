@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -38,12 +37,16 @@
 #include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import core.context;
 import core.device;
 import core.effectslot;
 import numeric;
 
 #else
+
+#include <algorithm>
 
 #include "core/context.h"
 #include "core/device.h"

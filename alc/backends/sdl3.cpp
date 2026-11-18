@@ -22,7 +22,6 @@
 
 #include "sdl3.hpp"
 
-#include <algorithm>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -49,16 +48,21 @@ constexpr auto DefaultCaptureDeviceID = SDL_AUDIO_DEVICE_DEFAULT_RECORDING;
 DIAGNOSTIC_POP;
 
 #if HAVE_CXXMODULES
-import backends.exception;
 import common.std;
+
+import backends.exception;
 import core.device;
 import format;
 import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

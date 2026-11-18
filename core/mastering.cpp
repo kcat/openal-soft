@@ -3,7 +3,6 @@
 
 #include "mastering.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -15,8 +14,14 @@
 #include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import numeric;
+
 #else
+
+#include <algorithm>
+
 #include "numeric.hpp"
 #endif
 

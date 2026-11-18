@@ -8,7 +8,6 @@ module;
 #include <xmmintrin.h>
 #endif
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <numbers>
@@ -20,6 +19,7 @@ module;
 
 export module phase_shifter;
 
+import common.std;
 import cemath;
 import gsl;
 

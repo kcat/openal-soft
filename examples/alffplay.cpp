@@ -4,7 +4,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -78,6 +77,7 @@ import zstring_view;
 
 #else
 
+#include <algorithm>
 #include <utility>
 
 #include "AL/al.h"

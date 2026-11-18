@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <bit>
@@ -90,6 +89,7 @@ import numeric;
 
 #else
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 

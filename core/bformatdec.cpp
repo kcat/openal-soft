@@ -3,7 +3,6 @@
 
 #include "bformatdec.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <ranges>
@@ -14,6 +13,11 @@
 #include "opthelper_macros.hpp"
 #include "zudl.hpp"
 
+#if HAVE_CXXMODULES
+import common.std;
+#else
+#include <algorithm>
+#endif
 
 namespace {
 

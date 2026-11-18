@@ -3,7 +3,6 @@
 
 #include "converter.h"
 
-#include <algorithm>
 #include <bit>
 #include <climits>
 #include <cmath>
@@ -18,11 +17,17 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import core.device;
 import gsl;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
+
 #include "core/devfmttraits.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"

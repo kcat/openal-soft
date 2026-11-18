@@ -23,7 +23,6 @@
 
 #include "pulseaudio.hpp"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -49,16 +48,21 @@
 #include <pulse/pulseaudio.h>
 
 #if HAVE_CXXMODULES
-import backends.exception;
 import common.std;
+
+import backends.exception;
 import core.device;
 import format;
 import gsl;
 import logging;
 import numeric;
 import zstring_view;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

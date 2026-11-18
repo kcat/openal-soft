@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cmath>
@@ -46,6 +45,8 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import core.ambi_utils;
 import core.context;
 import core.device;
@@ -55,6 +56,8 @@ import gsl;
 import numeric;
 
 #else
+
+#include <algorithm>
 
 #include "core/ambi_utils.hpp"
 #include "core/context.h"

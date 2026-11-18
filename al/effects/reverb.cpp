@@ -1,14 +1,10 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <span>
 #include <variant>
-
-#include "AL/al.h"
-#include "AL/efx.h"
 
 #include "effects.h"
 #include "zudl.hpp"
@@ -28,11 +24,21 @@ import eax.validator;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+
 import alc.context;
 import logging;
 import gsl;
 import numeric;
+
 #else
+
+#include <algorithm>
+
+#include "AL/al.h"
+#include "AL/efx.h"
+
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

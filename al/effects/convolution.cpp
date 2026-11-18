@@ -1,21 +1,27 @@
 
 #include "config.h"
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <span>
-
-#include "AL/al.h"
 
 #include "alc/inprogext.h"
 #include "effects.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+
 import alc.context;
 import numeric;
+
 #else
+
+#include <algorithm>
+
+#include "AL/al.h"
+
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif

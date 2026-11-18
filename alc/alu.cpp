@@ -23,7 +23,6 @@
 
 #include "alu.h"
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -71,10 +70,11 @@
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import bsinc_tables;
 import cemath;
-import common.std;
 import core.ambi_utils;
 import core.buffer_storage;
 import core.context;
@@ -87,8 +87,12 @@ import gsl;
 import hrtfstore;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alformat.hpp"
 #include "alstring.h"
 #include "cemath.hpp"

@@ -25,7 +25,6 @@
 
 #include "loadsofa.h"
 
-#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -49,9 +48,15 @@
 #include "numeric.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import fmtlib;
 import gsl;
+
 #else
+
+#include <algorithm>
+
 #include "fmt/base.h"
 #include "fmt/ostream.h"
 #include "gsl/gsl"

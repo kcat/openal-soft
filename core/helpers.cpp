@@ -5,7 +5,6 @@
 #include <windows.h>
 #endif
 
-#include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <mutex>
@@ -56,15 +55,20 @@
 #include "envutils.hpp"
 
 #if HAVE_CXXMODULES
-import alstring;
 import common.std;
+
+import alstring;
 import core.helpers;
 import filesystem;
 import logging;
 import numeric;
 import zstring_view;
+
 #else
+
+#include <algorithm>
 #include <utility>
+
 #include "alformatpath.hpp"
 #include "alstring.h"
 #include "core/helpers.hpp"

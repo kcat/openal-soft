@@ -18,8 +18,6 @@
 #include "zudl.hpp"
 
 #if ALSOFT_EAX
-#include <compare>
-
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/globals.h"

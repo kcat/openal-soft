@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <compare>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -207,6 +208,29 @@ export namespace std {
         using std::ranges::next_permutation;
         using std::ranges::prev_permutation;
     }
+
+    /* compare */
+    using std::three_way_comparable;
+    using std::three_way_comparable_with;
+
+    using std::partial_ordering;
+    using std::weak_ordering;
+    using std::strong_ordering;
+    using std::common_comparison_category;
+    using std::compare_three_way_result;
+    using std::compare_three_way;
+    using std::strong_order;
+    using std::weak_order;
+    using std::partial_order;
+    using std::compare_strong_order_fallback;
+    using std::compare_weak_order_fallback;
+    using std::compare_partial_order_fallback;
+    using std::is_eq;
+    using std::is_neq;
+    using std::is_lt;
+    using std::is_lteq;
+    using std::is_gt;
+    using std::is_gteq;
 
     /* ios, iostream, etc... */
     using std::cerr;

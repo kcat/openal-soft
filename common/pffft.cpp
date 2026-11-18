@@ -112,37 +112,37 @@ namespace {
 #include <altivec.h>
 using v4sf = vector float;
 constexpr auto SimdSize = 4u;
-force_inline auto vzero() noexcept -> v4sf { return (vector float)vec_splat_u8(0); }
-force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return vec_madd(a, b, vzero()); }
-force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return vec_add(a, b); }
-force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return vec_madd(a, b, c); }
-force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return vec_sub(a, b); }
-force_inline auto ld_ps1(float a) noexcept -> v4sf { return vec_splats(a); }
+FORCE_INLINE auto vzero() noexcept -> v4sf { return (vector float)vec_splat_u8(0); }
+FORCE_INLINE auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return vec_madd(a, b, vzero()); }
+FORCE_INLINE auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return vec_add(a, b); }
+FORCE_INLINE auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return vec_madd(a, b, c); }
+FORCE_INLINE auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return vec_sub(a, b); }
+FORCE_INLINE auto ld_ps1(float a) noexcept -> v4sf { return vec_splats(a); }
 
-force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+FORCE_INLINE auto vset4(float a, float b, float c, float d) noexcept -> v4sf
 {
     /* There a more efficient way to do this? */
     alignas(16) auto vals = std::array{a, b, c, d};
     return vec_ld(0, vals.data());
 }
-force_inline auto vinsert0(v4sf v, float a) noexcept -> v4sf { return vec_insert(a, v, 0); }
-force_inline auto vextract0(v4sf v) noexcept -> float { return vec_extract(v, 0); }
+FORCE_INLINE auto vinsert0(v4sf v, float a) noexcept -> v4sf { return vec_insert(a, v, 0); }
+FORCE_INLINE auto vextract0(v4sf v) noexcept -> float { return vec_extract(v, 0); }
 
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
 { return vec_perm(a,b, (vector unsigned char){16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15}); }
 
-force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = vec_mergeh(in1, in2);
     out2 = vec_mergel(in1, in2);
 }
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = vec_perm(in1, in2, (vector unsigned char){0,1,2,3,8,9,10,11,16,17,18,19,24,25,26,27});
     out2 = vec_perm(in1, in2, (vector unsigned char){4,5,6,7,12,13,14,15,20,21,22,23,28,29,30,31});
 }
 
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     auto y0 = vec_mergeh(x0, x2);
     auto y1 = vec_mergel(x0, x2);
@@ -162,14 +162,14 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 #include <arm_neon.h>
 using v4sf = float32x4_t;
 constexpr auto SimdSize = 4u;
-force_inline auto vzero() noexcept -> v4sf { return vdupq_n_f32(0.0f); }
-force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return vmulq_f32(a, b); }
-force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return vaddq_f32(a, b); }
-force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return vmlaq_f32(c, a, b); }
-force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return vsubq_f32(a, b); }
-force_inline auto ld_ps1(float a) noexcept -> v4sf { return vdupq_n_f32(a); }
+FORCE_INLINE auto vzero() noexcept -> v4sf { return vdupq_n_f32(0.0f); }
+FORCE_INLINE auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return vmulq_f32(a, b); }
+FORCE_INLINE auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return vaddq_f32(a, b); }
+FORCE_INLINE auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return vmlaq_f32(c, a, b); }
+FORCE_INLINE auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return vsubq_f32(a, b); }
+FORCE_INLINE auto ld_ps1(float a) noexcept -> v4sf { return vdupq_n_f32(a); }
 
-force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+FORCE_INLINE auto vset4(float a, float b, float c, float d) noexcept -> v4sf
 {
     auto ret = vmovq_n_f32(a);
     ret = vsetq_lane_f32(b, ret, 1);
@@ -177,28 +177,28 @@ force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
     ret = vsetq_lane_f32(d, ret, 3);
     return ret;
 }
-force_inline auto vinsert0(v4sf v, float a) noexcept -> v4sf
+FORCE_INLINE auto vinsert0(v4sf v, float a) noexcept -> v4sf
 { return vsetq_lane_f32(a, v, 0); }
-force_inline auto vextract0(v4sf v) noexcept -> float
+FORCE_INLINE auto vextract0(v4sf v) noexcept -> float
 { return vgetq_lane_f32(v, 0); }
 
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
 { return vcombine_f32(vget_low_f32(b), vget_high_f32(a)); }
 
-force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     auto tmp = vzipq_f32(in1, in2);
     out1 = tmp.val[0];
     out2 = tmp.val[1];
 }
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     auto tmp = vuzpq_f32(in1, in2);
     out1 = tmp.val[0];
     out2 = tmp.val[1];
 }
 
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     /* marginally faster version:
      * asm("vtrn.32 %q0, %q1;\n"
@@ -230,36 +230,36 @@ using v4sf = __m128;
  * with its 256-bit vectors.
  */
 constexpr auto SimdSize = 4u;
-force_inline auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
-force_inline auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
-force_inline auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
-force_inline auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
+FORCE_INLINE auto vzero() noexcept -> v4sf { return _mm_setzero_ps(); }
+FORCE_INLINE auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return _mm_mul_ps(a, b); }
+FORCE_INLINE auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return _mm_add_ps(a, b); }
+FORCE_INLINE auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf
 { return _mm_add_ps(_mm_mul_ps(a,b), c); }
-force_inline auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
-force_inline auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
+FORCE_INLINE auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return _mm_sub_ps(a, b); }
+FORCE_INLINE auto ld_ps1(float a) noexcept -> v4sf { return _mm_set1_ps(a); }
 
-force_inline auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+FORCE_INLINE auto vset4(float a, float b, float c, float d) noexcept -> v4sf
 { return _mm_setr_ps(a, b, c, d); }
-force_inline auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
+FORCE_INLINE auto vinsert0(const v4sf v, const float a) noexcept -> v4sf
 { return _mm_move_ss(v, _mm_set_ss(a)); }
-force_inline auto vextract0(v4sf v) noexcept -> float
+FORCE_INLINE auto vextract0(v4sf v) noexcept -> float
 { return _mm_cvtss_f32(v); }
 
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
 { return _mm_shuffle_ps(b, a, _MM_SHUFFLE(3,2,1,0)); }
 
-force_inline void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void interleave2(const v4sf in1, const v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = _mm_unpacklo_ps(in1, in2);
     out2 = _mm_unpackhi_ps(in1, in2);
 }
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(2,0,2,0));
     out2 = _mm_shuffle_ps(in1, in2, _MM_SHUFFLE(3,1,3,1));
 }
 
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 { _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
 /*
@@ -269,39 +269,39 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 
 using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
 constexpr auto SimdSize = 4u;
-force_inline constexpr auto vzero() noexcept -> v4sf { return v4sf{0.0f, 0.0f, 0.0f, 0.0f}; }
-force_inline constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
-force_inline constexpr auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return a + b; }
-force_inline constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return a*b + c; }
-force_inline constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
-force_inline constexpr auto ld_ps1(float a) noexcept -> v4sf { return v4sf{a, a, a, a}; }
+FORCE_INLINE constexpr auto vzero() noexcept -> v4sf { return v4sf{0.0f, 0.0f, 0.0f, 0.0f}; }
+FORCE_INLINE constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
+FORCE_INLINE constexpr auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return a + b; }
+FORCE_INLINE constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return a*b + c; }
+FORCE_INLINE constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
+FORCE_INLINE constexpr auto ld_ps1(float a) noexcept -> v4sf { return v4sf{a, a, a, a}; }
 
-force_inline constexpr auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+FORCE_INLINE constexpr auto vset4(float a, float b, float c, float d) noexcept -> v4sf
 { return v4sf{a, b, c, d}; }
-force_inline constexpr auto vinsert0(v4sf v, float a) noexcept -> v4sf
+FORCE_INLINE constexpr auto vinsert0(v4sf v, float a) noexcept -> v4sf
 { return v4sf{a, v[1], v[2], v[3]}; }
-force_inline auto vextract0(v4sf v) noexcept -> float { return v[0]; }
+FORCE_INLINE auto vextract0(v4sf v) noexcept -> float { return v[0]; }
 
-force_inline auto unpacklo(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto unpacklo(v4sf a, v4sf b) noexcept -> v4sf
 { return v4sf{a[0], b[0], a[1], b[1]}; }
-force_inline auto unpackhi(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto unpackhi(v4sf a, v4sf b) noexcept -> v4sf
 { return v4sf{a[2], b[2], a[3], b[3]}; }
 
-force_inline auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
+FORCE_INLINE auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
 { return v4sf{b[0], b[1], a[2], a[3]}; }
 
-force_inline void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = unpacklo(in1, in2);
     out2 = unpackhi(in1, in2);
 }
-force_inline void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
 {
     out1 = v4sf{in1[0], in1[2], in2[0], in2[2]};
     out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
 }
 
-force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 {
     auto tmp0 = unpacklo(x0, x1);
     auto tmp2 = unpacklo(x2, x3);
@@ -325,11 +325,11 @@ force_inline void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 #ifdef PFFFT_SIMD_DISABLE
 using v4sf = float;
 constexpr auto SimdSize = 1u;
-force_inline constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
-force_inline constexpr auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return a + b; }
-force_inline constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return a*b + c; }
-force_inline constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
-force_inline constexpr auto ld_ps1(float a) noexcept -> v4sf { return a; }
+FORCE_INLINE constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
+FORCE_INLINE constexpr auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return a + b; }
+FORCE_INLINE constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return a*b + c; }
+FORCE_INLINE constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
+FORCE_INLINE constexpr auto ld_ps1(float a) noexcept -> v4sf { return a; }
 
 #else
 
@@ -342,13 +342,13 @@ auto valigned(const float *ptr) noexcept -> bool
 #endif
 
 // shortcuts for complex multiplications
-force_inline void vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+FORCE_INLINE void vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 {
     auto tmp = vmul(ar, bi);
     ar = vsub(vmul(ar, br), vmul(ai, bi));
     ai = vmadd(ai, br, tmp);
 }
-force_inline void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+FORCE_INLINE void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
 {
     auto tmp = vmul(ar, bi);
     ar = vmadd(ai, bi, vmul(ar, br));
@@ -1730,7 +1730,7 @@ void pffft_cplx_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT ou
 }
 
 
-force_inline void pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, const v4sf *in,
+FORCE_INLINE void pffft_real_finalize_4x4(const v4sf *in0, const v4sf *in1, const v4sf *in,
     const v4sf *e, v4sf *RESTRICT out)
 {
     auto r0 = *in0;
@@ -1833,7 +1833,7 @@ NOINLINE void pffft_real_finalize(const size_t Ncvec, const v4sf *in, v4sf *REST
         pffft_real_finalize_4x4(&in[8*k-1], &in[8*k+0], in + 8*k+1, e + k*6, out + k*8);
 }
 
-force_inline void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *RESTRICT out,
+FORCE_INLINE void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf *RESTRICT out,
     const bool first)
 {
     auto r0 = in[0];

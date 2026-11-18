@@ -12,13 +12,13 @@
 #endif
 
 #ifdef __GNUC__
-#define force_inline [[gnu::always_inline]] inline
+#define FORCE_INLINE [[gnu::always_inline]] inline
 #define NOINLINE [[gnu::noinline]]
 #elif defined(_MSC_VER)
-#define force_inline __forceinline
+#define FORCE_INLINE __forceinline
 #define NOINLINE __declspec(noinline)
 #else
-#define force_inline inline
+#define FORCE_INLINE inline
 #define NOINLINE
 #endif
 

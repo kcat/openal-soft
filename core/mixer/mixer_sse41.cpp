@@ -54,7 +54,7 @@ constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
 constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
 constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
-force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
+FORCE_INLINE auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 } // namespace

@@ -41,7 +41,7 @@ constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
 constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
 constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
-force_inline
+FORCE_INLINE
 void vtranspose4(float32x4_t &x0, float32x4_t &x1, float32x4_t &x2, float32x4_t &x3) noexcept
 {
     auto t0_ = vzipq_f32(x0, x2);
@@ -84,9 +84,9 @@ inline void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
     }
 }
 
-force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,
+FORCE_INLINE auto MixLine(std::span<float const> const InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t const realign_len, std::size_t Counter) noexcept NONBLOCKING
+    std::size_t const realign_len, std::size_t const Counter) noexcept NONBLOCKING -> void
 {
     auto const step = float{(TargetGain-CurrentGain) * delta};
 

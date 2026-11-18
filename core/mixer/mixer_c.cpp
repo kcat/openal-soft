@@ -153,9 +153,9 @@ void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
     { return f32x2{{value[0] + coeff[0]*left, value[1] + coeff[1]*right}}; });
 }
 
-force_inline void MixLine(std::span<float const> InSamples, std::span<float> const dst,
+FORCE_INLINE auto MixLine(std::span<float const> InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t Counter) noexcept NONBLOCKING
+    std::size_t const Counter) noexcept NONBLOCKING -> void
 {
     auto const step = (TargetGain-CurrentGain) * delta;
 

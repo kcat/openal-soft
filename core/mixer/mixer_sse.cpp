@@ -40,7 +40,7 @@ constexpr auto CubicPhaseDiffBits = unsigned{MixerFracBits - CubicPhaseBits};
 constexpr auto CubicPhaseDiffOne = 1u << CubicPhaseDiffBits;
 constexpr auto CubicPhaseDiffMask = CubicPhaseDiffOne - 1u;
 
-force_inline auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
+FORCE_INLINE auto vmadd(__m128 const x, __m128 const y, __m128 const z) noexcept -> __m128
 { return _mm_add_ps(x, _mm_mul_ps(y, z)); }
 
 void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
@@ -97,9 +97,9 @@ void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
     /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 }
 
-force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,
+FORCE_INLINE auto MixLine(std::span<float const> const InSamples, std::span<float> const dst,
     float &CurrentGain, float const TargetGain, float const delta, std::size_t const fade_len,
-    std::size_t const realign_len, std::size_t const Counter) noexcept NONBLOCKING
+    std::size_t const realign_len, std::size_t const Counter) noexcept NONBLOCKING -> void
 {
     auto const step = float{(TargetGain-CurrentGain) * delta};
 

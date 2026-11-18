@@ -29,7 +29,6 @@
 #include <deque>
 #include <mutex>
 #include <optional>
-#include <stdexcept>
 #include <string>
 
 #include "alc/alu.h"
@@ -59,7 +58,10 @@ import format;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

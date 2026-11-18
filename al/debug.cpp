@@ -11,7 +11,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -34,7 +33,10 @@ import gsl;
 import logging;
 import numeric;
 import zstring_view;
+
 #else
+
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

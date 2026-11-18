@@ -35,7 +35,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -82,7 +81,10 @@ import format;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

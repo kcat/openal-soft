@@ -40,7 +40,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -88,7 +87,10 @@ import gsl;
 import logging;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

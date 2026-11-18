@@ -7,6 +7,7 @@ module;
 #include <ostream>
 #include <source_location>
 #include <sstream>
+#include <stdexcept>
 #include <streambuf>
 #include <utility>
 
@@ -104,7 +105,19 @@ export namespace std {
     using std::in_place_type_t;
     using std::in_place_index_t;
 
+    /* source_location */
     using std::source_location;
+
+    /* stdexcept */
+    using std::logic_error;
+    using std::invalid_argument;
+    using std::domain_error;
+    using std::length_error;
+    using std::out_of_range;
+    using std::runtime_error;
+    using std::range_error;
+    using std::overflow_error;
+    using std::underflow_error;
 
     using std::operator>>;
     using std::operator<<;

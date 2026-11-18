@@ -32,11 +32,16 @@
 #include <numbers>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
+
 #else
+
+#include <stdexcept>
+
 #include "gsl/gsl"
 #endif
 

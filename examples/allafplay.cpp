@@ -67,7 +67,6 @@
 #include <numbers>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -103,6 +102,7 @@ import zstring_view;
 
 #include <iostream>
 #include <source_location>
+#include <stdexcept>
 #include <utility>
 
 #include "AL/alc.h"

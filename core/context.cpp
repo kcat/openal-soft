@@ -5,7 +5,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 
 #include "context.h"
 #include "effectslot.h"
@@ -15,12 +14,17 @@
 
 #if HAVE_CXXMODULES
 import common.std;
+
 import core.device;
 import gsl;
 import logging;
 #include "gsl_macros.hpp"
+
 #else
+
+#include <stdexcept>
 #include <utility>
+
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

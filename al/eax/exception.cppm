@@ -1,11 +1,12 @@
 module;
 
-#include <stdexcept>
 #include <string_view>
 
 #include "opthelper_macros.hpp"
 
 export module eax.exception;
+
+import common.std;
 
 /* NOLINTNEXTLINE(clazy-copyable-polymorphic) Exceptions must be copyable. */
 export extern "C++" class EaxException : public std::runtime_error {

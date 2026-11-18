@@ -2,10 +2,6 @@
 #include "config.h"
 
 #include <optional>
-#include <stdexcept>
-
-#include "AL/al.h"
-#include "AL/efx.h"
 
 #include "effects.h"
 #include "opthelpers.h"
@@ -22,12 +18,22 @@ import eax.validator;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+
 import alc.context;
 import format;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <stdexcept>
+
+#include "AL/al.h"
+#include "AL/efx.h"
+
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/logging.h"

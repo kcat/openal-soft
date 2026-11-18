@@ -54,7 +54,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -177,6 +176,7 @@ import numeric;
 #else
 
 #include <source_location>
+#include <stdexcept>
 #include <utility>
 
 #include "AL/al.h"

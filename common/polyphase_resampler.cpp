@@ -7,13 +7,18 @@
 #include <cmath>
 #include <numbers>
 #include <ranges>
-#include <stdexcept>
 #include <tuple>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import numeric;
+
 #else
+
+#include <stdexcept>
+
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

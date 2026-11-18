@@ -29,7 +29,6 @@
 #include <new>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -61,6 +60,7 @@ import eax.validator;
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 
 import al.iface;
@@ -70,7 +70,11 @@ import format;
 import gsl;
 import logging;
 import numeric;
+
 #else
+
+#include <stdexcept>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 #include "AL/efx.h"

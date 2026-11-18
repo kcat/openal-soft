@@ -1,7 +1,6 @@
 module;
 
 #include <span>
-#include <stdexcept>
 
 #include "opthelper_macros.hpp"
 

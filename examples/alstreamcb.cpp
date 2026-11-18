@@ -34,7 +34,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <thread>
 #include <variant>
 #include <vector>
@@ -46,17 +45,19 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
-import alhelpers;
 import common.std;
+import openal;
+
+import alhelpers;
 import fmtlib;
 import gsl;
 import numeric;
-import openal;
 import zstring_view;
 
 #else
 
 #include <iostream>
+#include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/alc.h"

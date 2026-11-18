@@ -6,7 +6,6 @@
 #include <iterator>
 #include <ranges>
 #include <span>
-#include <stdexcept>
 #include <string_view>
 
 #include "hrtf_loader.hpp"
@@ -17,6 +16,7 @@
 
 #if HAVE_CXXMODULES
 import common.std;
+
 import fmtlib;
 import format;
 import gsl;
@@ -24,8 +24,12 @@ import hrtfstore;
 import logging;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
 #include <istream>
+#include <stdexcept>
+
 #include "alformat.hpp"
 #include "core/hrtfstore.hpp"
 #include "fmt/format.h"

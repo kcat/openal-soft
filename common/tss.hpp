@@ -1,5 +1,5 @@
-#ifndef AL_THREADS_H
-#define AL_THREADS_H
+#ifndef COMMON_TSS_HPP
+#define COMMON_TSS_HPP
 
 #include <bit>
 #include <cstdint>
@@ -137,6 +137,6 @@ public:
     void operator=(tss&&) = delete;
 };
 
-} // namespace al
+} /* namespace al */
 
-#endif /* AL_THREADS_H */
+#endif /* COMMON_TSS_HPP */

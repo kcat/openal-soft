@@ -747,7 +747,6 @@ set(COMMON_HDRS
     common/almalloc.h
     common/alstring.h
     common/althrd_setname.h
-    common/althreads.h
     common/atomic.h
     common/bitset.hpp
     common/cemath.hpp
@@ -773,6 +772,7 @@ set(COMMON_HDRS
     common/pragmadefs.h
     common/ringbuffer.hpp
     common/spanstream.hpp
+    common/tss.hpp
     common/vecmat.h
     common/vector.h
     common/zstring_view.hpp

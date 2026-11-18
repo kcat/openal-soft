@@ -24,11 +24,11 @@
 
 #include "al/listener.h"
 #include "alformat.hpp"
-#include "althreads.h"
 #include "core/context.h"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "opthelper_macros.hpp"
+#include "tss.hpp"
 #include "zstring_view.hpp"
 
 #if ALSOFT_EAX

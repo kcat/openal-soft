@@ -9,6 +9,7 @@
 #include "allpass_iir.hpp"
 #include "bufferline.h"
 #include "encoderbase.hpp"
+#include "opthelper_macros.hpp"
 #include "zudl.hpp"
 
 

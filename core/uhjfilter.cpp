@@ -10,13 +10,13 @@
 #include <ranges>
 #include <span>
 
-#include "allpass_conv.hpp"
 #include "pffft.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.allpass_conv;
 import gsl;
 import phase_shifter;
 
@@ -24,6 +24,7 @@ import phase_shifter;
 
 #include <algorithm>
 
+#include "core/allpass_conv.hpp"
 #include "gsl/gsl"
 #include "phase_shifter.hpp"
 #endif

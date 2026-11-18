@@ -890,6 +890,7 @@ set(CORE_HDRS
     core/voice_change.h)
 if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
+        core/allpass_conv.cppm
         core/ambi_utils.cppm
         core/bsinc_tables.cppm
         core/buffer_storage.cppm

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <span>
 
+#include "opthelper_macros.hpp"
 
 struct EncoderBase {
     EncoderBase() = default;

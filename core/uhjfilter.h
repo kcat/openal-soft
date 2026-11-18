@@ -10,6 +10,7 @@
 #include "bufferline.h"
 #include "decoderbase.hpp"
 #include "encoderbase.hpp"
+#include "opthelper_macros.hpp"
 #include "zudl.hpp"
 
 

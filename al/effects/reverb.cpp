@@ -17,11 +17,12 @@
 #include "al/eax/api.h"
 #include "al/eax/call.h"
 #include "al/eax/effect.h"
-#include "al/eax/exception.h"
 #include "al/eax/presets.hpp"
 #if HAVE_CXXMODULES
+import eax.exception;
 import eax.validator;
 #else
+#include "al/eax/exception.hpp"
 #include "al/eax/validator.hpp"
 #endif
 #endif // ALSOFT_EAX

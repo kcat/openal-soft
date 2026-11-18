@@ -1,12 +1,13 @@
 #include "config.h"
 
-#include "exception.h"
-
+#include <stdexcept>
 #include <string>
 
 #if HAVE_CXXMODULES
+import eax.exception;
 import format;
 #else
+#include "al/eax/exception.hpp"
 #include "alformat.hpp"
 #endif
 

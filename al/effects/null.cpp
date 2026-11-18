@@ -8,7 +8,11 @@
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
-#include "al/eax/exception.h"
+#if HAVE_CXXMODULES
+import eax.exception;
+#else
+#include "al/eax/exception.hpp"
+#endif
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES

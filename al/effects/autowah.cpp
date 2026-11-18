@@ -10,10 +10,11 @@
 
 #if ALSOFT_EAX
 #include "al/eax/effect.h"
-#include "al/eax/exception.h"
 #if HAVE_CXXMODULES
+import eax.exception;
 import eax.validator;
 #else
+#include "al/eax/exception.hpp"
 #include "al/eax/validator.hpp"
 #endif
 #endif // ALSOFT_EAX

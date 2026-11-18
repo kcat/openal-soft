@@ -5,8 +5,11 @@
 #include <string_view>
 
 #include "api.h"
-#include "exception.h"
-
+#if HAVE_CXXMODULES
+import eax.exception;
+#else
+#include "al/eax/exception.hpp"
+#endif
 
 namespace {
 

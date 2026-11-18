@@ -3,8 +3,12 @@
 #include "fx_slot_index.h"
 
 #include "api.h"
-#include "exception.h"
 
+#if HAVE_CXXMODULES
+import eax.exception;
+#else
+#include "al/eax/exception.hpp"
+#endif
 
 namespace {
 

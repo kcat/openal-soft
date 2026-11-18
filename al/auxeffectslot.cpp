@@ -50,11 +50,12 @@
 #include "eax/api.h"
 #include "eax/call.h"
 #include "eax/effect.h"
-#include "eax/exception.h"
 #include "eax/fx_slot_index.h"
 #if HAVE_CXXMODULES
+import eax.exception;
 import eax.validator;
 #else
+#include "eax/exception.hpp"
 #include "eax/validator.hpp"
 #endif
 #endif

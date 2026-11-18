@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <mutex>
+#include <string_view>
 #if defined(_WIN32)
 #include <guiddef.h>
 #endif
@@ -10,20 +11,23 @@
 #include "direct_defs.h"
 #include "eax/alapi.hpp"
 #include "eax/api.h"
-#include "eax/exception.h"
 
 #if HAVE_CXXMODULES
 import openal;
 #include "openal_apientry.h"
 
 import alc.context;
+import eax.exception;
 import gsl;
 import logging;
+
 #else
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "al/eax/exception.hpp"
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

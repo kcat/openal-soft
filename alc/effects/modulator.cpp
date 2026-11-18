@@ -34,20 +34,23 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/mixer.h"
+#include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.context;
 import core.device;
+import core.effectslot;
 import gsl;
+
 #else
+
 #include "core/context.h"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "gsl/gsl"
 #endif
 

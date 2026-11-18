@@ -44,15 +44,19 @@
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/mixer/defs.h"
+#include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;
+import core.effectslot;
+
 #else
+
 #include "core/device.h"
+#include "core/effectslot.h"
 #endif
 
 struct BufferStorage;

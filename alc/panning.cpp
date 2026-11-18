@@ -36,24 +36,21 @@
 #include <string_view>
 #include <vector>
 
-#include "AL/alext.h"
-
 #include "alconfig.h"
 #include "alu.h"
 #include "core/ambdec.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
-#include "core/effectslot.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/front_stablizer.h"
 #include "core/hrtf.h"
 #include "core/mixer/hrtfdefs.h"
+#include "core/mixparams.hpp"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
@@ -64,22 +61,31 @@
 #if !defined(__INTEL_COMPILER) && !defined(__clang__) && defined(__GNUC__) && __GNUC__ == 16
 #include "alc/device.h"
 #endif
+import common.std;
+import openal;
+
 import alc.context;
 import alc.device;
 import alstring;
-import common.std;
 import core.ambi_utils;
+import core.effectslot;
 import gsl;
 import hrtfstore;
 import logging;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
 #include <utility>
+
+#include "AL/alext.h"
+
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
+#include "core/effectslot.h"
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

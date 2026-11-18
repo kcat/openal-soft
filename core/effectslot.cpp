@@ -10,8 +10,8 @@
 import core.context;
 import core.effectslot;
 #else
-#include "context.h"
-#include "effectslot.h"
+#include "core/context.h"
+#include "core/effectslot.h"
 #endif
 
 auto EffectSlotBase::CreatePtrArray(std::size_t const count) -> std::unique_ptr<EffectSlotArray>

@@ -33,13 +33,12 @@
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/filters/biquad.h"
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
+#include "opthelper_macros.hpp"
 #include "vector.h"
 #include "zudl.hpp"
 
@@ -47,15 +46,19 @@
 import core.ambi_utils;
 import core.context;
 import core.device;
+import core.effectslot;
 import cubic_tables;
 import gsl;
 import numeric;
 #include "gsl_macros.hpp"
+
 #else
+
 #include "core/ambi_utils.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"
 #include "core/device.h"
+#include "core/effectslot.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

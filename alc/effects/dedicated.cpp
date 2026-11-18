@@ -28,16 +28,20 @@
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/mixer.h"
+#include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES
 import core.ambi_utils;
 import core.device;
+import core.effectslot;
+
 #else
+
 #include "core/ambi_utils.hpp"
 #include "core/device.h"
+#include "core/effectslot.h"
 #endif
 
 struct BufferStorage;

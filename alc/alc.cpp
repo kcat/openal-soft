@@ -68,13 +68,13 @@
 #include "core/bs2b.h"
 #include "core/cpu_caps.h"
 #include "core/effects/base.h"
-#include "core/effectslot.h"
 #include "core/except.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
 #include "core/hrtf.h"
 #include "core/mastering.h"
+#include "core/mixparams.hpp"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
@@ -164,6 +164,7 @@ import alc.context;
 import alc.device;
 import alstring;
 import backends.exception;
+import core.effectslot;
 import core.helpers;
 import core.voice;
 import fmtlib;
@@ -195,6 +196,7 @@ import numeric;
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "alstring.h"
+#include "core/effectslot.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "core/voice.h"

@@ -34,7 +34,6 @@
 #include <mutex>
 #include <new>
 #include <ranges>
-#include <thread>
 #include <functional>
 
 #include "althrd_setname.h"
@@ -48,6 +47,8 @@
 #include <SLES/OpenSLES_AndroidConfiguration.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -55,7 +56,11 @@ import gsl;
 import logging;
 import ringbuffer;
 import zstring_view;
+
 #else
+
+#include <thread>
+
 #include "alc/backends/exception.hpp"
 #include "alformatzsv.hpp"
 #include "core/device.h"

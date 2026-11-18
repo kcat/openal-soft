@@ -37,7 +37,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include "makemhr.h"
@@ -56,6 +55,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <thread>
 
 #include "fmt/base.h"
 #include "fmt/ostream.h"

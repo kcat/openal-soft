@@ -60,7 +60,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -111,6 +110,7 @@ import ringbuffer;
 #else
 
 #include <algorithm>
+#include <thread>
 
 #include "alc/backends/exception.hpp"
 #include "alstring.h"

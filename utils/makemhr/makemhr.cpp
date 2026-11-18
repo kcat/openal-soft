@@ -77,7 +77,6 @@
 #include <ranges>
 #include <span>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include "alcomplex.h"
@@ -101,6 +100,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <iostream>
+#include <thread>
 
 #include "alformatzsv.hpp"
 #include "alstring.h"

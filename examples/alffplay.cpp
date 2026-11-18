@@ -25,7 +25,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <variant>
 #include <vector>
 
@@ -62,14 +61,15 @@ struct SwsContext;
 #include "SDL3/SDL_video.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+import openal;
+
 import alhelpers;
 import alstring;
-import common.std;
 import fmtlib;
 import gsl;
 import inout_ptr;
 import numeric;
-import openal;
 import zstring_view;
 
 /* AL_APIENTRY is needed, but not exported from the module. */
@@ -78,6 +78,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <thread>
 #include <utility>
 
 #include "AL/al.h"

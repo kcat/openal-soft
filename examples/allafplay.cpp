@@ -57,6 +57,7 @@
 
 #include <array>
 #include <bit>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -68,7 +69,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <variant>
 #include <vector>
 
@@ -103,6 +103,7 @@ import zstring_view;
 #include <iostream>
 #include <source_location>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 
 #include "AL/alc.h"

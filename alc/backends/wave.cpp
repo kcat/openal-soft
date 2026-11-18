@@ -33,7 +33,6 @@
 #include <exception>
 #include <functional>
 #include <system_error>
-#include <thread>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -55,6 +54,7 @@ import logging;
 
 #include <algorithm>
 #include <ostream>
+#include <thread>
 
 #include "alc/backends/exception.hpp"
 #include "alstring.h"

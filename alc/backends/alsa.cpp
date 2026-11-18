@@ -32,7 +32,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -59,6 +58,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <thread>
 #include <utility>
 
 #include "alc/backends/exception.hpp"

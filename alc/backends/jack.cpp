@@ -29,7 +29,6 @@
 #include <mutex>
 #include <ranges>
 #include <span>
-#include <thread>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -58,6 +57,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <thread>
 
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"

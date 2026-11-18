@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <ranges>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "althrd_setname.h"
@@ -59,6 +58,7 @@ import ringbuffer;
 #else
 
 #include <algorithm>
+#include <thread>
 
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"

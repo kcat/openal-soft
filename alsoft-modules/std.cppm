@@ -10,6 +10,7 @@ module;
 #include <sstream>
 #include <stdexcept>
 #include <streambuf>
+#include <thread>
 #include <utility>
 
 export module common.std;
@@ -53,7 +54,6 @@ export namespace std {
     using std::replace_if;
     using std::replace_copy;
     using std::replace_copy_if;
-    using std::swap;
     using std::swap_ranges;
     using std::iter_swap;
     using std::reverse;
@@ -262,6 +262,17 @@ export namespace std {
     using std::io_errc;
     using std::iostream_category;
 
+    /* thread */
+    using std::thread;
+    using std::jthread;
+
+    namespace this_thread {
+        using std::this_thread::yield;
+        using std::this_thread::get_id;
+        using std::this_thread::sleep_for;
+        using std::this_thread::sleep_until;
+    }
+
     /* utility */
     using std::cmp_equal;
     using std::cmp_not_equal;
@@ -310,6 +321,8 @@ export namespace std {
     using std::overflow_error;
     using std::underflow_error;
 
+    using std::swap;
+    using std::hash;
     using std::operator>>;
     using std::operator<<;
     using std::operator==;

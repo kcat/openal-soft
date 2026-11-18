@@ -28,7 +28,6 @@
 #include <poll.h>
 #include <span>
 #include <system_error>
-#include <thread>
 #include <vector>
 
 #include "althrd_setname.h"
@@ -36,13 +35,19 @@
 #include <sndio.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import backends.exception;
 import core.device;
 import core.helpers;
 import gsl;
 import logging;
 import ringbuffer;
+
 #else
+
+#include <thread>
+
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "core/helpers.hpp"

@@ -9,7 +9,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <tuple>
 #include <variant>
 
@@ -35,6 +34,8 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <thread>
+
 #include "AL/al.h"
 #include "AL/alext.h"
 

@@ -38,7 +38,6 @@
 #include <vector>
 
 #include <span>
-#include <thread>
 #include <functional>
 
 #include "alc/alconfig.h"
@@ -47,13 +46,19 @@
 #include <sys/audioio.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
 import core.device;
 import core.helpers;
 import gsl;
 import logging;
+
 #else
+
+#include <thread>
+
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"

@@ -36,7 +36,6 @@
 #include <cstdlib>
 #include <span>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "althrd_setname.h"
@@ -94,6 +93,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <thread>
 
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"

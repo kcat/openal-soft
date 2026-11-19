@@ -22,22 +22,32 @@ public:
     { }
 };
 
-} // namespace
+[[nodiscard]]
+auto validate_buffer(ALvoid*const property_buffer, ALuint const property_size)
+    -> std::span<std::byte>
+{
+    if(not property_buffer and property_size > 0)
+        throw EaxCallException{"Invalid buffer size."};
+    return std::span{static_cast<std::byte*>(property_buffer), property_size};
+}
 
-EaxCall::EaxCall(EaxCallType type, AL_GUID const& property_set_guid, ALuint property_id,
-    ALuint property_source_id, ALvoid *property_buffer, ALuint property_size)
+} /* namespace */
+
+EaxCall::EaxCall(EaxCallType const type, AL_GUID const& property_set_guid,
+    ALuint const property_id, ALuint const property_source_id, ALvoid*const property_buffer,
+    ALuint const property_size)
     : mCallType{type}, mIsDeferred{(property_id & deferred_flag) != 0}
     , mPropertyId{property_id & ~deferred_flag}, mPropertySourceId{property_source_id}
-    , mPropertyBuffer{property_buffer}, mPropertyBufferSize{property_size}
+    , mPropertyBuffer{validate_buffer(property_buffer, property_size)}
 {
     switch(mCallType)
     {
-        case EaxCallType::get:
-        case EaxCallType::set:
-            break;
+    case EaxCallType::get:
+    case EaxCallType::set:
+        break;
 
-        default:
-            fail("Invalid type.");
+    default:
+        fail("Invalid type.");
     }
 
     if(property_set_guid == EAXPROPERTYID_EAX40_Context)
@@ -174,29 +184,23 @@ EaxCall::EaxCall(EaxCallType type, AL_GUID const& property_set_guid, ALuint prop
         }
     }
 
-    if(!mIsDeferred)
+    if(!mIsDeferred && mPropertySetId != EaxCallPropertySetId::fx_slot && mPropertyId != 0)
     {
-        if(mPropertySetId != EaxCallPropertySetId::fx_slot && mPropertyId != 0)
-        {
-            if(mPropertyBuffer == nullptr)
-                fail("Null property buffer.");
+        if(mPropertyBuffer.data() == nullptr)
+            fail("Null property buffer.");
 
-            if(mPropertyBufferSize == 0)
-                fail("Empty property.");
-        }
+        if(mPropertyBuffer.empty())
+            fail("Empty property.");
     }
 
     if(mPropertySetId == EaxCallPropertySetId::source && mPropertySourceId == 0)
         fail("Null AL source id.");
 
-    if(mPropertySetId == EaxCallPropertySetId::fx_slot)
-    {
-        if(mPropertyId < EAXFXSLOT_NONE)
-            mPropertySetId = EaxCallPropertySetId::fx_slot_effect;
-    }
+    if(mPropertySetId == EaxCallPropertySetId::fx_slot && mPropertyId < EAXFXSLOT_NONE)
+        mPropertySetId = EaxCallPropertySetId::fx_slot_effect;
 }
 
-[[noreturn]] void EaxCall::fail(const std::string_view message)
+[[noreturn]] void EaxCall::fail(std::string_view const message)
 {
     throw EaxCallException{message};
 }

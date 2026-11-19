@@ -1,6 +1,7 @@
 #ifndef EAX_EAX_CALL_INCLUDED
 #define EAX_EAX_CALL_INCLUDED
 
+#include <cstddef>
 #include <limits>
 #include <span>
 #include <string_view>
@@ -27,22 +28,16 @@ class EaxCall {
     EaxCallPropertySetId mPropertySetId{};
     bool mIsDeferred{};
 
-    const ALuint mPropertyId;
-    const ALuint mPropertySourceId;
-    ALvoid*const mPropertyBuffer;
-    const ALuint mPropertyBufferSize;
+    ALuint const mPropertyId;
+    ALuint const mPropertySourceId;
+    std::span<std::byte> const mPropertyBuffer;
 
     [[noreturn]] static void fail(std::string_view message);
     [[noreturn]] static void fail_too_small();
 
 public:
-    EaxCall(
-        EaxCallType type,
-        AL_GUID const& property_set_guid,
-        ALuint property_id,
-        ALuint property_source_id,
-        ALvoid* property_buffer,
-        ALuint property_size);
+    EaxCall(EaxCallType type, AL_GUID const& property_set_guid, ALuint property_id,
+        ALuint property_source_id, ALvoid* property_buffer, ALuint property_size);
 
     [[nodiscard]] auto is_get() const noexcept -> bool { return mCallType == EaxCallType::get; }
     [[nodiscard]] auto is_deferred() const noexcept -> bool { return mIsDeferred; }
@@ -53,24 +48,19 @@ public:
     [[nodiscard]] auto get_fx_slot_index() const noexcept -> EaxFxSlotIndex { return mFxSlotIndex; }
 
     template<typename TValue> [[nodiscard]]
-    auto load() const -> TValue&
+    auto as_span(size_t const max_count=std::numeric_limits<std::size_t>::max()) const
+        -> std::span<TValue>
     {
-        if(mPropertyBufferSize < sizeof(TValue))
+        auto const count = std::min(mPropertyBuffer.size()/sizeof(TValue), max_count);
+        if(count == 0)
             fail_too_small();
 
-        return *static_cast<TValue*>(mPropertyBuffer);
+        /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) */
+        return std::span{reinterpret_cast<TValue*>(mPropertyBuffer.data()), count};
     }
 
     template<typename TValue> [[nodiscard]]
-    auto as_span(size_t const max_count=std::numeric_limits<size_t>::max()) const
-        -> std::span<TValue>
-    {
-        if(max_count == 0 || mPropertyBufferSize < sizeof(TValue))
-            fail_too_small();
-
-        const auto count = std::min(mPropertyBufferSize/sizeof(TValue), max_count);
-        return {static_cast<TValue*>(mPropertyBuffer), count};
-    }
+    auto load() const -> TValue& { return as_span<TValue>(1)[0]; }
 
     template<typename TValue>
     auto store(const TValue &value) const -> void { load<TValue>() = value; }

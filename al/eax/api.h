@@ -9,9 +9,9 @@
 #define EAX_API_INCLUDED
 
 #include <array>
-#include <cfloat>
 #include <compare>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -398,8 +398,8 @@ struct EAX50CONTEXTPROPERTIES : EAX40CONTEXTPROPERTIES {
 }; // EAX50CONTEXTPROPERTIES
 
 
-inline constexpr auto EAXCONTEXT_MINDISTANCEFACTOR = FLT_MIN;
-inline constexpr auto EAXCONTEXT_MAXDISTANCEFACTOR = FLT_MAX;
+inline constexpr auto EAXCONTEXT_MINDISTANCEFACTOR = std::numeric_limits<float>::min();
+inline constexpr auto EAXCONTEXT_MAXDISTANCEFACTOR = std::numeric_limits<float>::max();
 inline constexpr auto EAXCONTEXT_DEFAULTDISTANCEFACTOR = 1.0F;
 
 inline constexpr auto EAXCONTEXT_MINAIRABSORPTIONHF = -100.0F;

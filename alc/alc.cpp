@@ -142,7 +142,6 @@
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
-#include "al/eax/effect.h"
 #include "al/eax/globals.h"
 #endif
 
@@ -172,6 +171,10 @@ import logging;
 import numeric;
 import zudl;
 #include "gsl_macros.hpp"
+
+#if ALSOFT_EAX
+import eax.effect;
+#endif
 
 #else
 
@@ -205,6 +208,9 @@ import zudl;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "zudl.hpp"
+#if ALSOFT_EAX
+#include "al/eax/effect.hpp"
+#endif
 #endif
 
 

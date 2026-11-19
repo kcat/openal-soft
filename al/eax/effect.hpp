@@ -15,10 +15,10 @@
 
 inline bool EaxTraceCommits{false};
 
-struct EaxEffectErrorMessages {
+namespace EaxEffectErrorMessages {
     static constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
     static constexpr auto unknown_version() noexcept { return "Unknown version."; }
-}; // EaxEffectErrorMessages
+}
 
 using EaxEffectProps = std::variant<std::monostate,
     EAXREVERBPROPERTIES,

@@ -1055,14 +1055,14 @@ if(ALSOFT_EAX)
         al/eax/alapi.hpp
         al/eax/api.h
         al/eax/call.h
-        al/eax/effect.h
+        al/eax/effect.hpp
         al/eax/fx_slot_index.h
         al/eax/fx_slots.h
         al/eax/globals.h
         al/eax/presets.hpp
     )
     if(HAVE_CXXMODULES)
-        list(APPEND CORE_MODS al/eax/exception.cppm al/eax/validator.cppm)
+        list(APPEND CORE_MODS al/eax/effect.cppm al/eax/exception.cppm al/eax/validator.cppm)
     else()
         list(APPEND OPENAL_HDRS al/eax/exception.hpp al/eax/validator.hpp)
     endif()

@@ -9,11 +9,14 @@
 #include "effects.h"
 
 #if ALSOFT_EAX
-#include "al/eax/effect.h"
+#include "al/eax/api.h"
+#include "al/eax/call.h"
 #if HAVE_CXXMODULES
+import eax.effect;
 import eax.exception;
 import eax.validator;
 #else
+#include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"
 #include "al/eax/validator.hpp"
 #endif

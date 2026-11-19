@@ -46,12 +46,13 @@
 #if ALSOFT_EAX
 #include "eax/api.h"
 #include "eax/call.h"
-#include "eax/effect.h"
 #include "eax/fx_slot_index.h"
 #if HAVE_CXXMODULES
+import eax.effect;
 import eax.exception;
 import eax.validator;
 #else
+#include "eax/effect.hpp"
 #include "eax/exception.hpp"
 #include "eax/validator.hpp"
 #endif

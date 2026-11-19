@@ -11,21 +11,30 @@
 struct AL_GUID;
 
 
-enum class EaxCallType {
-    none,
-    get,
-    set,
-}; // EaxCallType
+enum class EaxCallType : bool { get, set };
 
 enum class EaxCallPropertySetId {
-    none,
     context,
     fx_slot,
     source,
     fx_slot_effect,
-}; // EaxCallPropertySetId
+};
 
 class EaxCall {
+    EaxCallType const mCallType;
+    int mVersion{};
+    EaxFxSlotIndex mFxSlotIndex{};
+    EaxCallPropertySetId mPropertySetId{};
+    bool mIsDeferred{};
+
+    const ALuint mPropertyId;
+    const ALuint mPropertySourceId;
+    ALvoid*const mPropertyBuffer;
+    const ALuint mPropertyBufferSize;
+
+    [[noreturn]] static void fail(std::string_view message);
+    [[noreturn]] static void fail_too_small();
+
 public:
     EaxCall(
         EaxCallType type,
@@ -65,21 +74,6 @@ public:
 
     template<typename TValue>
     auto store(const TValue &value) const -> void { load<TValue>() = value; }
-
-private:
-    const EaxCallType mCallType;
-    int mVersion{};
-    EaxFxSlotIndex mFxSlotIndex{};
-    EaxCallPropertySetId mPropertySetId{EaxCallPropertySetId::none};
-    bool mIsDeferred{};
-
-    const ALuint mPropertyId;
-    const ALuint mPropertySourceId;
-    ALvoid*const mPropertyBuffer;
-    const ALuint mPropertyBufferSize;
-
-    [[noreturn]] static void fail(std::string_view message);
-    [[noreturn]] static void fail_too_small();
-}; // EaxCall
+};
 
 #endif // !EAX_EAX_CALL_INCLUDED

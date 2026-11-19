@@ -1,5 +1,5 @@
-#ifndef AL_BIT_H
-#define AL_BIT_H
+#ifndef COMMON_BIT_HPP
+#define COMMON_BIT_HPP
 
 #include <algorithm>
 #include <array>
@@ -71,6 +71,6 @@ auto byteswap(T const& value) noexcept -> T
     return std::bit_cast<T>(bytes);
 }
 
-} // namespace al
+} /* namespace al */
 
-#endif /* AL_BIT_H */
+#endif /* COMMON_BIT_HPP */

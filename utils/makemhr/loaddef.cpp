@@ -40,7 +40,6 @@
 #include <string_view>
 #include <vector>
 
-#include "albit.h"
 #include "makemhr.h"
 #include "polyphase_resampler.h"
 #include "sofa-support.h"
@@ -51,6 +50,7 @@
 import common.std;
 
 import alstring;
+import bit;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -63,6 +63,7 @@ import gsl;
 #include <utility>
 
 #include "alstring.h"
+#include "bit.hpp"
 #include "filesystem.h"
 #include "fmt/base.h"
 #include "fmt/ostream.h"

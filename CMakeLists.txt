@@ -741,13 +741,13 @@ set(COMMON_SRCS
     common/polyphase_resampler.cpp
 )
 set(COMMON_HDRS
-    common/albit.h
     common/alcomplex.h
     common/alformat.hpp
     common/almalloc.h
     common/alstring.h
     common/althrd_setname.h
     common/atomic.h
+    common/bit.hpp
     common/bitset.hpp
     common/cemath.hpp
     common/comptr.h
@@ -795,6 +795,7 @@ if(HAVE_CXXMODULES)
         alsoft-modules/std.cppm
         common/alformat.cppm
         common/alstring.cppm
+        common/bit.cppm
         common/cemath.cppm
         common/filesystem.cppm
         common/hann_window.cppm

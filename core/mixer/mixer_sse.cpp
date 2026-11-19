@@ -22,12 +22,14 @@
 import common.std;
 
 import gsl;
+import zudl;
 
 #else
 
 #include <algorithm>
 
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 

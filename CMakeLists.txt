@@ -805,6 +805,7 @@ if(HAVE_CXXMODULES)
         common/ringbuffer.cppm
         common/spanstream.cppm
         common/zstring_view.cppm
+        common/zudl.cppm
     )
 else()
     list(APPEND COMMON_HDRS

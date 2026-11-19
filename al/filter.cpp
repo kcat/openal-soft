@@ -36,7 +36,6 @@
 #include "core/except.h"
 #include "direct_defs.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -49,6 +48,7 @@ import alc.device;
 import gsl;
 import logging;
 import numeric;
+import zudl;
 
 #else
 
@@ -63,6 +63,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

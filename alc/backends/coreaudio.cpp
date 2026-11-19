@@ -37,7 +37,6 @@
 #include <vector>
 
 #include "core/converter.h"
-#include "zudl.hpp"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -58,7 +57,10 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+import zudl;
+
 #else
+
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alstring.h"
@@ -67,6 +69,7 @@ import ringbuffer;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

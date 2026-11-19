@@ -11,7 +11,6 @@
 
 #include "hrtf.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -22,6 +21,7 @@ import gsl;
 import hrtfstore;
 import logging;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -37,6 +37,7 @@ import numeric;
 #include "gsl/gsl"
 #include "logging.h"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

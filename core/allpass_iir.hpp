@@ -6,8 +6,6 @@
 #include <ranges>
 #include <span>
 
-#include "zudl.hpp"
-
 
 struct AllPassFilter {
     struct AllPassState {
@@ -37,7 +35,7 @@ constexpr auto processOne(AllPassFilter &self, std::span<float const, 4> const c
 {
     auto state = self.mState;
     static_assert(state.size() == coeffs.size());
-    for(const auto i : std::views::iota(0_uz, coeffs.size()))
+    for(const auto i : std::views::iota(std::size_t{0}, coeffs.size()))
     {
         const auto y = x*coeffs[i] + state[i].z[0];
         state[i].z[0] = state[i].z[1];
@@ -56,7 +54,7 @@ constexpr auto process(AllPassFilter &self, std::span<float const, 4> const coef
     std::ranges::transform(src | std::views::take(dst.size()), dst.begin(),
         [&state,coeffs](float x) noexcept -> float
     {
-        for(const auto i : std::views::iota(0_uz, coeffs.size()))
+        for(const auto i : std::views::iota(std::size_t{0}, coeffs.size()))
         {
             const auto y = x*coeffs[i] + state[i].z[0];
             state[i].z[0] = state[i].z[1];

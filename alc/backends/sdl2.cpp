@@ -28,7 +28,6 @@
 #include <string_view>
 
 #include "pragmadefs.h"
-#include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
@@ -40,11 +39,15 @@ import backends.exception;
 import core.device;
 import gsl;
 import numeric;
+import zudl;
+
 #else
+
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

@@ -30,7 +30,6 @@
 #include "alc/alconfig.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "zudl.hpp"
 
 #include <portaudio.h>
 
@@ -42,7 +41,10 @@ import logging;
 import numeric;
 import ringbuffer;
 import zstring_view;
+import zudl;
+
 #else
+
 #include "alc/backends/exception.hpp"
 #include "alformatzsv.hpp"
 #include "core/device.h"
@@ -50,6 +52,7 @@ import zstring_view;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 

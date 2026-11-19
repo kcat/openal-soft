@@ -6,6 +6,7 @@
 #include <array>
 #include <bitset>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -21,9 +22,8 @@
 #include "core/context.h"
 #include "core/voice.h"
 #include "disable_alloc.hpp"
-#include "gsl/gsl"
+#include "gsl/pointers"
 #include "intrusive_ptr.h"
-#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "eax/api.h"
@@ -43,7 +43,7 @@ enum class SourceStereo : bool {
     Enhanced = AL_SUPER_STEREO_SOFT
 };
 
-inline constexpr auto DefaultSendCount = 2_uz;
+inline constexpr auto DefaultSendCount = std::size_t{2};
 
 inline constexpr auto InvalidVoiceIndex = std::numeric_limits<unsigned>::max();
 
@@ -317,7 +317,7 @@ private:
     static void eax_get_sends(const EaxCall &call, const EaxSends &src_sends)
     {
         const auto dst_sends = call.as_span<TDstSend>(EAX_MAX_FXSLOTS);
-        for(const auto i : std::views::iota(0_uz, dst_sends.size()))
+        for(const auto i : std::views::iota(std::size_t{0}, dst_sends.size()))
         {
             const auto &src_send = src_sends[i];
             auto &dst_send = dst_sends[i];

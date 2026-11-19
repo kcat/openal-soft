@@ -72,13 +72,13 @@
 
 #include "opthelper_macros.hpp"
 #include "pragmadefs.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
 
 import fmtlib;
 import gsl;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -89,6 +89,7 @@ import gsl;
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 namespace {

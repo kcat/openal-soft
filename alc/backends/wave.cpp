@@ -38,7 +38,6 @@
 #include "alc/alconfig.h"
 #include "althrd_setname.h"
 #include "core/ambidefs.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -49,6 +48,7 @@ import core.device;
 import filesystem;
 import gsl;
 import logging;
+import zudl;
 
 #else
 
@@ -62,6 +62,7 @@ import logging;
 #include "core/logging.h"
 #include "filesystem.h"
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 

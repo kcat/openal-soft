@@ -7,7 +7,6 @@
 #include <variant>
 
 #include "effects.h"
-#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -31,6 +30,7 @@ import alc.context;
 import logging;
 import gsl;
 import numeric;
+import zudl;
 
 #else
 
@@ -43,6 +43,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

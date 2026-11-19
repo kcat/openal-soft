@@ -50,7 +50,6 @@
 #include "core/uhjfilter.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 /* HACK: GCC 16 seems to have an issue when trying to use the StereoEncoding
@@ -72,6 +71,7 @@ import gsl;
 import hrtfstore;
 import logging;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -90,6 +90,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

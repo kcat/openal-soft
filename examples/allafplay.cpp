@@ -81,7 +81,6 @@
 #endif
 
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #include "win_main_utf8.h"
 
@@ -96,6 +95,7 @@ import fmtlib;
 import gsl;
 import numeric;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -120,6 +120,7 @@ import zstring_view;
 #include "fmt/std.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

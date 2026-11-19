@@ -15,7 +15,6 @@
 #include <unordered_map>
 
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -25,6 +24,7 @@ import openal;
 import alsoft.router;
 import alstring;
 import gsl;
+import zudl;
 
 #else
 
@@ -37,6 +37,7 @@ import gsl;
 #include "alstring.h"
 #include "gsl/gsl"
 #include "router.h"
+#include "zudl.hpp"
 #endif
 
 

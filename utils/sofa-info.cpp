@@ -29,7 +29,6 @@
 #include <vector>
 
 #include "sofa-support.h"
-#include "zudl.hpp"
 
 #include "mysofa.h"
 
@@ -39,10 +38,14 @@
 import fmtlib;
 import gsl;
 import zstring_view;
+import zudl;
+
 #else
+
 #include "alformatzsv.hpp"
 #include "fmt/base.h"
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 namespace {

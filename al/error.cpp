@@ -36,7 +36,6 @@
 #include "core/except.h"
 #include "direct_defs.h"
 #include "envutils.hpp"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -49,7 +48,10 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import zudl;
+
 #else
+
 #include <utility>
 
 #include "AL/al.h"
@@ -62,6 +64,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

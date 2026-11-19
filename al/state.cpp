@@ -39,7 +39,6 @@
 #include "envutils.hpp"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "eax/alapi.hpp"
@@ -58,6 +57,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import zudl;
 
 #else
 
@@ -77,6 +77,7 @@ import numeric;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

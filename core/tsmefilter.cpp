@@ -6,13 +6,13 @@
 #include <memory>
 
 #include "pffft.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
 
 import core.allpass_conv;
 import phase_shifter;
+import zudl;
 
 #else
 
@@ -20,6 +20,7 @@ import phase_shifter;
 
 #include "core/allpass_conv.hpp"
 #include "phase_shifter.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

@@ -15,14 +15,13 @@ module;
 #include <span>
 
 #include "opthelper_macros.hpp"
-#include "zudl.hpp"
 
 export module phase_shifter;
 
 import common.std;
 import cemath;
 import gsl;
-
+import zudl;
 
 /* Implements a wide-band +90 degree phase-shift. Note that this should be
  * given one sample less of a delay (FilterSize/2 - 1) compared to the direct

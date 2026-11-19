@@ -67,14 +67,13 @@ int my_main(int, char**);
 #include <span>
 #include <string>
 
-#include "zudl.hpp"
-
 #if HAVE_CXXMODULES
 import common.std;
 
 import fmtlib;
 import gsl;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -85,6 +84,7 @@ import zstring_view;
 #include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "zstring_view.hpp"
+#include "zudl.hpp"
 #endif
 
 extern "C"

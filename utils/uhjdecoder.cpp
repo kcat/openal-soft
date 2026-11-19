@@ -39,7 +39,6 @@
 #include <vector>
 
 #include "vector.h"
-#include "zudl.hpp"
 
 #include "sndfile.h"
 
@@ -55,6 +54,7 @@ import gsl;
 import numeric;
 import phase_shifter;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -69,6 +69,7 @@ import zstring_view;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "phase_shifter.hpp"
+#include "zudl.hpp"
 #endif
 
 

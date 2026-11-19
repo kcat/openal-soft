@@ -27,7 +27,6 @@
 #include "opthelper_macros.hpp"
 #include "resampler_limits.hpp"
 #include "uhjfilter.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -40,6 +39,7 @@ import core.voice;
 import gsl;
 import logging;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -55,6 +55,7 @@ import numeric;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

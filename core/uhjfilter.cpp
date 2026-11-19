@@ -11,7 +11,6 @@
 #include <span>
 
 #include "pffft.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -19,6 +18,7 @@ import common.std;
 import core.allpass_conv;
 import gsl;
 import phase_shifter;
+import zudl;
 
 #else
 
@@ -27,6 +27,7 @@ import phase_shifter;
 #include "core/allpass_conv.hpp"
 #include "gsl/gsl"
 #include "phase_shifter.hpp"
+#include "zudl.hpp"
 #endif
 
 /* UHJ is primarily defined in terms of classical B-Format. In particular,

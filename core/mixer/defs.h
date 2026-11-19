@@ -13,7 +13,6 @@
 #include "core/bufferline.h"
 #include "core/cubic_defs.h"
 #include "opthelper_macros.hpp"
-#include "zudl.hpp"
 
 struct HrtfChannelState;
 struct HrtfFilter;
@@ -155,7 +154,7 @@ void InitPosArrays(unsigned const pos, unsigned const frac, unsigned const incre
     static_assert(pos_arr.size() == frac_arr.size());
     pos_arr[0] = pos;
     frac_arr[0] = frac;
-    for(auto const i : std::views::iota(1_uz, pos_arr.size()))
+    for(auto const i : std::views::iota(std::size_t{1}, pos_arr.size()))
     {
         auto const frac_tmp = frac_arr[i-1] + increment;
         pos_arr[i] = pos_arr[i-1] + (frac_tmp>>MixerFracBits);

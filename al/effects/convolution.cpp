@@ -7,7 +7,6 @@
 
 #include "alc/inprogext.h"
 #include "effects.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -15,6 +14,7 @@ import openal;
 
 import alc.context;
 import numeric;
+import zudl;
 
 #else
 
@@ -24,6 +24,7 @@ import numeric;
 
 #include "alc/context.hpp"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

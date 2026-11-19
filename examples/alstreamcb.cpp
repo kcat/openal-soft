@@ -38,8 +38,6 @@
 
 #include "sndfile.h"
 
-#include "zudl.hpp"
-
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
@@ -51,6 +49,7 @@ import fmtlib;
 import gsl;
 import numeric;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -69,6 +68,7 @@ import zstring_view;
 #include "fmt/ostream.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

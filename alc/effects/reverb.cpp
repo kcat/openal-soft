@@ -39,7 +39,6 @@
 #include "intrusive_ptr.h"
 #include "opthelper_macros.hpp"
 #include "vector.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -51,6 +50,7 @@ import core.effectslot;
 import cubic_tables;
 import gsl;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -64,6 +64,7 @@ import numeric;
 #include "core/effectslot.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 struct BufferStorage;

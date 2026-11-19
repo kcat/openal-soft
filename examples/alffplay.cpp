@@ -30,7 +30,6 @@
 
 #include "opthelpers.h"
 #include "pragmadefs.h"
-#include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wconversion\"")
@@ -71,6 +70,7 @@ import gsl;
 import inout_ptr;
 import numeric;
 import zstring_view;
+import zudl;
 
 /* AL_APIENTRY is needed, but not exported from the module. */
 #include "openal_apientry.h"
@@ -93,6 +93,7 @@ import zstring_view;
 #include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

@@ -67,7 +67,6 @@
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
 #include "vecmat.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -86,6 +85,7 @@ import format;
 import gsl;
 import hrtfstore;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -108,6 +108,7 @@ import numeric;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

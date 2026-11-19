@@ -11,8 +11,6 @@
 #include <span>
 #include <string>
 
-#include "zudl.hpp"
-
 #if HAVE_CXXMODULES
 import common.std;
 
@@ -21,6 +19,7 @@ import filesystem;
 import format;
 import gsl;
 import numeric;
+import zudl;
 
 #else
 
@@ -33,6 +32,7 @@ import numeric;
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

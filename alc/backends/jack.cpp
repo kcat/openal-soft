@@ -36,7 +36,6 @@
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #include <jack/jack.h>
 
@@ -53,6 +52,7 @@ import logging;
 import numeric;
 import ringbuffer;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -69,6 +69,7 @@ import zstring_view;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 

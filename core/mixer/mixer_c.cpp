@@ -21,6 +21,7 @@ import common.std;
 
 import gsl;
 import numeric;
+import zudl;
 
 #else
 
@@ -28,6 +29,7 @@ import numeric;
 
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

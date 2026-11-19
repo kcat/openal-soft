@@ -9,13 +9,12 @@
 #include <numbers>
 #include <ranges>
 
-#include "zudl.hpp"
-
 #if HAVE_CXXMODULES
 import common.std;
 
 import bit;
 import gsl;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -24,6 +23,7 @@ import gsl;
 
 #include "bit.hpp"
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 

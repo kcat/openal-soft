@@ -40,7 +40,6 @@
 #include "dlopennote.h"
 #include "dynload.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -56,6 +55,7 @@ import gsl;
 import logging;
 import ringbuffer;
 import zstring_view;
+import zudl;
 
 #else
 
@@ -68,6 +68,7 @@ import zstring_view;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 

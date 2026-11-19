@@ -36,7 +36,6 @@
 
 #include "althrd_setname.h"
 #include "vector.h"
-#include "zudl.hpp"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
@@ -54,6 +53,7 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+import zudl;
 
 #else
 
@@ -69,6 +69,7 @@ import ringbuffer;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

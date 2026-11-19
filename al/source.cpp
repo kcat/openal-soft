@@ -58,7 +58,6 @@
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "eax/api.h"
@@ -85,6 +84,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -109,6 +109,7 @@ import numeric;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

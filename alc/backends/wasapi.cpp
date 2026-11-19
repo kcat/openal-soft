@@ -66,9 +66,7 @@
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
-#include "gsl/gsl"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -102,10 +100,13 @@ import alstring;
 import backends.exception;
 import core.device;
 import format;
+import gsl;
 import inout_ptr;
 import logging;
 import numeric;
 import ringbuffer;
+import zudl;
+#include "gsl_macros.hpp"
 
 #else
 
@@ -117,9 +118,11 @@ import ringbuffer;
 #include "alformat.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

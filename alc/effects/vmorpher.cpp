@@ -48,7 +48,6 @@
 #include "core/mixer.h"
 #include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -57,6 +56,7 @@ import core.context;
 import core.device;
 import core.effectslot;
 import numeric;
+import zudl;
 
 #else
 
@@ -66,6 +66,7 @@ import numeric;
 #include "core/device.h"
 #include "core/effectslot.h"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 struct BufferStorage;

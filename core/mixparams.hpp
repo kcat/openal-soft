@@ -12,7 +12,6 @@
 #include "ambidefs.h"
 #include "bufferline.h"
 #include "devformat.h"
-#include "zudl.hpp"
 
 
 inline constexpr auto InvalidChannelIndex = static_cast<std::uint8_t>(~0u);
@@ -41,12 +40,12 @@ struct MixParams {
     {
         auto const numIn = inmix.Buffer.size();
         auto const numOut = Buffer.size();
-        for(auto const i : std::views::iota(0_uz, numIn))
+        for(auto const i : std::views::iota(std::size_t{0}, numIn))
         {
             auto idx = InvalidChannelIndex;
             auto gain = 0.0f;
 
-            for(auto const j : std::views::iota(0_uz, numOut))
+            for(auto const j : std::views::iota(std::size_t{0}, numOut))
             {
                 if(AmbiMap[j].Index == inmix.AmbiMap[i].Index)
                 {

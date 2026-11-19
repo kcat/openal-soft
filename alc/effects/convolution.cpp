@@ -34,7 +34,6 @@
 #include "polyphase_resampler.h"
 #include "vecmat.h"
 #include "vector.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -46,6 +45,7 @@ import core.device;
 import core.effectslot;
 import gsl;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -59,6 +59,7 @@ import numeric;
 #include "core/effectslot.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

@@ -10,7 +10,6 @@
 #include "effectslot.h"
 #include "voice.h"
 #include "voice_change.h"
-#include "zudl.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -18,6 +17,7 @@ import common.std;
 import core.device;
 import gsl;
 import logging;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -28,6 +28,7 @@ import logging;
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "zudl.hpp"
 #endif
 
 

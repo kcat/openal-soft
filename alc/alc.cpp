@@ -84,7 +84,6 @@
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 #include "opthelpers.h"
-#include "zudl.hpp"
 
 #include "backends/base.hpp"
 #include "backends/null.hpp"
@@ -171,6 +170,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import zudl;
 #include "gsl_macros.hpp"
 
 #else
@@ -204,6 +204,7 @@ import numeric;
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zudl.hpp"
 #endif
 
 

@@ -15,7 +15,6 @@
 #include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "vecmat.h"
-#include "zudl.hpp"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -41,6 +40,7 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+import zudl;
 
 #else
 
@@ -61,6 +61,7 @@ import ringbuffer;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 namespace {

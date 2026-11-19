@@ -33,7 +33,6 @@
 
 #include "opthelpers.h"
 #include "pragmadefs.h"
-#include "zudl.hpp"
 
 DIAGNOSTIC_PUSH
 std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
@@ -57,6 +56,7 @@ import gsl;
 import logging;
 import numeric;
 import ringbuffer;
+import zudl;
 
 #else
 
@@ -70,6 +70,7 @@ import ringbuffer;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "ringbuffer.hpp"
+#include "zudl.hpp"
 #endif
 
 

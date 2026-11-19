@@ -29,7 +29,7 @@ void MixHrtfBase(std::span<float const> const InSamples, std::span<f32x2> const 
     auto ldelay = std::size_t{HrtfHistoryLength} - hrtfparams->Delay[0];
     auto rdelay = std::size_t{HrtfHistoryLength} - hrtfparams->Delay[1];
     auto stepcount = 0.0f;
-    for(auto i = 0_uz;i < SamplesToDo;++i)
+    for(auto i = std::size_t{0};i < SamplesToDo;++i)
     {
         auto const g = gain + gainstep*stepcount;
         auto const left = InSamples[ldelay++] * g;
@@ -59,7 +59,7 @@ void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> c
         auto ldelay = std::size_t{HrtfHistoryLength} - oldparams->Delay[0];
         auto rdelay = std::size_t{HrtfHistoryLength} - oldparams->Delay[1];
         auto stepcount = static_cast<float>(SamplesToDo);
-        for(auto i = 0_uz;i < SamplesToDo;++i)
+        for(auto i = std::size_t{0};i < SamplesToDo;++i)
         {
             auto const g = oldGainStep*stepcount;
             auto const left = InSamples[ldelay++] * g;
@@ -75,7 +75,7 @@ void MixHrtfBlendBase(std::span<float const> const InSamples, std::span<f32x2> c
         auto ldelay = std::size_t{HrtfHistoryLength+1} - newparams->Delay[0];
         auto rdelay = std::size_t{HrtfHistoryLength+1} - newparams->Delay[1];
         auto stepcount = 1.0f;
-        for(auto i = 1_uz;i < SamplesToDo;++i)
+        for(auto i = std::size_t{1};i < SamplesToDo;++i)
         {
             auto const g = newGainStep*stepcount;
             auto const left = InSamples[ldelay++] * g;
@@ -109,7 +109,7 @@ void MixDirectHrtfBase(FloatBufferSpan const LeftOut, FloatBufferSpan const Righ
 
         /* Now apply the HRIR coefficients to this channel. */
         auto const Coeffs = ConstHrirSpan{ChanState.mCoeffs};
-        for(auto i = 0_uz;i < SamplesToDo;++i)
+        for(auto i = std::size_t{0};i < SamplesToDo;++i)
         {
             auto const insample = TempBuf[i];
             ApplyCoeffs(AccumSamples.subspan(i), IrSize, Coeffs, insample, insample);

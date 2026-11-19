@@ -10,7 +10,6 @@
 #include "bufferline.h"
 #include "encoderbase.hpp"
 #include "opthelper_macros.hpp"
-#include "zudl.hpp"
 
 
 enum class TsmeQualityType : std::uint8_t {
@@ -28,10 +27,10 @@ template<std::size_t N>
 struct TsmeEncoder final : EncoderBase {
     struct Tag { using encoder_t = TsmeEncoder; };
 
-    static constexpr auto sFftLength = 256_uz;
-    static constexpr auto sSegmentSize = sFftLength/2_uz;
+    static constexpr auto sFftLength = std::size_t{256};
+    static constexpr auto sSegmentSize = sFftLength/2u;
     static constexpr auto sNumSegments = N/sSegmentSize;
-    static constexpr auto sFilterDelay = N/2_uz + sSegmentSize;
+    static constexpr auto sFilterDelay = N/2u + sSegmentSize;
 
     static consteval auto TypeName() noexcept -> std::string_view
     {
@@ -75,7 +74,7 @@ using TsmeEncoder512 = TsmeEncoder<512>;
 struct TsmeEncoderIIR final : EncoderBase {
     struct Tag { using encoder_t = TsmeEncoderIIR; };
 
-    static constexpr auto sFilterDelay = 1_uz;
+    static constexpr auto sFilterDelay = std::size_t{1};
 
     static consteval auto TypeName() noexcept -> std::string_view
     { return "IIR"; }

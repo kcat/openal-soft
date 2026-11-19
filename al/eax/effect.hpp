@@ -16,8 +16,8 @@
 inline bool EaxTraceCommits{false};
 
 namespace EaxEffectErrorMessages {
-    static constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
-    static constexpr auto unknown_version() noexcept { return "Unknown version."; }
+    constexpr auto unknown_property_id() noexcept { return "Unknown property id."; }
+    constexpr auto unknown_version() noexcept { return "Unknown version."; }
 }
 
 using EaxEffectProps = std::variant<std::monostate,

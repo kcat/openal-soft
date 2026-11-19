@@ -2,6 +2,7 @@
 #define EAX_EAX_CALL_INCLUDED
 
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <span>
 #include <string_view>
@@ -14,7 +15,7 @@ struct AL_GUID;
 
 enum class EaxCallType : bool { get, set };
 
-enum class EaxCallPropertySetId {
+enum class EaxCallPropertySetId : std::uint8_t {
     context,
     fx_slot,
     source,
@@ -23,7 +24,7 @@ enum class EaxCallPropertySetId {
 
 class EaxCall {
     EaxCallType const mCallType;
-    int mVersion{};
+    std::uint8_t mVersion{};
     EaxFxSlotIndex mFxSlotIndex{};
     EaxCallPropertySetId mPropertySetId{};
     bool mIsDeferred{};
@@ -48,7 +49,7 @@ public:
     [[nodiscard]] auto get_fx_slot_index() const noexcept -> EaxFxSlotIndex { return mFxSlotIndex; }
 
     template<typename TValue> [[nodiscard]]
-    auto as_span(size_t const max_count=std::numeric_limits<std::size_t>::max()) const
+    auto as_span(std::size_t const max_count=std::numeric_limits<std::size_t>::max()) const
         -> std::span<TValue>
     {
         auto const count = std::min(mPropertyBuffer.size()/sizeof(TValue), max_count);

@@ -1,13 +1,13 @@
 #ifndef EAX_FX_SLOT_INDEX_INCLUDED
 #define EAX_FX_SLOT_INDEX_INCLUDED
 
-#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string_view>
 
 struct AL_GUID;
 
-using EaxFxSlotIndexValue = std::size_t;
+using EaxFxSlotIndexValue = std::uint8_t;
 
 class EaxFxSlotIndex : public std::optional<EaxFxSlotIndexValue> {
     [[noreturn]] static

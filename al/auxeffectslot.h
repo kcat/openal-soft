@@ -22,7 +22,7 @@
 
 #include "bitset.hpp"
 #include "eax/api.h"
-#include "eax/call.h"
+#include "eax/call.hpp"
 #include "eax/fx_slot_index.h"
 
 class EaxEffect;

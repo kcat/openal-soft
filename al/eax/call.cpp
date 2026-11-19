@@ -1,13 +1,17 @@
 #include "config.h"
 
-#include "call.h"
-
 #include <string_view>
 
 #include "api.h"
 #if HAVE_CXXMODULES
+import openal;
+
+import eax.call;
 import eax.exception;
 #else
+#include "AL/al.h"
+
+#include "al/eax/call.hpp"
 #include "al/eax/exception.hpp"
 #endif
 

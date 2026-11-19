@@ -27,7 +27,7 @@
 
 #if ALSOFT_EAX
 #include "eax/api.h"
-#include "eax/call.h"
+#include "eax/call.hpp"
 #include "eax/fx_slot_index.h"
 #endif // ALSOFT_EAX
 

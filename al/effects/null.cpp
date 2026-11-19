@@ -7,11 +7,12 @@
 #include "effects.h"
 
 #if ALSOFT_EAX
-#include "al/eax/call.h"
 #if HAVE_CXXMODULES
+import eax.call;
 import eax.effect;
 import eax.exception;
 #else
+#include "al/eax/call.hpp"
 #include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"
 #endif

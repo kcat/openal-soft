@@ -8,9 +8,9 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "al/eax/call.hpp"
 #include "api.h"
 #include "core/effects/base.h"
-#include "call.h"
 #include "opthelper_macros.hpp"
 
 inline bool EaxTraceCommits{false};

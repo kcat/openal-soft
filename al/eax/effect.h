@@ -360,7 +360,6 @@ public:
         al_effect_type_ = EnumFromEaxEffectType(props_);
         return ret;
     }
-#undef EAXCALL
 }; // EaxEffect
 
 #endif // !EAX_EFFECT_INCLUDED

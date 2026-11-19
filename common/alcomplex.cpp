@@ -9,6 +9,7 @@
 #include <numbers>
 #include <ranges>
 
+#include "albit.h"
 #include "zudl.hpp"
 
 #if HAVE_CXXMODULES
@@ -50,15 +51,8 @@ struct BitReverser : std::array<u16x2, BitReverseCounter(N)> {
         /* Bit-reversal permutation applied to a sequence of fftsize items. */
         for(auto const idx : std::views::iota(1_uz, fftsize-1u))
         {
-            auto revidx = idx;
-            revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
-            revidx = ((revidx&0xcccccccc) >> 2) | ((revidx&0x33333333) << 2);
-            revidx = ((revidx&0xf0f0f0f0) >> 4) | ((revidx&0x0f0f0f0f) << 4);
-            revidx = ((revidx&0xff00ff00) >> 8) | ((revidx&0x00ff00ff) << 8);
-            revidx = (revidx >> 16) | ((revidx&0x0000ffff) << 16);
-            revidx >>= 32-N;
-
-            if(idx < revidx)
+            if(auto const revidx = al::bit_reverse(idx) >> (sizeof(std::size_t)*8 - N);
+                idx < revidx)
             {
                 (*iter)[0] = gsl::narrow<std::uint16_t>(idx);
                 (*iter)[1] = gsl::narrow<std::uint16_t>(revidx);
@@ -162,15 +156,7 @@ void complex_fft(std::span<std::complex<double>> const buffer, double const sign
 
         for(auto const idx : std::views::iota(1_uz, fftsize-1))
         {
-            auto revidx = idx;
-            revidx = ((revidx&0xaaaaaaaa) >> 1) | ((revidx&0x55555555) << 1);
-            revidx = ((revidx&0xcccccccc) >> 2) | ((revidx&0x33333333) << 2);
-            revidx = ((revidx&0xf0f0f0f0) >> 4) | ((revidx&0x0f0f0f0f) << 4);
-            revidx = ((revidx&0xff00ff00) >> 8) | ((revidx&0x00ff00ff) << 8);
-            revidx = (revidx >> 16) | ((revidx&0x0000ffff) << 16);
-            revidx >>= 32-log2_size;
-
-            if(idx < revidx)
+            if(auto const revidx = al::bit_reverse(idx) >> (32-log2_size); idx < revidx)
                 std::swap(buffer[idx], buffer[revidx]);
         }
 

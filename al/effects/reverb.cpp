@@ -33,6 +33,7 @@ import logging;
 import gsl;
 import numeric;
 import zudl;
+#include "gsl_macros.hpp"
 
 #else
 

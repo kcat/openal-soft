@@ -15,16 +15,24 @@
 #include <type_traits>
 #include <utility>
 
-#include "gsl/narrow"
+#include "opthelper_macros.hpp"
 
 
 using eax_long = std::conditional_t<std::cmp_greater(sizeof(long), sizeof(int)), int, long>;
 using eax_ulong = std::make_unsigned_t<eax_long>;
 
 [[nodiscard]] consteval
-auto operator ""_eax_long(unsigned long long const x) { return gsl::narrow<eax_long>(x); }
+auto operator ""_eax_long(unsigned long long const x) noexcept -> eax_long
+{
+    if(not std::in_range<eax_long>(x)) ASSUME(false);
+    return static_cast<eax_long>(x);
+}
 [[nodiscard]] consteval
-auto operator ""_eax_ulong(unsigned long long const x) { return gsl::narrow<eax_ulong>(x); }
+auto operator ""_eax_ulong(unsigned long long const x) noexcept -> eax_ulong
+{
+    if(not std::in_range<eax_ulong>(x)) ASSUME(false);
+    return static_cast<eax_ulong>(x);
+}
 
 struct AL_GUID {
     std::uint32_t Data1;

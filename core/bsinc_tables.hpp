@@ -158,7 +158,7 @@ inline constexpr auto bsinc48_hdr = BSincHeader{80, 47, 1};
 
 template<BSincHeader const& hdr>
 struct BSincFilterArray {
-    static constexpr auto BSincPointsMax = (hdr.m[0] + 3_uz) & ~3_uz;
+    static constexpr auto BSincPointsMax = (hdr.m[0] + std::size_t{3}) & ~std::size_t{3};
     static constexpr auto besseli_0_beta = ce::cyl_bessel_i(0, hdr.beta);
     static_assert(BSincPointsMax <= MaxResamplerPadding, "MaxResamplerPadding is too small");
 

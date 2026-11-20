@@ -88,7 +88,7 @@ constexpr auto Kaiser(double const beta, double const k, double const besseli_0_
 {
     if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-    return ce::cyl_bessel_i(0, beta * sqrt(1.0 - k*k)) / besseli_0_beta;
+    return ce::cyl_bessel_i(0, beta * ce::sqrt(1.0 - k*k)) / besseli_0_beta;
 }
 
 /* Calculates the (normalized frequency) transition width of the Kaiser window.

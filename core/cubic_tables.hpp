@@ -85,8 +85,9 @@ struct SplineTable : CubicTable {
     {
         constexpr auto third = 1.0/3.0;
         constexpr auto sixth = 1.0/6.0;
-        /* This filter table is based on a Catmull-Rom spline. It retains more of
-         * the original high-frequency content, at the cost of increased harmonics.
+        /* This filter table is based on a Catmull-Rom spline. It retains more
+         * of the original high-frequency content, at the cost of increased
+         * harmonics.
          */
         for(const auto pi : std::views::iota(0u, unsigned{CubicPhaseCount}))
         {
@@ -129,8 +130,8 @@ struct CubicFilter {
         constexpr auto third = 1.0/3.0;
         constexpr auto sixth = 1.0/6.0;
         constexpr auto IndexScale = 1.0 / double{sTableSteps};
-        /* Only half the coefficients need to be iterated here, since Coeff2 and
-         * Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
+        /* Only half the coefficients need to be iterated here, since Coeff2
+         * and Coeff3 are just Coeff1 and Coeff0 in reverse respectively.
          */
         for(const auto i : std::views::iota(0u, sTableSteps/2u + 1u))
         {

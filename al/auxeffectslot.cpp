@@ -25,7 +25,6 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <ranges>
 #include <span>
 #include <tuple>
@@ -75,6 +74,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <new>
 #include <stdexcept>
 
 #include "AL/al.h"

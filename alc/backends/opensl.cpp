@@ -32,7 +32,6 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <ranges>
 #include <functional>
 
@@ -59,6 +58,7 @@ import zudl;
 
 #else
 
+#include <new>
 #include <thread>
 
 #include "alc/backends/exception.hpp"

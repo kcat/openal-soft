@@ -7,6 +7,7 @@ module;
 #include <ios>
 #include <iostream>
 #include <istream>
+#include <new>
 #include <ostream>
 #include <source_location>
 #include <sstream>
@@ -303,6 +304,19 @@ export namespace std {
     using std::io_errc;
     using std::iostream_category;
 
+    /* new */
+    using std::bad_alloc;
+    using std::bad_array_new_length;
+    using std::align_val_t;
+    using std::new_handler;
+    using std::nothrow;
+    using std::nothrow_t;
+    using std::destroying_delete;
+    using std::destroying_delete_t;
+    using std::hardware_destructive_interference_size;
+    using std::hardware_constructive_interference_size;
+    using std::launder;
+
     /* thread */
     using std::thread;
     using std::jthread;
@@ -371,3 +385,11 @@ export namespace std {
 
 }
 /* NOLINTEND(bugprone-std-namespace-modification, cert-dcl58-cpp) */
+
+export {
+    /* new */
+    using ::operator new;
+    using ::operator new[];
+    using ::operator delete;
+    using ::operator delete[];
+}

@@ -65,7 +65,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
-#include <new>
 #include <numbers>
 #include <span>
 #include <vector>
@@ -84,6 +83,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <new>
 #include <utility>
 
 #include "fmt/format.h"

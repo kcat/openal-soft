@@ -26,7 +26,6 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <ranges>
 #include <unordered_map>
 #include <variant>
@@ -53,6 +52,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <new>
 
 #include "AL/al.h"
 #include "AL/alext.h"

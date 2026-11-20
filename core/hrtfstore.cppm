@@ -3,7 +3,6 @@ module;
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <new>
 #include <span>
 
 #include "intrusive_ptr.h"

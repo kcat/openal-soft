@@ -30,7 +30,6 @@
 #include <limits>
 #include <memory>
 #include <mutex>
-#include <new>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -84,6 +83,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <new>
 #include <stdexcept>
 #include <utility>
 

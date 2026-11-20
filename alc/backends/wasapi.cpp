@@ -65,7 +65,6 @@
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
-#include "opthelpers.h"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -103,6 +102,7 @@ import gsl;
 import inout_ptr;
 import logging;
 import numeric;
+import opthelpers;
 import ringbuffer;
 import zudl;
 #include "gsl_macros.hpp"
@@ -121,6 +121,7 @@ import zudl;
 #include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "ringbuffer.hpp"
 #include "zudl.hpp"
 #endif

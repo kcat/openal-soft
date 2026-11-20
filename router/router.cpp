@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "envutils.hpp"
-#include "opthelpers.h"
 
 #include "version.h"
 
@@ -30,6 +29,7 @@ import alsoft.router;
 import alstring;
 import filesystem;
 import gsl;
+import opthelpers;
 
 #else
 
@@ -40,6 +40,7 @@ import gsl;
 #include "alstring.h"
 #include "filesystem.h"
 #include "gsl/gsl"
+#include "opthelpers.hpp"
 #endif
 
 namespace {

@@ -37,7 +37,6 @@
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "opthelpers.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -51,6 +50,7 @@ import core.device;
 import core.helpers;
 import gsl;
 import logging;
+import opthelpers;
 import ringbuffer;
 import zstring_view;
 import zudl;
@@ -67,6 +67,7 @@ import zudl;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
+#include "opthelpers.hpp"
 #include "ringbuffer.hpp"
 #include "zudl.hpp"
 #endif

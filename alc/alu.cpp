@@ -65,7 +65,6 @@
 #include "core/front_stablizer.h"
 #include "envutils.hpp"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "vecmat.h"
 
 #if HAVE_CXXMODULES
@@ -85,6 +84,7 @@ import format;
 import gsl;
 import hrtfstore;
 import numeric;
+import opthelpers;
 import zudl;
 #include "gsl_macros.hpp"
 
@@ -108,6 +108,7 @@ import zudl;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

@@ -80,8 +80,6 @@
 #include <fcntl.h>
 #endif
 
-#include "opthelpers.h"
-
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
@@ -94,6 +92,7 @@ import filesystem;
 import fmtlib;
 import gsl;
 import numeric;
+import opthelpers;
 import zstring_view;
 import zudl;
 
@@ -120,6 +119,7 @@ import zudl;
 #include "fmt/std.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

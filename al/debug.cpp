@@ -15,7 +15,6 @@
 
 #include "core/except.h"
 #include "direct_defs.h"
-#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -29,6 +28,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import zstring_view;
 import zudl;
 
@@ -55,6 +55,7 @@ import zudl;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

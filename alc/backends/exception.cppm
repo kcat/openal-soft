@@ -1,11 +1,11 @@
 module;
 
 #include "core/except.h"
-#include "opthelpers.h"
 
 export module backends.exception;
 
 import format;
+import opthelpers;
 
 export namespace al {
 

@@ -766,7 +766,7 @@ set(COMMON_HDRS
     common/numeric.hpp
     common/openal_apientry.h
     common/opthelper_macros.hpp
-    common/opthelpers.h
+    common/opthelpers.hpp
     common/pffft.h
     common/polyphase_resampler.h
     common/pragmadefs.h
@@ -801,6 +801,7 @@ if(HAVE_CXXMODULES)
         common/hann_window.cppm
         common/inout_ptr.cppm
         common/numeric.cppm
+        common/opthelpers.cppm
         common/phase_shifter.cppm
         common/ringbuffer.cppm
         common/spanstream.cppm

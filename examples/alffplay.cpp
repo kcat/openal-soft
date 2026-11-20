@@ -27,7 +27,6 @@
 #include <variant>
 #include <vector>
 
-#include "opthelpers.h"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -68,8 +67,10 @@ import fmtlib;
 import gsl;
 import inout_ptr;
 import numeric;
+import opthelpers;
 import zstring_view;
 import zudl;
+#include "opthelper_macros.hpp"
 
 /* AL_APIENTRY is needed, but not exported from the module. */
 #include "openal_apientry.h"
@@ -93,6 +94,7 @@ import zudl;
 #include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

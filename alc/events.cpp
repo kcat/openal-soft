@@ -8,7 +8,6 @@
 
 #include "backends/base.hpp"
 #include "bitset.hpp"
-#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import alc.device;
@@ -16,12 +15,16 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
+
 #else
+
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #endif
 
 

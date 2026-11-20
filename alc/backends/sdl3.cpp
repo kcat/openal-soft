@@ -31,7 +31,6 @@
 #include <string>
 #include <string_view>
 
-#include "opthelpers.h"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -55,6 +54,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import ringbuffer;
 import zudl;
 
@@ -69,6 +69,7 @@ import zudl;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "ringbuffer.hpp"
 #include "zudl.hpp"
 #endif

@@ -41,7 +41,6 @@
 #include "core/mixparams.hpp"
 #include "core/resampler_limits.hpp"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -53,6 +52,7 @@ import core.effectslot;
 import cubic_tables;
 import gsl;
 import numeric;
+import opthelpers;
 import zudl;
 
 #else
@@ -66,6 +66,7 @@ import zudl;
 #include "core/effectslot.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

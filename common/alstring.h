@@ -8,7 +8,7 @@
 #include <cwctype>
 #include <string_view>
 
-#include "opthelpers.h"
+#include "opthelpers.hpp"
 
 #if defined(_WIN32)
 #include <string>

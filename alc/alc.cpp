@@ -79,7 +79,6 @@
 #include "flexarray.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 
 #include "backends/base.hpp"
 #include "backends/null.hpp"
@@ -165,6 +164,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import zudl;
 #include "gsl_macros.hpp"
 
@@ -207,6 +207,7 @@ import eax.effect;
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #if ALSOFT_EAX
 #include "al/eax/effect.hpp"

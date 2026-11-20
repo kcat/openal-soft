@@ -13,7 +13,6 @@
 #include <span>
 
 #include "fpu_ctrl.h"
-#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -21,6 +20,7 @@ import common.std;
 import core.device;
 import gsl;
 import numeric;
+import opthelpers;
 import zudl;
 #include "gsl_macros.hpp"
 
@@ -31,6 +31,7 @@ import zudl;
 #include "core/devfmttraits.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

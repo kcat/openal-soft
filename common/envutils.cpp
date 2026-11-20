@@ -7,13 +7,10 @@
 #include <optional>
 #include <string>
 
-#if defined(_WIN32)
-#include "opthelpers.h"
-#endif
-
 #if HAVE_CXXMODULES
 #if defined(_WIN32)
 import alstring;
+import opthelpers;
 #endif
 import gsl;
 
@@ -21,6 +18,7 @@ import gsl;
 
 #if defined(_WIN32)
 #include "alstring.h"
+#include "opthelpers.hpp"
 #endif
 #include "gsl/zstring"
 #endif

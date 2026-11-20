@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include "effects.h"
-#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -31,6 +30,7 @@ import openal;
 import alc.context;
 import format;
 import numeric;
+import opthelpers;
 
 #else
 
@@ -42,6 +42,7 @@ import numeric;
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #endif
 
 

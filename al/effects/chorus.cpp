@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include "effects.h"
-#include "opthelpers.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -33,6 +32,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 
 #else
 
@@ -46,6 +46,7 @@ import numeric;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #endif
 
 

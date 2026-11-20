@@ -34,7 +34,6 @@
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "opthelpers.h"
 
 #include <jack/jack.h>
 
@@ -49,6 +48,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import ringbuffer;
 import zstring_view;
 import zudl;
@@ -68,6 +68,7 @@ import zudl;
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "ringbuffer.hpp"
 #include "zudl.hpp"
 #endif

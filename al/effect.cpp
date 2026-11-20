@@ -36,7 +36,6 @@
 #include "almalloc.h"
 #include "core/except.h"
 #include "direct_defs.h"
-#include "opthelpers.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -49,6 +48,7 @@ import alstring;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import zudl;
 
 #else
@@ -69,6 +69,7 @@ import zudl;
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

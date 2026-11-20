@@ -23,7 +23,6 @@
 #include "hrtf_loader.hpp"
 #include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
-#include "opthelpers.h"
 #include "polyphase_resampler.h"
 
 #if HAVE_CXXMODULES
@@ -38,6 +37,7 @@ import gsl;
 import hrtfstore;
 import logging;
 import numeric;
+import opthelpers;
 import spanstream;
 import zudl;
 #include "gsl_macros.hpp"
@@ -60,6 +60,7 @@ import zudl;
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "spanstream.hpp"
 #include "zudl.hpp"
 #endif

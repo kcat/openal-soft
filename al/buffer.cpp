@@ -44,7 +44,6 @@
 #include "core/storage_formats.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
-#include "opthelpers.h"
 #include "vector.h"
 
 #if ALSOFT_EAX
@@ -77,6 +76,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import zudl;
 
 #else
@@ -98,6 +98,7 @@ import zudl;
 #include "core/voice.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "zudl.hpp"
 #endif
 

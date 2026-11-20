@@ -43,7 +43,6 @@
 #include "alc/alconfig.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "opthelpers.h"
 #include "pragmadefs.h"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
@@ -134,6 +133,7 @@ import format;
 import gsl;
 import logging;
 import numeric;
+import opthelpers;
 import ringbuffer;
 import spanstream;
 import zstring_view;
@@ -158,6 +158,7 @@ import zstring_view;
 #include "fmt/ranges.h"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "opthelpers.hpp"
 #include "ringbuffer.hpp"
 #include "spanstream.hpp"
 #include "zstring_view.hpp"

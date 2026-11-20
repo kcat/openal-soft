@@ -41,13 +41,13 @@ void EaxFxSlotIndex::set(AL_GUID const& guid)
     if(guid == EAX_NULL_GUID)
         reset();
     else if(guid == EAXPROPERTYID_EAX40_FXSlot0 || guid == EAXPROPERTYID_EAX50_FXSlot0)
-        emplace(0u);
+        emplace(EaxFxSlotIndexValue{0});
     else if(guid == EAXPROPERTYID_EAX40_FXSlot1 || guid == EAXPROPERTYID_EAX50_FXSlot1)
-        emplace(1u);
+        emplace(EaxFxSlotIndexValue{1});
     else if(guid == EAXPROPERTYID_EAX40_FXSlot2 || guid == EAXPROPERTYID_EAX50_FXSlot2)
-        emplace(2u);
+        emplace(EaxFxSlotIndexValue{2});
     else if(guid == EAXPROPERTYID_EAX40_FXSlot3 || guid == EAXPROPERTYID_EAX50_FXSlot3)
-        emplace(3u);
+        emplace(EaxFxSlotIndexValue{3});
     else
         fail("Unsupported GUID.");
 }

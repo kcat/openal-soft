@@ -164,20 +164,14 @@ struct BSincFilterArray {
 
     alignas(16) std::array<float, hdr.total_size> mTable{};
 
-    /* This could be made constexpr/consteval with constexpr-capable sin and
-     * sqrt functions, which we can suitably make. However, the size of the
-     * filter tables not only requires significantly increasing the constexpr
-     * step limit, compilation takes *minutes*, at least with Clang (GCC just
-     * gives up on it without a reason after about a minute of compiling, only
-     * saying it's not constexpr). Pretty absurd since it's instantaneous at
-     * runtime. Would be better to just compile the darn functions with
-     * optimizations and then execute the compiled code, but we can't easily do
-     * that as a pre-compile step with cross-compiling.
-     *
-     * Avoiding our strict number types and using less accurate math functions
-     * can help a bit, but even ignoring the potential quality issues, the
-     * speed improvement isn't enough to make it viable. I don't know how else
-     * to make this more efficient to make the resamplers constexpr.
+    /* This could be made constexpr/consteval. However, the size of the filter
+     * tables not only requires significantly increasing the constexpr step
+     * limit, compilation takes *minutes*, at least with Clang. GCC just gives
+     * up on it without a reason after about a minute of compiling, only saying
+     * it's not constexpr. Pretty absurd since it's instantaneous at runtime.
+     * Would be better to just compile the darn functions with optimizations
+     * and then execute the compiled code, but we can't easily do that as a
+     * pre-compile step with cross-compiling.
      */
     BSincFilterArray() noexcept
     {

@@ -60,8 +60,10 @@ class bitset {
     { return integer_t{1u} << static_cast<UnderlyingType>(e); }
 
 public:
-    constexpr bitset() noexcept = default;
-    constexpr bitset(bitset const &rhs) noexcept = default;
+    template<typename ...Args> requires(true and ... and std::is_same_v<Args, EnumType>)
+        explicit(sizeof...(Args) > 0) constexpr
+    bitset(Args&& ...args) noexcept : mBits{(integer_t{0u} | ... | flag_from_enum(args))} { }
+    constexpr bitset(bitset const& rhs) noexcept = default;
     constexpr ~bitset() noexcept = default;
 
     [[nodiscard]] explicit constexpr

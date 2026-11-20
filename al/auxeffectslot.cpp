@@ -1374,10 +1374,9 @@ void al::EffectSlot::eax5_fx_slot_set_all(const EaxCall& call)
 
 auto al::EffectSlot::eax_fx_slot_should_update_sources() const noexcept -> bool
 {
-    static constexpr auto dirty_bits = al::bitset<EaxEffectSlotDirtyBit>{}
-        .set(EaxEffectSlotDirtyBit::Occlusion)
-        .set(EaxEffectSlotDirtyBit::OcclusionLfRatio)
-        .set(EaxEffectSlotDirtyBit::Flags);
+    static auto constexpr dirty_bits = al::bitset<EaxEffectSlotDirtyBit>{
+        EaxEffectSlotDirtyBit::Occlusion, EaxEffectSlotDirtyBit::OcclusionLfRatio,
+        EaxEffectSlotDirtyBit::Flags};
     return (mEaxDf & dirty_bits).any();
 }
 

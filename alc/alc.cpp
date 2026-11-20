@@ -1121,9 +1121,9 @@ constexpr auto X71Downmix = std::to_array<InputRemixMap>({
 auto CreateDeviceLimiter(al::Device const& device, float const threshold)
     -> std::unique_ptr<Compressor>
 {
-    constexpr auto flags = Compressor::FlagBits{}.set(Compressor::Flags::AutoKnee)
-        .set(Compressor::Flags::AutoAttack).set(Compressor::Flags::AutoRelease)
-        .set(Compressor::Flags::AutoPostGain).set(Compressor::Flags::AutoDeclip);
+    auto constexpr flags = Compressor::FlagBits{Compressor::Flags::AutoKnee,
+        Compressor::Flags::AutoAttack, Compressor::Flags::AutoRelease,
+        Compressor::Flags::AutoPostGain, Compressor::Flags::AutoDeclip};
 
     return Compressor::Create({
         .NumChans = gsl::narrow<std::uint32_t>(device.RealOut.Buffer.size()),

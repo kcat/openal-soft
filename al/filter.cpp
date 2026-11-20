@@ -25,7 +25,6 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <ranges>
 #include <unordered_map>
 #include <variant>
@@ -52,6 +51,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <new>
 
 #include "AL/al.h"

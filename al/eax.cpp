@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <cstring>
-#include <mutex>
 #include <string_view>
 #if defined(_WIN32)
 #include <guiddef.h>
@@ -25,6 +24,7 @@ import logging;
 #else
 
 #include <exception>
+#include <mutex>
 
 #include "AL/al.h"
 #include "AL/alc.h"

@@ -26,7 +26,6 @@
 #include <bit>
 #include <cstring>
 #include <memory>
-#include <mutex>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -57,6 +56,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <thread>
 
 #include "alc/backends/exception.hpp"

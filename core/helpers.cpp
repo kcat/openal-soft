@@ -7,7 +7,6 @@
 
 #include <cstdlib>
 #include <functional>
-#include <mutex>
 #include <optional>
 #include <span>
 #include <string>
@@ -67,6 +66,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <utility>
 
 #include "alformatpath.hpp"

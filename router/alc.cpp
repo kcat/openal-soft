@@ -7,7 +7,6 @@
 #include <cstring>
 #include <cstdio>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <ranges>
 #include <string_view>
@@ -28,6 +27,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <tuple>
 
 #include "AL/alc.h"

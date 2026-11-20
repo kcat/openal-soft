@@ -7,6 +7,7 @@ module;
 #include <ios>
 #include <iostream>
 #include <istream>
+#include <mutex>
 #include <new>
 #include <ostream>
 #include <source_location>
@@ -304,6 +305,25 @@ export namespace std {
 
     using std::io_errc;
     using std::iostream_category;
+
+    /* mutex */
+    using std::mutex;
+    using std::timed_mutex;
+    using std::recursive_mutex;
+    using std::recursive_timed_mutex;
+    using std::lock_guard;
+    using std::unique_lock;
+    using std::scoped_lock;
+    using std::once_flag;
+    using std::try_lock;
+    using std::lock;
+    using std::call_once;
+    using std::defer_lock;
+    using std::try_to_lock;
+    using std::adopt_lock;
+    using std::defer_lock_t;
+    using std::try_to_lock_t;
+    using std::adopt_lock_t;
 
     /* new */
     using std::bad_alloc;

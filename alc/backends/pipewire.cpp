@@ -36,7 +36,6 @@
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -142,6 +141,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <thread>
 #include <tuple>
 #include <utility>

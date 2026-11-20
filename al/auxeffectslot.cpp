@@ -24,7 +24,6 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <ranges>
 #include <span>
 #include <unordered_map>
@@ -73,6 +72,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <new>
 #include <stdexcept>
 #include <tuple>

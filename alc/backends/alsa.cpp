@@ -27,7 +27,6 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <mutex>
 #include <span>
 #include <string>
 #include <string_view>
@@ -58,6 +57,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <exception>
+#include <mutex>
 #include <thread>
 #include <utility>
 

@@ -31,7 +31,6 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
-#include <mutex>
 #include <ranges>
 #include <functional>
 
@@ -58,6 +57,7 @@ import zudl;
 
 #else
 
+#include <mutex>
 #include <new>
 #include <thread>
 

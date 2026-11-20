@@ -6,7 +6,6 @@
 #include <cstring>
 #include <deque>
 #include <functional>
-#include <mutex>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -36,6 +35,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <stdexcept>
 #include <utility>
 

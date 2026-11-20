@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <mutex>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -33,6 +32,7 @@ import numeric;
 
 #include <algorithm>
 #include <exception>
+#include <mutex>
 #include <thread>
 #include <tuple>
 

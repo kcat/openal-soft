@@ -29,7 +29,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -83,6 +82,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <new>
 #include <stdexcept>
 #include <utility>

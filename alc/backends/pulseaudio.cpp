@@ -30,7 +30,6 @@
 #include <concepts>
 #include <cstring>
 #include <limits>
-#include <mutex>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -61,6 +60,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <utility>
 
 #include "alc/backends/exception.hpp"

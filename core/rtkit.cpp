@@ -38,7 +38,6 @@
 #include <cstring>
 #include <dbus/dbus.h>
 #include <memory>
-#include <mutex>
 #include <string_view>
 #include <unistd.h>
 #include <sys/types.h>
@@ -53,10 +52,16 @@
 
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import logging;
 import zstring_view;
+
 #else
+
+#include <mutex>
+
 #include "alformatzsv.hpp"
 #include "gsl/gsl"
 #include "logging.h"

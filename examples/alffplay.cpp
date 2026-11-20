@@ -18,7 +18,6 @@
 #include <future>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <numbers>
 #include <ranges>
 #include <ratio>
@@ -78,6 +77,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <mutex>
 #include <thread>
 #include <utility>
 

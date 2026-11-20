@@ -30,7 +30,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <functional>
 #include <system_error>
 #include <vector>
@@ -53,6 +52,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <exception>
 #include <ostream>
 #include <thread>
 

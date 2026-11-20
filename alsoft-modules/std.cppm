@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <compare>
+#include <exception>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -231,6 +232,22 @@ export namespace std {
     using std::is_lteq;
     using std::is_gt;
     using std::is_gteq;
+
+    /* exception */
+    using std::exception;
+    using std::nested_exception;
+    using std::bad_exception;
+    using std::terminate_handler;
+    using std::exception_ptr;
+    using std::uncaught_exceptions;
+    using std::make_exception_ptr;
+    using std::current_exception;
+    using std::rethrow_exception;
+    using std::throw_with_nested;
+    using std::rethrow_if_nested;
+    using std::terminate;
+    using std::get_terminate;
+    using std::set_terminate;
 
     /* ios, iostream, etc... */
     using std::cerr;

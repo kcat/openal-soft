@@ -42,7 +42,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <functional>
 #include <iterator>
 #include <limits>
@@ -179,6 +178,7 @@ import eax.effect;
 #else
 
 #include <algorithm>
+#include <exception>
 #include <source_location>
 #include <stdexcept>
 #include <utility>

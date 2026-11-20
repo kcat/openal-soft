@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <exception>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -34,6 +33,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <exception>
 #include <thread>
 
 #include "AL/al.h"

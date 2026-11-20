@@ -22,7 +22,6 @@
 
 #include "null.hpp"
 
-#include <exception>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -38,6 +37,7 @@ import core.helpers;
 
 #else
 
+#include <exception>
 #include <thread>
 
 #include "alc/backends/exception.hpp"

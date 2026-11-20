@@ -26,7 +26,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -58,6 +57,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <exception>
 #include <thread>
 #include <utility>
 

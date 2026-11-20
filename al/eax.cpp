@@ -13,6 +13,7 @@
 #include "eax/api.h"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 #include "openal_apientry.h"
 
@@ -22,6 +23,8 @@ import gsl;
 import logging;
 
 #else
+
+#include <exception>
 
 #include "AL/al.h"
 #include "AL/alc.h"

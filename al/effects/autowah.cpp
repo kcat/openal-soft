@@ -3,8 +3,7 @@
 
 #include <cmath>
 #include <cstdlib>
-
-#include "AL/efx.h"
+#include <string_view>
 
 #include "effects.h"
 
@@ -15,7 +14,9 @@ import eax.call;
 import eax.effect;
 import eax.exception;
 import eax.validator;
+
 #else
+
 #include "al/eax/call.hpp"
 #include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"
@@ -24,10 +25,16 @@ import eax.validator;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import openal;
+
 import alc.context;
 import gsl;
 import numeric;
+
 #else
+
+#include "AL/efx.h"
+
 #include "alc/context.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"

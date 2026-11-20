@@ -1,8 +1,7 @@
 
 #include "config.h"
 
-#include "AL/al.h"
-#include "AL/efx.h"
+#include <string_view>
 
 #include "effects.h"
 
@@ -11,7 +10,9 @@
 import eax.call;
 import eax.effect;
 import eax.exception;
+
 #else
+
 #include "al/eax/call.hpp"
 #include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"
@@ -19,9 +20,16 @@ import eax.exception;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import openal;
+
 import alc.context;
 import numeric;
+
 #else
+
+#include "AL/al.h"
+#include "AL/efx.h"
+
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif

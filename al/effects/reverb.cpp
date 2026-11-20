@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <span>
+#include <string_view>
 #include <variant>
 
 #include "effects.h"
@@ -16,7 +17,9 @@ import eax.call;
 import eax.effect;
 import eax.exception;
 import eax.validator;
+
 #else
+
 #include "al/eax/call.hpp"
 #include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"

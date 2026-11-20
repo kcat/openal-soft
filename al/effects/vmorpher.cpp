@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include <optional>
+#include <string_view>
 
 #include "effects.h"
 #include "opthelpers.h"
@@ -13,7 +14,9 @@ import eax.call;
 import eax.effect;
 import eax.exception;
 import eax.validator;
+
 #else
+
 #include "al/eax/call.hpp"
 #include "al/eax/effect.hpp"
 #include "al/eax/exception.hpp"

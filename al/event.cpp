@@ -8,7 +8,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <variant>
 
 #include "atomic.h"
@@ -35,6 +34,7 @@ import numeric;
 #include <algorithm>
 #include <exception>
 #include <thread>
+#include <tuple>
 
 #include "AL/al.h"
 #include "AL/alext.h"

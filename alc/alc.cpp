@@ -53,7 +53,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "alc/events.h"
@@ -181,6 +180,7 @@ import eax.effect;
 #include <new>
 #include <source_location>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include "AL/al.h"

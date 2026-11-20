@@ -40,7 +40,6 @@
 #include <optional>
 #include <span>
 #include <string_view>
-#include <tuple>
 
 #include "alc/alconfig.h"
 #include "dlopennote.h"
@@ -144,6 +143,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 #include "alc/backends/exception.hpp"

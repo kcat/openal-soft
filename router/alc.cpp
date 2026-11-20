@@ -11,7 +11,6 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 
 #include "opthelpers.h"
@@ -29,6 +28,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <tuple>
 
 #include "AL/alc.h"
 #include "AL/al.h"

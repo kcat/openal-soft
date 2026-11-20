@@ -6,7 +6,6 @@
 #include <cmath>
 #include <numbers>
 #include <ranges>
-#include <tuple>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -18,6 +17,7 @@ import numeric;
 
 #include <algorithm>
 #include <stdexcept>
+#include <tuple>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

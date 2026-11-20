@@ -27,7 +27,6 @@
 #include <mutex>
 #include <ranges>
 #include <span>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -76,6 +75,7 @@ import zudl;
 #include <algorithm>
 #include <new>
 #include <stdexcept>
+#include <tuple>
 
 #include "AL/al.h"
 #include "AL/alext.h"

@@ -14,6 +14,7 @@ module;
 #include <stdexcept>
 #include <streambuf>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 export module common.std;
@@ -328,6 +329,21 @@ export namespace std {
         using std::this_thread::sleep_until;
     }
 
+    /* tuple */
+    using std::tuple;
+    using std::tuple_size;
+    using std::tuple_element;
+    using std::tuple_size;
+    using std::tuple_element;
+    using std::uses_allocator;
+    using std::ignore;
+    using std::make_tuple;
+    using std::tie;
+    using std::forward_as_tuple;
+    using std::tuple_cat;
+    using std::apply;
+    using std::make_from_tuple;
+
     /* utility */
     using std::cmp_equal;
     using std::cmp_not_equal;
@@ -376,8 +392,9 @@ export namespace std {
     using std::overflow_error;
     using std::underflow_error;
 
-    using std::swap;
+    using std::get;
     using std::hash;
+    using std::swap;
     using std::operator>>;
     using std::operator<<;
     using std::operator==;

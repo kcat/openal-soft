@@ -40,7 +40,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -92,6 +91,7 @@ import zudl;
 #include <algorithm>
 #include <new>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include "AL/al.h"

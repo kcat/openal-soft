@@ -1067,56 +1067,55 @@ auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
  * existing ones. Based on what PipeWire does, though simplified.
  */
 constexpr auto inv_sqrt2f = gsl::narrow_cast<float>(1.0 / std::numbers::sqrt2);
-constexpr auto FrontStereo3dB = std::array{
-    InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f},
-    InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}
-};
-constexpr auto FrontStereo6dB = std::array{
-    InputRemixMap::TargetMix{FrontLeft, 0.5f},
-    InputRemixMap::TargetMix{FrontRight, 0.5f}
-};
-constexpr auto SideStereo3dB = std::array{
-    InputRemixMap::TargetMix{SideLeft, inv_sqrt2f},
-    InputRemixMap::TargetMix{SideRight, inv_sqrt2f}
-};
-constexpr auto BackStereo3dB = std::array{
-    InputRemixMap::TargetMix{BackLeft, inv_sqrt2f},
-    InputRemixMap::TargetMix{BackRight, inv_sqrt2f}
-};
-constexpr auto FrontLeft3dB = std::array{InputRemixMap::TargetMix{FrontLeft, inv_sqrt2f}};
-constexpr auto FrontRight3dB = std::array{InputRemixMap::TargetMix{FrontRight, inv_sqrt2f}};
-constexpr auto SideLeft0dB = std::array{InputRemixMap::TargetMix{SideLeft, 1.0f}};
-constexpr auto SideRight0dB = std::array{InputRemixMap::TargetMix{SideRight, 1.0f}};
-constexpr auto BackLeft0dB = std::array{InputRemixMap::TargetMix{BackLeft, 1.0f}};
-constexpr auto BackRight0dB = std::array{InputRemixMap::TargetMix{BackRight, 1.0f}};
-constexpr auto BackCenter3dB = std::array{InputRemixMap::TargetMix{BackCenter, inv_sqrt2f}};
+constexpr auto FrontStereo3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=FrontLeft, .mix=inv_sqrt2f}, {.channel=FrontRight, .mix=inv_sqrt2f}});
+constexpr auto FrontStereo6dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=FrontLeft, .mix=0.5f}, {.channel=FrontRight, .mix=0.5f}});
+constexpr auto SideStereo3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=SideLeft, .mix=inv_sqrt2f}, {.channel=SideRight, .mix=inv_sqrt2f}});
+constexpr auto BackStereo3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=BackLeft, .mix=inv_sqrt2f}, {.channel=BackRight, .mix=inv_sqrt2f}});
+constexpr auto FrontLeft3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=FrontLeft, .mix=inv_sqrt2f}});
+constexpr auto FrontRight3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=FrontRight, .mix=inv_sqrt2f}});
+constexpr auto SideLeft0dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=SideLeft, .mix=1.0f}});
+constexpr auto SideRight0dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=SideRight, .mix=1.0f}});
+constexpr auto BackLeft0dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=BackLeft, .mix=1.0f}});
+constexpr auto BackRight0dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=BackRight, .mix=1.0f}});
+constexpr auto BackCenter3dB = std::to_array<InputRemixMap::TargetMix>({
+    {.channel=BackCenter, .mix=inv_sqrt2f}});
 
-constexpr auto StereoDownmix = std::array{
-    InputRemixMap{FrontCenter, FrontStereo3dB},
-    InputRemixMap{SideLeft,    FrontLeft3dB},
-    InputRemixMap{SideRight,   FrontRight3dB},
-    InputRemixMap{BackLeft,    FrontLeft3dB},
-    InputRemixMap{BackRight,   FrontRight3dB},
-    InputRemixMap{BackCenter,  FrontStereo6dB},
-};
-constexpr auto QuadDownmix = std::array{
-    InputRemixMap{FrontCenter, FrontStereo3dB},
-    InputRemixMap{SideLeft,    BackLeft0dB},
-    InputRemixMap{SideRight,   BackRight0dB},
-    InputRemixMap{BackCenter,  BackStereo3dB},
-};
-constexpr auto X51Downmix = std::array{
-    InputRemixMap{BackLeft,   SideLeft0dB},
-    InputRemixMap{BackRight,  SideRight0dB},
-    InputRemixMap{BackCenter, SideStereo3dB},
-};
-constexpr auto X61Downmix = std::array{
-    InputRemixMap{BackLeft,  BackCenter3dB},
-    InputRemixMap{BackRight, BackCenter3dB},
-};
-constexpr auto X71Downmix = std::array{
-    InputRemixMap{BackCenter, BackStereo3dB},
-};
+constexpr auto StereoDownmix = std::to_array<InputRemixMap>({
+    {.channel=FrontCenter, .targets=FrontStereo3dB},
+    {.channel=SideLeft,    .targets=FrontLeft3dB},
+    {.channel=SideRight,   .targets=FrontRight3dB},
+    {.channel=BackLeft,    .targets=FrontLeft3dB},
+    {.channel=BackRight,   .targets=FrontRight3dB},
+    {.channel=BackCenter,  .targets=FrontStereo6dB},
+});
+constexpr auto QuadDownmix = std::to_array<InputRemixMap>({
+    {.channel=FrontCenter, .targets=FrontStereo3dB},
+    {.channel=SideLeft,    .targets=BackLeft0dB},
+    {.channel=SideRight,   .targets=BackRight0dB},
+    {.channel=BackCenter,  .targets=BackStereo3dB},
+});
+constexpr auto X51Downmix = std::to_array<InputRemixMap>({
+    {.channel=BackLeft,   .targets=SideLeft0dB},
+    {.channel=BackRight,  .targets=SideRight0dB},
+    {.channel=BackCenter, .targets=SideStereo3dB},
+});
+constexpr auto X61Downmix = std::to_array<InputRemixMap>({
+    {.channel=BackLeft,  .targets=BackCenter3dB},
+    {.channel=BackRight, .targets=BackCenter3dB},
+});
+constexpr auto X71Downmix = std::to_array<InputRemixMap>({
+    {.channel=BackCenter, .targets=BackStereo3dB},
+});
 
 
 auto CreateDeviceLimiter(al::Device const& device, float const threshold)

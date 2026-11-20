@@ -4641,8 +4641,7 @@ auto al::Source::eax_create_direct_filter_param() const noexcept -> EaxAlLowPass
         if(!(fx_slot_eax.ulFlags&EAXFXSLOTFLAGS_ENVIRONMENT))
             continue;
 
-        if(mEaxPrimaryFxSlotId.has_value() && *mEaxPrimaryFxSlotId == fx_slot.eax_get_index()
-            && source.mOcclusion.lOcclusion != 0)
+        if(mEaxPrimaryFxSlotId == fx_slot.eax_get_index() && source.mOcclusion.lOcclusion != 0)
         {
             gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
                 source.mOcclusion.flOcclusionDirectRatio, source.mOcclusion.flOcclusionLFRatio);
@@ -4699,7 +4698,7 @@ auto al::Source::eax_create_room_filter_param(const al::EffectSlot &fx_slot,
             + gsl::narrow_cast<float>(send.mExclusion.lExclusion);
 
         const auto &source = mEax.source;
-        if(mEaxPrimaryFxSlotId.has_value() && *mEaxPrimaryFxSlotId == fx_slot.eax_get_index())
+        if(mEaxPrimaryFxSlotId == fx_slot.eax_get_index())
         {
             gain_mb += eax_calculate_dst_occlusion_mb(source.mOcclusion.lOcclusion,
                 source.mOcclusion.flOcclusionRoomRatio, source.mOcclusion.flOcclusionLFRatio);

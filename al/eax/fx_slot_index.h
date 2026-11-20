@@ -24,7 +24,12 @@ public:
     auto set(AL_GUID const& guid) -> void;
 
     [[nodiscard]] friend constexpr
-    auto operator==(EaxFxSlotIndex const&, EaxFxSlotIndex const&) noexcept -> bool = default;
+    auto operator==(EaxFxSlotIndex const& lhs, auto const& rhs) noexcept -> bool
+    { return static_cast<std::optional<EaxFxSlotIndexValue> const&>(lhs) == rhs; }
+
+    [[nodiscard]] friend constexpr
+    auto operator<=>(EaxFxSlotIndex const& lhs, auto const& rhs) noexcept
+    { return static_cast<std::optional<EaxFxSlotIndexValue> const&>(lhs) <=> rhs; }
 };
 
 #endif // !EAX_FX_SLOT_INDEX_INCLUDED

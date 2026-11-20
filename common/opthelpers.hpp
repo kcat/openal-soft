@@ -1,6 +1,7 @@
 #ifndef OPTHELPERS_HPP
 #define OPTHELPERS_HPP
 
+#include <concepts>
 #include <functional>
 #include <type_traits>
 
@@ -28,7 +29,7 @@ struct dereference {
     { return *std::forward<T>(p); }
 };
 
-template<typename F>
+template<std::invocable F>
 struct assign_result {
     using result_t = std::invoke_result_t<F>;
     F&& mCallable;

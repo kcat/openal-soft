@@ -20,11 +20,15 @@
 
 #include "config.h"
 
-#include "alc/backends/base.hpp"
+#include <vector>
+
+#include "alc/events.h"
 
 #if HAVE_CXXMODULES
+import backends.base;
 import core.device;
 #else
+#include "alc/backends/base.hpp"
 #include "core/device.h"
 #endif
 

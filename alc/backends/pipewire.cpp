@@ -38,7 +38,7 @@
 #include <string_view>
 
 #include "alc/alconfig.h"
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "pragmadefs.h"
@@ -122,6 +122,7 @@ DIAGNOSTIC_POP;
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -145,6 +146,7 @@ import zstring_view;
 #include <tuple>
 #include <utility>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

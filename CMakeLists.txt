@@ -1128,7 +1128,7 @@ endif()
 
 set(BACKENDS "")
 if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS alc/backends/exception.cppm)
+    list(APPEND CORE_MODS alc/backends/base.cppm alc/backends/exception.cppm)
 else()
     list(APPEND ALC_HDRS alc/backends/exception.hpp)
 endif()

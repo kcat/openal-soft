@@ -24,12 +24,13 @@
 #include <chrono>
 #include <cstdint>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "althrd_setname.h"
 
 #if HAVE_CXXMODULES
 import common.std;
 
+import backends.base;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -39,6 +40,7 @@ import core.helpers;
 #include <exception>
 #include <thread>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "core/device.h"
 #include "core/helpers.hpp"

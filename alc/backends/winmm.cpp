@@ -31,7 +31,7 @@
 #include <ranges>
 #include <vector>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "althrd_setname.h"
 #include "vector.h"
 
@@ -43,6 +43,7 @@
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -59,6 +60,7 @@ import zudl;
 #include <string>
 #include <thread>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alstring.h"

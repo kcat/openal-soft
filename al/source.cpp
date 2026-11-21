@@ -41,7 +41,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "alc/backends/base.hpp"
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
@@ -73,6 +72,7 @@ import openal;
 import al.iface;
 import alc.context;
 import alc.device;
+import backends.base;
 import core.except;
 import core.logging;
 import core.voice;
@@ -103,6 +103,7 @@ import zudl;
 #include "al/debug.h"
 #include "al/filter.h"
 #include "al/source.h"
+#include "alc/backends/base.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"

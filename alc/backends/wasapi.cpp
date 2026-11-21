@@ -59,7 +59,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"
@@ -93,6 +93,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.logging;
@@ -112,6 +113,7 @@ import zudl;
 #include <string>
 #include <thread>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "alformat.hpp"

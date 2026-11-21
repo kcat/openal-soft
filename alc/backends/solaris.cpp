@@ -39,7 +39,7 @@
 #include <functional>
 
 #include "alc/alconfig.h"
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "althrd_setname.h"
 
 #include <sys/audioio.h>
@@ -48,6 +48,7 @@
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -58,6 +59,7 @@ import gsl;
 
 #include <thread>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"

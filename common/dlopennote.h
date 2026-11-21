@@ -29,6 +29,7 @@
 #if defined(__ELF__) && defined(HAVE_DLOPEN_NOTES)
 
 /* Modified here to avoid unsafe C arrays and use proper C++ types. */
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstdint>

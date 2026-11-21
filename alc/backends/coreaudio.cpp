@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "core/converter.h"
 
 #include <AudioUnit/AudioUnit.h>
@@ -49,6 +49,7 @@
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.logging;
@@ -63,6 +64,7 @@ import zudl;
 #include <optional>
 #include <string>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alstring.h"

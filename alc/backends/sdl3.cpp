@@ -28,7 +28,7 @@
 #include <span>
 #include <string_view>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -46,6 +46,7 @@ DIAGNOSTIC_POP;
 #if HAVE_CXXMODULES
 import common.std;
 
+import backends.base;
 import backends.exception;
 import core.device;
 import core.logging;
@@ -62,6 +63,7 @@ import zudl;
 #include <string>
 #include <utility>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

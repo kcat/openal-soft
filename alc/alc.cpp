@@ -56,7 +56,6 @@
 #include "alconfig.h"
 #include "alu.h"
 #include "atomic.h"
-#include "backends/base.hpp"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
@@ -97,6 +96,7 @@ import al.iface;
 import alc.context;
 import alc.device;
 import alstring;
+import backends.base;
 import backends.exception;
 import core.effectslot;
 import core.except;
@@ -140,6 +140,7 @@ import eax.effect;
 #include "al/effect.h"
 #include "al/filter.h"
 #include "al/source.h"
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"

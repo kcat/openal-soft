@@ -35,7 +35,7 @@
 #include <span>
 #include <vector>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "dynload.h"
@@ -77,6 +77,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0
 import common.std;
 
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.helpers;
@@ -94,6 +95,7 @@ import zstring_view;
 #include <string>
 #include <thread>
 
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"

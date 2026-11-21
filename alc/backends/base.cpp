@@ -1,19 +1,24 @@
 
 #include "config.h"
 
-#include "base.hpp"
-
 #include <atomic>
+#include <chrono>
 
 #include "core/mixparams.hpp"
 
 #if HAVE_CXXMODULES
-import backends.exception;
 import common.std;
+
+import backends.base;
+import backends.exception;
 import core.device;
 import format;
+
 #else
+
 #include <utility>
+
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "core/device.h"

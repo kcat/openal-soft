@@ -3,19 +3,23 @@
 
 #include <cstring>
 
-#include "alc/backends/base.hpp"
+#include "alc/events.h"
 
 #include "oboe/Oboe.h"
 
 #if HAVE_CXXMODULES
 import alstring;
+import backends.base;
 import backends.exception;
 import core.device;
 import core.logging;
 import gsl;
 import numeric;
 import ringbuffer;
+
 #else
+
+#include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "core/device.h"

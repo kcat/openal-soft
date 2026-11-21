@@ -10,16 +10,17 @@
 #include <variant>
 
 #include "atomic.h"
-#include "backends/base.hpp"
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "flexarray.h"
 
 #if HAVE_CXXMODULES
 import common.std;
+import openal;
 
 import al.iface;
 import alc.device;
+import backends.base;
 import core.logging;
 import gsl;
 import numeric;
@@ -29,9 +30,12 @@ import zudl;
 
 #include <algorithm>
 
+#include "AL/alc.h"
+
 #include "al/buffer.h"
 #include "al/effect.h"
 #include "al/filter.h"
+#include "alc/backends/base.hpp"
 #include "alc/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

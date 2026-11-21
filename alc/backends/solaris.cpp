@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "solaris.hpp"
-
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -41,6 +39,7 @@
 #include <functional>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 
 #include <sys/audioio.h>
@@ -291,6 +290,10 @@ auto SolarisBackendFactory::init() -> bool
 
 auto SolarisBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback; }
+
+auto SolarisBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto SolarisBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

@@ -1,9 +1,9 @@
 
 #include "config.h"
 
-#include "oboe.hpp"
-
 #include <cstring>
+
+#include "alc/backends/base.hpp"
 
 #include "oboe/Oboe.h"
 
@@ -374,6 +374,10 @@ auto OboeBackendFactory::init() -> bool { return true; }
 
 auto OboeBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback || type == BackendType::Capture; }
+
+auto OboeBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto OboeBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

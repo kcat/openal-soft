@@ -20,12 +20,11 @@
 
 #include "config.h"
 
-#include "null.hpp"
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 
 #if HAVE_CXXMODULES
@@ -157,6 +156,10 @@ auto NullBackendFactory::init() -> bool
 
 auto NullBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback); }
+
+auto NullBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto NullBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "oss.hpp"
-
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/ioctl.h>
@@ -41,6 +39,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 
 #include <sys/soundcard.h>
@@ -653,6 +652,10 @@ auto OSSBackendFactory::init() -> bool
 
 auto OSSBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
+
+auto OSSBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto OSSBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "alsa.hpp"
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -32,6 +30,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
@@ -1220,8 +1219,12 @@ auto AlsaBackendFactory::init() -> bool
     return true;
 }
 
-bool AlsaBackendFactory::querySupport(BackendType type)
+auto AlsaBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
+
+auto AlsaBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto AlsaBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {

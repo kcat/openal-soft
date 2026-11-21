@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "wave.hpp"
-
 #include <array>
 #include <atomic>
 #include <bit>
@@ -35,6 +33,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "core/ambidefs.h"
 
@@ -516,6 +515,10 @@ auto WaveBackendFactory::init() -> bool
 
 auto WaveBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback; }
+
+auto WaveBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto WaveBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

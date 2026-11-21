@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "coreaudio.hpp"
-
 #include <cinttypes>
 #include <cmath>
 #include <functional>
@@ -34,6 +32,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "alc/backends/base.hpp"
 #include "core/converter.h"
 
 #include <AudioUnit/AudioUnit.h>

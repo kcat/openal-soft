@@ -20,12 +20,11 @@
 
 #include "config.h"
 
-#include "sdl2.hpp"
-
 #include <cstdlib>
 #include <cstring>
 #include <string_view>
 
+#include "alc/backends/base.hpp"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH
@@ -256,6 +255,10 @@ auto SDL2BackendFactory::init() -> bool
 
 auto SDL2BackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback; }
+
+auto SDL2BackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto SDL2BackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

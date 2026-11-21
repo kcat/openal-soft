@@ -1,6 +1,8 @@
 #ifndef ALC_BACKENDS_BASE_HPP
 #define ALC_BACKENDS_BASE_HPP
 
+#include "config_backends.h"
+
 #include <chrono>
 #include <cstddef>
 #include <memory>
@@ -77,5 +79,70 @@ struct BackendFactory {
 
     virtual auto createBackend(DeviceBase &device, BackendType type) -> BackendPtr = 0;
 };
+
+#define DECL_BACKEND(Name) struct Name final : BackendFactory {               \
+    auto init() -> bool override;                                             \
+    auto querySupport(BackendType type) -> bool override;                     \
+    auto queryEventSupport(alc::EventType eventType, BackendType type)        \
+        -> alc::EventSupport override;                                        \
+    auto enumerate(BackendType type) -> std::vector<std::string> override;    \
+    auto createBackend(DeviceBase &device, BackendType type) -> BackendPtr    \
+        override;                                                             \
+    static auto getFactory() -> BackendFactory&;                              \
+};
+DECL_BACKEND(NullBackendFactory)
+DECL_BACKEND(LoopbackBackendFactory)
+#if HAVE_PIPEWIRE
+DECL_BACKEND(PipeWireBackendFactory)
+#endif
+#if HAVE_JACK
+DECL_BACKEND(JackBackendFactory)
+#endif
+#if HAVE_PULSEAUDIO
+DECL_BACKEND(PulseBackendFactory)
+#endif
+#if HAVE_ALSA
+DECL_BACKEND(AlsaBackendFactory)
+#endif
+#if HAVE_WASAPI
+DECL_BACKEND(WasapiBackendFactory)
+#endif
+#if HAVE_COREAUDIO
+DECL_BACKEND(CoreAudioBackendFactory)
+#endif
+#if HAVE_OPENSL
+DECL_BACKEND(OSLBackendFactory)
+#endif
+#if HAVE_OBOE
+DECL_BACKEND(OboeBackendFactory)
+#endif
+#if HAVE_SOLARIS
+DECL_BACKEND(SolarisBackendFactory)
+#endif
+#if HAVE_SNDIO
+DECL_BACKEND(SndIOBackendFactory)
+#endif
+#if HAVE_OSS
+DECL_BACKEND(OSSBackendFactory)
+#endif
+#if HAVE_DSOUND
+DECL_BACKEND(DSoundBackendFactory)
+#endif
+#if HAVE_WINMM
+DECL_BACKEND(WinMMBackendFactory)
+#endif
+#if HAVE_PORTAUDIO
+DECL_BACKEND(PortBackendFactory)
+#endif
+#if HAVE_SDL3
+DECL_BACKEND(SDL3BackendFactory)
+#endif
+#if HAVE_SDL2
+DECL_BACKEND(SDL2BackendFactory)
+#endif
+#if HAVE_WAVE
+DECL_BACKEND(WaveBackendFactory)
+#endif
+#undef DECL_BACKEND
 
 #endif /* ALC_BACKENDS_BASE_HPP */

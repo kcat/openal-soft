@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "sdl3.hpp"
-
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -30,6 +28,7 @@
 #include <span>
 #include <string_view>
 
+#include "alc/backends/base.hpp"
 #include "pragmadefs.h"
 
 DIAGNOSTIC_PUSH

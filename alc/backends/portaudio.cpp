@@ -20,13 +20,12 @@
 
 #include "config.h"
 
-#include "portaudio.hpp"
-
 #include <cmath>
 #include <cstring>
 #include <utility>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "dlopennote.h"
 #include "dynload.h"
 
@@ -526,6 +525,10 @@ auto PortBackendFactory::init() -> bool
 
 auto PortBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
+
+auto PortBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto PortBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

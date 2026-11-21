@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "loopback.hpp"
+#include "alc/backends/base.hpp"
 
 #if HAVE_CXXMODULES
 import core.device;
@@ -66,6 +66,10 @@ auto LoopbackBackendFactory::init() -> bool
 
 auto LoopbackBackendFactory::querySupport(BackendType) -> bool
 { return true; }
+
+auto LoopbackBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto LoopbackBackendFactory::enumerate(BackendType) -> std::vector<std::string>
 { return {}; }

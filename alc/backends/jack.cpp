@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "jack.hpp"
-
 #include <array>
 #include <bit>
 #include <cstring>
@@ -31,6 +29,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
@@ -715,8 +714,12 @@ bool JackBackendFactory::init()
     return true;
 }
 
-bool JackBackendFactory::querySupport(BackendType type)
+auto JackBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback); }
+
+auto JackBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto JackBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {

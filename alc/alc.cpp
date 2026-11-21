@@ -56,6 +56,7 @@
 #include "alconfig.h"
 #include "alu.h"
 #include "atomic.h"
+#include "backends/base.hpp"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
@@ -75,61 +76,6 @@
 #include "flexarray.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
-
-#include "backends/base.hpp"
-#include "backends/null.hpp"
-#include "backends/loopback.hpp"
-#if HAVE_PIPEWIRE
-#include "backends/pipewire.hpp"
-#endif
-#if HAVE_JACK
-#include "backends/jack.hpp"
-#endif
-#if HAVE_PULSEAUDIO
-#include "backends/pulseaudio.hpp"
-#endif
-#if HAVE_ALSA
-#include "backends/alsa.hpp"
-#endif
-#if HAVE_WASAPI
-#include "backends/wasapi.hpp"
-#endif
-#if HAVE_COREAUDIO
-#include "backends/coreaudio.hpp"
-#endif
-#if HAVE_OPENSL
-#include "backends/opensl.hpp"
-#endif
-#if HAVE_OBOE
-#include "backends/oboe.hpp"
-#endif
-#if HAVE_SOLARIS
-#include "backends/solaris.hpp"
-#endif
-#if HAVE_SNDIO
-#include "backends/sndio.hpp"
-#endif
-#if HAVE_OSS
-#include "backends/oss.hpp"
-#endif
-#if HAVE_DSOUND
-#include "backends/dsound.hpp"
-#endif
-#if HAVE_WINMM
-#include "backends/winmm.hpp"
-#endif
-#if HAVE_PORTAUDIO
-#include "backends/portaudio.hpp"
-#endif
-#if HAVE_SDL3
-#include "backends/sdl3.hpp"
-#endif
-#if HAVE_SDL2
-#include "backends/sdl2.hpp"
-#endif
-#if HAVE_WAVE
-#include "backends/wave.hpp"
-#endif
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -275,61 +221,61 @@ struct BackendInfo {
     BackendFactory& (*getFactory)();
 };
 
-std::array BackendList{
+constinit auto BackendList = std::to_array<BackendInfo>({
 #if HAVE_PIPEWIRE
-    BackendInfo{"pipewire"sv, PipeWireBackendFactory::getFactory},
+    {"pipewire"sv, PipeWireBackendFactory::getFactory},
 #endif
 #if HAVE_PULSEAUDIO
-    BackendInfo{"pulse"sv, PulseBackendFactory::getFactory},
+    {"pulse"sv, PulseBackendFactory::getFactory},
 #endif
 #if HAVE_WASAPI
-    BackendInfo{"wasapi"sv, WasapiBackendFactory::getFactory},
+    {"wasapi"sv, WasapiBackendFactory::getFactory},
 #endif
 #if HAVE_COREAUDIO
-    BackendInfo{"core"sv, CoreAudioBackendFactory::getFactory},
+    {"core"sv, CoreAudioBackendFactory::getFactory},
 #endif
 #if HAVE_OBOE
-    BackendInfo{"oboe"sv, OboeBackendFactory::getFactory},
+    {"oboe"sv, OboeBackendFactory::getFactory},
 #endif
 #if HAVE_OPENSL
-    BackendInfo{"opensl"sv, OSLBackendFactory::getFactory},
+    {"opensl"sv, OSLBackendFactory::getFactory},
 #endif
 #if HAVE_ALSA
-    BackendInfo{"alsa"sv, AlsaBackendFactory::getFactory},
+    {"alsa"sv, AlsaBackendFactory::getFactory},
 #endif
 #if HAVE_SOLARIS
-    BackendInfo{"solaris"sv, SolarisBackendFactory::getFactory},
+    {"solaris"sv, SolarisBackendFactory::getFactory},
 #endif
 #if HAVE_SNDIO
-    BackendInfo{"sndio"sv, SndIOBackendFactory::getFactory},
+    {"sndio"sv, SndIOBackendFactory::getFactory},
 #endif
 #if HAVE_OSS
-    BackendInfo{"oss"sv, OSSBackendFactory::getFactory},
+    {"oss"sv, OSSBackendFactory::getFactory},
 #endif
 #if HAVE_DSOUND
-    BackendInfo{"dsound"sv, DSoundBackendFactory::getFactory},
+    {"dsound"sv, DSoundBackendFactory::getFactory},
 #endif
 #if HAVE_WINMM
-    BackendInfo{"winmm"sv, WinMMBackendFactory::getFactory},
+    {"winmm"sv, WinMMBackendFactory::getFactory},
 #endif
 #if HAVE_PORTAUDIO
-    BackendInfo{"port"sv, PortBackendFactory::getFactory},
+    {"port"sv, PortBackendFactory::getFactory},
 #endif
 #if HAVE_SDL3
-    BackendInfo{"sdl3"sv, SDL3BackendFactory::getFactory},
+    {"sdl3"sv, SDL3BackendFactory::getFactory},
 #endif
 #if HAVE_SDL2
-    BackendInfo{"sdl2"sv, SDL2BackendFactory::getFactory},
+    {"sdl2"sv, SDL2BackendFactory::getFactory},
 #endif
 #if HAVE_JACK
-    BackendInfo{"jack"sv, JackBackendFactory::getFactory},
+    {"jack"sv, JackBackendFactory::getFactory},
 #endif
 
-    BackendInfo{"null"sv, NullBackendFactory::getFactory},
+    {"null"sv, NullBackendFactory::getFactory},
 #if HAVE_WAVE
-    BackendInfo{"wave"sv, WaveBackendFactory::getFactory},
+    {"wave"sv, WaveBackendFactory::getFactory},
 #endif
-};
+});
 
 
 [[nodiscard]] constexpr auto GetNoErrorString() noexcept { return "No Error"; }

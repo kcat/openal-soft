@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "pipewire.hpp"
-
 #include <array>
 #include <atomic>
 #include <bit>
@@ -40,6 +38,7 @@
 #include <string_view>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "dlopennote.h"
 #include "dynload.h"
 #include "pragmadefs.h"

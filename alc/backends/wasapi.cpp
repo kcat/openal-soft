@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "wasapi.hpp"
-
 #include <windows.h>
 
 #include <cstdio>
@@ -61,6 +59,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "core/converter.h"

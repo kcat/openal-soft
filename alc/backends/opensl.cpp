@@ -21,8 +21,6 @@
 
 #include "config.h"
 
-#include "opensl.hpp"
-
 #include <jni.h>
 
 #include <array>
@@ -34,6 +32,7 @@
 #include <ranges>
 #include <functional>
 
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "dlopennote.h"
 #include "dynload.h"
@@ -986,6 +985,10 @@ auto OSLBackendFactory::init() -> bool
 
 auto OSLBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
+
+auto OSLBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto OSLBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

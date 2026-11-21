@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "dsound.hpp"
-
 #include <windows.h>
 
 #include <cguid.h>
@@ -37,6 +35,7 @@
 #include <span>
 #include <vector>
 
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "comptr.h"
 #include "dynload.h"
@@ -803,8 +802,12 @@ auto DSoundBackendFactory::init() -> bool
     return true;
 }
 
-bool DSoundBackendFactory::querySupport(BackendType type)
+auto DSoundBackendFactory::querySupport(BackendType const type) -> bool
 { return (type == BackendType::Playback || type == BackendType::Capture); }
+
+auto DSoundBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto DSoundBackendFactory::enumerate(BackendType type) -> std::vector<std::string>
 {

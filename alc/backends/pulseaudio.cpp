@@ -21,8 +21,6 @@
 
 #include "config.h"
 
-#include "pulseaudio.hpp"
-
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -36,6 +34,7 @@
 #include <vector>
 
 #include "alc/alconfig.h"
+#include "alc/backends/base.hpp"
 #include "dlopennote.h"
 #include "dynload.h"
 

@@ -20,8 +20,6 @@
 
 #include "config.h"
 
-#include "winmm.hpp"
-
 #include <windows.h>
 #include <mmsystem.h>
 #include <mmreg.h>
@@ -33,6 +31,7 @@
 #include <ranges>
 #include <vector>
 
+#include "alc/backends/base.hpp"
 #include "althrd_setname.h"
 #include "vector.h"
 
@@ -592,6 +591,10 @@ auto WinMMBackendFactory::init() -> bool
 
 auto WinMMBackendFactory::querySupport(BackendType const type) -> bool
 { return type == BackendType::Playback || type == BackendType::Capture; }
+
+auto WinMMBackendFactory::queryEventSupport(alc::EventType const event, BackendType const type)
+    -> alc::EventSupport
+{ return BackendFactory::queryEventSupport(event, type); }
 
 auto WinMMBackendFactory::enumerate(BackendType const type) -> std::vector<std::string>
 {

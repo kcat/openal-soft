@@ -164,7 +164,9 @@ auto GetProcBinary() -> fs::path const&
         }
         resultpath = std::wstring_view{exePath};
 #endif
-#endif
+
+#else
+
 #ifdef __FreeBSD__
         auto pathlen = size_t{};
         auto mib = std::array<int,4>{{CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1}};
@@ -223,6 +225,7 @@ auto GetProcBinary() -> fs::path const&
                 }
             }
         }
+#endif
 #endif
 
         resultpath.make_preferred();

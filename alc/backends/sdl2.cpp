@@ -24,7 +24,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <string>
 #include <string_view>
 
 #include "pragmadefs.h"
@@ -35,6 +34,8 @@ std_pragma("GCC diagnostic ignored \"-Wold-style-cast\"")
 DIAGNOSTIC_POP
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import backends.exception;
 import core.device;
 import gsl;
@@ -42,6 +43,8 @@ import numeric;
 import zudl;
 
 #else
+
+#include <string>
 
 #include "alc/backends/exception.hpp"
 #include "core/device.h"

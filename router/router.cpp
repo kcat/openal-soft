@@ -9,7 +9,6 @@
 #include <cstring>
 #include <iostream>
 #include <ranges>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -29,6 +28,7 @@ import opthelpers;
 #else
 
 #include <algorithm>
+#include <string>
 
 #include "AL/alc.h"
 

@@ -24,7 +24,6 @@
 
 #include <cmath>
 #include <cstring>
-#include <string>
 #include <utility>
 
 #include "alc/alconfig.h"
@@ -34,6 +33,8 @@
 #include <portaudio.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import backends.exception;
 import core.device;
 import core.logging;
@@ -44,6 +45,8 @@ import zstring_view;
 import zudl;
 
 #else
+
+#include <string>
 
 #include "alc/backends/exception.hpp"
 #include "alformatzsv.hpp"

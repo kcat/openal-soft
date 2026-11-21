@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
-#include <string>
 
 #include "alc/alu.h"
 #include "alc/inprogext.h"
@@ -62,6 +61,7 @@ import zudl;
 
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "AL/al.h"

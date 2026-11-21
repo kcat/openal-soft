@@ -37,7 +37,6 @@
 #include <cstdlib>
 #include <limits>
 #include <ranges>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -67,6 +66,7 @@ import numeric;
 #include <algorithm>
 #include <istream>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "alformatpath.hpp"

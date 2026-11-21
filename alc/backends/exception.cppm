@@ -1,11 +1,10 @@
 module;
 
-#include <string>
-
 #include "opthelper_macros.hpp"
 
 export module backends.exception;
 
+import common.std;
 import core.except;
 import format;
 import opthelpers;

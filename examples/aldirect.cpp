@@ -34,7 +34,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <string>
 #include <variant>
 #include <vector>
 
@@ -56,6 +55,7 @@ import zstring_view;
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 #include "AL/al.h"

@@ -8,7 +8,6 @@
 #include <functional>
 #include <ranges>
 #include <span>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
@@ -37,6 +36,7 @@ import zudl;
 #include <mutex>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "AL/al.h"

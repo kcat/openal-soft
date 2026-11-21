@@ -21,12 +21,14 @@
 #include <bit>
 #include <cctype>
 #include <ranges>
-#include <string>
 
 #if HAVE_CXXMODULES
 import common.std;
+
 #else
+
 #include <algorithm>
+#include <string>
 #endif
 
 namespace {

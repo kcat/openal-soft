@@ -35,7 +35,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -60,6 +59,7 @@ import gsl;
 #include <algorithm>
 #include <iostream>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "alstring.h"

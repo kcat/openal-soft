@@ -49,7 +49,6 @@
 #include <numbers>
 #include <ranges>
 #include <span>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -180,6 +179,7 @@ import eax.effect;
 #include <optional>
 #include <source_location>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <utility>
 

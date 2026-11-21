@@ -31,7 +31,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <ranges>
-#include <string>
 #include <vector>
 
 #include "althrd_setname.h"
@@ -58,6 +57,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <string>
 #include <thread>
 
 #include "alc/backends/exception.hpp"

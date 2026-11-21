@@ -1,12 +1,13 @@
 module;
 
 #include <exception>
-#include <string>
 #include <type_traits>
 
 #include "opthelper_macros.hpp"
 
 export module core.except;
+
+import common.std;
 
 export namespace al {
 

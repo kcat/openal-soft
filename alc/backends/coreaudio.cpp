@@ -30,7 +30,6 @@
 #include <span>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include <string.h>
 #include <unistd.h>
 #include <vector>
@@ -63,6 +62,7 @@ import zudl;
 #else
 
 #include <optional>
+#include <string>
 
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"

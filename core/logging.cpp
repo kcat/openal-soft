@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <string>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -28,6 +27,7 @@ import zstring_view;
 #include <iostream>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "alformat.hpp"

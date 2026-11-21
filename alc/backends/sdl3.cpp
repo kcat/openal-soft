@@ -28,7 +28,6 @@
 #include <cstring>
 #include <ranges>
 #include <span>
-#include <string>
 #include <string_view>
 
 #include "pragmadefs.h"
@@ -61,6 +60,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <string>
 #include <utility>
 
 #include "alc/backends/exception.hpp"

@@ -65,7 +65,6 @@ int my_main(int, char**);
 #ifdef __cplusplus
 #include <cstdlib>
 #include <span>
-#include <string>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -79,6 +78,7 @@ import zudl;
 
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 
 #include "fmt/base.h"
 #include "fmt/ostream.h"

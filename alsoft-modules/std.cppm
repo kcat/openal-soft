@@ -15,6 +15,7 @@ module;
 #include <sstream>
 #include <stdexcept>
 #include <streambuf>
+#include <string>
 #include <thread>
 #include <tuple>
 #include <utility>
@@ -346,6 +347,31 @@ export namespace std {
     using std::nullopt;
     using std::make_optional;
 
+    /* string */
+    using std::char_traits;
+    using std::basic_string;
+    using std::string;
+    using std::u8string;
+    using std::u16string;
+    using std::u32string;
+    using std::wstring;
+    using std::getline;
+    using std::stoi;
+    using std::stol;
+    using std::stoll;
+    using std::stoul;
+    using std::stoull;
+    using std::stof;
+    using std::stod;
+    using std::stold;
+    using std::to_string;
+    using std::to_wstring;
+    inline namespace literals {
+        inline namespace string_literals {
+            using std::literals::string_literals::operator ""s;
+        }
+    }
+
     /* thread */
     using std::thread;
     using std::jthread;
@@ -433,9 +459,13 @@ export namespace std {
     using std::empty;
     using std::data;
 
+    using std::erase;
+    using std::erase_if;
     using std::get;
     using std::hash;
     using std::swap;
+
+    using std::operator+;
     using std::operator>>;
     using std::operator<<;
     using std::operator==;

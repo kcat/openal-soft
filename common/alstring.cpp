@@ -2,14 +2,19 @@
 #include "config.h"
 
 #if defined(_WIN32)
-#include <string>
 #include <string_view>
 #include <windows.h>
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import gsl;
+
 #else
+
+#include <string>
+
 #include "alstring.h"
 #include "gsl/gsl"
 #endif

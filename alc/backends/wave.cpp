@@ -44,9 +44,9 @@ import common.std;
 import alstring;
 import backends.exception;
 import core.device;
+import core.logging;
 import filesystem;
 import gsl;
-import logging;
 import zudl;
 
 #else

@@ -32,7 +32,7 @@ import common.std;
 import openal;
 
 import alc.context;
-import logging;
+import core.logging;
 import gsl;
 import numeric;
 import zudl;

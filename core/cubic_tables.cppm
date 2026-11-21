@@ -1,8 +1,8 @@
 module;
 
-#include "cubic_tables.hpp"
+#include "core/cubic_tables.hpp"
 
-export module cubic_tables;
+export module core.cubic_tables;
 
 export {
     using ::gGaussianFilter;

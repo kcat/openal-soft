@@ -58,8 +58,8 @@ import common.std;
 
 import alstring;
 import core.helpers;
+import core.logging;
 import filesystem;
-import logging;
 import numeric;
 import zstring_view;
 

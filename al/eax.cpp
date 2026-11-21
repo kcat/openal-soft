@@ -17,9 +17,9 @@ import openal;
 #include "openal_apientry.h"
 
 import alc.context;
+import core.logging;
 import eax.exception;
 import gsl;
-import logging;
 
 #else
 

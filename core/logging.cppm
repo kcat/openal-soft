@@ -6,7 +6,7 @@ module;
 #include "opthelper_macros.hpp"
 
 
-export module logging;
+export module core.logging;
 
 import filesystem;
 import format;

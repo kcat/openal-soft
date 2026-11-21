@@ -67,9 +67,9 @@ import alc.device;
 import alstring;
 import core.ambi_utils;
 import core.effectslot;
+import core.hrtfstore;
+import core.logging;
 import gsl;
-import hrtfstore;
-import logging;
 import numeric;
 import zudl;
 #include "gsl_macros.hpp"

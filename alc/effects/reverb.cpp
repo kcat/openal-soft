@@ -45,9 +45,9 @@ import common.std;
 
 import core.ambi_utils;
 import core.context;
+import core.cubic_tables;
 import core.device;
 import core.effectslot;
-import cubic_tables;
 import gsl;
 import numeric;
 import zudl;

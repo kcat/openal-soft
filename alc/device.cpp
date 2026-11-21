@@ -20,8 +20,8 @@ import common.std;
 
 import al.iface;
 import alc.device;
+import core.logging;
 import gsl;
-import logging;
 import numeric;
 import zudl;
 

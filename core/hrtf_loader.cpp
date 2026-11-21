@@ -14,11 +14,11 @@
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.hrtfstore;
+import core.logging;
 import fmtlib;
 import format;
 import gsl;
-import hrtfstore;
-import logging;
 import numeric;
 import opthelpers;
 import zudl;

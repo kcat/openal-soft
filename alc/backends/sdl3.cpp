@@ -50,9 +50,9 @@ import common.std;
 
 import backends.exception;
 import core.device;
+import core.logging;
 import format;
 import gsl;
-import logging;
 import numeric;
 import opthelpers;
 import ringbuffer;

@@ -71,18 +71,18 @@
 import common.std;
 
 import alstring;
-import bsinc_tables;
 import cemath;
 import core.ambi_utils;
+import core.bsinc_tables;
 import core.buffer_storage;
 import core.context;
+import core.cubic_tables;
 import core.device;
 import core.effectslot;
+import core.hrtfstore;
 import core.voice;
-import cubic_tables;
 import format;
 import gsl;
-import hrtfstore;
 import numeric;
 import opthelpers;
 import zudl;

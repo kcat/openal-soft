@@ -56,11 +56,11 @@ import common.std;
 
 import alstring;
 import core.helpers;
+import core.logging;
 import filesystem;
 import fmtlib;
 import gsl;
 import inout_ptr;
-import logging;
 import numeric;
 
 #else

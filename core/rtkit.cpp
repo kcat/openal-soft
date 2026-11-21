@@ -54,8 +54,8 @@
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.logging;
 import gsl;
-import logging;
 import zstring_view;
 
 #else

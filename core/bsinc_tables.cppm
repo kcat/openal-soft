@@ -1,8 +1,8 @@
 module;
 
-#include "bsinc_tables.hpp"
+#include "core/bsinc_tables.hpp"
 
-export module bsinc_tables;
+export module core.bsinc_tables;
 
 export {
     using ::BSincTable;

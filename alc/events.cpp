@@ -11,9 +11,9 @@
 
 #if HAVE_CXXMODULES
 import alc.device;
+import core.logging;
 import format;
 import gsl;
-import logging;
 import numeric;
 import opthelpers;
 

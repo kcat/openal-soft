@@ -18,10 +18,10 @@
 import common.std;
 
 import alstring;
+import core.logging;
 import filesystem;
 import fmtlib;
 import format;
-import logging;
 import numeric;
 import zstring_view;
 

@@ -10,9 +10,11 @@
 #if HAVE_CXXMODULES
 import core.context;
 import core.device;
+import core.hrtfstore;
 import gsl;
-import hrtfstore;
+
 #else
+
 #include "core/context.h"
 #include "core/device.h"
 #include "core/hrtfstore.hpp"

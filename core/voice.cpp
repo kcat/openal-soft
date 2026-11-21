@@ -35,9 +35,9 @@ import alstring;
 import core.ambi_utils;
 import core.buffer_storage;
 import core.device;
+import core.logging;
 import core.voice;
 import gsl;
-import logging;
 import numeric;
 import zudl;
 #include "gsl_macros.hpp"

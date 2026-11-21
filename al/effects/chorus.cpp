@@ -28,9 +28,9 @@ import common.std;
 import openal;
 
 import alc.context;
+import core.logging;
 import format;
 import gsl;
-import logging;
 import numeric;
 import opthelpers;
 

@@ -11,8 +11,8 @@
 import alstring;
 import backends.exception;
 import core.device;
+import core.logging;
 import gsl;
-import logging;
 import numeric;
 import ringbuffer;
 #else

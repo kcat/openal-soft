@@ -9,7 +9,7 @@ module;
 #include "mixer/hrtfdefs.h"
 #include "opthelper_macros.hpp"
 
-export module hrtfstore;
+export module core.hrtfstore;
 
 import filesystem;
 import gsl;

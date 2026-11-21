@@ -44,9 +44,9 @@ import openal;
 
 import al.iface;
 import alc.context;
+import core.logging;
 import format;
 import gsl;
-import logging;
 import numeric;
 import zudl;
 

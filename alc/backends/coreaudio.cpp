@@ -52,9 +52,9 @@
 import alstring;
 import backends.exception;
 import core.device;
+import core.logging;
 import format;
 import gsl;
-import logging;
 import numeric;
 import ringbuffer;
 import zudl;

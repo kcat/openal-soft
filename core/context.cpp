@@ -15,8 +15,8 @@
 import common.std;
 
 import core.device;
+import core.logging;
 import gsl;
-import logging;
 import zudl;
 #include "gsl_macros.hpp"
 

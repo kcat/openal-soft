@@ -40,8 +40,8 @@ import common.std;
 import backends.exception;
 import core.device;
 import core.helpers;
+import core.logging;
 import gsl;
-import logging;
 import ringbuffer;
 
 #else

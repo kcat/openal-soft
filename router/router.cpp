@@ -1,10 +1,6 @@
 
 #include "config.h"
 
-#if !HAVE_CXXMODULES
-#include "router.h"
-#endif
-
 #include <windows.h>
 #include <winnt.h>
 
@@ -17,8 +13,6 @@
 #include <string_view>
 #include <vector>
 
-#include "envutils.hpp"
-
 #include "version.h"
 
 #if HAVE_CXXMODULES
@@ -27,6 +21,7 @@ import openal.alc;
 
 import alsoft.router;
 import alstring;
+import envutils;
 import filesystem;
 import gsl;
 import opthelpers;
@@ -38,9 +33,11 @@ import opthelpers;
 #include "AL/alc.h"
 
 #include "alstring.h"
+#include "envutils.hpp"
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "opthelpers.hpp"
+#include "router.h"
 #endif
 
 namespace {

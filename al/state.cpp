@@ -36,7 +36,6 @@
 #include "atomic.h"
 #include "core/mixer/defs.h"
 #include "direct_defs.h"
-#include "envutils.hpp"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
@@ -53,6 +52,7 @@ import alc.context;
 import alc.device;
 import core.logging;
 import core.voice;
+import envutils;
 import format;
 import gsl;
 import numeric;
@@ -75,6 +75,7 @@ import zudl;
 #include "alformat.hpp"
 #include "core/logging.h"
 #include "core/voice.h"
+#include "envutils.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

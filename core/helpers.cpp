@@ -51,14 +51,13 @@
 #endif
 #endif
 
-#include "envutils.hpp"
-
 #if HAVE_CXXMODULES
 import common.std;
 
 import alstring;
 import core.helpers;
 import core.logging;
+import envutils;
 import filesystem;
 import numeric;
 import zstring_view;
@@ -73,6 +72,7 @@ import zstring_view;
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "envutils.hpp"
 #include "filesystem.h"
 #include "numeric.hpp"
 #include "zstring_view.hpp"

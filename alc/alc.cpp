@@ -74,7 +74,6 @@
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
 #include "effects/base.h"
-#include "envutils.hpp"
 #include "export_list.h"
 #include "flexarray.h"
 #include "inprogext.h"
@@ -160,6 +159,7 @@ import core.effectslot;
 import core.helpers;
 import core.logging;
 import core.voice;
+import envutils;
 import fmtlib;
 import format;
 import gsl;
@@ -203,6 +203,7 @@ import eax.effect;
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "core/voice.h"
+#include "envutils.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"

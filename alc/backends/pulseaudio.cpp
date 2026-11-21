@@ -40,7 +40,6 @@
 #include "alc/alconfig.h"
 #include "dlopennote.h"
 #include "dynload.h"
-#include "envutils.hpp"
 
 #include <pulse/pulseaudio.h>
 
@@ -50,6 +49,7 @@ import common.std;
 import backends.exception;
 import core.device;
 import core.logging;
+import envutils;
 import format;
 import gsl;
 import numeric;
@@ -68,6 +68,7 @@ import zudl;
 #include "alformatzsv.hpp"
 #include "core/device.h"
 #include "core/logging.h"
+#include "envutils.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

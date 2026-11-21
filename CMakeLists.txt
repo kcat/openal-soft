@@ -754,7 +754,6 @@ set(COMMON_HDRS
     common/disable_alloc.hpp
     common/dynload.h
     common/dlopennote.h
-    common/envutils.hpp
     common/expected.hpp
     common/filesystem.h
     common/flexarray.h
@@ -797,6 +796,7 @@ if(HAVE_CXXMODULES)
         common/alstring.cppm
         common/bit.cppm
         common/cemath.cppm
+        common/envutils.cppm
         common/filesystem.cppm
         common/hann_window.cppm
         common/inout_ptr.cppm
@@ -812,6 +812,7 @@ else()
     list(APPEND COMMON_HDRS
         common/alformatpath.hpp
         common/alformatzsv.hpp
+        common/envutils.hpp
         common/hann_window.hpp
         common/phase_shifter.hpp
     )

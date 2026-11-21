@@ -41,8 +41,6 @@
 #include <string_view>
 #include <vector>
 
-#include "envutils.hpp"
-
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
 #include <winrt/Windows.Storage.h>
@@ -57,6 +55,7 @@ import common.std;
 import alstring;
 import core.helpers;
 import core.logging;
+import envutils;
 import filesystem;
 import fmtlib;
 import gsl;
@@ -74,6 +73,7 @@ import numeric;
 #include "alstring.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "envutils.hpp"
 #include "filesystem.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

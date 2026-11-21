@@ -6,8 +6,6 @@
 #include <optional>
 #include <string>
 
-#include "envutils.hpp"
-
 #if defined(_WIN32)
 #include <windows.h>
 #elif defined(__ANDROID__)
@@ -19,6 +17,7 @@ import common.std;
 
 import alstring;
 import core.logging;
+import envutils;
 import filesystem;
 import fmtlib;
 import format;
@@ -35,6 +34,7 @@ import zstring_view;
 #include "alformatpath.hpp"
 #include "alformatzsv.hpp"
 #include "alstring.h"
+#include "envutils.hpp"
 #include "filesystem.h"
 #include "fmt/std.h"
 #include "logging.h"

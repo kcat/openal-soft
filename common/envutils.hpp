@@ -4,13 +4,13 @@
 #include <optional>
 #include <string>
 
-#include "gsl/zstring"
+#include "zstring_view.hpp"
 
 namespace al {
 
-auto getenv(gsl::czstring envname) -> std::optional<std::string>;
+auto getenv(al::zstring_view envname) -> std::optional<std::string>;
 #ifdef _WIN32
-auto getenv(gsl::cwzstring envname) -> std::optional<std::wstring>;
+auto getenv(al::wzstring_view envname) -> std::optional<std::wstring>;
 #endif
 
 } /* namespace al */

@@ -63,7 +63,6 @@
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
 #include "core/front_stablizer.h"
-#include "envutils.hpp"
 #include "intrusive_ptr.h"
 #include "vecmat.h"
 
@@ -81,6 +80,7 @@ import core.device;
 import core.effectslot;
 import core.hrtfstore;
 import core.voice;
+import envutils;
 import format;
 import gsl;
 import numeric;
@@ -106,6 +106,7 @@ import zudl;
 #include "core/effectslot.h"
 #include "core/hrtfstore.hpp"
 #include "core/voice.h"
+#include "envutils.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

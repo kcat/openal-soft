@@ -47,7 +47,6 @@
 #include <limits>
 #include <memory>
 #include <numbers>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <string>
@@ -178,6 +177,7 @@ import eax.effect;
 #include <exception>
 #include <mutex>
 #include <new>
+#include <optional>
 #include <source_location>
 #include <stdexcept>
 #include <tuple>

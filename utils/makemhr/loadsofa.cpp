@@ -33,7 +33,6 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -55,6 +54,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <optional>
 #include <thread>
 
 #include "fmt/base.h"

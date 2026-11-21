@@ -9,6 +9,7 @@ module;
 #include <istream>
 #include <mutex>
 #include <new>
+#include <optional>
 #include <ostream>
 #include <source_location>
 #include <sstream>
@@ -338,6 +339,13 @@ export namespace std {
     using std::hardware_constructive_interference_size;
     using std::launder;
 
+    /* optional */
+    using std::optional;
+    using std::bad_optional_access;
+    using std::nullopt_t;
+    using std::nullopt;
+    using std::make_optional;
+
     /* thread */
     using std::thread;
     using std::jthread;
@@ -412,12 +420,30 @@ export namespace std {
     using std::overflow_error;
     using std::underflow_error;
 
+    using std::begin;
+    using std::cbegin;
+    using std::end;
+    using std::cend;
+    using std::rbegin;
+    using std::crbegin;
+    using std::rend;
+    using std::crend;
+    using std::size;
+    using std::ssize;
+    using std::empty;
+    using std::data;
+
     using std::get;
     using std::hash;
     using std::swap;
     using std::operator>>;
     using std::operator<<;
     using std::operator==;
+    using std::operator!=;
+    using std::operator<;
+    using std::operator<=;
+    using std::operator>;
+    using std::operator>=;
     using std::operator<=>;
 
 }

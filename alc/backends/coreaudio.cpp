@@ -26,7 +26,6 @@
 #include <cmath>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <stdio.h>
@@ -49,6 +48,8 @@
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import alstring;
 import backends.exception;
 import core.device;
@@ -60,6 +61,8 @@ import ringbuffer;
 import zudl;
 
 #else
+
+#include <optional>
 
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"

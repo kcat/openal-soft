@@ -26,7 +26,6 @@
 #include <cstdint>
 #include <limits>
 #include <numbers>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <variant>
@@ -58,6 +57,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <optional>
 
 #include "core/ambi_utils.hpp"
 #include "core/context.h"

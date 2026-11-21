@@ -28,7 +28,6 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <functional>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -52,6 +51,7 @@ import zudl;
 
 #else
 
+#include <optional>
 #include <utility>
 
 #include "AL/al.h"

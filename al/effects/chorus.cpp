@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <optional>
 #include <string_view>
 
 #include "effects.h"
@@ -36,6 +35,7 @@ import opthelpers;
 
 #else
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"

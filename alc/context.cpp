@@ -4,7 +4,6 @@
 #include <array>
 #include <bit>
 #include <functional>
-#include <optional>
 #include <string_view>
 
 #include "alc/alu.h"
@@ -46,6 +45,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <optional>
 #include <utility>
 
 #include "al/auxeffectslot.h"

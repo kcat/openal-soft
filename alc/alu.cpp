@@ -35,7 +35,6 @@
 #include <limits>
 #include <memory>
 #include <numbers>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -91,6 +90,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <optional>
 #include <utility>
 
 #include "alformat.hpp"

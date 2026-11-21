@@ -28,7 +28,6 @@
 #include <iterator>
 #include <memory>
 #include <numbers>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <string>
@@ -77,6 +76,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <optional>
 #include <utility>
 
 #include "AL/alext.h"

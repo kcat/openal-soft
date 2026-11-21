@@ -9,7 +9,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <optional>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -45,6 +44,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <optional>
 #include <utility>
 
 #include "alstring.h"

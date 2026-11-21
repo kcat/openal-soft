@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "almalloc.h"
-#include "core/except.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
@@ -42,6 +41,7 @@ import openal;
 import al.iface;
 import alc.context;
 import alc.device;
+import core.except;
 import core.logging;
 import gsl;
 import numeric;
@@ -60,6 +60,7 @@ import zudl;
 #include "al/filter.h"
 #include "alc/context.hpp"
 #include "alc/device.h"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

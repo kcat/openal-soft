@@ -62,7 +62,6 @@
 #include "core/bs2b.h"
 #include "core/cpu_caps.h"
 #include "core/effects/base.h"
-#include "core/except.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
@@ -155,6 +154,7 @@ import alc.device;
 import alstring;
 import backends.exception;
 import core.effectslot;
+import core.except;
 import core.helpers;
 import core.logging;
 import core.voice;
@@ -200,6 +200,7 @@ import eax.effect;
 #include "alformat.hpp"
 #include "alstring.h"
 #include "core/effectslot.h"
+#include "core/except.hpp"
 #include "core/helpers.hpp"
 #include "core/logging.h"
 #include "core/voice.h"

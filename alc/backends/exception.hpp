@@ -2,7 +2,7 @@
 #define ALC_BACKENDS_EXCEPTION_HPP
 
 #include "alformat.hpp"
-#include "core/except.h"
+#include "core/except.hpp"
 #include "opthelpers.hpp"
 
 

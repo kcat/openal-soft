@@ -1,9 +1,12 @@
 module;
 
-#include "core/except.h"
+#include <string>
+
+#include "opthelper_macros.hpp"
 
 export module backends.exception;
 
+import core.except;
 import format;
 import opthelpers;
 

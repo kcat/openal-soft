@@ -34,7 +34,6 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
-#include "core/except.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
 #include "flexarray.h"
@@ -62,6 +61,7 @@ import openal;
 import al.iface;
 import alc.context;
 import alc.device;
+import core.except;
 import core.logging;
 import format;
 import gsl;
@@ -87,6 +87,7 @@ import zudl;
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

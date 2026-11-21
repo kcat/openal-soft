@@ -12,7 +12,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "core/except.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
@@ -23,6 +22,7 @@ import openal;
 import al.iface;
 import alc.context;
 import alc.device;
+import core.except;
 import core.logging;
 import format;
 import gsl;
@@ -52,6 +52,7 @@ import zudl;
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "alformatzsv.hpp"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

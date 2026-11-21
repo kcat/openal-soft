@@ -11,7 +11,6 @@
 #include "atomic.h"
 #include "core/async_event.h"
 #include "core/effects/base.h"
-#include "core/except.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 
@@ -22,6 +21,7 @@ import openal;
 
 import al.iface;
 import alc.context;
+import core.except;
 import core.logging;
 import format;
 import gsl;
@@ -42,6 +42,7 @@ import numeric;
 #include "al/event.h"
 #include "alc/context.hpp"
 #include "alformat.hpp"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

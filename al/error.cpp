@@ -32,7 +32,6 @@
 #include <string_view>
 
 #include "alc/alconfig.h"
-#include "core/except.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
@@ -42,6 +41,7 @@ import openal;
 
 import al.iface;
 import alc.context;
+import core.except;
 import core.logging;
 import envutils;
 import format;
@@ -61,6 +61,7 @@ import zudl;
 #include "al/debug.h"
 #include "alc/context.hpp"
 #include "alformat.hpp"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "envutils.hpp"
 #include "gsl/gsl"

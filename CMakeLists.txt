@@ -831,7 +831,6 @@ set(CORE_SRCS
     core/devformat.cpp
     core/device.cpp
     core/effectslot.cpp
-    core/except.cpp
     core/filters/biquad.cpp
     core/filters/nfc.cpp
     core/filters/splitter.cpp
@@ -873,7 +872,6 @@ set(CORE_HDRS
     core/effects/base.h
     core/effectslot.h
     core/encoderbase.hpp
-    core/except.h
     core/filters/biquad.h
     core/filters/nfc.h
     core/filters/splitter.h
@@ -902,12 +900,14 @@ if(HAVE_CXXMODULES)
         core/cubic_tables.cppm
         core/device.cppm
         core/effectslot.cppm
+        core/except.cppm
         core/helpers.cppm
         core/hrtfstore.cppm
         core/logging.cppm
         core/voice.cppm)
 else()
     list(APPEND CORE_HDRS
+        core/except.hpp
         core/helpers.hpp
         core/hrtfstore.hpp
         core/logging.h)

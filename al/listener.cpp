@@ -24,7 +24,6 @@
 #include <ranges>
 #include <span>
 
-#include "core/except.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
@@ -34,6 +33,7 @@ import openal;
 
 import al.iface;
 import alc.context;
+import core.except;
 import core.logging;
 import gsl;
 import numeric;
@@ -49,6 +49,7 @@ import zudl;
 
 #include "al/listener.h"
 #include "alc/context.hpp"
+#include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

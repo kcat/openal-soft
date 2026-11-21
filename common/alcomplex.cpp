@@ -3,7 +3,6 @@
 
 #include "alcomplex.h"
 
-#include <array>
 #include <bit>
 #include <cstdint>
 #include <numbers>
@@ -20,6 +19,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "bit.hpp"
 #include "gsl/gsl"

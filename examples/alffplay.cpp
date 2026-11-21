@@ -4,7 +4,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <chrono>
@@ -77,6 +76,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <string>
 #include <thread>

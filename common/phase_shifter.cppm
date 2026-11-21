@@ -8,7 +8,6 @@ module;
 #include <xmmintrin.h>
 #endif
 
-#include <array>
 #include <cstddef>
 #include <numbers>
 #include <ranges>

@@ -1,6 +1,5 @@
 module;
 
-#include <array>
 #include <cmath>
 #include <numbers>
 #include <ranges>

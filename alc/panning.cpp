@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <charconv>
 #include <chrono>
 #include <cmath>
@@ -75,6 +74,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>

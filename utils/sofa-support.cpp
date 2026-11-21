@@ -26,7 +26,6 @@
 
 #include "sofa-support.h"
 
-#include <array>
 #include <cmath>
 #include <cstdio>
 #include <span>
@@ -42,6 +41,7 @@ import fmtlib;
 #else
 
 #include <algorithm>
+#include <array>
 #include <utility>
 
 #include "fmt/base.h"

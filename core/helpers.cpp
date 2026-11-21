@@ -63,6 +63,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <optional>
 #include <string>

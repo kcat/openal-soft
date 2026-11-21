@@ -3,7 +3,6 @@
 #include <mmintrin.h>
 #include <xmmintrin.h>
 
-#include <array>
 #include <cmath>
 #include <limits>
 #include <span>
@@ -27,6 +26,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "gsl/gsl"
 #include "zudl.hpp"

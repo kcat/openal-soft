@@ -2,7 +2,6 @@
 #include "config.h"
 #include "config_simd.h"
 
-#include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
@@ -44,6 +43,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <utility>
 

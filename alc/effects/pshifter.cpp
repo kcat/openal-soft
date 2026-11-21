@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <bit>
 #include <cmath>
 #include <complex>
@@ -53,6 +52,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "core/ambi_utils.hpp"
 #include "core/device.h"

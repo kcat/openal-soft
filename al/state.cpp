@@ -22,7 +22,6 @@
 
 #include "version.h"
 
-#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -59,6 +58,7 @@ import zudl;
 
 #else
 
+#include <array>
 #include <optional>
 #include <stdexcept>
 #include <string>

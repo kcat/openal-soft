@@ -2,11 +2,15 @@
 
 #include "fx_slots.h"
 
+#if HAVE_CXXMODULES
+import common.std;
+
+import eax.exception;
+
+#else
+
 #include <array>
 
-#if HAVE_CXXMODULES
-import eax.exception;
-#else
 #include "al/eax/exception.hpp"
 #endif
 

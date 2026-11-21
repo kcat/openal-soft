@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <numbers>
@@ -47,6 +46,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "core/context.h"
 #include "core/device.h"

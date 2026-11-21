@@ -24,7 +24,6 @@
 #include <emmintrin.h>
 #include <smmintrin.h>
 
-#include <array>
 #include <cstddef>
 #include <span>
 #include <variant>
@@ -43,6 +42,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

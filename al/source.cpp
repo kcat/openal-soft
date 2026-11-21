@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <bitset>
@@ -86,6 +85,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <new>
 #include <optional>

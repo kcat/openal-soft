@@ -23,7 +23,6 @@
 
 #include <jni.h>
 
-#include <array>
 #include <bit>
 #include <cstdlib>
 #include <cstring>
@@ -57,6 +56,7 @@ import zudl;
 
 #else
 
+#include <array>
 #include <mutex>
 #include <new>
 #include <thread>

@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <cmath>
@@ -140,6 +139,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <optional>
 #include <thread>

@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <cerrno>
@@ -52,6 +51,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <exception>
 #include <ostream>
 #include <thread>

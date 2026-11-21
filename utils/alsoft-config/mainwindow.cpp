@@ -5,7 +5,6 @@
 
 #include "mainwindow.h"
 
-#include <array>
 #include <cmath>
 #include <memory>
 #include <ranges>
@@ -25,12 +24,18 @@
 #endif
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import gsl;
 import numeric;
 #ifdef _WIN32
 import inout_ptr;
 #endif
+
 #else
+
+#include <array>
+
 #include "gsl/gsl"
 #include "numeric.hpp"
 #ifdef _WIN32

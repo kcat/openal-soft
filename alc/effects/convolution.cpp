@@ -2,7 +2,6 @@
 #include "config.h"
 #include "config_simd.h"
 
-#include <array>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -51,6 +50,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "core/ambi_utils.hpp"
 #include "core/buffer_storage.h"

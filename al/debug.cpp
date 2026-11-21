@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
@@ -33,6 +32,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <optional>
 #include <stdexcept>

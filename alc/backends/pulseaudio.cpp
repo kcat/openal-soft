@@ -21,7 +21,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -58,6 +57,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <optional>
 #include <string>

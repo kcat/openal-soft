@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cmath>
 #include <span>
 #include <string_view>
@@ -41,6 +40,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "AL/al.h"
 #include "AL/efx.h"

@@ -4,7 +4,6 @@
 #include <windows.h>
 #include <winnt.h>
 
-#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -28,6 +27,7 @@ import opthelpers;
 #else
 
 #include <algorithm>
+#include <array>
 #include <string>
 
 #include "AL/alc.h"

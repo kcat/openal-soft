@@ -28,7 +28,6 @@
 #include <windows.h>
 #endif
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <bitset>
@@ -119,6 +118,7 @@ import eax.effect;
 #else
 
 #include <algorithm>
+#include <array>
 #include <exception>
 #include <mutex>
 #include <new>

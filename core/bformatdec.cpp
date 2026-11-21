@@ -3,7 +3,6 @@
 
 #include "bformatdec.h"
 
-#include <array>
 #include <cmath>
 #include <ranges>
 
@@ -20,6 +19,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "zudl.hpp"
 #endif

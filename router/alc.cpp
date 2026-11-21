@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -25,6 +24,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <optional>
 #include <tuple>

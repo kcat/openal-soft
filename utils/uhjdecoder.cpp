@@ -24,7 +24,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <bit>
 #include <cerrno>
 #include <cstddef>
@@ -59,6 +58,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "alformatzsv.hpp"
 #include "alstring.h"

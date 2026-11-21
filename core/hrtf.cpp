@@ -3,7 +3,6 @@
 
 #include "hrtf.h"
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -44,6 +43,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <istream>
 #include <mutex>
 #include <optional>

@@ -23,7 +23,6 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
-#include <array>
 #include <span>
 #include <variant>
 
@@ -41,6 +40,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

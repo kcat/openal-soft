@@ -24,7 +24,6 @@
 #include <mmsystem.h>
 #include <mmreg.h>
 
-#include <array>
 #include <atomic>
 #include <bit>
 #include <cstddef>
@@ -58,6 +57,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include <thread>
 

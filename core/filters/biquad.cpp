@@ -3,7 +3,6 @@
 
 #include "biquad.h"
 
-#include <array>
 #include <bit>
 #include <cmath>
 #include <cstddef>
@@ -21,6 +20,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

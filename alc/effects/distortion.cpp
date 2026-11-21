@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -50,6 +49,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <optional>
 
 #include "core/ambi_utils.hpp"

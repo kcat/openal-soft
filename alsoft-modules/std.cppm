@@ -1,6 +1,7 @@
 module;
 
 #include <algorithm>
+#include <array>
 #include <compare>
 #include <exception>
 #include <fstream>
@@ -214,6 +215,10 @@ export namespace std {
         using std::ranges::next_permutation;
         using std::ranges::prev_permutation;
     }
+
+    /* array */
+    using std::array;
+    using std::to_array;
 
     /* compare */
     using std::three_way_comparable;

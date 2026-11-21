@@ -26,7 +26,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cstdio>
 #include <memory>
 #include <ranges>
@@ -49,6 +48,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 
 #include "AL/alc.h"

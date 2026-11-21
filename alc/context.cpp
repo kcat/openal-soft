@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <bit>
 #include <functional>
 #include <string_view>
@@ -46,6 +45,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <utility>
 

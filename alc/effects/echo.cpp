@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <bit>
 #include <cmath>
 #include <span>
@@ -47,6 +46,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "core/context.h"
 #include "core/device.h"

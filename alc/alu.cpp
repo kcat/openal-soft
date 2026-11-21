@@ -23,7 +23,6 @@
 
 #include "alu.h"
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -89,6 +88,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>

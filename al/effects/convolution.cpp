@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <array>
 #include <cmath>
 #include <span>
 
@@ -19,6 +18,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <array>
 
 #include "AL/al.h"
 

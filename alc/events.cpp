@@ -9,6 +9,7 @@
 #include "bitset.hpp"
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 
 import alc.device;
@@ -20,6 +21,8 @@ import numeric;
 import opthelpers;
 
 #else
+
+#include <optional>
 
 #include "AL/alc.h"
 #include "AL/al.h"

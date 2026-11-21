@@ -73,7 +73,8 @@ jobs:
             name: "macOS-Release",
             os: macos-15,
             cmake_opts: "-DALSOFT_REQUIRE_COREAUDIO=ON \
-              -DALSOFT_TESTS=ON",
+              -DALSOFT_TESTS=ON \
+              \"-DCMAKE_OSX_ARCHITECTURES=arm64\"",
             build_type: "Release"
           }
         - {
@@ -220,9 +221,25 @@ jobs:
         mkdir archive
         cp ${{github.workspace}}/build/libopenal.so archive/
 
+    - name: Set up Linux artifacts
+      if: ${{ contains(matrix.config.name, 'Linux') }}
+      shell: bash
+      run: |
+        cd build
+        mkdir archive
+        cp libopenal.so* archive/
+
+    - name: Set up macOS artifacts
+      if: ${{ matrix.config.name == 'macOS-Release' }}
+      shell: bash
+      run: |
+        cd build
+        mkdir archive
+        cp libopenal.*dylib archive/
+
     - name: Upload build as a workflow artifact
-      uses: actions/upload-artifact@v7
-      if: ${{ contains(matrix.config.name, 'Win') || contains(matrix.config.name, 'Android') }}
+      uses: actions/upload-artifact@v4
+      if: ${{ contains(matrix.config.name, 'Win') || contains(matrix.config.name, 'Android') || contains(matrix.config.name, 'Linux') || matrix.config.name == 'macOS-Release' }}
       with:
         name: soft_oal-${{matrix.config.name}}
         path: build/archive
@@ -246,11 +263,27 @@ jobs:
         pattern: "*-Win??-Release"
         github-token: "${{secrets.GITHUB_TOKEN}}"
 
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4.1.7
+      with:
+        path: "build"
+        pattern: "*-Linux-Release"
+        github-token: "${{secrets.GITHUB_TOKEN}}"
+
+    - name: Download macOS artifacts
+      uses: actions/download-artifact@v4.1.7
+      with:
+        path: "build"
+        pattern: "*-macOS-Release"
+        github-token: "${{secrets.GITHUB_TOKEN}}"
+
     - name: Set up build folders
       run: |
         mkdir -p build/release/OpenALSoft/Documentation
         mkdir -p build/release/OpenALSoft/Win32
         mkdir -p build/release/OpenALSoft/Win64
+        mkdir -p build/release/OpenALSoft/Linux
+        mkdir -p build/release/OpenALSoft/MacOS
         echo "${{github.repository}}" >>                                                                              "build/release/OpenALSoft/Documentation/Version.txt"
         echo "v${{needs.build.outputs.CommitTag}}-${{needs.build.outputs.CommitHashShort}} ${{github.ref_name}}" >>   "build/release/OpenALSoft/Documentation/Version.txt"
         echo "Commit #${{needs.build.outputs.CommitCount}}" >>                                                        "build/release/OpenALSoft/Documentation/Version.txt"
@@ -266,6 +299,8 @@ jobs:
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/logging/log.cmd         -o "build/release/OpenALSoft/Win64/log.cmd"
         cp "build/soft_oal-Win32-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win32/OpenAL32.dll"
         cp "build/soft_oal-Win64-Release/soft_oal.dll"                                                                "build/release/OpenALSoft/Win64/OpenAL32.dll"
+        cp build/soft_oal-Linux-Release/libopenal.so*                                                                 "build/release/OpenALSoft/Linux/"
+        cp build/soft_oal-macOS-Release/libopenal.*dylib                                                               "build/release/OpenALSoft/MacOS/"
         cp -r "build/release/OpenALSoft"                                                                              "build/release/OpenALSoft+HRTF"
         cp "build/release/OpenALSoft+HRTF/Win32/alsoft.ini"                                                           "build/release/OpenALSoft+HRTF/Documentation/alsoft.ini"
         curl https://raw.githubusercontent.com/${{github.repository}}/${{github.ref_name}}/configs/HRTF/alsoft.ini -o "build/release/OpenALSoft+HRTF/Win32/alsoft.ini"
@@ -285,3 +320,4 @@ jobs:
         prerelease: true
         title: "OpenAL Soft v${{needs.build.outputs.CommitTag}}-${{needs.build.outputs.CommitHashShort}}"
         files: "build/release/*"
+

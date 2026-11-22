@@ -2,11 +2,20 @@ module;
 
 #include <span>
 
+#if defined(_MSC_VER) && _MSC_VER > 1944 && _MSC_VER <= 1952
+#include <iostream>
+#include <stdexcept>
+#include <utility>
+#define SKIP_STD_MODULE
+#endif
+
 #include "opthelper_macros.hpp"
 
 export module alhelpers;
 
+#ifndef SKIP_STD_MODULE
 import common.std;
+#endif
 import openal;
 import fmtlib;
 import gsl;

@@ -7,10 +7,22 @@ module;
 #include <memory>
 #include <vector>
 
+/* HACK: MSVC 19.52.37029.0 seems to have an internal compiler error after some
+ * updates to the common.std module, while MSVC 19.44.35219.0 is fine. Avoid
+ * using these modules here for the potentially affected versions.
+ */
+#if defined(_MSC_VER) && _MSC_VER > 1944 && _MSC_VER <= 1952
+#include <mutex>
+#include <string>
+#include <utility>
+#define SKIP_STD_MODULE
+#endif
 
 export module alsoft.router;
 
+#ifndef SKIP_STD_MODULE
 import common.std;
+#endif
 import filesystem;
 import fmtlib;
 import openal;

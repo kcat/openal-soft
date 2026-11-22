@@ -45,7 +45,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
 #include <string_view>
@@ -122,6 +121,7 @@ import eax.effect;
 #include <exception>
 #include <mutex>
 #include <new>
+#include <numbers>
 #include <optional>
 #include <source_location>
 #include <stdexcept>

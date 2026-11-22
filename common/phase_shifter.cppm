@@ -9,7 +9,6 @@ module;
 #endif
 
 #include <cstddef>
-#include <numbers>
 #include <ranges>
 #include <span>
 

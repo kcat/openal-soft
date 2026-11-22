@@ -28,7 +28,6 @@
 #include <cmath>
 #include <functional>
 #include <iterator>
-#include <numbers>
 #include <ranges>
 #include <span>
 
@@ -40,6 +39,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <numbers>
 #include <stdexcept>
 
 #include "gsl/gsl"

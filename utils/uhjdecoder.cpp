@@ -31,7 +31,6 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
 #include <system_error>
@@ -59,6 +58,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <numbers>
 
 #include "alformatzsv.hpp"
 #include "alstring.h"

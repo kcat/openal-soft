@@ -4,7 +4,6 @@
 #include "mixer.h"
 
 #include <cmath>
-#include <numbers>
 
 #include "mixer/defs.h"
 #include "mixparams.hpp"
@@ -18,6 +17,7 @@ import core.device;
 #else
 
 #include <algorithm>
+#include <numbers>
 #include <utility>
 
 #include "core/ambi_utils.hpp"

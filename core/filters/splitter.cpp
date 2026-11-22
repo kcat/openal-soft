@@ -5,7 +5,6 @@
 
 #include <cmath>
 #include <limits>
-#include <numbers>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -17,6 +16,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <numbers>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

@@ -5,7 +5,6 @@
 
 #include <bit>
 #include <cstdint>
-#include <numbers>
 #include <ranges>
 
 #if HAVE_CXXMODULES
@@ -20,6 +19,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <numbers>
 
 #include "bit.hpp"
 #include "gsl/gsl"

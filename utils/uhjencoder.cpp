@@ -28,7 +28,6 @@
 #include <cstddef>
 #include <iostream>
 #include <memory>
-#include <numbers>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -55,6 +54,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <numbers>
 
 #include "alformatzsv.hpp"
 #include "alstring.h"

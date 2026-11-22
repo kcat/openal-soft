@@ -1,7 +1,6 @@
 module;
 
 #include <cmath>
-#include <numbers>
 #include <ranges>
 
 export module window.hann;

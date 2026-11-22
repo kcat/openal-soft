@@ -6,7 +6,6 @@
 #include <bit>
 #include <cmath>
 #include <cstddef>
-#include <numbers>
 #include <ranges>
 
 #include "opthelper_macros.hpp"
@@ -21,6 +20,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <numbers>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

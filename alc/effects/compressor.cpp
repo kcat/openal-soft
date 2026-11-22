@@ -32,7 +32,6 @@
 
 #include "config.h"
 
-#include <cmath>
 #include <cstdint>
 #include <ranges>
 #include <span>
@@ -57,6 +56,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 #include "core/device.h"
 #include "core/effectslot.h"

@@ -5,7 +5,6 @@
 
 #include <bit>
 #include <cctype>
-#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <span>
@@ -23,6 +22,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <istream>
 #include <sstream>
 #include <string>

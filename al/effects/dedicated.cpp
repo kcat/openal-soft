@@ -1,17 +1,22 @@
 
 #include "config.h"
 
+#include "effects.h"
+
+#if HAVE_CXXMODULES
+import common.std;
+import openal;
+
+import alc.context;
+import numeric;
+
+#else
+
 #include <cmath>
 
 #include "AL/al.h"
 #include "AL/alext.h"
 
-#include "effects.h"
-
-#if HAVE_CXXMODULES
-import alc.context;
-import numeric;
-#else
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif

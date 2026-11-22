@@ -5,7 +5,6 @@
 
 #include "mainwindow.h"
 
-#include <cmath>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -35,6 +34,7 @@ import inout_ptr;
 #else
 
 #include <array>
+#include <cmath>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

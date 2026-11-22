@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <ranges>
@@ -26,6 +25,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <cmath>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

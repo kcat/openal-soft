@@ -34,7 +34,6 @@
 #include <cctype>
 #include <chrono>
 #include <climits>
-#include <cmath>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
@@ -118,6 +117,7 @@ import eax.effect;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <exception>
 #include <mutex>
 #include <new>

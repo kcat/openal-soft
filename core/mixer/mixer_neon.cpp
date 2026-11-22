@@ -2,7 +2,6 @@
 
 #include <arm_neon.h>
 
-#include <cmath>
 #include <limits>
 #include <span>
 #include <variant>
@@ -27,6 +26,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

@@ -4,7 +4,6 @@
 #include "biquad.h"
 
 #include <bit>
-#include <cmath>
 #include <cstddef>
 #include <ranges>
 
@@ -20,6 +19,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <numbers>
 
 #include "gsl/gsl"

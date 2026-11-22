@@ -3,7 +3,6 @@
 
 #include "bformatdec.h"
 
-#include <cmath>
 #include <ranges>
 
 #include "bufferline.h"

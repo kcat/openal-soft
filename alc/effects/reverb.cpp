@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <bit>
-#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <ranges>
@@ -55,6 +54,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <numbers>
 
 #include "core/ambi_utils.hpp"

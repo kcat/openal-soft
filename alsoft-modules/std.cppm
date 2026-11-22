@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <compare>
 #include <exception>
 #include <fstream>
@@ -220,6 +221,81 @@ export namespace std {
     /* array */
     using std::array;
     using std::to_array;
+
+    /* cmath */
+#define DECL_CMATH_OP(x) using x; using x##f; using x##l;
+    using std::abs;
+    DECL_CMATH_OP(std::fabs)
+    DECL_CMATH_OP(std::fmod)
+    DECL_CMATH_OP(std::remainder)
+    DECL_CMATH_OP(std::remquo)
+    DECL_CMATH_OP(std::fma)
+    DECL_CMATH_OP(std::fmax)
+    DECL_CMATH_OP(std::fmin)
+    DECL_CMATH_OP(std::fdim)
+    DECL_CMATH_OP(std::nan)
+    using std::lerp;
+    DECL_CMATH_OP(std::exp)
+    DECL_CMATH_OP(std::exp2)
+    DECL_CMATH_OP(std::expm1)
+    DECL_CMATH_OP(std::log)
+    DECL_CMATH_OP(std::log10)
+    DECL_CMATH_OP(std::log2)
+    DECL_CMATH_OP(std::log1p)
+    DECL_CMATH_OP(std::pow)
+    DECL_CMATH_OP(std::sqrt)
+    DECL_CMATH_OP(std::cbrt)
+    DECL_CMATH_OP(std::hypot)
+    DECL_CMATH_OP(std::sin)
+    DECL_CMATH_OP(std::cos)
+    DECL_CMATH_OP(std::tan)
+    DECL_CMATH_OP(std::asin)
+    DECL_CMATH_OP(std::acos)
+    DECL_CMATH_OP(std::atan)
+    DECL_CMATH_OP(std::atan2)
+    DECL_CMATH_OP(std::sinh)
+    DECL_CMATH_OP(std::cosh)
+    DECL_CMATH_OP(std::tanh)
+    DECL_CMATH_OP(std::asinh)
+    DECL_CMATH_OP(std::acosh)
+    DECL_CMATH_OP(std::atanh)
+    DECL_CMATH_OP(std::erf)
+    DECL_CMATH_OP(std::erfc)
+    DECL_CMATH_OP(std::tgamma)
+    DECL_CMATH_OP(std::lgamma)
+    DECL_CMATH_OP(std::ceil)
+    DECL_CMATH_OP(std::floor)
+    DECL_CMATH_OP(std::trunc)
+    DECL_CMATH_OP(std::round)
+    DECL_CMATH_OP(std::lround)
+    DECL_CMATH_OP(std::llround)
+    DECL_CMATH_OP(std::nearbyint)
+    DECL_CMATH_OP(std::rint)
+    DECL_CMATH_OP(std::lrint)
+    DECL_CMATH_OP(std::llrint)
+    DECL_CMATH_OP(std::frexp)
+    DECL_CMATH_OP(std::ldexp)
+    DECL_CMATH_OP(std::modf)
+    DECL_CMATH_OP(std::scalbn)
+    DECL_CMATH_OP(std::scalbln)
+    DECL_CMATH_OP(std::ilogb)
+    DECL_CMATH_OP(std::logb)
+    DECL_CMATH_OP(std::nextafter)
+    DECL_CMATH_OP(std::nexttoward)
+    DECL_CMATH_OP(std::copysign)
+#undef DECL_CMATH_OP
+    using std::fpclassify;
+    using std::isfinite;
+    using std::isinf;
+    using std::isnan;
+    using std::isnormal;
+    using std::signbit;
+    using std::isgreater;
+    using std::isgreaterequal;
+    using std::isless;
+    using std::islessequal;
+    using std::islessgreater;
+    using std::isunordered;
 
     /* compare */
     using std::three_way_comparable;

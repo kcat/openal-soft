@@ -7,7 +7,6 @@
 #include <atomic>
 #include <bit>
 #include <chrono>
-#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
@@ -76,6 +75,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <mutex>
 #include <numbers>
 #include <string>

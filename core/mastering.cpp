@@ -3,7 +3,6 @@
 
 #include "mastering.h"
 
-#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -21,6 +20,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <cmath>
 
 #include "numeric.hpp"
 #endif

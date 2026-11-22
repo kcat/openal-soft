@@ -3,7 +3,6 @@
 
 #include "splitter.h"
 
-#include <cmath>
 #include <limits>
 
 #if HAVE_CXXMODULES
@@ -16,6 +15,7 @@ import numeric;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <numbers>
 
 #include "gsl/gsl"

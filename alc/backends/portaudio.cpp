@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -46,6 +45,7 @@ import zudl;
 
 #else
 
+#include <cmath>
 #include <string>
 
 #include "alc/backends/base.hpp"

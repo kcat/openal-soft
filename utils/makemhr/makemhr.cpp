@@ -66,7 +66,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <cmath>
 #include <complex>
 #include <cstdint>
 #include <cstdlib>
@@ -98,6 +97,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numbers>
 #include <thread>

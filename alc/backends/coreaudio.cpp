@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <cinttypes>
-#include <cmath>
 #include <functional>
 #include <memory>
 #include <ranges>
@@ -61,6 +60,7 @@ import zudl;
 
 #else
 
+#include <cmath>
 #include <optional>
 #include <string>
 

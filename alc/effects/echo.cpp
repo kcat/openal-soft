@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <bit>
-#include <cmath>
 #include <span>
 #include <variant>
 #include <vector>
@@ -47,6 +46,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 #include "core/context.h"
 #include "core/device.h"

@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <cmath>
 #include <cstdint>
 #include <ranges>
 #include <span>
@@ -46,6 +45,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <numbers>
 
 #include "core/context.h"

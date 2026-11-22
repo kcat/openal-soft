@@ -3,8 +3,6 @@
 
 #include "mixer.h"
 
-#include <cmath>
-
 #include "mixer/defs.h"
 #include "mixparams.hpp"
 
@@ -17,6 +15,7 @@ import core.device;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <numbers>
 #include <utility>
 

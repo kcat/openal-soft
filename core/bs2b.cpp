@@ -25,7 +25,6 @@
 
 #include "bs2b.h"
 
-#include <cmath>
 #include <functional>
 #include <iterator>
 #include <ranges>
@@ -39,6 +38,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <numbers>
 #include <stdexcept>
 

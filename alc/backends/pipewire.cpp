@@ -22,7 +22,6 @@
 
 #include <atomic>
 #include <bit>
-#include <cmath>
 #include <concepts>
 #include <cstdlib>
 #include <cstdint>
@@ -140,6 +139,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <mutex>
 #include <optional>
 #include <thread>

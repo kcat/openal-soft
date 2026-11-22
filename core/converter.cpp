@@ -5,7 +5,6 @@
 
 #include <bit>
 #include <climits>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -27,6 +26,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <cmath>
 
 #include "core/devfmttraits.hpp"
 #include "gsl/gsl"

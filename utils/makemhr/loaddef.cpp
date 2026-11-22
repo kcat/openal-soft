@@ -27,7 +27,6 @@
 
 #include <bit>
 #include <cctype>
-#include <cmath>
 #include <cstdarg>
 #include <cstdlib>
 #include <iterator>
@@ -57,6 +56,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <optional>
 #include <string>

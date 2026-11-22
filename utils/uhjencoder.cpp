@@ -24,7 +24,6 @@
 
 #include "config.h"
 
-#include <cmath>
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -54,6 +53,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <numbers>
 
 #include "alformatzsv.hpp"

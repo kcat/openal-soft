@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <cmath>
 #include <cstdlib>
 #include <string_view>
 

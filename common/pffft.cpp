@@ -268,60 +268,71 @@ FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 { _MM_TRANSPOSE4_PS(x0, x1, x2, x3); }
 
 /*
- * Generic GCC vector macros
+ * Generic vector macros
  */
-#elif defined(__GNUC__)
+#else
 
-using v4sf [[gnu::vector_size(16), gnu::aligned(16)]] = float;
+using v4sf [[gnu::aligned(16)]] = std::array<float, 4>;
 constexpr auto SimdSize = 4u;
-FORCE_INLINE constexpr auto vzero() noexcept -> v4sf { return v4sf{0.0f, 0.0f, 0.0f, 0.0f}; }
-FORCE_INLINE constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
-FORCE_INLINE constexpr auto vadd(v4sf a, v4sf b) noexcept -> v4sf { return a + b; }
-FORCE_INLINE constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { return a*b + c; }
-FORCE_INLINE constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
-FORCE_INLINE constexpr auto ld_ps1(float a) noexcept -> v4sf { return v4sf{a, a, a, a}; }
+FORCE_INLINE constexpr
+auto vzero() noexcept -> v4sf { return v4sf{0.0f, 0.0f, 0.0f, 0.0f}; }
+FORCE_INLINE constexpr
+auto vmul(v4sf const a, v4sf const b) noexcept -> v4sf
+{ return v4sf{a[0]*b[0], a[1]*b[1], a[2]*b[2], a[3]*b[3]}; }
+FORCE_INLINE constexpr
+auto vadd(v4sf const a, v4sf const b) noexcept -> v4sf
+{ return v4sf{a[0]+b[0], a[1]+b[1], a[2]+b[2], a[3]+b[3]}; }
+FORCE_INLINE constexpr
+auto vmadd(v4sf const a, v4sf const b, v4sf const c) noexcept -> v4sf
+{ return v4sf{a[0]*b[0] + c[0], a[1]*b[1] + c[1], a[2]*b[2] + c[2], a[3]*b[3] + c[3]}; }
+FORCE_INLINE constexpr
+auto vsub(v4sf const a, v4sf const b) noexcept -> v4sf
+{ return v4sf{a[0]-b[0], a[1]-b[1], a[2]-b[2], a[3]-b[3]}; }
+FORCE_INLINE constexpr
+auto ld_ps1(float const a) noexcept -> v4sf { return v4sf{a, a, a, a}; }
 
-FORCE_INLINE constexpr auto vset4(float a, float b, float c, float d) noexcept -> v4sf
+FORCE_INLINE constexpr
+auto vset4(float const a, float const b, float const c, float const d) noexcept -> v4sf
 { return v4sf{a, b, c, d}; }
-FORCE_INLINE constexpr auto vinsert0(v4sf v, float a) noexcept -> v4sf
-{ return v4sf{a, v[1], v[2], v[3]}; }
-FORCE_INLINE auto vextract0(v4sf v) noexcept -> float { return v[0]; }
+FORCE_INLINE constexpr
+auto vinsert0(v4sf const v, float const a) noexcept -> v4sf { return v4sf{a, v[1], v[2], v[3]}; }
+FORCE_INLINE constexpr
+auto vextract0(v4sf const v) noexcept -> float { return v[0]; }
 
-FORCE_INLINE auto unpacklo(v4sf a, v4sf b) noexcept -> v4sf
-{ return v4sf{a[0], b[0], a[1], b[1]}; }
-FORCE_INLINE auto unpackhi(v4sf a, v4sf b) noexcept -> v4sf
-{ return v4sf{a[2], b[2], a[3], b[3]}; }
+FORCE_INLINE constexpr
+auto unpacklo(v4sf const a, v4sf const b) noexcept -> v4sf { return v4sf{a[0], b[0], a[1], b[1]}; }
+FORCE_INLINE constexpr
+auto unpackhi(v4sf const a, v4sf const b) noexcept -> v4sf { return v4sf{a[2], b[2], a[3], b[3]}; }
 
-FORCE_INLINE auto vswaphl(v4sf a, v4sf b) noexcept -> v4sf
-{ return v4sf{b[0], b[1], a[2], a[3]}; }
+FORCE_INLINE constexpr
+auto vswaphl(v4sf const a, v4sf const b) noexcept -> v4sf { return v4sf{b[0], b[1], a[2], a[3]}; }
 
-FORCE_INLINE void interleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE constexpr
+auto interleave2(v4sf const in1, v4sf const in2, v4sf& out1, v4sf& out2) noexcept -> void
 {
     out1 = unpacklo(in1, in2);
     out2 = unpackhi(in1, in2);
 }
-FORCE_INLINE void uninterleave2(v4sf in1, v4sf in2, v4sf &out1, v4sf &out2) noexcept
+FORCE_INLINE constexpr
+auto uninterleave2(v4sf const in1, v4sf const in2, v4sf& out1, v4sf& out2) noexcept -> void
 {
     out1 = v4sf{in1[0], in1[2], in2[0], in2[2]};
     out2 = v4sf{in1[1], in1[3], in2[1], in2[3]};
 }
 
-FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
+FORCE_INLINE constexpr
+auto vtranspose4(v4sf& x0, v4sf& x1, v4sf& x2, v4sf& x3) noexcept -> void
 {
-    auto tmp0 = unpacklo(x0, x1);
-    auto tmp2 = unpacklo(x2, x3);
-    auto tmp1 = unpackhi(x0, x1);
-    auto tmp3 = unpackhi(x2, x3);
+    auto const tmp0 = unpacklo(x0, x1);
+    auto const tmp2 = unpacklo(x2, x3);
+    auto const tmp1 = unpackhi(x0, x1);
+    auto const tmp3 = unpackhi(x2, x3);
     x0 = v4sf{tmp0[0], tmp0[1], tmp2[0], tmp2[1]};
     x1 = v4sf{tmp0[2], tmp0[3], tmp2[2], tmp2[3]};
     x2 = v4sf{tmp1[0], tmp1[1], tmp3[0], tmp3[1]};
     x3 = v4sf{tmp1[2], tmp1[3], tmp3[2], tmp3[3]};
 }
 
-#else
-
-#warning "building with simd disabled !\n";
-#define PFFFT_SIMD_DISABLE // fallback to scalar code
 #endif
 
 #endif /* PFFFT_SIMD_DISABLE */
@@ -2005,8 +2016,18 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
     const auto Ncvec = size_t{setup->Ncvec};
     const auto nf_odd = (setup->ifac[1]&1) != 0;
 
-    auto buff = std::array{voutput, scratch};
+    auto const buff = std::array{voutput, scratch};
     auto ib = nf_odd != ordered;
+    DIAGNOSTIC_PUSH
+#if defined(__clang__)
+    /* Not sure why Clang complains about assigning a v4sf* variable, saying
+     * it's a 4-byte aligned argument, to a v4sf* parameter, saying it's a
+     * 16-byte aligned parameter, with both pointing to the same type defined
+     * with an aligned attribute. Even std::assume_aligned<16>(...) fails to
+     * suppress the warning.
+     */
+    std_pragma("GCC diagnostic ignored \"-Walign-mismatch\"")
+#endif
     if(direction == PFFFT_FORWARD)
     {
         /* Swap the initial work buffer for forward FFTs, which helps avoid an
@@ -2015,7 +2036,8 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
         ib = !ib;
         if(setup->transform == PFFFT_REAL)
         {
-            ib = (rfftf1_ps(Ncvec*2, vinput, buff[ib], buff[!ib], setup->twiddle, setup->ifac) == buff[1]);
+            ib = (rfftf1_ps(Ncvec*2, vinput, buff[ib], buff[!ib], setup->twiddle, setup->ifac)
+                == buff[1]);
             pffft_real_finalize(Ncvec, buff[ib], buff[!ib], setup->e.data());
         }
         else
@@ -2024,7 +2046,8 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
             for(auto k = 0_uz;k < Ncvec;++k)
                 uninterleave2(vinput[k*2], vinput[k*2+1], tmp[k*2], tmp[k*2+1]);
 
-            ib = (cfftf1_ps(Ncvec, buff[ib], buff[!ib], buff[ib], setup->twiddle, setup->ifac, -1.0f) == buff[1]);
+            ib = (cfftf1_ps(Ncvec, buff[ib], buff[!ib], buff[ib], setup->twiddle, setup->ifac,
+                -1.0f) == buff[1]);
             pffft_cplx_finalize(Ncvec, buff[ib], buff[!ib], setup->e.data());
         }
         if(ordered)
@@ -2046,16 +2069,19 @@ void pffft_transform_internal(const PFFFT_Setup *setup, const v4sf *vinput, v4sf
         if(setup->transform == PFFFT_REAL)
         {
             pffft_real_preprocess(Ncvec, vinput, buff[ib], setup->e.data());
-            ib = (rfftb1_ps(Ncvec*2, buff[ib], buff[0], buff[1], setup->twiddle, setup->ifac) == buff[1]);
+            ib = (rfftb1_ps(Ncvec*2, buff[ib], buff[0], buff[1], setup->twiddle, setup->ifac)
+                == buff[1]);
         }
         else
         {
             pffft_cplx_preprocess(Ncvec, vinput, buff[ib], setup->e.data());
-            ib = (cfftf1_ps(Ncvec, buff[ib], buff[0], buff[1],  setup->twiddle, setup->ifac, +1.0f) == buff[1]);
+            ib = (cfftf1_ps(Ncvec, buff[ib], buff[0], buff[1],  setup->twiddle, setup->ifac, 1.0f)
+                == buff[1]);
             for(auto k = 0_uz;k < Ncvec;++k)
                 interleave2(buff[ib][k*2], buff[ib][k*2+1], buff[ib][k*2], buff[ib][k*2+1]);
         }
     }
+    DIAGNOSTIC_POP
 
     if(buff[ib] != voutput)
     {

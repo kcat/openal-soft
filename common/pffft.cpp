@@ -69,6 +69,41 @@
 #include "opthelper_macros.hpp"
 #include "pragmadefs.h"
 
+/* Define PFFFT_SIMD_DISABLE if you want to use scalar code instead of SIMD code */
+//#define PFFFT_SIMD_DISABLE
+
+#if !defined(PFFFT_SIMD_DISABLE)
+#if (defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__)) \
+    && (defined(__VEC__) || defined(__ALTIVEC__))
+#include <altivec.h>
+#define USE_ALTIVEC 1
+#define USE_NEON 0
+#define USE_SSE 0
+
+#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64) \
+    || defined(_M_ARM64EC)
+
+#include <arm_neon.h>
+#define USE_ALTIVEC 0
+#define USE_NEON 1
+#define USE_SSE 0
+
+#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
+    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+
+#include <xmmintrin.h>
+#define USE_ALTIVEC 0
+#define USE_NEON 0
+#define USE_SSE 1
+
+#else
+
+#define USE_ALTIVEC 0
+#define USE_NEON 0
+#define USE_SSE 0
+#endif
+#endif
+
 #if HAVE_CXXMODULES
 import common.std;
 
@@ -105,16 +140,11 @@ namespace {
  * vectors should be limited to these macros
  */
 
-/* Define PFFFT_SIMD_DISABLE if you want to use scalar code instead of SIMD code */
-//#define PFFFT_SIMD_DISABLE
-
 #ifndef PFFFT_SIMD_DISABLE
 /*
  * Altivec support macros
  */
-#if (defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__)) \
-    && (defined(__VEC__) || defined(__ALTIVEC__))
-#include <altivec.h>
+#if USE_ALTIVEC
 using v4sf = vector float;
 constexpr auto SimdSize = 4u;
 FORCE_INLINE auto vzero() noexcept -> v4sf { return (vector float)vec_splat_u8(0); }
@@ -162,9 +192,8 @@ FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 /*
  * ARM NEON support macros
  */
-#elif defined(__ARM_NEON) || defined(__aarch64__) || defined(__arm64) || defined(_M_ARM64) || defined(_M_ARM64EC)
+#elif USE_NEON
 
-#include <arm_neon.h>
 using v4sf = float32x4_t;
 constexpr auto SimdSize = 4u;
 FORCE_INLINE auto vzero() noexcept -> v4sf { return vdupq_n_f32(0.0f); }
@@ -225,10 +254,8 @@ FORCE_INLINE void vtranspose4(v4sf &x0, v4sf &x1, v4sf &x2, v4sf &x3) noexcept
 /*
  * SSE1 support macros
  */
-#elif defined(__x86_64__) || defined(__SSE__) || defined(_M_X64) || \
-    (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
+#elif USE_SSE
 
-#include <xmmintrin.h>
 using v4sf = __m128;
 /* 4 floats by simd vector -- this is pretty much hardcoded in the preprocess/
  * finalize functions anyway so you will have to work if you want to enable AVX
@@ -332,13 +359,18 @@ auto vtranspose4(v4sf& x0, v4sf& x1, v4sf& x2, v4sf& x3) noexcept -> void
     x2 = v4sf{tmp1[0], tmp1[1], tmp3[0], tmp3[1]};
     x3 = v4sf{tmp1[2], tmp1[3], tmp3[2], tmp3[3]};
 }
-
 #endif
 
-#endif /* PFFFT_SIMD_DISABLE */
+[[maybe_unused, nodiscard]] inline
+auto valigned(const float *ptr) noexcept -> bool
+{
+    constexpr auto alignmask = uintptr_t{SimdSize*sizeof(float) - 1};
+    return (std::bit_cast<uintptr_t>(ptr) & alignmask) == 0;
+}
+
+#else
 
 // fallback mode for situations where SIMD is not available, use scalar mode instead
-#ifdef PFFFT_SIMD_DISABLE
 using v4sf = float;
 constexpr auto SimdSize = 1u;
 FORCE_INLINE constexpr auto vmul(v4sf a, v4sf b) noexcept -> v4sf { return a * b; }
@@ -347,96 +379,78 @@ FORCE_INLINE constexpr auto vmadd(v4sf a, v4sf b, v4sf c) noexcept -> v4sf { ret
 FORCE_INLINE constexpr auto vsub(v4sf a, v4sf b) noexcept -> v4sf { return a - b; }
 FORCE_INLINE constexpr auto ld_ps1(float a) noexcept -> v4sf { return a; }
 
-#else
-
-[[maybe_unused, nodiscard]] inline
-auto valigned(const float *ptr) noexcept -> bool
-{
-    constexpr auto alignmask = uintptr_t{SimdSize*sizeof(float) - 1};
-    return (std::bit_cast<uintptr_t>(ptr) & alignmask) == 0;
-}
 #endif
 
 // shortcuts for complex multiplications
-FORCE_INLINE void vcplxmul(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+FORCE_INLINE void vcplxmul(v4sf &ar, v4sf &ai, v4sf const br, v4sf const bi) noexcept
 {
-    auto tmp = vmul(ar, bi);
+    auto const tmp = vmul(ar, bi);
     ar = vsub(vmul(ar, br), vmul(ai, bi));
     ai = vmadd(ai, br, tmp);
 }
-FORCE_INLINE void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf br, v4sf bi) noexcept
+FORCE_INLINE void vcplxmulconj(v4sf &ar, v4sf &ai, v4sf const br, v4sf const bi) noexcept
 {
-    auto tmp = vmul(ar, bi);
+    auto const tmp = vmul(ar, bi);
     ar = vmadd(ai, bi, vmul(ar, br));
     ai = vsub(vmul(ai, br), tmp);
 }
 
 #if !defined(PFFFT_SIMD_DISABLE)
 
-inline void assertv4(const std::span<const float,4> v_f [[maybe_unused]],
-    const float f0 [[maybe_unused]], const float f1 [[maybe_unused]],
-    const float f2 [[maybe_unused]], const float f3 [[maybe_unused]])
-{ Expects(v_f[0] == f0 && v_f[1] == f1 && v_f[2] == f2 && v_f[3] == f3); }
-
-template<typename T, T ...N>
-constexpr auto make_float_array(std::integer_sequence<T,N...>)
-{ return std::array{gsl::narrow<float>(N)...}; }
-
 /* detect bugs with the vector support macros */
 [[maybe_unused]] auto validate_pffft_simd() -> bool
 {
-    using float4 = std::array<float,4>;
-    static constexpr auto f = make_float_array(std::make_index_sequence<16>{});
+    using float4 = std::array<float, 4>;
 
-    auto a0_v = vset4(f[ 0], f[ 1], f[ 2], f[ 3]);
-    auto a1_v = vset4(f[ 4], f[ 5], f[ 6], f[ 7]);
-    auto a2_v = vset4(f[ 8], f[ 9], f[10], f[11]);
-    auto a3_v = vset4(f[12], f[13], f[14], f[15]);
+    auto a0_v = vset4( 0.0f,  1.0f,  2.0f,  3.0f);
+    auto a1_v = vset4( 4.0f,  5.0f,  6.0f,  7.0f);
+    auto a2_v = vset4( 8.0f,  9.0f, 10.0f, 11.0f);
+    auto a3_v = vset4(12.0f, 13.0f, 14.0f, 15.0f);
 
     auto t_v = vzero();
     auto t_f = std::bit_cast<float4>(t_v);
     fmt::println("VZERO={}", t_f);
-    assertv4(t_f, 0, 0, 0, 0);
+    Expects((t_f == std::array{0.0f, 0.0f, 0.0f, 0.0f}));
 
     t_v = vadd(a1_v, a2_v);
     t_f = std::bit_cast<float4>(t_v);
     fmt::println("VADD(4:7,8:11)={}", t_f);
-    assertv4(t_f, 12, 14, 16, 18);
+    Expects((t_f == std::array{12.0f, 14.0f, 16.0f, 18.0f}));
 
     t_v = vmul(a1_v, a2_v);
     t_f = std::bit_cast<float4>(t_v);
     fmt::println("VMUL(4:7,8:11)={}", t_f);
-    assertv4(t_f, 32, 45, 60, 77);
+    Expects((t_f == std::array{32.0f, 45.0f, 60.0f, 77.0f}));
 
     t_v = vmadd(a1_v, a2_v, a0_v);
     t_f = std::bit_cast<float4>(t_v);
     fmt::println("VMADD(4:7,8:11,0:3)={}", t_f);
-    assertv4(t_f, 32, 46, 62, 80);
+    Expects((t_f == std::array{32.0f, 46.0f, 62.0f, 80.0f}));
 
     auto u_v = v4sf{};
     interleave2(a1_v, a2_v, t_v, u_v);
     t_f = std::bit_cast<float4>(t_v);
     auto u_f = std::bit_cast<float4>(u_v);
     fmt::println("INTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
-    assertv4(t_f, 4, 8, 5, 9);
-    assertv4(u_f, 6, 10, 7, 11);
+    Expects((t_f == std::array{4.0f, 8.0f, 5.0f, 9.0f}));
+    Expects((u_f == std::array{6.0f, 10.0f, 7.0f, 11.0f}));
 
     uninterleave2(a1_v, a2_v, t_v, u_v);
     t_f = std::bit_cast<float4>(t_v);
     u_f = std::bit_cast<float4>(u_v);
     fmt::println("UNINTERLEAVE2(4:7,8:11)={} {}", t_f, u_f);
-    assertv4(t_f, 4, 6, 8, 10);
-    assertv4(u_f, 5, 7, 9, 11);
+    Expects((t_f == std::array{4.0f, 6.0f, 8.0f, 10.0f}));
+    Expects((u_f == std::array{5.0f, 7.0f, 9.0f, 11.0f}));
 
-    t_v = ld_ps1(f[15]);
+    t_v = ld_ps1(15.0f);
     t_f = std::bit_cast<float4>(t_v);
     fmt::println("LD_PS1(15)={}", t_f);
-    assertv4(t_f, 15, 15, 15, 15);
+    Expects((t_f == std::array{15.0f, 15.0f, 15.0f, 15.0f}));
 
     t_v = vswaphl(a1_v, a2_v);
     t_f = std::bit_cast<float4>(t_v);
     fmt::println("VSWAPHL(4:7,8:11)={}", t_f);
-    assertv4(t_f, 8, 9, 6, 7);
+    Expects((t_f == std::array{8.0f, 9.0f, 6.0f, 7.0f}));
 
     vtranspose4(a0_v, a1_v, a2_v, a3_v);
     auto a0_f = std::bit_cast<float4>(a0_v);
@@ -444,10 +458,10 @@ constexpr auto make_float_array(std::integer_sequence<T,N...>)
     auto a2_f = std::bit_cast<float4>(a2_v);
     auto a3_f = std::bit_cast<float4>(a3_v);
     fmt::println("VTRANSPOSE4(0:3,4:7,8:11,12:15)={} {} {} {}", a0_f, a1_f, a2_f, a3_f);
-    assertv4(a0_f, 0, 4, 8, 12);
-    assertv4(a1_f, 1, 5, 9, 13);
-    assertv4(a2_f, 2, 6, 10, 14);
-    assertv4(a3_f, 3, 7, 11, 15);
+    Expects((a0_f == std::array{0.0f, 4.0f, 8.0f, 12.0f}));
+    Expects((a1_f == std::array{1.0f, 5.0f, 9.0f, 13.0f}));
+    Expects((a2_f == std::array{2.0f, 6.0f, 10.0f, 14.0f}));
+    Expects((a3_f == std::array{3.0f, 7.0f, 11.0f, 15.0f}));
 
     return true;
 }
@@ -1908,7 +1922,7 @@ FORCE_INLINE void pffft_real_preprocess_4x4(const v4sf *in, const v4sf *e, v4sf 
     *out++ = r2;
     *out++ = i2;
     *out++ = r3;
-    *out++ = i3;
+    *out = i3;
 }
 
 NOINLINE void pffft_real_preprocess(const size_t Ncvec, const v4sf *in, v4sf *RESTRICT out,

@@ -24,7 +24,7 @@ auto contains(std::string_view const& str0, std::string_view const& str1) noexce
 { return str0.find(str1) != std::string_view::npos; }
 
 namespace detail {
-    template<typename CharT, typename Traits> NOINLINE [[nodiscard]]
+    template<typename CharT, typename Traits> [[nodiscard]] NOINLINE
     auto ci_compare(std::basic_string_view<CharT, Traits> const& str0,
         std::basic_string_view<CharT, Traits> const& str1) noexcept -> std::weak_ordering
     {

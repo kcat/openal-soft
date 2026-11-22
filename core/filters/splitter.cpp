@@ -5,7 +5,11 @@
 
 #include <limits>
 
-#if HAVE_CXXMODULES
+/* HACK: MSVC 19.52.37029.0 seems to have an internal compiler error after some
+ * updates to the common.std module, while MSVC 19.44.35219.0 is fine. Avoid
+ * using these modules here for the potentially affected versions.
+ */
+#if HAVE_CXXMODULES && !(defined(_MSC_VER) && _MSC_VER > 1944 && _MSC_VER <= 1952)
 import common.std;
 
 import gsl;

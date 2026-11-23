@@ -249,23 +249,30 @@ endif()
 # it supports modules with the given generator and compiler, so we have to do a
 # check ourselves (which is far less inclusive and more pessimistic than what
 # it can actually do, especially as CMake continues to update and improve).
-option(ALSOFT_ENABLE_MODULES "Enable use of C++20 modules when supported" ON)
+if(MINGW)
+    # MinGW is currently broken with modules, as of GCC 16.
+    option(ALSOFT_ENABLE_MODULES "Enable use of C++20 modules when supported" OFF)
+else()
+    option(ALSOFT_ENABLE_MODULES "Enable use of C++20 modules when supported" ON)
+endif()
 set(HAVE_CXXMODULES FALSE)
-if(ALSOFT_ENABLE_MODULES)
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28 AND (CMAKE_GENERATOR STREQUAL "Ninja"
-            OR CMAKE_GENERATOR STREQUAL "Visual Studio 17 2022"
-            OR CMAKE_GENERATOR STREQUAL "Visual Studio 18 2026"))
-        if((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.0)
-            OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0)
-            OR (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.34))
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28 AND (CMAKE_GENERATOR STREQUAL "Ninja"
+        OR CMAKE_GENERATOR STREQUAL "Visual Studio 17 2022"
+        OR CMAKE_GENERATOR STREQUAL "Visual Studio 18 2026"))
+    if((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.0)
+        OR (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15.0)
+        OR (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14.34))
+        if(ALSOFT_ENABLE_MODULES)
             message(STATUS "C++20 modules enabled using ${CMAKE_CXX_COMPILER_ID} compiler v${CMAKE_CXX_COMPILER_VERSION} (CMake ${CMAKE_VERSION}, ${CMAKE_GENERATOR} generator)")
             set(HAVE_CXXMODULES TRUE)
         else()
-            message(NOTICE "C++20 modules not supported with ${CMAKE_CXX_COMPILER_ID} compiler v${CMAKE_CXX_COMPILER_VERSION}")
+            message(STATUS "C++20 modules disabled")
         endif()
     else()
-        message(NOTICE "C++20 modules not supported with ${CMAKE_GENERATOR} on CMake ${CMAKE_VERSION}")
+        message(NOTICE "C++20 modules not supported with ${CMAKE_CXX_COMPILER_ID} compiler v${CMAKE_CXX_COMPILER_VERSION}")
     endif()
+else()
+    message(NOTICE "C++20 modules not supported with ${CMAKE_GENERATOR} on CMake ${CMAKE_VERSION}")
 endif()
 
 

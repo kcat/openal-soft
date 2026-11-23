@@ -37,7 +37,6 @@
 #include <variant>
 
 #include "atomic.h"
-#include "core/async_event.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/bsinc_defs.h"
@@ -67,6 +66,7 @@ import common.std;
 import alstring;
 import cemath;
 import core.ambi_utils;
+import core.async_event;
 import core.bsinc_tables;
 import core.buffer_storage;
 import core.context;
@@ -97,6 +97,7 @@ import zudl;
 #include "alstring.h"
 #include "cemath.hpp"
 #include "core/ambi_utils.hpp"
+#include "core/async_event.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"

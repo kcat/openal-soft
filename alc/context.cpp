@@ -4,10 +4,10 @@
 #include <bit>
 #include <functional>
 #include <string_view>
+#include <variant>
 
 #include "alc/alu.h"
 #include "atomic.h"
-#include "core/async_event.h"
 #include "core/voice_change.h"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
@@ -35,6 +35,7 @@ import al.iface;
 import alc.context;
 import alc.device;
 import backends.base;
+import core.async_event;
 import core.logging;
 import fmtlib;
 import gsl;
@@ -62,6 +63,7 @@ import zudl;
 #include "alc/backends/base.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
+#include "core/async_event.hpp"
 #include "core/logging.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

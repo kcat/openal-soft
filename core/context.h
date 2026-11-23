@@ -11,9 +11,9 @@
 #include <thread>
 #include <vector>
 
-#include "async_event.h"
 #include "atomic.h"
 #include "bitset.hpp"
+#include "core/async_event.hpp"
 #include "flexarray.h"
 #include "opthelper_macros.hpp"
 #include "ringbuffer.hpp"

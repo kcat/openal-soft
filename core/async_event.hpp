@@ -1,5 +1,5 @@
-#ifndef CORE_EVENT_H
-#define CORE_EVENT_H
+#ifndef CORE_EVENT_HPP
+#define CORE_EVENT_HPP
 
 #include <cstdint>
 #include <memory>

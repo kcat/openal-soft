@@ -8,7 +8,6 @@
 #include <variant>
 
 #include "atomic.h"
-#include "core/async_event.h"
 #include "core/effects/base.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
@@ -20,6 +19,7 @@ import openal;
 
 import al.iface;
 import alc.context;
+import core.async_event;
 import core.except;
 import core.logging;
 import format;
@@ -42,6 +42,7 @@ import numeric;
 #include "al/event.h"
 #include "alc/context.hpp"
 #include "alformat.hpp"
+#include "core/async_event.hpp"
 #include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

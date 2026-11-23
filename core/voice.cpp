@@ -12,7 +12,6 @@
 #include <span>
 #include <vector>
 
-#include "async_event.h"
 #include "context.h"
 #include "cpu_caps.h"
 #include "filters/biquad.h"
@@ -31,6 +30,7 @@ import common.std;
 
 import alstring;
 import core.ambi_utils;
+import core.async_event;
 import core.buffer_storage;
 import core.device;
 import core.logging;
@@ -49,6 +49,7 @@ import zudl;
 
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
+#include "core/async_event.hpp"
 #include "core/buffer_storage.h"
 #include "core/device.h"
 #include "core/logging.h"

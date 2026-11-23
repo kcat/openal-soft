@@ -47,7 +47,7 @@ auto DeviceBase::removeContext(ContextBase *context) -> std::size_t
          * to finish before deleting the old array.
          */
         auto prevarray = mContexts.exchange(std::move(newarray));
-        std::ignore = waitForMix();
+        waitForCurrentMix();
 
         return newsize;
     }

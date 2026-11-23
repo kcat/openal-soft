@@ -119,7 +119,7 @@ void ContextBase::allocVoices(size_t addcount)
             [](Voice &voice) noexcept -> Voice* { return std::addressof(voice); }).out;
 
     if(auto oldvoices = mVoices.exchange(std::move(newarray), std::memory_order_acq_rel))
-        std::ignore = mDevice.waitForMix();
+        mDevice.waitForCurrentMix();
 }
 
 

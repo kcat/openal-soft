@@ -233,7 +233,7 @@ void AddActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> const 
 
     auto oldarray = context.mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
-    std::ignore = context.mDevice.waitForMix();
+    context.mDevice.waitForCurrentMix();
 }
 
 void RemoveActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> const auxslots,
@@ -257,7 +257,7 @@ void RemoveActiveEffectSlots(std::span<gsl::not_null<al::EffectSlot*> const> con
 
     auto oldarray = context.mActiveAuxSlots.exchange(std::move(newarray),
         std::memory_order_acq_rel);
-    std::ignore = context.mDevice.waitForMix();
+    context.mDevice.waitForCurrentMix();
 }
 
 

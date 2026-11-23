@@ -307,6 +307,21 @@ struct DeviceBase {
     }
 
     /**
+     * Waits for any current run of the mixer to finish. This may return while
+     * the mixer is running a subsequent update.
+     */
+    auto waitForCurrentMix() const noexcept BLOCKING -> void
+    {
+        if(auto const refcount = mMixCount.load(std::memory_order_acquire);
+            (refcount&1) != 0)
+        {
+            while(refcount == mMixCount.load(std::memory_order_acquire)) {
+                /* busy-wait */
+            }
+        }
+    }
+
+    /**
      * Helper to get the current clock time from the device's ClockBase, and
      * SamplesDone converted from the sample rate. Should only be called while
      * watching the MixCount.

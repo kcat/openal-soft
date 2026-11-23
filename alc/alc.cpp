@@ -2902,7 +2902,7 @@ try {
          * to finish before deleting the old array.
          */
         auto prevarray = dev->mContexts.exchange(std::move(newarray));
-        std::ignore = dev->waitForMix();
+        dev->waitForCurrentMix();
     }
     statelock.unlock();
 
@@ -3200,7 +3200,7 @@ ALC_API auto ALC_APIENTRY alcCloseDevice(ALCdevice *device) noexcept -> ALCboole
     }
 
     auto prevarray = dev->mContexts.exchange(al::Device::ContextArray::Create(0));
-    std::ignore = dev->waitForMix();
+    dev->waitForCurrentMix();
 
     auto orphanctxs = std::vector<ContextRef>{};
     std::ranges::for_each(*prevarray, [&orphanctxs](ContextBase *ctx)

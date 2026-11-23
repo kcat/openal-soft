@@ -737,7 +737,7 @@ void SendVoiceChanges(al::Context& ctx, VoiceChange *tail)
     oldhead->mNext.store(tail, std::memory_order_release);
 
     const auto connected = device.Connected.load(std::memory_order_acquire);
-    std::ignore = device.waitForMix();
+    device.waitForCurrentMix();
     if(!connected) [[unlikely]]
     {
         if(ctx.mStopVoicesOnDisconnect.load(std::memory_order_acquire))
@@ -843,7 +843,7 @@ auto SetVoiceOffset(Voice *const oldvoice, VoicePos const& vpos, al::Source& sou
         return true;
 
     /* Otherwise, wait for any current mix to finish and check one last time. */
-    std::ignore = device.waitForMix();
+    device.waitForCurrentMix();
     if(newvoice->mPlayState.load(std::memory_order_acquire) != Voice::Pending)
         return true;
     /* The change-over failed because the old voice stopped before the new
@@ -1723,7 +1723,7 @@ void SetProperty(al::Source& Source, al::Context& Context, SourceProp const prop
                  * to ensure it isn't currently looping back or reaching the
                  * end.
                  */
-                std::ignore = device.waitForMix();
+                device.waitForCurrentMix();
             }
             return;
         }

@@ -698,12 +698,13 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
     {
     case DevFmtMono: return SPEAKERS_2;
     case DevFmtStereo:
-        /* Pretend 7.1 if using UHJ output, since they both provide full
-         * horizontal surround.
+        /* Pretend HEADPHONES if using UHJ or TSME output, since they provide
+         * virtual surround output like HRTF (TSME also including height).
          */
-        if(std::holds_alternative<UhjPostProcess>(mDevice.mPostProcess))
-            return SPEAKERS_7;
-        if(mDevice.mFlags.test(DeviceFlag::DirectEar))
+        if(mDevice.mFlags.test(DeviceFlag::DirectEar)
+            or std::holds_alternative<HrtfPostProcess>(mDevice.mPostProcess)
+            or std::holds_alternative<UhjPostProcess>(mDevice.mPostProcess)
+            or std::holds_alternative<TsmePostProcess>(mDevice.mPostProcess))
             return HEADPHONES;
         return SPEAKERS_2;
     case DevFmtQuad: return SPEAKERS_4;
@@ -720,13 +721,13 @@ auto Context::eax_detect_speaker_configuration() const -> eax_ulong
      */
     case DevFmtX3D71: return SPEAKERS_5;
     /* This could also be HEADPHONES, since headphones-based HRTF and Ambi3D
-     * provide full-sphere surround sound. Depends if apps are more likely to
-     * consider headphones or 7.1 for surround sound support.
+     * provide full-sphere surround sound. That depends on whether apps are
+     * more likely to consider headphones or 7.1 for with-height surround sound
+     * support.
      */
     case DevFmtAmbi3D: return SPEAKERS_7;
     }
-    ERR(EAX_PREFIX "Unexpected device channel format {:#x}.",
-        unsigned{al::to_underlying(mDevice.FmtChans)});
+    ERR(EAX_PREFIX "Unexpected device channel format {:#x}", al::to_underlying(mDevice.FmtChans));
     return HEADPHONES;
 
 #undef EAX_PREFIX

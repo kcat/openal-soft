@@ -156,7 +156,7 @@ void ChorusState::deviceUpdate(const DeviceBase *device, const BufferStorage*)
         auto const splitter = BandSplitter{device->mXOverFreq
             / static_cast<float>(device->mSampleRate)};
 
-        auto &upsampler = mUpsampler.emplace();
+        auto &upsampler = mUpsampler.emplace(std::array<UpsampleParams, NumLines>{});
         for(auto &chandata : upsampler)
         {
             chandata.mHfScale = hfscales[idx];

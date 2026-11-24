@@ -543,7 +543,8 @@ struct ReverbPipeline {
         mLateDelayTap = {};
         mEarly.clear();
         mLate.clear();
-        std::ranges::for_each(mAmbiSplitter | std::views::join, &BandSplitter::clear);
+        std::ranges::for_each(mAmbiSplitter | std::views::join,
+            [](BandSplitter &splitter) noexcept { splitter.clear(); });
     }
 };
 

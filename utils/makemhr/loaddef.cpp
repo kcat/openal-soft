@@ -28,6 +28,7 @@
 #include <bit>
 #include <cctype>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdlib>
 #include <iterator>
 #include <memory>
@@ -586,7 +587,7 @@ auto TrReadOperator(TokenReaderT *tr, const std::string_view op) -> bool
 // Read a binary value of the specified byte order and byte size from a file,
 // storing it as a 32-bit unsigned integer.
 auto ReadBin4(std::istream &istream, std::string_view const filename, std::endian const order,
-    unsigned const bytes, uint32_t *out) -> bool
+    unsigned const bytes, std::uint32_t *out) -> bool
 {
     auto in = std::array<char,4>{};
     istream.read(in.data(), static_cast<int>(bytes));
@@ -596,7 +597,7 @@ auto ReadBin4(std::istream &istream, std::string_view const filename, std::endia
         return false;
     }
 
-    auto tmpval = std::bit_cast<uint32_t>(in);
+    auto tmpval = std::bit_cast<std::uint32_t>(in);
     if constexpr(std::endian::native == std::endian::little)
     {
         if(order != std::endian::little)
@@ -616,7 +617,7 @@ auto ReadBin4(std::istream &istream, std::string_view const filename, std::endia
 // Read a binary value of the specified byte order from a file, storing it as
 // a 64-bit unsigned integer.
 auto ReadBin8(std::istream &istream, const std::string_view filename, const std::endian order,
-    uint64_t *out) -> bool
+    std::uint64_t *out) -> bool
 {
     auto in = std::array<char,8>{};
     istream.read(in.data(), in.size());
@@ -626,7 +627,7 @@ auto ReadBin8(std::istream &istream, const std::string_view filename, const std:
         return false;
     }
 
-    auto tmpval = std::bit_cast<uint64_t>(in);
+    auto tmpval = std::bit_cast<std::uint64_t>(in);
     if(order != std::endian::native)
         tmpval = al::byteswap(tmpval);
     *out = tmpval;
@@ -646,7 +647,7 @@ auto ReadBinAsDouble(std::istream &istream, std::string_view const filename,
     *out = 0.0;
     if(bytes > 4)
     {
-        uint64_t val{};
+        auto val = std::uint64_t{};
         if(!ReadBin8(istream, filename, order, &val))
             return false;
         if(type == ET_FP)
@@ -654,7 +655,7 @@ auto ReadBinAsDouble(std::istream &istream, std::string_view const filename,
     }
     else
     {
-        uint32_t val{};
+        auto val = std::uint32_t{};
         if(!ReadBin4(istream, filename, order, bytes, &val))
             return false;
         if(type == ET_FP)
@@ -668,7 +669,7 @@ auto ReadBinAsDouble(std::istream &istream, std::string_view const filename,
 
             if(val&static_cast<unsigned>(1<<(std::abs(bits)-1)))
                 val |= (0xFFFFFFFF << std::abs(bits));
-            *out = static_cast<int32_t>(val) / static_cast<double>(1<<(std::abs(bits)-1));
+            *out = static_cast<std::int32_t>(val) / static_cast<double>(1<<(std::abs(bits)-1));
         }
     }
     return true;
@@ -718,8 +719,8 @@ auto ReadAsciiAsDouble(TokenReaderT *tr, std::string_view const filename, Elemen
 auto ReadWaveFormat(std::istream &istream, std::endian const order, unsigned const hrirRate,
     SourceRefT *src) -> bool
 {
-    auto fourCC = uint32_t{};
-    auto chunkSize = uint32_t{0u};
+    auto fourCC = std::uint32_t{};
+    auto chunkSize = std::uint32_t{0u};
     do {
         if(chunkSize > 0)
             istream.seekg(static_cast<int>(chunkSize), std::ios::cur);
@@ -728,13 +729,13 @@ auto ReadWaveFormat(std::istream &istream, std::endian const order, unsigned con
             return false;
     } while(fourCC != FOURCC_FMT);
 
-    auto format = uint32_t{};
-    auto channels = uint32_t{};
-    auto rate = uint32_t{};
-    auto dummy = uint32_t{};
-    auto block = uint32_t{};
-    auto size = uint32_t{};
-    auto bits = uint32_t{};
+    auto format = std::uint32_t{};
+    auto channels = std::uint32_t{};
+    auto rate = std::uint32_t{};
+    auto dummy = std::uint32_t{};
+    auto block = std::uint32_t{};
+    auto size = std::uint32_t{};
+    auto bits = std::uint32_t{};
     if(!ReadBin4(istream, src->mPath, order, 2, &format)
         || !ReadBin4(istream, src->mPath, order, 2, &channels)
         || !ReadBin4(istream, src->mPath, order, 4, &rate)
@@ -845,10 +846,10 @@ auto ReadWaveData(std::istream &istream, const SourceRefT *src, const std::endia
 auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endian order,
     const std::span<double> hrir) -> int
 {
-    auto chunkSize = uint32_t{};
+    auto chunkSize = std::uint32_t{};
     for(;;)
     {
-        auto fourCC = uint32_t{};
+        auto fourCC = std::uint32_t{};
         if(!ReadBin4(istream, src->mPath, std::endian::little, 4, &fourCC)
             || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return false;
@@ -885,7 +886,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
     auto lastSample = 0.0;
     while(offset < hrir.size() && listSize > 8)
     {
-        auto fourCC = uint32_t{};
+        auto fourCC = std::uint32_t{};
         if(!ReadBin4(istream, src->mPath, std::endian::little, 4, &fourCC)
             || !ReadBin4(istream, src->mPath, order, 4, &chunkSize))
             return false;
@@ -913,7 +914,7 @@ auto ReadWaveList(std::istream &istream, const SourceRefT *src, const std::endia
         }
         else if(fourCC == FOURCC_SLNT)
         {
-            auto count = uint32_t{};
+            auto count = std::uint32_t{};
             if(!ReadBin4(istream, src->mPath, order, 4, &count))
                 return 0;
             chunkSize -= 4;
@@ -992,8 +993,8 @@ auto LoadBinarySource(std::istream &istream, const SourceRefT *src, const std::e
 auto LoadWaveSource(std::istream &istream, SourceRefT *src, unsigned const hrirRate,
     std::span<double> const hrir) -> bool
 {
-    auto fourCC = uint32_t{};
-    auto dummy = uint32_t{};
+    auto fourCC = std::uint32_t{};
+    auto dummy = std::uint32_t{};
     auto order = std::endian{};
 
     if(!ReadBin4(istream, src->mPath, std::endian::little, 4, &fourCC)
@@ -1679,12 +1680,12 @@ auto ReadSofaRef(TokenReaderT *tr, SourceRefT *src) -> bool
 }
 
 // Match the target ear (index) from a given identifier.
-auto MatchTargetEar(const std::string_view ident) -> std::optional<uint8_t>
+auto MatchTargetEar(const std::string_view ident) -> std::optional<std::uint8_t>
 {
     if(al::ci_equal(ident, "left"sv))
-        return 0u;
+        return std::uint8_t{0};
     if(al::ci_equal(ident, "right"sv))
-        return 1u;
+        return std::uint8_t{1};
     return std::nullopt;
 }
 

@@ -55,6 +55,7 @@
 #include <memory>
 #include <span>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "alc/alconfig.h"

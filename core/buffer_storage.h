@@ -5,9 +5,9 @@
 #include <span>
 #include <variant>
 
-#include "fmt_traits.h"
+#include "core/fmt_traits.hpp"
+#include "core/storage_formats.h"
 #include "opthelper_macros.hpp"
-#include "storage_formats.h"
 
 
 constexpr auto IsBFormat(FmtChannels const chans) noexcept -> bool

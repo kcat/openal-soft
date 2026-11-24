@@ -1,5 +1,5 @@
-#ifndef CORE_FMT_TRAITS_H
-#define CORE_FMT_TRAITS_H
+#ifndef CORE_FMT_TRAITS_HPP
+#define CORE_FMT_TRAITS_HPP
 
 #include <array>
 #include <cstddef>

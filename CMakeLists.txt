@@ -884,7 +884,7 @@ set(CORE_HDRS
     core/filters/biquad.h
     core/filters/nfc.h
     core/filters/splitter.h
-    core/fmt_traits.h
+    core/fmt_traits.hpp
     core/fpu_ctrl.h
     core/front_stablizer.h
     core/hrtf.h
@@ -911,6 +911,7 @@ if(HAVE_CXXMODULES)
         core/device.cppm
         core/effectslot.cppm
         core/except.cppm
+        core/fmt_traits.cppm
         core/helpers.cppm
         core/hrtfstore.cppm
         core/logging.cppm

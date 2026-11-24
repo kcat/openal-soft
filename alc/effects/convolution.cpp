@@ -23,8 +23,8 @@
 #include "core/bufferline.h"
 #include "core/effects/base.h"
 #include "core/filters/splitter.h"
-#include "core/fmt_traits.h"
 #include "core/mixer.h"
+#include "core/storage_formats.h"
 #include "core/uhjfilter.h"
 #include "intrusive_ptr.h"
 #include "pffft.h"
@@ -40,6 +40,7 @@ import core.buffer_storage;
 import core.context;
 import core.device;
 import core.effectslot;
+import core.fmt_traits;
 import gsl;
 import numeric;
 import zudl;
@@ -57,6 +58,7 @@ import zudl;
 #include "core/context.h"
 #include "core/device.h"
 #include "core/effectslot.h"
+#include "core/fmt_traits.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "zudl.hpp"

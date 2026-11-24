@@ -3,7 +3,6 @@
 #include "config_simd.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
@@ -45,6 +44,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <limits>
 #include <optional>
 #include <utility>

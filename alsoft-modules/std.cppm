@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <compare>
 #include <exception>
@@ -222,6 +223,114 @@ export namespace std {
     /* array */
     using std::array;
     using std::to_array;
+
+    /* chrono */
+    namespace chrono {
+        using std::chrono::duration;
+        using std::chrono::treat_as_floating_point;
+        using std::chrono::duration_values;
+        using std::chrono::nanoseconds;
+        using std::chrono::microseconds;
+        using std::chrono::milliseconds;
+        using std::chrono::seconds;
+        using std::chrono::minutes;
+        using std::chrono::hours;
+        using std::chrono::days;
+        using std::chrono::weeks;
+        using std::chrono::months;
+        using std::chrono::years;
+        using std::chrono::time_point;
+#if !defined(_LIBCPP_VERSION) /* libc++ doesn't seem to have these (as of Clang 21). */
+        using std::chrono::clock_time_conversion;
+        using std::chrono::is_clock;
+        using std::chrono::is_clock_v;
+        using std::chrono::utc_clock;
+        using std::chrono::tai_clock;
+        using std::chrono::gps_clock;
+        using std::chrono::tzdb;
+        using std::chrono::tzdb_list;
+        using std::chrono::time_zone;
+        using std::chrono::sys_info;
+        using std::chrono::local_info;
+        using std::chrono::choose;
+        using std::chrono::zoned_traits;
+        using std::chrono::zoned_time;
+        using std::chrono::time_zone_link;
+        using std::chrono::nonexistent_local_time;
+        using std::chrono::ambiguous_local_time;
+        using std::chrono::leap_second;
+        using std::chrono::leap_second_info;
+        using std::chrono::from_stream;
+        using std::chrono::clock_cast;
+        using std::chrono::get_tzdb;
+        using std::chrono::get_tzdb_list;
+        using std::chrono::reload_tzdb;
+        using std::chrono::remote_version;
+        using std::chrono::locate_zone;
+        using std::chrono::current_zone;
+        using std::chrono::get_leap_second_info;
+        using std::chrono::parse;
+#endif
+        using std::chrono::system_clock;
+        using std::chrono::steady_clock;
+        using std::chrono::high_resolution_clock;
+        using std::chrono::file_clock;
+        using std::chrono::local_t;
+        using std::chrono::last_spec;
+        using std::chrono::last;
+        using std::chrono::day;
+        using std::chrono::month;
+        using std::chrono::year;
+        using std::chrono::weekday;
+        using std::chrono::weekday_indexed;
+        using std::chrono::weekday_last;
+        using std::chrono::month_day;
+        using std::chrono::month_day_last;
+        using std::chrono::month_weekday;
+        using std::chrono::month_weekday_last;
+        using std::chrono::year_month;
+        using std::chrono::year_month_day;
+        using std::chrono::year_month_day_last;
+        using std::chrono::year_month_weekday;
+        using std::chrono::year_month_weekday_last;
+        using std::chrono::hh_mm_ss;
+
+        using std::chrono::operator+;
+        using std::chrono::operator-;
+        using std::chrono::operator*;
+        using std::chrono::operator/;
+        using std::chrono::operator%;
+        using std::chrono::operator==;
+        using std::chrono::operator<;
+        using std::chrono::operator<=;
+        using std::chrono::operator>;
+        using std::chrono::operator>=;
+        using std::chrono::operator<=>;
+
+        using std::chrono::duration_cast;
+        using std::chrono::time_point_cast;
+        using std::chrono::floor;
+        using std::chrono::ceil;
+        using std::chrono::round;
+        using std::chrono::abs;
+
+        using std::chrono::is_am;
+        using std::chrono::is_pm;
+        using std::chrono::make12;
+        using std::chrono::make24;
+    }
+    inline namespace literals {
+        inline namespace chrono_literals {
+            using std::literals::chrono_literals::operator ""ns;
+            using std::literals::chrono_literals::operator ""us;
+            using std::literals::chrono_literals::operator ""ms;
+            using std::literals::chrono_literals::operator ""s;
+            using std::literals::chrono_literals::operator ""min;
+            using std::literals::chrono_literals::operator ""h;
+            using std::literals::chrono_literals::operator ""d;
+            using std::literals::chrono_literals::operator ""y;
+        }
+    }
 
     /* cmath */
 #define DECL_CMATH_OP(x) using x; using x##f; using x##l;
@@ -581,6 +690,9 @@ export namespace std {
     using std::erase_if;
     using std::get;
     using std::hash;
+    using std::common_type;
+    using std::common_type_t;
+    using std::formatter;
     using std::swap;
 
     using std::operator+;

@@ -21,8 +21,8 @@
 #include "config.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
+#include <vector>
 
 #include "alc/events.h"
 #include "althrd_setname.h"
@@ -37,6 +37,7 @@ import core.helpers;
 
 #else
 
+#include <chrono>
 #include <exception>
 #include <thread>
 

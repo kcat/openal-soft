@@ -45,7 +45,6 @@
 
 #include <atomic>
 #include <bit>
-#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -109,6 +108,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <chrono>
 #include <mutex>
 #include <string>
 #include <thread>

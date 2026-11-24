@@ -65,7 +65,6 @@
 #include "makemhr.h"
 
 #include <atomic>
-#include <chrono>
 #include <complex>
 #include <cstdint>
 #include <cstdlib>
@@ -96,6 +95,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <limits>

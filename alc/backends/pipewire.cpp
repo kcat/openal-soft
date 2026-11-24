@@ -27,13 +27,13 @@
 #include <cstdint>
 #include <cstring>
 #include <cerrno>
-#include <chrono>
 #include <ctime>
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <span>
 #include <string_view>
+#include <vector>
 
 #include "alc/alconfig.h"
 #include "alc/events.h"
@@ -139,6 +139,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <mutex>
 #include <optional>

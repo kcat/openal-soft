@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -55,6 +54,7 @@ import zstring_view;
 #else
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <mutex>
 #include <string>

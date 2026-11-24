@@ -27,7 +27,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -54,6 +53,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <thread>

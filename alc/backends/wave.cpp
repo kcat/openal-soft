@@ -23,11 +23,11 @@
 #include <atomic>
 #include <bit>
 #include <cerrno>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <span>
 #include <system_error>
 #include <vector>
 
@@ -52,6 +52,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <exception>
 #include <ostream>
 #include <thread>

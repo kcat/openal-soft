@@ -32,7 +32,6 @@
 #include <bit>
 #include <bitset>
 #include <cctype>
-#include <chrono>
 #include <climits>
 #include <csignal>
 #include <cstddef>
@@ -116,6 +115,7 @@ import eax.effect;
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <exception>
 #include <limits>

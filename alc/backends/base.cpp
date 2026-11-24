@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <chrono>
 
 #include "core/mixparams.hpp"
 
@@ -16,6 +15,7 @@ import format;
 
 #else
 
+#include <chrono>
 #include <utility>
 
 #include "alc/backends/base.hpp"

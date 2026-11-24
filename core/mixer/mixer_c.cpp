@@ -1,7 +1,6 @@
 #include "config.h"
 
 #include <cstddef>
-#include <limits>
 #include <ranges>
 #include <span>
 #include <variant>
@@ -26,6 +25,7 @@ import zudl;
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

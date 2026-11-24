@@ -3,8 +3,6 @@
 
 #include "splitter.h"
 
-#include <limits>
-
 /* HACK: MSVC 19.52.37029.0 seems to have an internal compiler error after some
  * updates to the common.std module, while MSVC 19.44.35219.0 is fine. Avoid
  * using these modules here for the potentially affected versions.
@@ -20,6 +18,7 @@ import numeric;
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numbers>
 
 #include "gsl/gsl"

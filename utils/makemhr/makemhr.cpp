@@ -70,7 +70,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -99,6 +98,7 @@ import zstring_view;
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <numbers>
 #include <thread>
 

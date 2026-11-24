@@ -42,7 +42,6 @@
 #include <cstring>
 #include <functional>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -119,6 +118,7 @@ import eax.effect;
 #include <array>
 #include <cmath>
 #include <exception>
+#include <limits>
 #include <mutex>
 #include <new>
 #include <numbers>

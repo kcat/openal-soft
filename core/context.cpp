@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -22,6 +21,7 @@ import zudl;
 
 #else
 
+#include <limits>
 #include <stdexcept>
 #include <utility>
 

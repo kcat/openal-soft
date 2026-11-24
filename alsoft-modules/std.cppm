@@ -9,6 +9,7 @@ module;
 #include <ios>
 #include <iostream>
 #include <istream>
+#include <limits>
 #include <mutex>
 #include <new>
 #include <numbers>
@@ -389,6 +390,11 @@ export namespace std {
 
     using std::io_errc;
     using std::iostream_category;
+
+    /* limits */
+    using std::numeric_limits;
+    using std::float_round_style;
+    using std::float_denorm_style;
 
     /* mutex */
     using std::mutex;

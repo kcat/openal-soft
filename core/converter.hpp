@@ -1,5 +1,5 @@
-#ifndef CORE_CONVERTER_H
-#define CORE_CONVERTER_H
+#ifndef CORE_CONVERTER_HPP
+#define CORE_CONVERTER_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -66,4 +66,4 @@ struct ChannelConverter {
     void convert(const void *src, float *dst, unsigned frames) const;
 };
 
-#endif /* CORE_CONVERTER_H */
+#endif /* CORE_CONVERTER_HPP */

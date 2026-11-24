@@ -870,7 +870,7 @@ set(CORE_HDRS
     core/bufferline.h
     core/buffer_storage.h
     core/context.h
-    core/converter.h
+    core/converter.hpp
     core/cpu_caps.h
     core/cubic_defs.h
     core/cubic_tables.hpp
@@ -907,6 +907,7 @@ if(HAVE_CXXMODULES)
         core/bsinc_tables.cppm
         core/buffer_storage.cppm
         core/context.cppm
+        core/converter.cppm
         core/cubic_tables.cppm
         core/device.cppm
         core/effectslot.cppm

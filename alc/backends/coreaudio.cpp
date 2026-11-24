@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "alc/events.h"
-#include "core/converter.h"
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -50,6 +49,7 @@ import common.std;
 import alstring;
 import backends.base;
 import backends.exception;
+import core.converter;
 import core.device;
 import core.logging;
 import format;
@@ -68,6 +68,7 @@ import zudl;
 #include "alc/backends/exception.hpp"
 #include "alformat.hpp"
 #include "alstring.h"
+#include "core/converter.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

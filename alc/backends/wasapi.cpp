@@ -62,7 +62,6 @@
 #include "alc/events.h"
 #include "althrd_setname.h"
 #include "comptr.h"
-#include "core/converter.h"
 
 #if ALSOFT_UWP
 #include <winrt/Windows.Media.Core.h> // !!This is important!!
@@ -95,6 +94,7 @@ import common.std;
 import alstring;
 import backends.base;
 import backends.exception;
+import core.converter;
 import core.device;
 import core.logging;
 import format;
@@ -117,6 +117,7 @@ import zudl;
 #include "alc/backends/exception.hpp"
 #include "alstring.h"
 #include "alformat.hpp"
+#include "core/converter.hpp"
 #include "core/device.h"
 #include "core/logging.h"
 #include "gsl/gsl"

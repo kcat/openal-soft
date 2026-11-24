@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "converter.h"
-
 #include <bit>
 #include <climits>
 #include <cstddef>
@@ -11,11 +9,16 @@
 #include <ranges>
 #include <span>
 
+#include "core/devformat.h"
+#include "core/mixer/defs.h"
+#include "core/resampler_limits.hpp"
+#include "flexarray.h"
 #include "fpu_ctrl.h"
 
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.converter;
 import core.device;
 import gsl;
 import numeric;
@@ -28,6 +31,7 @@ import zudl;
 #include <algorithm>
 #include <cmath>
 
+#include "core/converter.hpp"
 #include "core/devfmttraits.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"

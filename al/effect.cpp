@@ -172,8 +172,7 @@ auto AllocEffect(al::Device& device) noexcept -> gsl::not_null<al::Effect*>
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
-    auto effect = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mEffects->begin(), as_signed(slidx)))));
+    auto const effect = gsl::make_not_null(std::construct_at(&(*sublist->mEffects)[slidx]));
     InitEffectParams(*effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -209,7 +208,7 @@ auto LookupEffect(std::nothrow_t, al::Device const& device, ALuint const id) noe
     auto &sublist = device.EffectList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mEffects->begin(), as_signed(slidx)));
+    return &(*sublist.mEffects)[slidx];
 }
 
 [[nodiscard]]

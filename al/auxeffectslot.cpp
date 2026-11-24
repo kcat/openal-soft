@@ -137,7 +137,7 @@ auto LookupEffectSlot(std::nothrow_t, al::Context const& context, ALuint const i
     auto &sublist = context.mEffectSlotList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mEffectSlots->begin(), as_signed(slidx)));
+    return &(*sublist.mEffectSlots)[slidx];
 }
 
 [[nodiscard]]
@@ -160,7 +160,7 @@ auto LookupEffect(std::nothrow_t, al::Device const& device, ALuint const id) noe
     auto &sublist = device.EffectList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mEffects->begin(), as_signed(slidx)));
+    return &(*sublist.mEffects)[slidx];
 }
 
 [[nodiscard]]
@@ -183,7 +183,7 @@ auto LookupBuffer(std::nothrow_t, al::Device const& device, ALuint const id) noe
     auto &sublist = device.BufferList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mBuffers->begin(), as_signed(slidx)));
+    return &(*sublist.mBuffers)[slidx];
 }
 
 [[nodiscard]]
@@ -322,8 +322,8 @@ auto AllocEffectSlot(al::Context& context) -> gsl::not_null<al::EffectSlot*>
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
-    auto const slot = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mEffectSlots->begin(), as_signed(slidx))), context));
+    auto const slot = gsl::make_not_null(std::construct_at(&(*sublist->mEffectSlots)[slidx],
+        context));
     aluInitEffectPanning(slot->mSlot, &context);
 
     /* Add 1 to avoid ID 0. */

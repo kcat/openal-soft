@@ -911,8 +911,7 @@ auto AllocSource(al::Context& context) noexcept -> gsl::not_null<al::Source*>
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
-    auto const source = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mSources->begin(), as_signed(slidx)))));
+    auto const source = gsl::make_not_null(std::construct_at(&(*sublist->mSources)[slidx]));
 #if ALSOFT_EAX
     source->eaxInitialize(context);
 #endif // ALSOFT_EAX
@@ -965,7 +964,7 @@ auto LookupSource(std::nothrow_t, al::Context const& context, ALuint const id) n
     auto &sublist = context.mSourceList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(sublist.mSources->begin() + as_signed(slidx));
+    return &(*sublist.mSources)[slidx];
 }
 
 [[nodiscard]]
@@ -988,8 +987,7 @@ auto LookupBuffer(std::nothrow_t, al::Device const& device, std::unsigned_integr
     auto &sublist = device.BufferList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mBuffers->begin(),
-        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
+    return &(*sublist.mBuffers)[gsl::narrow_cast<std::size_t>(slidx)];
 }
 
 [[nodiscard]]
@@ -1012,8 +1010,7 @@ auto LookupFilter(std::nothrow_t, al::Device const& device, std::unsigned_integr
     auto &sublist = device.FilterList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mFilters->begin(),
-        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
+    return &(*sublist.mFilters)[gsl::narrow_cast<std::size_t>(slidx)];
 }
 
 [[nodiscard]]
@@ -1036,8 +1033,7 @@ auto LookupEffectSlot(std::nothrow_t, al::Context const& context,
     auto &sublist = context.mEffectSlotList[gsl::narrow_cast<std::size_t>(lidx)];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mEffectSlots->begin(),
-        gsl::narrow_cast<std::ptrdiff_t>(slidx)));
+    return &(*sublist.mEffectSlots)[gsl::narrow_cast<std::size_t>(slidx)];
 }
 
 [[nodiscard]]

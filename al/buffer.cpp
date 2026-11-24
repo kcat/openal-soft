@@ -241,14 +241,13 @@ catch(...) {
 [[nodiscard]]
 auto AllocBuffer(al::Device& device) noexcept -> gsl::not_null<al::Buffer*>
 {
-    auto sublist = std::ranges::find_if(device.BufferList,
+    auto const sublist = std::ranges::find_if(device.BufferList,
         [](BufferSubList const &slist) { return slist.mFreeMask != 0; });
-    auto lidx = gsl::narrow_cast<ALuint>(std::distance(device.BufferList.begin(), sublist));
-    auto slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
+    auto const lidx = gsl::narrow_cast<ALuint>(std::distance(device.BufferList.begin(), sublist));
+    auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
-    auto const buffer = gsl::make_not_null(std::construct_at(
-        std::to_address(sublist->mBuffers->begin() + as_signed(slidx))));
+    auto const buffer = gsl::make_not_null(std::construct_at(&(*sublist->mBuffers)[slidx]));
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->mId = gsl::narrow_cast<ALuint>((lidx<<6) | slidx) + 1;
@@ -287,7 +286,7 @@ auto LookupBuffer(std::nothrow_t, al::Device const& device, ALuint const id) noe
     auto &sublist = device.BufferList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mBuffers->begin(), as_signed(slidx)));
+    return &(*sublist.mBuffers)[slidx];
 }
 
 [[nodiscard]]

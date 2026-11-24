@@ -335,8 +335,7 @@ auto AllocFilter(al::Device& device) noexcept -> gsl::not_null<al::Filter*>
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
     ASSUME(slidx < 64);
 
-    auto filter = gsl::make_not_null(std::construct_at(
-        std::to_address(std::next(sublist->mFilters->begin(), as_signed(slidx)))));
+    auto filter = gsl::make_not_null(std::construct_at(&(*sublist->mFilters)[slidx]));
     InitFilterParams(*filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -372,7 +371,7 @@ auto LookupFilter(std::nothrow_t, al::Device const& device, ALuint const id) noe
     auto &sublist = device.FilterList[lidx];
     if((sublist.mFreeMask & (std::uint64_t{1} << slidx)) != 0) [[unlikely]]
         return nullptr;
-    return std::to_address(std::next(sublist.mFilters->begin(), as_signed(slidx)));
+    return &(*sublist.mFilters)[slidx];
 }
 
 [[nodiscard]]

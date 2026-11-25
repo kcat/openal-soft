@@ -53,6 +53,13 @@ enum class DebugSeverity : std::uint8_t {
 };
 inline constexpr auto DebugSeverityCount = 4u;
 
+namespace al {
+
+struct debug_defaults_t { explicit debug_defaults_t() = default; };
+inline auto constexpr debug_defaults = debug_defaults_t{};
+
+}
+
 struct DebugGroup {
     ALuint const mId;
     DebugSource const mSource;
@@ -64,6 +71,7 @@ struct DebugGroup {
     DebugGroup(DebugSource const source, ALuint const id, T&& message)
         : mId{id}, mSource{source}, mMessage{std::forward<T>(message)}
     { }
+    explicit DebugGroup(al::debug_defaults_t);
     DebugGroup(const DebugGroup&) = default;
     DebugGroup(DebugGroup&&) = default;
     NOINLINE ~DebugGroup() = default;

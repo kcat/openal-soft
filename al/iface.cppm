@@ -62,6 +62,11 @@ export {
     using ::DebugSeverity;
     using ::DebugSeverityCount;
 
+    namespace al {
+        using al::debug_defaults_t;
+        using al::debug_defaults;
+    }
+
     using ::DebugGroup;
 
 

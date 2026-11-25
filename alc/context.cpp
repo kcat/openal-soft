@@ -180,14 +180,11 @@ auto Context::Create(const gsl::not_null<intrusive_ptr<Device>> &device,
 }
 
 
-Context::Context(gsl::not_null<intrusive_ptr<Device>> const &device, ContextFlagBitset const flags)
+Context::Context(gsl::not_null<intrusive_ptr<Device>> const& device, ContextFlagBitset const flags)
     : ContextBase{*device}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
-    , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
 {
-    /* Low-severity debug messages are disabled by default. */
-    alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
-        AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
+    mDebugGroups.emplace_back(al::debug_defaults);
 }
 
 Context::~Context()

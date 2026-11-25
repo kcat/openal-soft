@@ -624,6 +624,29 @@ catch(std::exception &e) {
 } // namespace
 
 
+DebugGroup::DebugGroup(al::debug_defaults_t) : mId{0}, mSource{DebugSource::Other}
+{
+    /* Low-severity debug messages are disabled by default. */
+    static auto constexpr svridx = std::uint32_t{DebugSeverityBase
+        + al::to_underlying(DebugSeverity::Low)};
+
+    std::ranges::for_each(std::views::iota(DebugSourceBase, DebugSourceBase+DebugSourceCount),
+        [this](std::uint32_t const srcidx)
+    {
+        auto const srcfilt = std::uint32_t{1}<<srcidx;
+        std::ranges::for_each(std::views::iota(DebugTypeBase, DebugTypeBase+DebugTypeCount),
+            [srcfilt, this](std::uint32_t const typeidx)
+        {
+            auto const srctype = srcfilt | (std::uint32_t{1}<<typeidx);
+            auto const filter = srctype | (std::uint32_t{1}<<svridx);
+            if(auto const iter = std::ranges::lower_bound(mFilters, filter);
+                iter == mFilters.cend() || *iter != filter)
+                mFilters.insert(iter, filter);
+        });
+    });
+}
+
+
 void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, DebugSource source,
     DebugType type, ALuint id, DebugSeverity severity, al::zstring_view message)
 {

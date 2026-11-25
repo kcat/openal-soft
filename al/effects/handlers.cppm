@@ -4,7 +4,7 @@ module;
 
 export module al.effects.handlers;
 
-export {
+export extern "C++" {
     using ::NullEffectHandler;
     using ::ReverbEffectHandler;
     using ::StdReverbEffectHandler;

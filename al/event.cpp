@@ -18,6 +18,7 @@ import openal;
 import al.iface;
 import alc.context;
 import core.async_event;
+import core.effects.base;
 import core.except;
 import core.logging;
 import format;
@@ -42,6 +43,7 @@ import numeric;
 #include "alc/context.hpp"
 #include "alformat.hpp"
 #include "core/async_event.hpp"
+#include "core/effects/base.hpp"
 #include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

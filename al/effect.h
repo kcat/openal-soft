@@ -10,12 +10,12 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/inprogext.h"
 #include "bitset.hpp"
 #include "core/effects/base.h"
 #include "disable_alloc.hpp"
-#include "effects/effects.h"
-#include "gsl/gsl"
+#include "gsl/pointers"
 
 
 enum class EffectTypeFlag : std::uint8_t {

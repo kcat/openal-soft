@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -25,6 +25,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import gsl;
 import numeric;
@@ -34,27 +35,12 @@ import numeric;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return DistortionProps{
-        .Edge = AL_DISTORTION_DEFAULT_EDGE,
-        .Gain = AL_DISTORTION_DEFAULT_GAIN,
-        .LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF,
-        .EQCenter = AL_DISTORTION_DEFAULT_EQCENTER,
-        .EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH};
-}
-
-} // namespace
-
-constinit const EffectProps DistortionEffectProps(genDefaultProps());
 
 void DistortionEffectHandler::SetParami(al::Context& context, DistortionProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid distortion integer property {:#04x}", as_unsigned(param)); }

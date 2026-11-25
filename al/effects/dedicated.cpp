@@ -1,12 +1,13 @@
 
 #include "config.h"
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if HAVE_CXXMODULES
 import common.std;
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import numeric;
 
@@ -17,29 +18,11 @@ import numeric;
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif
 
-namespace {
-
-consteval auto genDefaultDialogProps() noexcept -> EffectProps
-{
-    return DedicatedProps{
-        .Target = DedicatedProps::Dialog,
-        .Gain = 1.0f};
-}
-
-consteval auto genDefaultLfeProps() noexcept -> EffectProps
-{
-    return DedicatedProps{
-        .Target = DedicatedProps::Lfe,
-        .Gain = 1.0f};
-}
-
-} // namespace
-
-constinit const EffectProps DedicatedDialogEffectProps(genDefaultDialogProps());
 
 void DedicatedDialogEffectHandler::SetParami(al::Context& context, DedicatedProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid dedicated integer property {:#04x}", as_unsigned(param)); }
@@ -79,8 +62,6 @@ void DedicatedDialogEffectHandler::GetParamf(al::Context& context, const Dedicat
 void DedicatedDialogEffectHandler::GetParamfv(al::Context& context, const DedicatedProps &props, ALenum param, float *vals)
 { GetParamf(context, props, param, vals); }
 
-
-constinit const EffectProps DedicatedLfeEffectProps(genDefaultLfeProps());
 
 void DedicatedLfeEffectHandler::SetParami(al::Context& context, DedicatedProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid dedicated integer property {:#04x}", as_unsigned(param)); }

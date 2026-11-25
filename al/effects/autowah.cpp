@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -26,6 +26,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import gsl;
 import numeric;
@@ -34,26 +35,12 @@ import numeric;
 
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return AutowahProps{
-        .AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME,
-        .ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME,
-        .Resonance = AL_AUTOWAH_DEFAULT_RESONANCE,
-        .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN};
-}
-
-} // namespace
-
-constinit const EffectProps AutowahEffectProps(genDefaultProps());
 
 void AutowahEffectHandler::SetParami(al::Context& context, AutowahProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid autowah integer property {:#04x}", as_unsigned(param)); }

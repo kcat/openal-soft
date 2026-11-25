@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -25,6 +25,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import gsl;
 import numeric;
@@ -34,32 +35,12 @@ import numeric;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return EqualizerProps{
-        .LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF,
-        .LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN,
-        .Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER,
-        .Mid1Gain = AL_EQUALIZER_DEFAULT_MID1_GAIN,
-        .Mid1Width = AL_EQUALIZER_DEFAULT_MID1_WIDTH,
-        .Mid2Center = AL_EQUALIZER_DEFAULT_MID2_CENTER,
-        .Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN,
-        .Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH,
-        .HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF,
-        .HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN};
-}
-
-} // namespace
-
-constinit const EffectProps EqualizerEffectProps(genDefaultProps());
 
 void EqualizerEffectHandler::SetParami(al::Context& context, EqualizerProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid equalizer integer property {:#04x}", as_unsigned(param)); }

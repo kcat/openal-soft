@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -25,6 +25,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import numeric;
 
@@ -33,29 +34,14 @@ import numeric;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif
 
 
-namespace {
-
 static_assert(EchoMaxDelay >= AL_ECHO_MAX_DELAY, "Echo max delay too short");
 static_assert(EchoMaxLRDelay >= AL_ECHO_MAX_LRDELAY, "Echo max left-right delay too short");
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return EchoProps{
-        .Delay    = AL_ECHO_DEFAULT_DELAY,
-        .LRDelay  = AL_ECHO_DEFAULT_LRDELAY,
-        .Damping  = AL_ECHO_DEFAULT_DAMPING,
-        .Feedback = AL_ECHO_DEFAULT_FEEDBACK,
-        .Spread   = AL_ECHO_DEFAULT_SPREAD};
-}
-
-} // namespace
-
-constinit const EffectProps EchoEffectProps(genDefaultProps());
 
 void EchoEffectHandler::SetParami(al::Context& context, EchoProps&, ALenum param, int)
 { context.throw_error(AL_INVALID_ENUM, "Invalid echo integer property {:#04x}", as_unsigned(param)); }

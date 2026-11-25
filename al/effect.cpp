@@ -31,15 +31,16 @@
 #include <variant>
 #include <vector>
 
-#include "al/effects/effects.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
+#include "core/effects/base.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
 import common.std;
 import openal;
 
+import al.effects.handlers;
 import al.iface;
 import alc.context;
 import alc.device;
@@ -63,6 +64,7 @@ import zudl;
 #include "AL/efx.h"
 
 #include "al/effect.h"
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"

@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -25,6 +25,7 @@ import eax.validator;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import gsl;
 import numeric;
@@ -34,24 +35,12 @@ import numeric;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return PshifterProps{
-        .CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE,
-        .FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE};
-}
-
-} // namespace
-
-constinit const EffectProps PshifterEffectProps(genDefaultProps());
 
 void PshifterEffectHandler::SetParami(al::Context& context, PshifterProps &props, ALenum param, int val)
 {

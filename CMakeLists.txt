@@ -1008,13 +1008,13 @@ set(OPENAL_HDRS
     al/debug.h
     al/direct_defs.h
     al/effect.h
-    al/effects/effects.h
+    al/effects/handlers.hpp
     al/event.h
     al/filter.h
     al/listener.h
     al/source.h)
 if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS  al/iface.cppm)
+    list(APPEND CORE_MODS  al/effects/handlers.cppm al/iface.cppm)
 endif()
 
 # ALC and related routines

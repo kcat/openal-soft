@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #if HAVE_CXXMODULES
@@ -22,6 +22,7 @@ import eax.exception;
 #if HAVE_CXXMODULES
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import numeric;
 
@@ -30,21 +31,11 @@ import numeric;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "numeric.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return std::monostate{};
-}
-
-} // namespace
-
-constinit const EffectProps NullEffectProps(genDefaultProps());
 
 void NullEffectHandler::SetParami(al::Context& context, std::monostate& /*props*/, ALenum param, int /*val*/)
 {

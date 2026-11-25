@@ -5,7 +5,7 @@
 #include <string_view>
 #include <variant>
 
-#include "effects.h"
+#include "core/effects/base.h"
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -29,6 +29,7 @@ import eax.validator;
 import common.std;
 import openal;
 
+import al.effects.handlers;
 import alc.context;
 import core.logging;
 import gsl;
@@ -45,6 +46,7 @@ import zudl;
 #include "AL/al.h"
 #include "AL/efx.h"
 
+#include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
@@ -52,70 +54,6 @@ import zudl;
 #include "zudl.hpp"
 #endif
 
-
-namespace {
-
-consteval auto genDefaultProps() noexcept -> EffectProps
-{
-    return ReverbProps{
-        .Density   = AL_EAXREVERB_DEFAULT_DENSITY,
-        .Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION,
-        .Gain   = AL_EAXREVERB_DEFAULT_GAIN,
-        .GainHF = AL_EAXREVERB_DEFAULT_GAINHF,
-        .GainLF = AL_EAXREVERB_DEFAULT_GAINLF,
-        .DecayTime    = AL_EAXREVERB_DEFAULT_DECAY_TIME,
-        .DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO,
-        .DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO,
-        .ReflectionsGain   = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN,
-        .ReflectionsDelay  = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY,
-        .ReflectionsPan    = {AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ,
-            AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ, AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ},
-        .LateReverbGain   = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN,
-        .LateReverbDelay  = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY,
-        .LateReverbPan    = {AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ,
-            AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ, AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ},
-        .EchoTime  = AL_EAXREVERB_DEFAULT_ECHO_TIME,
-        .EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH,
-        .ModulationTime  = AL_EAXREVERB_DEFAULT_MODULATION_TIME,
-        .ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH,
-        .AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
-        .HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE,
-        .LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE,
-        .RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
-        .DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT};
-}
-
-consteval auto genDefaultStdProps() noexcept -> EffectProps
-{
-    return ReverbProps{
-        .Density   = AL_REVERB_DEFAULT_DENSITY,
-        .Diffusion = AL_REVERB_DEFAULT_DIFFUSION,
-        .Gain   = AL_REVERB_DEFAULT_GAIN,
-        .GainHF = AL_REVERB_DEFAULT_GAINHF,
-        .GainLF = 1.0f,
-        .DecayTime    = AL_REVERB_DEFAULT_DECAY_TIME,
-        .DecayHFRatio = AL_REVERB_DEFAULT_DECAY_HFRATIO,
-        .DecayLFRatio = 1.0f,
-        .ReflectionsGain   = AL_REVERB_DEFAULT_REFLECTIONS_GAIN,
-        .ReflectionsDelay  = AL_REVERB_DEFAULT_REFLECTIONS_DELAY,
-        .ReflectionsPan    = {0.0f, 0.0f, 0.0f},
-        .LateReverbGain   = AL_REVERB_DEFAULT_LATE_REVERB_GAIN,
-        .LateReverbDelay  = AL_REVERB_DEFAULT_LATE_REVERB_DELAY,
-        .LateReverbPan    = {0.0f, 0.0f, 0.0f},
-        .EchoTime  = 0.25f,
-        .EchoDepth = 0.0f,
-        .ModulationTime  = 0.25f,
-        .ModulationDepth = 0.0f,
-        .AirAbsorptionGainHF = AL_REVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
-        .HFReference = 5'000.0f,
-        .LFReference = 250.0f,
-        .RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
-        .DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT};
-}
-
-} // namespace
-
-constinit const EffectProps ReverbEffectProps(genDefaultProps());
 
 void ReverbEffectHandler::SetParami(al::Context& context, ReverbProps &props, ALenum param, int val)
 {
@@ -339,8 +277,6 @@ void ReverbEffectHandler::GetParamfv(al::Context& context, const ReverbProps &pr
     GetParamf(context, props, param, vals);
 }
 
-
-constinit const EffectProps StdReverbEffectProps(genDefaultStdProps());
 
 void StdReverbEffectHandler::SetParami(al::Context& context, ReverbProps &props, ALenum param, int val)
 {

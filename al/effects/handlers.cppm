@@ -4,7 +4,7 @@ module;
 
 export module al.effects.handlers;
 
-export extern "C++" {
+export {
     using ::NullEffectHandler;
     using ::ReverbEffectHandler;
     using ::StdReverbEffectHandler;
@@ -41,3 +41,7 @@ export extern "C++" {
     using ::DedicatedLfeEffectProps;
     using ::ConvolutionEffectProps;
 }
+
+#ifdef _MSC_VER
+export inline auto maybe_an_msvc_workaround = true;
+#endif

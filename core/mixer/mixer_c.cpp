@@ -10,13 +10,13 @@
 #include "core/cubic_defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/resampler_limits.hpp"
-#include "hrtfbase.h"
 #include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
 
 import core.mixer.defs;
+import core.mixer.hrtfbase;
 import gsl;
 import numeric;
 import zudl;
@@ -28,6 +28,7 @@ import zudl;
 #include <limits>
 
 #include "core/mixer/defs.hpp"
+#include "core/mixer/hrtfbase.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "zudl.hpp"

@@ -12,15 +12,15 @@ using u8x2 = std::array<std::uint8_t, 2>;
 using u32x2 = std::array<std::uint32_t, 2>;
 using f32x2 = std::array<float, 2>;
 
-constexpr auto HrtfHistoryBits = 6u;
-constexpr auto HrtfHistoryLength = 1u << HrtfHistoryBits;
-constexpr auto HrtfHistoryMask = HrtfHistoryLength - 1u;
+inline auto constexpr HrtfHistoryBits = 6u;
+inline auto constexpr HrtfHistoryLength = 1u << HrtfHistoryBits;
+inline auto constexpr HrtfHistoryMask = HrtfHistoryLength - 1u;
 
-constexpr auto HrirBits = 7u;
-constexpr auto HrirLength = 1u << HrirBits;
-constexpr auto HrirMask = HrirLength - 1u;
+inline auto constexpr HrirBits = 7u;
+inline auto constexpr HrirLength = 1u << HrirBits;
+inline auto constexpr HrirMask = HrirLength - 1u;
 
-constexpr auto MinIrLength = 8u;
+inline auto constexpr MinIrLength = 8u;
 
 using HrirArray = std::array<f32x2, HrirLength>;
 using HrirSpan = std::span<f32x2, HrirLength>;

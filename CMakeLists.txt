@@ -973,10 +973,10 @@ list(APPEND CORE_SRCS
     core/mixer/mixer_c.cpp)
 list(APPEND CORE_HDRS
     core/mixer/defs.hpp
-    core/mixer/hrtfbase.h
+    core/mixer/hrtfbase.hpp
     core/mixer/hrtfdefs.h)
 if(HAVE_CXXMODULES)
-    list(APPEND CORE_MODS  core/mixer/defs.cppm)
+    list(APPEND CORE_MODS  core/mixer/defs.cppm core/mixer/hrtfbase.cppm)
 endif()
 
 # AL and related routines

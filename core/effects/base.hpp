@@ -1,5 +1,5 @@
-#ifndef CORE_EFFECTS_BASE_H
-#define CORE_EFFECTS_BASE_H
+#ifndef CORE_EFFECTS_BASE_HPP
+#define CORE_EFFECTS_BASE_HPP
 
 #include <array>
 #include <cstddef>
@@ -222,4 +222,4 @@ struct EffectStateFactory {
     virtual al::intrusive_ptr<EffectState> create() = 0;
 };
 
-#endif /* CORE_EFFECTS_BASE_H */
+#endif /* CORE_EFFECTS_BASE_HPP */

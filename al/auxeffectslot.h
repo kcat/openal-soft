@@ -12,7 +12,7 @@
 
 #include "AL/al.h"
 
-#include "core/effects/base.h"
+#include "core/effects/base.hpp"
 #include "core/effectslot.h"
 #include "gsl/pointers"
 #include "intrusive_ptr.h"

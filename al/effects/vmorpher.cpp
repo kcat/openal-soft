@@ -2,8 +2,7 @@
 #include "config.h"
 
 #include <string_view>
-
-#include "core/effects/base.h"
+#include <variant>
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -29,6 +28,7 @@ import openal;
 import al.effects.handlers;
 import alc.context;
 import format;
+import core.effects.base;
 import gsl;
 import numeric;
 import opthelpers;
@@ -44,6 +44,7 @@ import opthelpers;
 #include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
 #include "alformat.hpp"
+#include "core/effects/base.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

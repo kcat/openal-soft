@@ -3,8 +3,7 @@
 
 #include <cstdlib>
 #include <string_view>
-
-#include "core/effects/base.h"
+#include <variant>
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -28,6 +27,7 @@ import openal;
 
 import al.effects.handlers;
 import alc.context;
+import core.effects.base;
 import gsl;
 import numeric;
 
@@ -37,6 +37,7 @@ import numeric;
 
 #include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
+#include "core/effects/base.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #endif

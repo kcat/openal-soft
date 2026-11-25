@@ -2,9 +2,9 @@
 #include "config.h"
 
 #include <span>
+#include <variant>
 
 #include "alc/inprogext.h"
-#include "core/effects/base.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -12,6 +12,7 @@ import openal;
 
 import al.effects.handlers;
 import alc.context;
+import core.effects.base;
 import numeric;
 import zudl;
 
@@ -25,6 +26,7 @@ import zudl;
 
 #include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
+#include "core/effects/base.hpp"
 #include "numeric.hpp"
 #include "zudl.hpp"
 #endif

@@ -29,7 +29,6 @@
 #include "alc/effects/base.h"
 #include "alcomplex.h"
 #include "core/bufferline.h"
-#include "core/effects/base.h"
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
 #include "core/mixer/defs.h"
@@ -42,6 +41,7 @@ import common.std;
 import core.ambi_utils;
 import core.context;
 import core.device;
+import core.effects.base;
 import core.effectslot;
 import numeric;
 import window.hann;
@@ -58,6 +58,7 @@ import zudl;
 #include "core/ambi_utils.hpp"
 #include "core/context.h"
 #include "core/device.h"
+#include "core/effects/base.hpp"
 #include "core/effectslot.h"
 #include "hann_window.hpp"
 #include "numeric.hpp"

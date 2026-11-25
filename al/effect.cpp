@@ -33,7 +33,6 @@
 
 #include "alc/inprogext.h"
 #include "almalloc.h"
-#include "core/effects/base.h"
 #include "direct_defs.h"
 
 #if HAVE_CXXMODULES
@@ -45,6 +44,7 @@ import al.iface;
 import alc.context;
 import alc.device;
 import alstring;
+import core.effects.base;
 import core.except;
 import core.logging;
 import gsl;
@@ -68,6 +68,7 @@ import zudl;
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"
+#include "core/effects/base.hpp"
 #include "core/except.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"

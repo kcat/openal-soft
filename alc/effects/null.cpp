@@ -5,8 +5,14 @@
 
 #include "base.h"
 #include "core/bufferline.h"
-#include "core/effects/base.h"
 #include "intrusive_ptr.h"
+#include "opthelper_macros.hpp"
+
+#if HAVE_CXXMODULES
+import core.effects.base;
+#else
+#include "core/effects/base.hpp"
+#endif
 
 struct BufferStorage;
 struct ContextBase;

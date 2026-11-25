@@ -7,7 +7,7 @@
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "core/effects/base.h"
+#include "core/effects/base.hpp"
 
 namespace al {
 struct Context;

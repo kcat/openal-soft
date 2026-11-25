@@ -878,7 +878,7 @@ set(CORE_HDRS
     core/devfmttraits.hpp
     core/devformat.h
     core/device.h
-    core/effects/base.h
+    core/effects/base.hpp
     core/effectslot.h
     core/encoderbase.hpp
     core/filters/biquad.h
@@ -910,6 +910,7 @@ if(HAVE_CXXMODULES)
         core/converter.cppm
         core/cubic_tables.cppm
         core/device.cppm
+        core/effects/base.cppm
         core/effectslot.cppm
         core/except.cppm
         core/fmt_traits.cppm

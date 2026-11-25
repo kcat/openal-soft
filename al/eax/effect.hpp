@@ -10,7 +10,7 @@
 
 #include "al/eax/call.hpp"
 #include "api.h"
-#include "core/effects/base.h"
+#include "core/effects/base.hpp"
 #include "opthelper_macros.hpp"
 
 inline bool EaxTraceCommits{false};

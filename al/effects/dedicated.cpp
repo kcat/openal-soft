@@ -1,7 +1,7 @@
 
 #include "config.h"
 
-#include "core/effects/base.h"
+#include <variant>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -9,6 +9,7 @@ import openal;
 
 import al.effects.handlers;
 import alc.context;
+import core.effects.base;
 import numeric;
 
 #else
@@ -20,6 +21,7 @@ import numeric;
 
 #include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
+#include "core/effects/base.hpp"
 #include "numeric.hpp"
 #endif
 

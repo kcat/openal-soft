@@ -5,8 +5,6 @@
 #include <string_view>
 #include <variant>
 
-#include "core/effects/base.h"
-
 #if ALSOFT_EAX
 #include "al/eax/api.h"
 #include "al/eax/presets.hpp"
@@ -31,6 +29,7 @@ import openal;
 
 import al.effects.handlers;
 import alc.context;
+import core.effects.base;
 import core.logging;
 import gsl;
 import numeric;
@@ -48,6 +47,7 @@ import zudl;
 
 #include "al/effects/handlers.hpp"
 #include "alc/context.hpp"
+#include "core/effects/base.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

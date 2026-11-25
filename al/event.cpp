@@ -8,7 +8,6 @@
 #include <variant>
 
 #include "atomic.h"
-#include "core/effects/base.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 

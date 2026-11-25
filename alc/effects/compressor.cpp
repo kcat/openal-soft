@@ -40,7 +40,6 @@
 #include "alc/effects/base.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
-#include "core/effects/base.h"
 #include "core/mixer/defs.h"
 #include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
@@ -49,6 +48,7 @@
 import common.std;
 
 import core.device;
+import core.effects.base;
 import core.effectslot;
 import zudl;
 
@@ -59,6 +59,7 @@ import zudl;
 #include <cmath>
 
 #include "core/device.h"
+#include "core/effects/base.hpp"
 #include "core/effectslot.h"
 #include "zudl.hpp"
 #endif

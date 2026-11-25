@@ -13,7 +13,7 @@
 #include "al/effects/handlers.hpp"
 #include "alc/inprogext.h"
 #include "bitset.hpp"
-#include "core/effects/base.h"
+#include "core/effects/base.hpp"
 #include "disable_alloc.hpp"
 #include "gsl/pointers"
 

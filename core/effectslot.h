@@ -4,10 +4,10 @@
 #include <atomic>
 #include <memory>
 
-#include "effects/base.h"
+#include "core/effects/base.hpp"
+#include "core/mixparams.hpp"
 #include "flexarray.h"
 #include "intrusive_ptr.h"
-#include "mixparams.hpp"
 #include "vector.h"
 
 struct EffectSlotBase;

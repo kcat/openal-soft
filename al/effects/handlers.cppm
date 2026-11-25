@@ -41,7 +41,3 @@ export {
     using ::DedicatedLfeEffectProps;
     using ::ConvolutionEffectProps;
 }
-
-#ifdef _MSC_VER
-export inline auto maybe_an_msvc_workaround = true;
-#endif

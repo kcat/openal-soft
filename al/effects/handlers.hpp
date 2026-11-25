@@ -137,36 +137,36 @@ namespace detail {
 }
 
 /* Default properties for the given effect types. */
-inline auto constexpr NullEffectProps = EffectProps{std::monostate{}};
+inline auto constexpr NullEffectProps = EffectProps{[] { return std::monostate{}; }()};
 
-inline auto constexpr ReverbEffectProps = EffectProps{ReverbProps{
-    .Density = AL_EAXREVERB_DEFAULT_DENSITY,
-    .Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION,
-    .Gain = AL_EAXREVERB_DEFAULT_GAIN,
-    .GainHF = AL_EAXREVERB_DEFAULT_GAINHF,
-    .GainLF = AL_EAXREVERB_DEFAULT_GAINLF,
-    .DecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME,
-    .DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO,
-    .DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO,
-    .ReflectionsGain = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN,
-    .ReflectionsDelay = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY,
-    .ReflectionsPan = {AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ,
-        AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ, AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ},
-    .LateReverbGain = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN,
-    .LateReverbDelay = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY,
-    .LateReverbPan = {AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ,
-        AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ, AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ},
-    .EchoTime = AL_EAXREVERB_DEFAULT_ECHO_TIME,
-    .EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH,
-    .ModulationTime = AL_EAXREVERB_DEFAULT_MODULATION_TIME,
-    .ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH,
-    .AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
-    .HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE,
-    .LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE,
-    .RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
-    .DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT}};
+inline auto constexpr ReverbEffectProps = EffectProps{[] { return ReverbProps{
+        .Density = AL_EAXREVERB_DEFAULT_DENSITY,
+        .Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION,
+        .Gain = AL_EAXREVERB_DEFAULT_GAIN,
+        .GainHF = AL_EAXREVERB_DEFAULT_GAINHF,
+        .GainLF = AL_EAXREVERB_DEFAULT_GAINLF,
+        .DecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME,
+        .DecayHFRatio = AL_EAXREVERB_DEFAULT_DECAY_HFRATIO,
+        .DecayLFRatio = AL_EAXREVERB_DEFAULT_DECAY_LFRATIO,
+        .ReflectionsGain = AL_EAXREVERB_DEFAULT_REFLECTIONS_GAIN,
+        .ReflectionsDelay = AL_EAXREVERB_DEFAULT_REFLECTIONS_DELAY,
+        .ReflectionsPan = {AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ,
+            AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ, AL_EAXREVERB_DEFAULT_REFLECTIONS_PAN_XYZ},
+        .LateReverbGain = AL_EAXREVERB_DEFAULT_LATE_REVERB_GAIN,
+        .LateReverbDelay = AL_EAXREVERB_DEFAULT_LATE_REVERB_DELAY,
+        .LateReverbPan = {AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ,
+            AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ, AL_EAXREVERB_DEFAULT_LATE_REVERB_PAN_XYZ},
+        .EchoTime = AL_EAXREVERB_DEFAULT_ECHO_TIME,
+        .EchoDepth = AL_EAXREVERB_DEFAULT_ECHO_DEPTH,
+        .ModulationTime = AL_EAXREVERB_DEFAULT_MODULATION_TIME,
+        .ModulationDepth = AL_EAXREVERB_DEFAULT_MODULATION_DEPTH,
+        .AirAbsorptionGainHF = AL_EAXREVERB_DEFAULT_AIR_ABSORPTION_GAINHF,
+        .HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE,
+        .LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE,
+        .RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
+        .DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT}; }()};
 
-inline auto constexpr StdReverbEffectProps = EffectProps{ReverbProps{
+inline auto constexpr StdReverbEffectProps = EffectProps{[] { return ReverbProps{
     .Density = AL_REVERB_DEFAULT_DENSITY,
     .Diffusion = AL_REVERB_DEFAULT_DIFFUSION,
     .Gain = AL_REVERB_DEFAULT_GAIN,
@@ -189,40 +189,40 @@ inline auto constexpr StdReverbEffectProps = EffectProps{ReverbProps{
     .HFReference = 5'000.0f,
     .LFReference = 250.0f,
     .RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
-    .DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT}};
+    .DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT}; }()};
 
-inline auto constexpr AutowahEffectProps = EffectProps{AutowahProps{
+inline auto constexpr AutowahEffectProps = EffectProps{[] { return AutowahProps{
     .AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME,
     .ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME,
     .Resonance = AL_AUTOWAH_DEFAULT_RESONANCE,
-    .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN}};
+    .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN}; }()};
 
-inline auto constexpr ChorusEffectProps = EffectProps{ChorusProps{
+inline auto constexpr ChorusEffectProps = EffectProps{[] { return ChorusProps{
     .Waveform = *detail::ChorusWaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM),
     .Phase = AL_CHORUS_DEFAULT_PHASE,
     .Rate = AL_CHORUS_DEFAULT_RATE,
     .Depth = AL_CHORUS_DEFAULT_DEPTH,
     .Feedback = AL_CHORUS_DEFAULT_FEEDBACK,
-    .Delay = AL_CHORUS_DEFAULT_DELAY}};
+    .Delay = AL_CHORUS_DEFAULT_DELAY}; }()};
 
-inline auto constexpr CompressorEffectProps = EffectProps{CompressorProps{
-    .OnOff = AL_COMPRESSOR_DEFAULT_ONOFF}};
+inline auto constexpr CompressorEffectProps = EffectProps{[] { return CompressorProps{
+    .OnOff = AL_COMPRESSOR_DEFAULT_ONOFF}; }()};
 
-inline auto constexpr DistortionEffectProps = EffectProps{DistortionProps{
+inline auto constexpr DistortionEffectProps = EffectProps{[] { return DistortionProps{
     .Edge = AL_DISTORTION_DEFAULT_EDGE,
     .Gain = AL_DISTORTION_DEFAULT_GAIN,
     .LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF,
     .EQCenter = AL_DISTORTION_DEFAULT_EQCENTER,
-    .EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH}};
+    .EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH}; }()};
 
-inline auto constexpr EchoEffectProps = EffectProps{EchoProps{
+inline auto constexpr EchoEffectProps = EffectProps{[] { return EchoProps{
     .Delay = AL_ECHO_DEFAULT_DELAY,
     .LRDelay = AL_ECHO_DEFAULT_LRDELAY,
     .Damping = AL_ECHO_DEFAULT_DAMPING,
     .Feedback = AL_ECHO_DEFAULT_FEEDBACK,
-    .Spread = AL_ECHO_DEFAULT_SPREAD}};
+    .Spread = AL_ECHO_DEFAULT_SPREAD}; }()};
 
-inline auto constexpr EqualizerEffectProps = EffectProps{EqualizerProps{
+inline auto constexpr EqualizerEffectProps = EffectProps{[] { return EqualizerProps{
     .LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF,
     .LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN,
     .Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER,
@@ -232,48 +232,48 @@ inline auto constexpr EqualizerEffectProps = EffectProps{EqualizerProps{
     .Mid2Gain = AL_EQUALIZER_DEFAULT_MID2_GAIN,
     .Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH,
     .HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF,
-    .HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN}};
+    .HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN}; }()};
 
-inline auto constexpr FlangerEffectProps = EffectProps{ChorusProps{
+inline auto constexpr FlangerEffectProps = EffectProps{[] { return ChorusProps{
     .Waveform = *detail::ChorusWaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM),
     .Phase = AL_FLANGER_DEFAULT_PHASE,
     .Rate = AL_FLANGER_DEFAULT_RATE,
     .Depth = AL_FLANGER_DEFAULT_DEPTH,
     .Feedback = AL_FLANGER_DEFAULT_FEEDBACK,
-    .Delay = AL_FLANGER_DEFAULT_DELAY}};
+    .Delay = AL_FLANGER_DEFAULT_DELAY}; }()};
 
-inline auto constexpr FshifterEffectProps = EffectProps{FshifterProps{
+inline auto constexpr FshifterEffectProps = EffectProps{[] { return FshifterProps{
     .Frequency = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY,
     .LeftDirection = *detail::DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION),
-    .RightDirection = *detail::DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION)}};
+    .RightDirection = *detail::DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION)}; }()};
 
-inline auto constexpr ModulatorEffectProps = EffectProps{ModulatorProps{
+inline auto constexpr ModulatorEffectProps = EffectProps{[] { return ModulatorProps{
     .Frequency = AL_RING_MODULATOR_DEFAULT_FREQUENCY,
     .HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF,
-    .Waveform = *detail::ModulatorWaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM)}};
+    .Waveform = *detail::ModulatorWaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM)}; }()};
 
-inline auto constexpr PshifterEffectProps = EffectProps{PshifterProps{
+inline auto constexpr PshifterEffectProps = EffectProps{[] { return PshifterProps{
     .CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE,
-    .FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE}};
+    .FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE}; }()};
 
-inline auto constexpr VmorpherEffectProps = EffectProps{VmorpherProps{
+inline auto constexpr VmorpherEffectProps = EffectProps{[] { return VmorpherProps{
     .Rate = AL_VOCAL_MORPHER_DEFAULT_RATE,
     .PhonemeA = *detail::PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA),
     .PhonemeB = *detail::PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB),
     .PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING,
     .PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING,
-    .Waveform = *detail::VMorpherWaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM)}};
+    .Waveform = *detail::VMorpherWaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM)}; }()};
 
-inline auto constexpr DedicatedDialogEffectProps = EffectProps{DedicatedProps{
+inline auto constexpr DedicatedDialogEffectProps = EffectProps{[] { return DedicatedProps{
     .Target = DedicatedProps::Dialog,
-    .Gain = 1.0f}};
+    .Gain = 1.0f}; }()};
 
-inline auto constexpr DedicatedLfeEffectProps = EffectProps{DedicatedProps{
+inline auto constexpr DedicatedLfeEffectProps = EffectProps{[] { return DedicatedProps{
     .Target = DedicatedProps::Lfe,
-    .Gain = 1.0f}};
+    .Gain = 1.0f}; }()};
 
-inline auto constexpr ConvolutionEffectProps = EffectProps{ConvolutionProps{
+inline auto constexpr ConvolutionEffectProps = EffectProps{[] { return ConvolutionProps{
     .OrientAt = {0.0f,  0.0f, -1.0f},
-    .OrientUp = {0.0f,  1.0f,  0.0f}}};
+    .OrientUp = {0.0f,  1.0f,  0.0f}}; }()};
 
 #endif /* AL_EFFECTS_HANDLERS_HPP */

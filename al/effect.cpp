@@ -86,7 +86,8 @@ using namespace std::string_view_literals;
 
 using SubListAllocator = al::allocator<std::array<al::Effect,64>>;
 
-constexpr auto GetDefaultProps(ALenum const type) noexcept -> const EffectProps&
+[[nodiscard]] constexpr
+auto GetDefaultProps(ALenum const type) noexcept -> EffectProps
 {
     switch(type)
     {

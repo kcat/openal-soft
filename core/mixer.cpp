@@ -3,7 +3,6 @@
 
 #include "mixer.h"
 
-#include "mixer/defs.h"
 #include "mixparams.hpp"
 
 #if HAVE_CXXMODULES
@@ -11,6 +10,7 @@ import common.std;
 
 import core.ambi_utils;
 import core.device;
+import core.mixer.defs;
 
 #else
 
@@ -21,6 +21,7 @@ import core.device;
 
 #include "core/ambi_utils.hpp"
 #include "core/device.h"
+#include "core/mixer/defs.hpp"
 #endif
 
 [[nodiscard]]

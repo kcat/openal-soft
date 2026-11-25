@@ -30,7 +30,6 @@
 #include "alc/alu.h"
 #include "alc/inprogext.h"
 #include "atomic.h"
-#include "core/mixer/defs.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 
@@ -47,6 +46,7 @@ import al.iface;
 import alc.context;
 import alc.device;
 import core.logging;
+import core.mixer.defs;
 import core.voice;
 import envutils;
 import format;
@@ -74,6 +74,7 @@ import zudl;
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "core/logging.h"
+#include "core/mixer/defs.hpp"
 #include "core/voice.h"
 #include "envutils.hpp"
 #include "gsl/gsl"

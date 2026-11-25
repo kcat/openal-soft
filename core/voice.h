@@ -19,7 +19,7 @@
 #include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "filters/splitter.h"
-#include "mixer/defs.h"
+#include "mixer/defs.hpp"
 #include "mixer/hrtfdefs.h"
 #include "resampler_limits.hpp"
 #include "vector.h"

@@ -46,7 +46,6 @@
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "core/mixer.h"
-#include "core/mixer/defs.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/mixparams.hpp"
 #include "core/resampler_limits.hpp"
@@ -72,6 +71,7 @@ import core.device;
 import core.effects.base;
 import core.effectslot;
 import core.hrtfstore;
+import core.mixer.defs;
 import core.voice;
 import envutils;
 import format;
@@ -107,6 +107,7 @@ import zudl;
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
 #include "core/hrtfstore.hpp"
+#include "core/mixer/defs.hpp"
 #include "core/voice.h"
 #include "envutils.hpp"
 #include "gsl/gsl"

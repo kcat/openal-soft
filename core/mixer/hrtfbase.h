@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <ranges>
 
-#include "defs.h"
+#include "defs.hpp"
 #include "hrtfdefs.h"
 #include "opthelper_macros.hpp"
 

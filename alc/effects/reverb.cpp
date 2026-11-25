@@ -25,13 +25,13 @@
 #include <iterator>
 #include <ranges>
 #include <span>
+#include <variant>
 
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
 #include "core/filters/biquad.h"
 #include "core/filters/splitter.h"
 #include "core/mixer.h"
-#include "core/mixer/defs.h"
 #include "intrusive_ptr.h"
 #include "opthelper_macros.hpp"
 #include "vector.h"
@@ -45,6 +45,7 @@ import core.cubic_tables;
 import core.device;
 import core.effects.base;
 import core.effectslot;
+import core.mixer.defs;
 import gsl;
 import numeric;
 import zudl;
@@ -63,6 +64,7 @@ import zudl;
 #include "core/device.h"
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
+#include "core/mixer/defs.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "zudl.hpp"

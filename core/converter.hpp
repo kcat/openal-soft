@@ -8,7 +8,7 @@
 
 #include "devformat.h"
 #include "flexarray.h"
-#include "mixer/defs.h"
+#include "mixer/defs.hpp"
 #include "resampler_limits.hpp"
 
 

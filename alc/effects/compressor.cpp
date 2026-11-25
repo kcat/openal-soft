@@ -40,9 +40,9 @@
 #include "alc/effects/base.h"
 #include "core/ambidefs.h"
 #include "core/bufferline.h"
-#include "core/mixer/defs.h"
 #include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
+#include "opthelper_macros.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -50,6 +50,7 @@ import common.std;
 import core.device;
 import core.effects.base;
 import core.effectslot;
+import core.mixer.defs;
 import zudl;
 
 #else
@@ -61,6 +62,7 @@ import zudl;
 #include "core/device.h"
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
+#include "core/mixer/defs.hpp"
 #include "zudl.hpp"
 #endif
 

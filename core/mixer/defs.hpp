@@ -1,5 +1,5 @@
-#ifndef CORE_MIXER_DEFS_H
-#define CORE_MIXER_DEFS_H
+#ifndef CORE_MIXER_DEFS_HPP
+#define CORE_MIXER_DEFS_HPP
 
 #include "config_simd.h"
 
@@ -162,4 +162,4 @@ void InitPosArrays(unsigned const pos, unsigned const frac, unsigned const incre
     }
 }
 
-#endif /* CORE_MIXER_DEFS_H */
+#endif /* CORE_MIXER_DEFS_HPP */

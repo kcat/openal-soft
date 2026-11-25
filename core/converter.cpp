@@ -9,8 +9,8 @@
 #include <ranges>
 #include <span>
 
+#include "core/bufferline.h"
 #include "core/devformat.h"
-#include "core/mixer/defs.h"
 #include "core/resampler_limits.hpp"
 #include "flexarray.h"
 #include "fpu_ctrl.h"
@@ -20,6 +20,7 @@ import common.std;
 
 import core.converter;
 import core.device;
+import core.mixer.defs;
 import gsl;
 import numeric;
 import opthelpers;
@@ -33,6 +34,7 @@ import zudl;
 
 #include "core/converter.hpp"
 #include "core/devfmttraits.hpp"
+#include "core/mixer/defs.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

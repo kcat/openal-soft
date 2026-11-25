@@ -972,9 +972,12 @@ endif()
 list(APPEND CORE_SRCS
     core/mixer/mixer_c.cpp)
 list(APPEND CORE_HDRS
-    core/mixer/defs.h
+    core/mixer/defs.hpp
     core/mixer/hrtfbase.h
     core/mixer/hrtfdefs.h)
+if(HAVE_CXXMODULES)
+    list(APPEND CORE_MODS  core/mixer/defs.cppm)
+endif()
 
 # AL and related routines
 set(OPENAL_SRCS

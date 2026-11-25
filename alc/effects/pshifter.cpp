@@ -30,7 +30,6 @@
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
 #include "core/mixer.h"
-#include "core/mixer/defs.h"
 #include "core/mixparams.hpp"
 #include "intrusive_ptr.h"
 #include "pffft.h"
@@ -43,6 +42,7 @@ import core.ambi_utils;
 import core.device;
 import core.effects.base;
 import core.effectslot;
+import core.mixer.defs;
 import numeric;
 import window.hann;
 import zudl;
@@ -58,6 +58,7 @@ import zudl;
 #include "core/device.h"
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
+#include "core/mixer/defs.hpp"
 #include "hann_window.hpp"
 #include "numeric.hpp"
 #include "zudl.hpp"

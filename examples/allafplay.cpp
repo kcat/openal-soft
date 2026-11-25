@@ -64,7 +64,6 @@
 #include <ranges>
 #include <span>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 #ifdef _WIN32
@@ -104,6 +103,7 @@ import zudl;
 #include <string>
 #include <thread>
 #include <utility>
+#include <variant>
 
 #include "AL/alc.h"
 #include "AL/al.h"

@@ -22,7 +22,6 @@
 
 #include <bit>
 #include <span>
-#include <variant>
 #include <vector>
 
 #include "alc/effects/base.h"
@@ -47,6 +46,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "core/context.h"
 #include "core/device.h"

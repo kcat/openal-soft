@@ -9,7 +9,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <variant>
 #include <vector>
 
 #include "core/storage_formats.h"
@@ -49,6 +48,7 @@ import zudl;
 #include <limits>
 #include <optional>
 #include <utility>
+#include <variant>
 
 #include "alstring.h"
 #include "core/ambi_utils.hpp"

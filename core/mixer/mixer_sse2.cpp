@@ -24,7 +24,6 @@
 #include <emmintrin.h>
 
 #include <span>
-#include <variant>
 
 #include "core/cubic_defs.h"
 #include "core/resampler_limits.hpp"
@@ -41,6 +40,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <variant>
 
 #include "core/mixer/defs.hpp"
 #include "gsl/gsl"

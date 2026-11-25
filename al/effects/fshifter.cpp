@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <string_view>
-#include <variant>
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -36,6 +35,7 @@ import opthelpers;
 
 #include <optional>
 #include <stdexcept>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/efx.h"

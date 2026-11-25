@@ -32,7 +32,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <variant>
 #include <vector>
 
 #include "sndfile.h"
@@ -57,6 +56,7 @@ import zstring_view;
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"

@@ -32,7 +32,6 @@
 #include <memory>
 #include <span>
 #include <string_view>
-#include <variant>
 
 #include "atomic.h"
 #include "core/bformatdec.h"
@@ -92,6 +91,7 @@ import zudl;
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "alformat.hpp"
 #include "alstring.h"

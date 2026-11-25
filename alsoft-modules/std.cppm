@@ -24,6 +24,7 @@ module;
 #include <thread>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 export module common.std;
 
@@ -574,6 +575,20 @@ export namespace std {
     using std::nullopt;
     using std::make_optional;
 
+    /* source_location */
+    using std::source_location;
+
+    /* stdexcept */
+    using std::logic_error;
+    using std::invalid_argument;
+    using std::domain_error;
+    using std::length_error;
+    using std::out_of_range;
+    using std::runtime_error;
+    using std::range_error;
+    using std::overflow_error;
+    using std::underflow_error;
+
     /* string */
     using std::char_traits;
     using std::basic_string;
@@ -632,7 +647,6 @@ export namespace std {
     using std::cmp_less;
     using std::cmp_greater_equal;
     using std::cmp_less_equal;
-
     using std::forward;
     using std::exchange;
     using std::move;
@@ -659,20 +673,20 @@ export namespace std {
     using std::in_place_type_t;
     using std::in_place_index_t;
 
-    /* source_location */
-    using std::source_location;
+    /* variant */
+    using std::variant;
+    using std::monostate;
+    using std::bad_variant_access;
+    using std::variant_size;
+    using std::variant_size_v;
+    using std::variant_alternative;
+    using std::variant_alternative_t;
+    using std::variant_npos;
+    using std::visit;
+    using std::holds_alternative;
+    using std::get_if;
 
-    /* stdexcept */
-    using std::logic_error;
-    using std::invalid_argument;
-    using std::domain_error;
-    using std::length_error;
-    using std::out_of_range;
-    using std::runtime_error;
-    using std::range_error;
-    using std::overflow_error;
-    using std::underflow_error;
-
+    /* General purpose and specialized methods and types. */
     using std::begin;
     using std::cbegin;
     using std::end;

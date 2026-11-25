@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <ranges>
 #include <span>
-#include <variant>
 
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
@@ -26,6 +25,7 @@ import zudl;
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <variant>
 
 #include "core/mixer/defs.hpp"
 #include "core/mixer/hrtfbase.hpp"

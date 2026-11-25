@@ -35,7 +35,6 @@
 #include <cstdint>
 #include <ranges>
 #include <span>
-#include <variant>
 
 #include "alc/effects/base.h"
 #include "core/ambidefs.h"
@@ -58,6 +57,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "core/device.h"
 #include "core/effects/base.hpp"

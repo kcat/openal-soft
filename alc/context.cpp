@@ -4,7 +4,6 @@
 #include <bit>
 #include <functional>
 #include <string_view>
-#include <variant>
 
 #include "alc/alu.h"
 #include "atomic.h"
@@ -49,6 +48,7 @@ import zudl;
 #include <array>
 #include <optional>
 #include <utility>
+#include <variant>
 
 #include "AL/alc.h"
 #include "AL/al.h"

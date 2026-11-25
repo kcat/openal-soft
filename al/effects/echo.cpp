@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <string_view>
-#include <variant>
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -22,6 +21,7 @@ import eax.validator;
 #endif // ALSOFT_EAX
 
 #if HAVE_CXXMODULES
+import common.std;
 import openal;
 
 import al.effects.handlers;
@@ -30,6 +30,8 @@ import core.effects.base;
 import numeric;
 
 #else
+
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/efx.h"

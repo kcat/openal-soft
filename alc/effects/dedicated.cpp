@@ -22,7 +22,6 @@
 
 #include <cstdint>
 #include <span>
-#include <variant>
 
 #include "alc/effects/base.h"
 #include "core/bufferline.h"
@@ -41,6 +40,7 @@ import core.effectslot;
 #else
 
 #include <array>
+#include <variant>
 
 #include "core/ambi_utils.hpp"
 #include "core/device.h"

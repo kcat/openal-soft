@@ -30,7 +30,6 @@
 #include <ranges>
 #include <span>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "alc/inprogext.h"
@@ -86,6 +85,7 @@ import zudl;
 #include <optional>
 #include <stdexcept>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

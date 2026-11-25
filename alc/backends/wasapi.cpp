@@ -55,7 +55,6 @@
 #include <memory>
 #include <span>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 #include "alc/alconfig.h"
@@ -113,6 +112,7 @@ import zudl;
 #include <mutex>
 #include <string>
 #include <thread>
+#include <variant>
 
 #include "alc/backends/base.hpp"
 #include "alc/backends/exception.hpp"

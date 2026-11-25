@@ -7,7 +7,6 @@
 
 #include <bit>
 #include <csignal>
-#include <variant>
 
 #include "atomic.h"
 #include "core/hrtf.h"
@@ -29,6 +28,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <variant>
 
 #include "AL/alc.h"
 

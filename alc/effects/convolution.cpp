@@ -10,7 +10,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <variant>
 #include <vector>
 
 #if HAVE_NEON
@@ -53,6 +52,7 @@ import zudl;
 #include <array>
 #include <cmath>
 #include <numbers>
+#include <variant>
 
 #include "core/ambi_utils.hpp"
 #include "core/buffer_storage.h"

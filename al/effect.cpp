@@ -28,7 +28,6 @@
 #include <ranges>
 #include <string_view>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "alc/inprogext.h"
@@ -58,6 +57,7 @@ import zudl;
 #include <mutex>
 #include <new>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

@@ -4,7 +4,6 @@
 #include <xmmintrin.h>
 
 #include <span>
-#include <variant>
 
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
@@ -27,6 +26,7 @@ import zudl;
 #include <array>
 #include <cmath>
 #include <limits>
+#include <variant>
 
 #include "core/mixer/defs.hpp"
 #include "core/mixer/hrtfbase.hpp"

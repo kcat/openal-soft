@@ -18,7 +18,6 @@
 #include <ratio>
 #include <span>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 #include "pragmadefs.h"
@@ -81,6 +80,7 @@ import zudl;
 #include <string>
 #include <thread>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alc.h"

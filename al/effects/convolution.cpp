@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <span>
-#include <variant>
 
 #include "alc/inprogext.h"
 
@@ -21,6 +20,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "AL/al.h"
 

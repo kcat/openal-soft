@@ -5,7 +5,6 @@
 #include <ranges>
 #include <span>
 #include <string_view>
-#include <variant>
 
 #include "atomic.h"
 #include "direct_defs.h"
@@ -34,6 +33,7 @@ import numeric;
 #include <string>
 #include <thread>
 #include <tuple>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

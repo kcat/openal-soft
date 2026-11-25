@@ -27,7 +27,6 @@
 #include <memory>
 #include <ranges>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "almalloc.h"
@@ -53,6 +52,7 @@ import zudl;
 #include <algorithm>
 #include <mutex>
 #include <new>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <ranges>
 #include <span>
-#include <variant>
 
 #include "alc/effects/base.h"
 #include "core/ambidefs.h"
@@ -47,6 +46,7 @@ import numeric;
 #include <array>
 #include <cmath>
 #include <numbers>
+#include <variant>
 
 #include "core/context.h"
 #include "core/device.h"

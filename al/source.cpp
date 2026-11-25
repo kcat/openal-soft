@@ -35,7 +35,6 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "alc/inprogext.h"
@@ -94,6 +93,7 @@ import zudl;
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

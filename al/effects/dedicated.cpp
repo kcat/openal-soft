@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include <variant>
-
 #if HAVE_CXXMODULES
 import common.std;
 import openal;
@@ -15,6 +13,7 @@ import numeric;
 #else
 
 #include <cmath>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/alext.h"

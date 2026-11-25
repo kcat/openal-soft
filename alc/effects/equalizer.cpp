@@ -24,7 +24,6 @@
 #include <functional>
 #include <ranges>
 #include <span>
-#include <variant>
 
 #include "alc/effects/base.h"
 #include "core/ambidefs.h"
@@ -47,6 +46,7 @@ import core.effectslot;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "core/context.h"
 #include "core/device.h"

@@ -3,7 +3,6 @@
 
 #include <span>
 #include <string_view>
-#include <variant>
 
 #if ALSOFT_EAX
 #include "al/eax/api.h"
@@ -41,6 +40,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <variant>
 
 #include "AL/al.h"
 #include "AL/efx.h"

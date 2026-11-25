@@ -17,14 +17,14 @@ struct Context;
 struct N {                                                                    \
     using prop_type = T;                                                      \
                                                                               \
-    static void SetParami(al::Context& context, prop_type &props, ALenum param, int val);           \
-    static void SetParamiv(al::Context& context, prop_type &props, ALenum param, const int *vals);  \
-    static void SetParamf(al::Context& context, prop_type &props, ALenum param, float val);         \
-    static void SetParamfv(al::Context& context, prop_type &props, ALenum param, const float *vals);\
-    static void GetParami(al::Context& context, const prop_type &props, ALenum param, int *val);    \
-    static void GetParamiv(al::Context& context, const prop_type &props, ALenum param, int *vals);  \
-    static void GetParamf(al::Context& context, const prop_type &props, ALenum param, float *val);  \
-    static void GetParamfv(al::Context& context, const prop_type &props, ALenum param, float *vals);\
+    static void SetParami(al::Context& context, prop_type& props, ALenum param, int val);           \
+    static void SetParamiv(al::Context& context, prop_type& props, ALenum param, int const* vals);  \
+    static void SetParamf(al::Context& context, prop_type& props, ALenum param, float val);         \
+    static void SetParamfv(al::Context& context, prop_type& props, ALenum param, float const* vals);\
+    static void GetParami(al::Context& context, prop_type const& props, ALenum param, int* val);    \
+    static void GetParamiv(al::Context& context, prop_type const& props, ALenum param, int* vals);  \
+    static void GetParamf(al::Context& context, prop_type const& props, ALenum param, float* val);  \
+    static void GetParamfv(al::Context& context, prop_type const& props, ALenum param, float* vals);\
 };
 DECL_HANDLER(NullEffectHandler, std::monostate)
 DECL_HANDLER(ReverbEffectHandler, ReverbProps)
@@ -46,7 +46,7 @@ DECL_HANDLER(ConvolutionEffectHandler, ConvolutionProps)
 #undef DECL_HANDLER
 
 namespace detail {
-    [[nodiscard]] constexpr
+    [[nodiscard]] consteval
     auto ChorusWaveformFromEnum(ALenum const type) noexcept -> std::optional<ChorusWaveform>
     {
         switch(type)
@@ -57,7 +57,7 @@ namespace detail {
         return std::nullopt;
     }
 
-    [[nodiscard]] constexpr
+    [[nodiscard]] consteval
     auto DirectionFromEmum(ALenum const value) noexcept -> std::optional<FShifterDirection>
     {
         switch(value)
@@ -69,7 +69,7 @@ namespace detail {
         return std::nullopt;
     }
 
-    [[nodiscard]] constexpr
+    [[nodiscard]] consteval
     auto ModulatorWaveformFromEmum(ALenum const value) noexcept -> std::optional<ModulatorWaveform>
     {
         switch(value)
@@ -81,7 +81,7 @@ namespace detail {
         return std::nullopt;
     }
 
-    [[nodiscard]] constexpr
+    [[nodiscard]] consteval
     auto PhenomeFromEnum(ALenum const val) noexcept -> std::optional<VMorpherPhenome>
     {
 #define HANDLE_PHENOME(x) case AL_VOCAL_MORPHER_PHONEME_ ## x:                \
@@ -123,7 +123,7 @@ namespace detail {
 #undef HANDLE_PHENOME
     }
 
-    [[nodiscard]] constexpr
+    [[nodiscard]] consteval
     auto VMorpherWaveformFromEmum(ALenum const value) noexcept -> std::optional<VMorpherWaveform>
     {
         switch(value)
@@ -137,8 +137,9 @@ namespace detail {
 }
 
 /* Default properties for the given effect types. */
-inline auto constexpr NullEffectProps = EffectProps{std::monostate{}};
-inline auto constexpr ReverbEffectProps = EffectProps{ReverbProps{
+inline auto constexpr NullEffectProps = EffectProps{std::in_place_type<std::monostate>};
+
+inline auto constexpr ReverbEffectProps = EffectProps{std::in_place_type<ReverbProps>, ReverbProps{
     .Density = AL_EAXREVERB_DEFAULT_DENSITY,
     .Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION,
     .Gain = AL_EAXREVERB_DEFAULT_GAIN,
@@ -164,7 +165,8 @@ inline auto constexpr ReverbEffectProps = EffectProps{ReverbProps{
     .LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE,
     .RoomRolloffFactor = AL_EAXREVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
     .DecayHFLimit = AL_EAXREVERB_DEFAULT_DECAY_HFLIMIT}};
-inline auto constexpr StdReverbEffectProps = EffectProps{ReverbProps{
+
+inline auto constexpr StdReverbEffectProps = EffectProps{std::in_place_type<ReverbProps>, ReverbProps{
     .Density = AL_REVERB_DEFAULT_DENSITY,
     .Diffusion = AL_REVERB_DEFAULT_DIFFUSION,
     .Gain = AL_REVERB_DEFAULT_GAIN,
@@ -188,33 +190,39 @@ inline auto constexpr StdReverbEffectProps = EffectProps{ReverbProps{
     .LFReference = 250.0f,
     .RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
     .DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT}};
-inline auto constexpr AutowahEffectProps = EffectProps{AutowahProps{
+
+inline auto constexpr AutowahEffectProps = EffectProps{std::in_place_type<AutowahProps>, AutowahProps{
     .AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME,
     .ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME,
     .Resonance = AL_AUTOWAH_DEFAULT_RESONANCE,
     .PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN}};
-inline auto constexpr ChorusEffectProps = EffectProps{ChorusProps{
+
+inline auto constexpr ChorusEffectProps = EffectProps{std::in_place_type<ChorusProps>, ChorusProps{
     .Waveform = *detail::ChorusWaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM),
     .Phase = AL_CHORUS_DEFAULT_PHASE,
     .Rate = AL_CHORUS_DEFAULT_RATE,
     .Depth = AL_CHORUS_DEFAULT_DEPTH,
     .Feedback = AL_CHORUS_DEFAULT_FEEDBACK,
     .Delay = AL_CHORUS_DEFAULT_DELAY}};
-inline auto constexpr CompressorEffectProps = EffectProps{CompressorProps{
+
+inline auto constexpr CompressorEffectProps = EffectProps{std::in_place_type<CompressorProps>, CompressorProps{
     .OnOff = AL_COMPRESSOR_DEFAULT_ONOFF}};
-inline auto constexpr DistortionEffectProps = EffectProps{DistortionProps{
+
+inline auto constexpr DistortionEffectProps = EffectProps{std::in_place_type<DistortionProps>, DistortionProps{
     .Edge = AL_DISTORTION_DEFAULT_EDGE,
     .Gain = AL_DISTORTION_DEFAULT_GAIN,
     .LowpassCutoff = AL_DISTORTION_DEFAULT_LOWPASS_CUTOFF,
     .EQCenter = AL_DISTORTION_DEFAULT_EQCENTER,
     .EQBandwidth = AL_DISTORTION_DEFAULT_EQBANDWIDTH}};
-inline auto constexpr EchoEffectProps = EffectProps{EchoProps{
+
+inline auto constexpr EchoEffectProps = EffectProps{std::in_place_type<EchoProps>, EchoProps{
     .Delay = AL_ECHO_DEFAULT_DELAY,
     .LRDelay = AL_ECHO_DEFAULT_LRDELAY,
     .Damping = AL_ECHO_DEFAULT_DAMPING,
     .Feedback = AL_ECHO_DEFAULT_FEEDBACK,
     .Spread = AL_ECHO_DEFAULT_SPREAD}};
-inline auto constexpr EqualizerEffectProps = EffectProps{EqualizerProps{
+
+inline auto constexpr EqualizerEffectProps = EffectProps{std::in_place_type<EqualizerProps>, EqualizerProps{
     .LowCutoff = AL_EQUALIZER_DEFAULT_LOW_CUTOFF,
     .LowGain = AL_EQUALIZER_DEFAULT_LOW_GAIN,
     .Mid1Center = AL_EQUALIZER_DEFAULT_MID1_CENTER,
@@ -225,38 +233,46 @@ inline auto constexpr EqualizerEffectProps = EffectProps{EqualizerProps{
     .Mid2Width = AL_EQUALIZER_DEFAULT_MID2_WIDTH,
     .HighCutoff = AL_EQUALIZER_DEFAULT_HIGH_CUTOFF,
     .HighGain = AL_EQUALIZER_DEFAULT_HIGH_GAIN}};
-inline auto constexpr FlangerEffectProps = EffectProps{ChorusProps{
+
+inline auto constexpr FlangerEffectProps = EffectProps{std::in_place_type<ChorusProps>, ChorusProps{
     .Waveform = *detail::ChorusWaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM),
     .Phase = AL_FLANGER_DEFAULT_PHASE,
     .Rate = AL_FLANGER_DEFAULT_RATE,
     .Depth = AL_FLANGER_DEFAULT_DEPTH,
     .Feedback = AL_FLANGER_DEFAULT_FEEDBACK,
     .Delay = AL_FLANGER_DEFAULT_DELAY}};
-inline auto constexpr FshifterEffectProps = EffectProps{FshifterProps{
+
+inline auto constexpr FshifterEffectProps = EffectProps{std::in_place_type<FshifterProps>, FshifterProps{
     .Frequency = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY,
     .LeftDirection = *detail::DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION),
     .RightDirection = *detail::DirectionFromEmum(AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION)}};
-inline auto constexpr ModulatorEffectProps = EffectProps{ModulatorProps{
+
+inline auto constexpr ModulatorEffectProps = EffectProps{std::in_place_type<ModulatorProps>, ModulatorProps{
     .Frequency = AL_RING_MODULATOR_DEFAULT_FREQUENCY,
     .HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF,
     .Waveform = *detail::ModulatorWaveformFromEmum(AL_RING_MODULATOR_DEFAULT_WAVEFORM)}};
-inline auto constexpr PshifterEffectProps = EffectProps{PshifterProps{
+
+inline auto constexpr PshifterEffectProps = EffectProps{std::in_place_type<PshifterProps>, PshifterProps{
     .CoarseTune = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE,
     .FineTune = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE}};
-inline auto constexpr VmorpherEffectProps = EffectProps{VmorpherProps{
+
+inline auto constexpr VmorpherEffectProps = EffectProps{std::in_place_type<VmorpherProps>, VmorpherProps{
     .Rate = AL_VOCAL_MORPHER_DEFAULT_RATE,
     .PhonemeA = *detail::PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEA),
     .PhonemeB = *detail::PhenomeFromEnum(AL_VOCAL_MORPHER_DEFAULT_PHONEMEB),
     .PhonemeACoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEA_COARSE_TUNING,
     .PhonemeBCoarseTuning = AL_VOCAL_MORPHER_DEFAULT_PHONEMEB_COARSE_TUNING,
     .Waveform = *detail::VMorpherWaveformFromEmum(AL_VOCAL_MORPHER_DEFAULT_WAVEFORM)}};
-inline auto constexpr DedicatedDialogEffectProps = EffectProps{DedicatedProps{
+
+inline auto constexpr DedicatedDialogEffectProps = EffectProps{std::in_place_type<DedicatedProps>, DedicatedProps{
     .Target = DedicatedProps::Dialog,
     .Gain = 1.0f}};
-inline auto constexpr DedicatedLfeEffectProps = EffectProps{DedicatedProps{
+
+inline auto constexpr DedicatedLfeEffectProps = EffectProps{std::in_place_type<DedicatedProps>, DedicatedProps{
     .Target = DedicatedProps::Lfe,
     .Gain = 1.0f}};
-inline auto constexpr ConvolutionEffectProps = EffectProps{ConvolutionProps{
+
+inline auto constexpr ConvolutionEffectProps = EffectProps{std::in_place_type<ConvolutionProps>, ConvolutionProps{
     .OrientAt = {0.0f,  0.0f, -1.0f},
     .OrientUp = {0.0f,  1.0f,  0.0f}}};
 

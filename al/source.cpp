@@ -3599,7 +3599,7 @@ try {
         const auto Current = std::invoke([&source,&context]() -> const VoiceBufferItem*
         {
             if(auto *voice = GetSourceVoice(source, context))
-                return voice->mCurrentBuffer.load(std::memory_order_relaxed);
+                return voice->mCurrentBuffer.load(std::memory_order_acquire);
             return nullptr;
         });
         const auto qiter = std::ranges::find(source.mQueue, Current,

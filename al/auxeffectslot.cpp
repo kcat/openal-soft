@@ -34,9 +34,11 @@
 #include "alc/inprogext.h"
 #include "almalloc.h"
 #include "atomic.h"
+#include "core/effects/base.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
 #include "flexarray.h"
+#include "intrusive_ptr.h"
 
 #if ALSOFT_EAX
 #include "eax/api.h"

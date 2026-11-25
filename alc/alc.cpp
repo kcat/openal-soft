@@ -47,6 +47,7 @@
 #include <string_view>
 #include <vector>
 
+#include "alc/effects/base.h"
 #include "alc/events.h"
 #include "alconfig.h"
 #include "alu.h"
@@ -55,7 +56,6 @@
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/cpu_caps.h"
-#include "core/effects/base.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
@@ -65,7 +65,6 @@
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
-#include "effects/base.h"
 #include "export_list.h"
 #include "flexarray.h"
 #include "inprogext.h"

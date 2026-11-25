@@ -1,13 +1,12 @@
 #ifndef EFFECTS_BASE_H
 #define EFFECTS_BASE_H
 
-#include "core/effects/base.h"
-
+struct EffectStateFactory;
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.
  */
-inline float ReverbBoost{1.0f};
+inline auto ReverbBoost = 1.0f;
 
 
 auto NullStateFactory_getFactory() -> EffectStateFactory&;

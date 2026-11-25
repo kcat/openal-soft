@@ -988,7 +988,6 @@ set(OPENAL_SRCS
     al/effects/dedicated.cpp
     al/effects/distortion.cpp
     al/effects/echo.cpp
-    al/effects/effects.cpp
     al/effects/equalizer.cpp
     al/effects/fshifter.cpp
     al/effects/modulator.cpp

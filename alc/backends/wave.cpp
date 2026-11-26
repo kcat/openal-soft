@@ -26,7 +26,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <span>
 #include <system_error>
 #include <vector>
@@ -54,6 +53,7 @@ import zudl;
 #include <array>
 #include <chrono>
 #include <exception>
+#include <functional>
 #include <ostream>
 #include <thread>
 

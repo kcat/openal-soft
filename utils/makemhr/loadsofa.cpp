@@ -26,7 +26,6 @@
 #include "loadsofa.h"
 
 #include <atomic>
-#include <functional>
 #include <future>
 #include <iostream>
 #include <iterator>
@@ -53,6 +52,7 @@ import gsl;
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <optional>
 #include <string>
 #include <thread>

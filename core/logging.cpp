@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <functional>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -24,6 +23,7 @@ import zstring_view;
 
 #else
 
+#include <functional>
 #include <iostream>
 #include <mutex>
 #include <optional>

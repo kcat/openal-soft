@@ -27,7 +27,6 @@
 #include <csignal>
 #include <cstdarg>
 #include <cstdlib>
-#include <functional>
 #include <string_view>
 
 #include "alc/alconfig.h"
@@ -50,6 +49,7 @@ import zudl;
 
 #else
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <utility>

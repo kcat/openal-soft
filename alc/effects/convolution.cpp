@@ -5,7 +5,6 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -51,6 +50,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <numbers>
 #include <variant>
 

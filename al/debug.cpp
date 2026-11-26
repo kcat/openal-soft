@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <deque>
-#include <functional>
 #include <ranges>
 #include <span>
 #include <string_view>
@@ -33,6 +32,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <stdexcept>

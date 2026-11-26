@@ -28,7 +28,6 @@
 
 #include <atomic>
 #include <cstddef>
-#include <functional>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -53,6 +52,7 @@ import zudl;
 
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <thread>

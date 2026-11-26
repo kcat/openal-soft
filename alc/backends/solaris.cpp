@@ -36,7 +36,6 @@
 #include <vector>
 
 #include <span>
-#include <functional>
 
 #include "alc/alconfig.h"
 #include "alc/events.h"
@@ -57,6 +56,7 @@ import gsl;
 
 #else
 
+#include <functional>
 #include <thread>
 
 #include "alc/backends/base.hpp"

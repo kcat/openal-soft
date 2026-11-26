@@ -30,7 +30,6 @@
 #include <bit>
 #include <cerrno>
 #include <cstring>
-#include <functional>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -84,6 +83,7 @@ import ringbuffer;
 
 #include <algorithm>
 #include <exception>
+#include <functional>
 #include <string>
 #include <thread>
 #include <utility>

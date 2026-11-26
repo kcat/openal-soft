@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -43,6 +42,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <istream>
 #include <mutex>
 #include <numbers>

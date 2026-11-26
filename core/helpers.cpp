@@ -6,7 +6,6 @@
 #endif
 
 #include <cstdlib>
-#include <functional>
 #include <span>
 #include <string_view>
 #include <system_error>
@@ -64,6 +63,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <mutex>
 #include <optional>
 #include <string>

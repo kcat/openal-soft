@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <deque>
 #include <iterator>
-#include <functional>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -85,6 +84,7 @@ import zudl;
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <new>

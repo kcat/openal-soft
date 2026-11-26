@@ -4,7 +4,6 @@
 #include "uhjfilter.h"
 
 #include <complex>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -23,6 +22,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <functional>
 
 #include "core/allpass_conv.hpp"
 #include "gsl/gsl"

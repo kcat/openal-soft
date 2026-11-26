@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <functional>
 #include <ranges>
 #include <span>
 
@@ -46,6 +45,7 @@ import core.effectslot;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 #include <variant>
 
 #include "core/context.h"

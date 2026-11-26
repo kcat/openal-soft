@@ -58,7 +58,6 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -96,6 +95,7 @@ import zudl;
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <numbers>
 #include <source_location>

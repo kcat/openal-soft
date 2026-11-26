@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
-#include <functional>
 #include <future>
 #include <memory>
 #include <ranges>
@@ -74,6 +73,7 @@ import zudl;
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <mutex>
 #include <numbers>

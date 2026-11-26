@@ -29,7 +29,6 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
-#include <functional>
 
 #include "alc/events.h"
 #include "althrd_setname.h"
@@ -57,6 +56,7 @@ import zudl;
 #else
 
 #include <array>
+#include <functional>
 #include <mutex>
 #include <new>
 #include <thread>

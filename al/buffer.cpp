@@ -24,7 +24,6 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -79,6 +78,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <new>

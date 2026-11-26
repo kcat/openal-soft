@@ -4,7 +4,6 @@
 #include "mastering.h"
 
 #include <cstddef>
-#include <functional>
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -21,6 +20,7 @@ import numeric;
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 #include "numeric.hpp"
 #endif

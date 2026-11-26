@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <chrono>
 #include <cmath>
 #include <compare>
@@ -226,6 +227,9 @@ export namespace std {
     /* array */
     using std::array;
     using std::to_array;
+
+    /* bitset */
+    using std::bitset;
 
     /* chrono */
     namespace chrono {
@@ -765,6 +769,9 @@ export namespace std {
     using std::swap;
 
     using std::operator+;
+    using std::operator&;
+    using std::operator|;
+    using std::operator^;
     using std::operator>>;
     using std::operator<<;
     using std::operator==;

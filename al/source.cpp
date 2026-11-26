@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <bit>
 #include <bitset>
 #include <concepts>
 #include <cstddef>
@@ -82,6 +81,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <functional>

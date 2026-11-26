@@ -1,5 +1,5 @@
-#ifndef CORE_HRTF_H
-#define CORE_HRTF_H
+#ifndef CORE_HRTF_HPP
+#define CORE_HRTF_HPP
 
 #include <array>
 #include <cstddef>
@@ -58,4 +58,4 @@ public:
 auto EnumerateHrtf(std::optional<std::string> const &pathopt) -> std::vector<std::string>;
 auto GetLoadedHrtf(std::string_view name, unsigned devrate) -> al::intrusive_ptr<HrtfStore>;
 
-#endif /* CORE_HRTF_H */
+#endif /* CORE_HRTF_HPP */

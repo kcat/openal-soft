@@ -1,15 +1,18 @@
 
 #include "config.h"
 
-#include "bformatdec.h"
+#include <algorithm>
+#include <span>
+
 #include "bs2b.h"
-#include "front_stablizer.h"
-#include "hrtf.h"
-#include "mastering.h"
+#include "core/bformatdec.h"
+#include "core/front_stablizer.h"
+#include "core/mastering.h"
 
 #if HAVE_CXXMODULES
 import core.context;
 import core.device;
+import core.hrtf;
 import core.hrtfstore;
 import gsl;
 
@@ -17,6 +20,7 @@ import gsl;
 
 #include "core/context.h"
 #include "core/device.h"
+#include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "gsl/gsl"
 #endif

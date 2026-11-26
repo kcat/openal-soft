@@ -1,8 +1,6 @@
 
 #include "config.h"
 
-#include "hrtf.h"
-
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -14,9 +12,9 @@
 #include <string_view>
 #include <vector>
 
+#include "core/hrtf_loader.hpp"
+#include "core/hrtf_resource.hpp"
 #include "filters/splitter.h"
-#include "hrtf_loader.hpp"
-#include "hrtf_resource.hpp"
 #include "mixer/hrtfdefs.h"
 #include "polyphase_resampler.h"
 
@@ -26,9 +24,11 @@ import common.std;
 import alstring;
 import core.ambi_utils;
 import core.helpers;
+import core.hrtf;
 import core.hrtfstore;
 import core.logging;
 import filesystem;
+import flexarray;
 import format;
 import gsl;
 import numeric;
@@ -55,9 +55,11 @@ import zudl;
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
 #include "core/helpers.hpp"
+#include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"
 #include "filesystem.h"
+#include "flexarray.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

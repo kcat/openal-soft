@@ -40,7 +40,6 @@
 #include "core/filters/biquad.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
-#include "core/hrtf.h"
 #include "core/mastering.h"
 #include "core/mixer.h"
 #include "core/mixer/hrtfdefs.h"
@@ -68,6 +67,7 @@ import core.cubic_tables;
 import core.device;
 import core.effects.base;
 import core.effectslot;
+import core.hrtf;
 import core.hrtfstore;
 import core.mixer.defs;
 import core.voice;
@@ -107,6 +107,7 @@ import zudl;
 #include "core/devfmttraits.hpp"
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
+#include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "core/mixer/defs.hpp"
 #include "core/voice.h"

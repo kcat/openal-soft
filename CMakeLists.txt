@@ -889,7 +889,7 @@ set(CORE_HDRS
     core/fmt_traits.hpp
     core/fpu_ctrl.h
     core/front_stablizer.h
-    core/hrtf.h
+    core/hrtf.hpp
     core/hrtf_loader.hpp
     core/hrtf_resource.hpp
     core/mastering.h
@@ -917,6 +917,7 @@ if(HAVE_CXXMODULES)
         core/except.cppm
         core/fmt_traits.cppm
         core/helpers.cppm
+        core/hrtf.cppm
         core/hrtfstore.cppm
         core/logging.cppm
         core/voice.cppm)

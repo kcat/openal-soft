@@ -1,18 +1,20 @@
 
 #include "config.h"
 
+#include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <span>
 #include <string_view>
+#include <vector>
 
-#include "hrtf_loader.hpp"
-
-#include "hrtf.h"
+#include "core/hrtf_loader.hpp"
+#include "core/mixer/hrtfdefs.h"
 
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.hrtf;
 import core.hrtfstore;
 import core.logging;
 import fmtlib;
@@ -31,6 +33,7 @@ import zudl;
 #include <stdexcept>
 
 #include "alformat.hpp"
+#include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

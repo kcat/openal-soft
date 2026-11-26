@@ -51,8 +51,8 @@
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
 #include "core/front_stablizer.h"
-#include "core/hrtf.h"
 #include "core/mastering.h"
+#include "core/mixer/hrtfdefs.h"
 #include "core/mixparams.hpp"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
@@ -87,6 +87,7 @@ import backends.exception;
 import core.effectslot;
 import core.except;
 import core.helpers;
+import core.hrtf;
 import core.logging;
 import core.voice;
 import envutils;
@@ -145,6 +146,7 @@ import eax.effect;
 #include "core/effectslot.h"
 #include "core/except.hpp"
 #include "core/helpers.hpp"
+#include "core/hrtf.hpp"
 #include "core/logging.h"
 #include "core/voice.h"
 #include "envutils.hpp"

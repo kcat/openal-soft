@@ -7,8 +7,8 @@
 
 #include <csignal>
 
-#include "core/hrtf.h"
 #include "core/mastering.h"
+#include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -17,6 +17,7 @@ import openal;
 import al.iface;
 import alc.device;
 import backends.base;
+import core.hrtf;
 import core.logging;
 import gsl;
 import numeric;
@@ -35,6 +36,7 @@ import zudl;
 #include "al/filter.h"
 #include "alc/backends/base.hpp"
 #include "alc/device.h"
+#include "core/hrtf.hpp"
 #include "core/logging.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

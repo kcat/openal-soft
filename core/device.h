@@ -13,7 +13,7 @@
 
 #include "alformat.hpp"
 #include "ambidefs.h"
-#include "atomic.h"
+#include "atomic.hpp"
 #include "bitset.hpp"
 #include "bufferline.h"
 #include "decoderbase.hpp"

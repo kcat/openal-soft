@@ -33,7 +33,6 @@
 #include <span>
 #include <string_view>
 
-#include "atomic.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/bsinc_defs.h"
@@ -59,6 +58,7 @@
 import common.std;
 
 import alstring;
+import atomic;
 import cemath;
 import core.ambi_utils;
 import core.async_event;
@@ -95,6 +95,7 @@ import zudl;
 
 #include "alformat.hpp"
 #include "alstring.h"
+#include "atomic.hpp"
 #include "cemath.hpp"
 #include "core/ambi_utils.hpp"
 #include "core/async_event.hpp"

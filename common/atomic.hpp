@@ -1,5 +1,5 @@
-#ifndef AL_ATOMIC_H
-#define AL_ATOMIC_H
+#ifndef AL_ATOMIC_HPP
+#define AL_ATOMIC_HPP
 
 #include <atomic>
 #include <memory>
@@ -255,6 +255,6 @@ public:
     static constexpr auto is_always_lock_free = std::atomic<gsl::owner<T*>>::is_always_lock_free;
 };
 
-} // namespace al
+} /* namespace al */
 
-#endif /* AL_ATOMIC_H */
+#endif /* AL_ATOMIC_HPP */

@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-#include "atomic.h"
+#include "atomic.hpp"
 #include "bitset.hpp"
 #include "core/async_event.hpp"
 #include "flexarray.h"

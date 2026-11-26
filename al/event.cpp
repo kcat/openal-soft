@@ -6,7 +6,6 @@
 #include <span>
 #include <string_view>
 
-#include "atomic.h"
 #include "direct_defs.h"
 #include "intrusive_ptr.h"
 
@@ -17,6 +16,7 @@ import openal;
 
 import al.iface;
 import alc.context;
+import atomic;
 import core.async_event;
 import core.effects.base;
 import core.except;
@@ -42,6 +42,7 @@ import numeric;
 #include "al/event.h"
 #include "alc/context.hpp"
 #include "alformat.hpp"
+#include "atomic.hpp"
 #include "core/async_event.hpp"
 #include "core/effects/base.hpp"
 #include "core/except.hpp"

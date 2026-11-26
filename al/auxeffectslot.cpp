@@ -33,7 +33,6 @@
 #include "alc/effects/base.h"
 #include "alc/inprogext.h"
 #include "almalloc.h"
-#include "atomic.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
 #include "flexarray.h"
@@ -62,6 +61,7 @@ import openal;
 import al.iface;
 import alc.context;
 import alc.device;
+import atomic;
 import core.effects.base;
 import core.except;
 import core.logging;
@@ -89,6 +89,7 @@ import zudl;
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alformat.hpp"
+#include "atomic.hpp"
 #include "core/effects/base.hpp"
 #include "core/except.hpp"
 #include "core/logging.h"

@@ -51,7 +51,6 @@
 #include "alc/events.h"
 #include "alconfig.h"
 #include "alu.h"
-#include "atomic.h"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
@@ -90,6 +89,7 @@ import al.iface;
 import alc.context;
 import alc.device;
 import alstring;
+import atomic;
 import backends.base;
 import backends.exception;
 import core.effectslot;
@@ -145,6 +145,7 @@ import eax.effect;
 #include "alc/device.h"
 #include "alformat.hpp"
 #include "alstring.h"
+#include "atomic.hpp"
 #include "core/effectslot.h"
 #include "core/except.hpp"
 #include "core/helpers.hpp"

@@ -8,7 +8,6 @@
 #include <bit>
 #include <csignal>
 
-#include "atomic.h"
 #include "core/hrtf.h"
 #include "core/mastering.h"
 #include "flexarray.h"

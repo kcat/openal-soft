@@ -755,7 +755,7 @@ set(COMMON_HDRS
     common/almalloc.h
     common/alstring.h
     common/althrd_setname.h
-    common/atomic.h
+    common/atomic.hpp
     common/bit.hpp
     common/bitset.hpp
     common/cemath.hpp
@@ -803,6 +803,7 @@ if(HAVE_CXXMODULES)
         alsoft-modules/std.cppm
         common/alformat.cppm
         common/alstring.cppm
+        common/atomic.cppm
         common/bit.cppm
         common/cemath.cppm
         common/envutils.cppm

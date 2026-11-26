@@ -765,7 +765,7 @@ set(COMMON_HDRS
     common/dlopennote.h
     common/expected.hpp
     common/filesystem.h
-    common/flexarray.h
+    common/flexarray.hpp
     common/ghc_filesystem.h
     common/gsl_macros.hpp
     common/inout_ptr.hpp
@@ -808,6 +808,7 @@ if(HAVE_CXXMODULES)
         common/cemath.cppm
         common/envutils.cppm
         common/filesystem.cppm
+        common/flexarray.cppm
         common/hann_window.cppm
         common/inout_ptr.cppm
         common/numeric.cppm

@@ -34,7 +34,6 @@
 #include "almalloc.h"
 #include "core/fpu_ctrl.h"
 #include "direct_defs.h"
-#include "flexarray.h"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX

@@ -9,7 +9,6 @@
 
 #include "core/hrtf.h"
 #include "core/mastering.h"
-#include "flexarray.h"
 
 #if HAVE_CXXMODULES
 import common.std;

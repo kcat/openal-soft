@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "flexarray.h"
+#include "flexarray.hpp"
 #include "gsl/pointers"
 #include "opthelper_macros.hpp"
 #include "zudl.hpp"

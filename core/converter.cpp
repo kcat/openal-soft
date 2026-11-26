@@ -11,7 +11,6 @@
 #include "core/bufferline.h"
 #include "core/devformat.h"
 #include "core/resampler_limits.hpp"
-#include "flexarray.h"
 #include "fpu_ctrl.h"
 
 #if HAVE_CXXMODULES
@@ -20,6 +19,7 @@ import common.std;
 import core.converter;
 import core.device;
 import core.mixer.defs;
+import flexarray;
 import gsl;
 import numeric;
 import opthelpers;
@@ -35,6 +35,7 @@ import zudl;
 #include "core/converter.hpp"
 #include "core/devfmttraits.hpp"
 #include "core/mixer/defs.hpp"
+#include "flexarray.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"

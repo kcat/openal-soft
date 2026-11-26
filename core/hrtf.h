@@ -13,7 +13,7 @@
 
 #include "ambidefs.h"
 #include "bufferline.h"
-#include "flexarray.h"
+#include "flexarray.hpp"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"
 

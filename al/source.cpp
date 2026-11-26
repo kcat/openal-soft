@@ -39,7 +39,6 @@
 #include "core/storage_formats.h"
 #include "core/voice_change.h"
 #include "direct_defs.h"
-#include "flexarray.h"
 #include "intrusive_ptr.h"
 
 #if ALSOFT_EAX

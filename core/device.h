@@ -20,7 +20,7 @@
 #include "devformat.h"
 #include "encoderbase.hpp"
 #include "filters/nfc.h"
-#include "flexarray.h"
+#include "flexarray.hpp"
 #include "gsl/gsl"
 #include "intrusive_ptr.h"
 #include "mixer/hrtfdefs.h"

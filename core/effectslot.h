@@ -6,7 +6,7 @@
 
 #include "core/effects/base.hpp"
 #include "core/mixparams.hpp"
-#include "flexarray.h"
+#include "flexarray.hpp"
 #include "intrusive_ptr.h"
 #include "vector.h"
 

@@ -14,7 +14,7 @@
 #include "atomic.hpp"
 #include "bitset.hpp"
 #include "core/async_event.hpp"
-#include "flexarray.h"
+#include "flexarray.hpp"
 #include "opthelper_macros.hpp"
 #include "ringbuffer.hpp"
 #include "vecmat.h"

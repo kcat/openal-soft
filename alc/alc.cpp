@@ -58,7 +58,6 @@
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
 #include "export_list.h"
-#include "flexarray.h"
 #include "inprogext.h"
 #include "intrusive_ptr.h"
 
@@ -91,6 +90,7 @@ import core.helpers;
 import core.logging;
 import core.voice;
 import envutils;
+import flexarray;
 import fmtlib;
 import format;
 import gsl;
@@ -148,6 +148,7 @@ import eax.effect;
 #include "core/logging.h"
 #include "core/voice.h"
 #include "envutils.hpp"
+#include "flexarray.hpp"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "gsl/gsl"

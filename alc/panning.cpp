@@ -42,7 +42,6 @@
 #include "core/mixparams.hpp"
 #include "core/tsmefilter.hpp"
 #include "core/uhjfilter.h"
-#include "flexarray.h"
 #include "intrusive_ptr.h"
 
 #if HAVE_CXXMODULES

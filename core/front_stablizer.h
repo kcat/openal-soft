@@ -7,7 +7,7 @@
 
 #include "bufferline.h"
 #include "filters/splitter.h"
-#include "flexarray.h"
+#include "flexarray.hpp"
 
 
 class FrontStablizer {

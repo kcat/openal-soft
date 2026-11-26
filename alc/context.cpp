@@ -5,7 +5,6 @@
 
 #include "alc/alu.h"
 #include "core/voice_change.h"
-#include "flexarray.h"
 #include "intrusive_ptr.h"
 #include "vecmat.h"
 

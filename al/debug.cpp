@@ -370,7 +370,7 @@ try {
         if(newlen >= MaxDebugMessageLength)
             context.throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", newlen,
                 MaxDebugMessageLength);
-        length = gsl::narrow_cast<ALsizei>(newlen);
+        length = gsl::narrow<ALsizei>(newlen);
     }
     else if(length >= int{MaxDebugMessageLength})
         context.throw_error(AL_INVALID_VALUE, "Debug message too long ({} >= {})", length,
@@ -462,7 +462,7 @@ try {
             });
             return todo;
         }
-        return gsl::narrow_cast<ALuint>(std::min(context.mDebugLog.size(), size_t{count}));
+        return gsl::narrow<ALuint>(std::min(context.mDebugLog.size(), std::size_t{count}));
     });
     if(toget < 1)
         return 0;
@@ -483,7 +483,7 @@ try {
     {
         std::ranges::transform(logrange, std::span{lengths, toget}.begin(),
             [](const std::string_view msg)
-        { return gsl::narrow_cast<ALsizei>(msg.size()+1); }, &DebugLogEntry::mMessage);
+        { return gsl::narrow<ALsizei>(msg.size()+1); }, &DebugLogEntry::mMessage);
     }
 
     if(logBuf)
@@ -572,14 +572,14 @@ try {
         });
 
         if(labelOut.empty())
-            *length = gsl::narrow_cast<ALsizei>(objname.size());
+            *length = gsl::narrow<ALsizei>(objname.size());
         else
         {
             const auto namerange = objname | std::views::take(labelOut.size()-1);
             auto oiter = std::ranges::copy(namerange, labelOut.begin()).out;
             *oiter = '\0';
             if(length)
-                *length = gsl::narrow_cast<ALsizei>(namerange.size());
+                *length = gsl::narrow<ALsizei>(namerange.size());
         }
     };
 
@@ -682,7 +682,7 @@ void al::Context::sendDebugMessage(std::unique_lock<std::mutex> &debuglock, Debu
         auto param = mDebugParam;
         debuglock.unlock();
         callback(GetDebugSourceEnum(source), GetDebugTypeEnum(type), id,
-            GetDebugSeverityEnum(severity), gsl::narrow_cast<ALsizei>(message.size()),
+            GetDebugSeverityEnum(severity), al::saturating_cast<ALsizei>(message.size()),
             message.c_str(), param);
     }
     else

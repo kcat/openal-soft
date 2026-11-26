@@ -39,7 +39,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -117,6 +116,7 @@ import eax.effect;
 #include <chrono>
 #include <cmath>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <mutex>
 #include <new>

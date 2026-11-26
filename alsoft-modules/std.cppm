@@ -5,6 +5,7 @@ module;
 #include <chrono>
 #include <cmath>
 #include <compare>
+#include <condition_variable>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -431,6 +432,12 @@ export namespace std {
     using std::is_lteq;
     using std::is_gt;
     using std::is_gteq;
+
+    /* condition_variable */
+    using std::condition_variable;
+    using std::condition_variable_any;
+    using std::cv_status;
+    using std::notify_all_at_thread_exit;
 
     /* exception */
     using std::exception;

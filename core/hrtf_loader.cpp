@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <iterator>
 #include <ranges>
 #include <span>
@@ -27,6 +26,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <istream>
 #include <stdexcept>
 

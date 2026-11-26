@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <bit>
 #include <concepts>
 #include <cstdlib>
 #include <cstdint>
@@ -138,6 +137,7 @@ import zstring_view;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <functional>

@@ -55,7 +55,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -93,6 +92,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <functional>

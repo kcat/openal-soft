@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <cstring>
 #include <memory>
 #include <ranges>
@@ -56,6 +55,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <mutex>
 #include <thread>
 

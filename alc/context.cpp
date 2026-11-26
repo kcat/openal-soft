@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <string_view>
 
 #include "alc/alu.h"
@@ -44,6 +43,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <functional>
 #include <optional>
 #include <utility>

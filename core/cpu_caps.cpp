@@ -17,7 +17,6 @@
 #include <intrin.h>
 #endif
 
-#include <bit>
 #include <cctype>
 #include <ranges>
 
@@ -28,6 +27,7 @@ import common.std;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <string>
 #endif
 

@@ -5,7 +5,6 @@
 #include <windows.h>
 #endif
 
-#include <bit>
 #include <csignal>
 
 #include "core/hrtf.h"
@@ -27,6 +26,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <variant>
 
 #include "AL/alc.h"

@@ -3,7 +3,6 @@
 
 #include "ambdec.h"
 
-#include <bit>
 #include <cctype>
 #include <cstddef>
 #include <iterator>
@@ -22,6 +21,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <istream>
 #include <sstream>

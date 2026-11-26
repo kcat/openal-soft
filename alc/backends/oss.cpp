@@ -27,7 +27,6 @@
 #include <unistd.h>
 
 #include <atomic>
-#include <bit>
 #include <cerrno>
 #include <cstring>
 #include <memory>
@@ -82,6 +81,7 @@ import ringbuffer;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <exception>
 #include <functional>
 #include <string>

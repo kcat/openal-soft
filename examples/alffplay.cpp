@@ -5,7 +5,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <bit>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -70,6 +69,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>

@@ -29,7 +29,6 @@
 #endif
 
 #include <atomic>
-#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -109,6 +108,7 @@ import eax.effect;
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <bitset>
 #include <chrono>
 #include <cmath>
 #include <exception>

@@ -30,7 +30,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-#include <bit>
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
@@ -63,6 +62,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <istream>
 #include <limits>
 #include <stdexcept>

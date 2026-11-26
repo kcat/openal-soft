@@ -25,7 +25,6 @@
 
 #include "loaddef.h"
 
-#include <bit>
 #include <cctype>
 #include <cstdarg>
 #include <cstdint>
@@ -56,6 +55,7 @@ import gsl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <iostream>
 #include <limits>

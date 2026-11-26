@@ -1,7 +1,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
@@ -30,6 +29,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 
 #include "core/converter.hpp"

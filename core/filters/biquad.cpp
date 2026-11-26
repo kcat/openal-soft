@@ -3,7 +3,6 @@
 
 #include "biquad.h"
 
-#include <bit>
 #include <cstddef>
 #include <ranges>
 
@@ -19,6 +18,7 @@ import numeric;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <numbers>
 

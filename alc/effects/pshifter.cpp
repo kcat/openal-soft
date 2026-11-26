@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <complex>
 #include <cstdint>
 #include <ranges>
@@ -50,6 +49,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <numbers>
 #include <variant>

@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -50,6 +49,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <mutex>
 #include <new>
 #include <variant>

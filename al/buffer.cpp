@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <atomic>
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -78,6 +77,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <functional>
 #include <limits>
 #include <mutex>

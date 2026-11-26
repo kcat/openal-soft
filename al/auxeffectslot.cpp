@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <bit>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -74,6 +73,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <bit>
 #include <mutex>
 #include <new>
 #include <stdexcept>

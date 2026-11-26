@@ -38,7 +38,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -3451,7 +3450,7 @@ try {
     InitConfig();
 
     /* Make sure the device name, if specified, is us. */
-    if(deviceName && strcmp(deviceName, GetDefaultName()) != 0)
+    if(deviceName && std::string_view{deviceName} != GetDefaultName())
     {
         al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return nullptr;

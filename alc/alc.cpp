@@ -50,7 +50,6 @@
 #include "core/cpu_caps.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
-#include "core/front_stablizer.h"
 #include "core/mastering.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/mixparams.hpp"
@@ -86,6 +85,7 @@ import backends.base;
 import backends.exception;
 import core.effectslot;
 import core.except;
+import core.front_stablizer;
 import core.helpers;
 import core.hrtf;
 import core.logging;
@@ -145,6 +145,7 @@ import eax.effect;
 #include "atomic.hpp"
 #include "core/effectslot.h"
 #include "core/except.hpp"
+#include "core/front_stablizer.hpp"
 #include "core/helpers.hpp"
 #include "core/hrtf.hpp"
 #include "core/logging.h"

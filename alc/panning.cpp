@@ -36,7 +36,6 @@
 #include "core/bs2b.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
-#include "core/front_stablizer.h"
 #include "core/mixer/hrtfdefs.h"
 #include "core/mixparams.hpp"
 #include "core/tsmefilter.hpp"
@@ -59,6 +58,7 @@ import alc.device;
 import alstring;
 import core.ambi_utils;
 import core.effectslot;
+import core.front_stablizer;
 import core.hrtf;
 import core.hrtfstore;
 import core.logging;
@@ -85,6 +85,7 @@ import zudl;
 #include "alstring.h"
 #include "core/ambi_utils.hpp"
 #include "core/effectslot.h"
+#include "core/front_stablizer.hpp"
 #include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "core/logging.h"

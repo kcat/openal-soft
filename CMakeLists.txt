@@ -888,7 +888,7 @@ set(CORE_HDRS
     core/filters/splitter.h
     core/fmt_traits.hpp
     core/fpu_ctrl.h
-    core/front_stablizer.h
+    core/front_stablizer.hpp
     core/hrtf.hpp
     core/hrtf_loader.hpp
     core/hrtf_resource.hpp
@@ -916,6 +916,7 @@ if(HAVE_CXXMODULES)
         core/effectslot.cppm
         core/except.cppm
         core/fmt_traits.cppm
+        core/front_stablizer.cppm
         core/helpers.cppm
         core/hrtf.cppm
         core/hrtfstore.cppm

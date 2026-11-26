@@ -48,7 +48,6 @@
 #include "core/storage_formats.h"
 #include "core/uhjfilter.h"
 #include "core/voice_change.h"
-#include "core/front_stablizer.h"
 #include "intrusive_ptr.h"
 #include "vecmat.h"
 
@@ -67,6 +66,7 @@ import core.cubic_tables;
 import core.device;
 import core.effects.base;
 import core.effectslot;
+import core.front_stablizer;
 import core.hrtf;
 import core.hrtfstore;
 import core.mixer.defs;
@@ -107,6 +107,7 @@ import zudl;
 #include "core/devfmttraits.hpp"
 #include "core/effects/base.hpp"
 #include "core/effectslot.h"
+#include "core/front_stablizer.hpp"
 #include "core/hrtf.hpp"
 #include "core/hrtfstore.hpp"
 #include "core/mixer/defs.hpp"

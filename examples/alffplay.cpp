@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <future>
 #include <memory>
 #include <ranges>
@@ -72,6 +71,7 @@ import zudl;
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
+#include <deque>
 #include <functional>
 #include <iostream>
 #include <mutex>

@@ -3,7 +3,6 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
-#include <deque>
 #include <ranges>
 #include <span>
 #include <string_view>
@@ -32,6 +31,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <optional>

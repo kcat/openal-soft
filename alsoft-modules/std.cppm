@@ -8,6 +8,7 @@ module;
 #include <cmath>
 #include <compare>
 #include <condition_variable>
+#include <deque>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -459,6 +460,9 @@ export namespace std {
     using std::condition_variable_any;
     using std::cv_status;
     using std::notify_all_at_thread_exit;
+
+    /* deque */
+    using std::deque;
 
     /* exception */
     using std::exception;

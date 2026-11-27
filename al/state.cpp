@@ -24,7 +24,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <deque>
 #include <mutex>
 
 #include "alc/alu.h"
@@ -59,6 +58,7 @@ import zudl;
 
 #include <array>
 #include <cmath>
+#include <deque>
 #include <optional>
 #include <stdexcept>
 #include <string>

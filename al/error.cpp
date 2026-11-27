@@ -45,6 +45,7 @@ import envutils;
 import format;
 import gsl;
 import numeric;
+import zstring_view;
 import zudl;
 
 #else
@@ -66,6 +67,7 @@ import zudl;
 #include "envutils.hpp"
 #include "gsl/gsl"
 #include "numeric.hpp"
+#include "zstring_view.hpp"
 #include "zudl.hpp"
 #endif
 
@@ -125,7 +127,8 @@ AL_API auto AL_APIENTRY alGetError() noexcept -> ALenum
         return alGetError_(*context);
 
     using namespace std::string_view_literals;
-    static const auto deferror = std::invoke([envname = "__ALSOFT_DEFAULT_ERROR",
+    using namespace al::zstring_view_literals;
+    static const auto deferror = std::invoke([envname = "__ALSOFT_DEFAULT_ERROR"_zsv,
         optname = "default-error"sv]() -> ALenum
     {
         auto optstr = al::getenv(envname);

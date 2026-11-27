@@ -1339,7 +1339,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 break;
 
             case ATTRIBUTE(ALC_MAX_AUXILIARY_SENDS)
-                numSends = gsl::narrow<ALCuint>(std::clamp<ALCint>(attrvalue, 0, MaxSendCount));
+                numSends = al::saturating_cast<ALCuint>(std::min<ALCint>(attrvalue, MaxSendCount));
                 break;
 
             case ATTRIBUTE(ALC_HRTF_SOFT)
@@ -1381,7 +1381,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 break;
 
             case ATTRIBUTE(ALC_AUXILIARY_EFFECT_SLOTS_SOFT)
-                numSlots = static_cast<ALCuint>(std::max<ALCint>(attrvalue, 0));
+                numSlots = al::saturating_cast<ALCuint>(attrvalue);
                 break;
 
             default:
@@ -1652,10 +1652,8 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         numSends = std::min(numSends, std::clamp(*sendsopt, 0u, unsigned{MaxSendCount}));
     device.NumAuxSends = numSends;
 
-    if(auto const slotsopt = device.configValue<unsigned>({}, "slots"sv);
-        slotsopt.value_or(0u) > 0)
-        numSlots = std::clamp(*slotsopt, 1u,
-            unsigned{std::numeric_limits<int>::max()});
+    if(auto const slotsopt = device.configValue<unsigned>({}, "slots"sv); slotsopt.value_or(0) > 0)
+        numSlots = std::min(*slotsopt, unsigned{std::numeric_limits<int>::max()});
     device.AuxiliaryEffectSlotMax = numSlots;
 
     TRACE("Max sources: {} ({} + {}), effect slots: {}, sends: {}",

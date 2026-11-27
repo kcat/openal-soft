@@ -1941,7 +1941,7 @@ auto ResetDeviceParams(al::Device& device, const std::span<const AttributePair> 
     if(!device.Connected.load(std::memory_order_relaxed))
     {
         /* Make sure disconnection is finished before continuing on. */
-        std::ignore = device.waitForMix();
+        device.waitForCurrentMix();
 
         std::ranges::for_each(*device.mContexts.load(std::memory_order_acquire),
             [](ContextBase *ctxbase)
@@ -2706,8 +2706,8 @@ try {
             std::atomic_thread_fence(std::memory_order_acquire);
         } while(refcount != dev->mMixCount.load(std::memory_order_relaxed));
 
-        valuespan[0] = nanoseconds{clocksec + clocknsec
-            + nanoseconds{seconds{samplecount}}/dev->mSampleRate}.count();
+        clocknsec += nanoseconds{seconds{samplecount}} / dev->mSampleRate;
+        valuespan[0] = nanoseconds{clocksec + clocknsec}.count();
         break;
     }
 

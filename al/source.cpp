@@ -73,6 +73,7 @@ import numeric;
 import opthelpers;
 import zudl;
 #include "gsl_macros.hpp"
+#include "opthelper_macros.hpp"
 
 #else
 
@@ -911,7 +912,6 @@ auto AllocSource(al::Context& context) noexcept -> gsl::not_null<al::Source*>
     auto const lidx = gsl::narrow_cast<ALuint>(std::distance(context.mSourceList.begin(),
         sublist));
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
-    ASSUME(slidx < 64);
 
     auto const source = gsl::make_not_null(std::construct_at(&(*sublist->mSources)[slidx]));
 #if ALSOFT_EAX

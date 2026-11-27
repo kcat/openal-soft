@@ -174,7 +174,6 @@ auto AllocEffect(al::Device& device) noexcept -> gsl::not_null<al::Effect*>
         [](EffectSubList const &slist) { return slist.mFreeMask != 0; });
     auto const lidx = gsl::narrow_cast<ALuint>(std::distance(device.EffectList.begin(), sublist));
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
-    ASSUME(slidx < 64);
 
     auto const effect = gsl::make_not_null(std::construct_at(&(*sublist->mEffects)[slidx]));
     InitEffectParams(*effect, AL_EFFECT_NULL);

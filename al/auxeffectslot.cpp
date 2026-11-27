@@ -323,7 +323,6 @@ auto AllocEffectSlot(al::Context& context) -> gsl::not_null<al::EffectSlot*>
     auto const lidx = gsl::narrow_cast<ALuint>(std::distance(context.mEffectSlotList.begin(),
         sublist));
     auto const slidx = as_unsigned(std::countr_zero(sublist->mFreeMask));
-    ASSUME(slidx < 64);
 
     auto const slot = gsl::make_not_null(std::construct_at(&(*sublist->mEffectSlots)[slidx],
         context));

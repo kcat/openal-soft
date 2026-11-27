@@ -20,6 +20,7 @@ module;
 #include <numbers>
 #include <optional>
 #include <ostream>
+#include <ratio>
 #include <source_location>
 #include <sstream>
 #include <stdexcept>
@@ -649,6 +650,35 @@ export namespace std {
     using std::nullopt_t;
     using std::nullopt;
     using std::make_optional;
+
+    /* ratio */
+    using std::ratio;
+    using std::ratio_add;
+    using std::ratio_subtract;
+    using std::ratio_multiply;
+    using std::ratio_divide;
+    using std::ratio_equal;
+    using std::ratio_not_equal;
+    using std::ratio_less;
+    using std::ratio_less_equal;
+    using std::ratio_greater;
+    using std::ratio_greater_equal;
+    using std::atto;
+    using std::femto;
+    using std::pico;
+    using std::nano;
+    using std::micro;
+    using std::milli;
+    using std::centi;
+    using std::deci;
+    using std::deca;
+    using std::hecto;
+    using std::kilo;
+    using std::mega;
+    using std::giga;
+    using std::tera;
+    using std::peta;
+    using std::exa;
 
     /* source_location */
     using std::source_location;

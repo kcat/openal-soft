@@ -1627,7 +1627,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         }
     }
 
-    aluInitRenderer(&device, hrtf_id, stereomode);
+    aluInitRenderer(device, hrtf_id, stereomode);
 
     /* Calculate the max number of sources, and split them between the mono and
      * stereo count given the requested number of stereo sources.

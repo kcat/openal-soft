@@ -327,7 +327,7 @@ auto AllocEffectSlot(al::Context& context) -> gsl::not_null<al::EffectSlot*>
 
     auto const slot = gsl::make_not_null(std::construct_at(&(*sublist->mEffectSlots)[slidx],
         context));
-    aluInitEffectPanning(slot->mSlot, &context);
+    aluInitEffectPanning(*slot->mSlot, context.mDevice.mAmbiOrder);
 
     /* Add 1 to avoid ID 0. */
     slot->mId = ((lidx<<6) | slidx) + 1;

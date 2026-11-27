@@ -36,6 +36,6 @@ void aluInit(CompatFlagBitset flags, float nfcscale);
  */
 void aluInitRenderer(al::Device& device, int hrtf_id, std::optional<StereoEncoding> stereomode);
 
-void aluInitEffectPanning(EffectSlotBase *slot, al::Context *context);
+void aluInitEffectPanning(EffectSlotBase& slot, unsigned ambi_order);
 
 #endif

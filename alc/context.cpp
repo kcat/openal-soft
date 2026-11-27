@@ -218,7 +218,7 @@ void Context::init()
     if(sDefaultEffect.mType != AL_EFFECT_NULL && mDevice.Type == DeviceType::Playback)
     {
         mDefaultSlot = std::make_unique<EffectSlot>(*this);
-        aluInitEffectPanning(mDefaultSlot->mSlot, this);
+        aluInitEffectPanning(*mDefaultSlot->mSlot, mDevice.mAmbiOrder);
     }
 
     auto auxslots = std::unique_ptr<EffectSlotArray>{};

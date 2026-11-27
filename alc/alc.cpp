@@ -1784,23 +1784,23 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
     std::ranges::for_each(*device.mContexts.load(), [&device](ContextBase *ctxbase)
     {
         /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
-        auto const context = gsl::make_not_null(static_cast<al::Context*>(ctxbase));
+        auto& context = *static_cast<al::Context*>(ctxbase);
 
-        auto proplock = std::unique_lock{context->mPropLock};
-        auto slotlock = std::unique_lock{context->mEffectSlotLock};
+        auto proplock = std::unique_lock{context.mPropLock};
+        auto slotlock = std::unique_lock{context.mEffectSlotLock};
 
         /* Remove unused effect slot clusters. */
-        auto slotcluster_rem = std::ranges::remove_if(context->mEffectSlotClusters,
-            [](ContextBase::EffectSlotCluster const &clusterptr) -> bool
+        auto slotcluster_rem = std::ranges::remove_if(context.mEffectSlotClusters,
+            [](ContextBase::EffectSlotCluster const& clusterptr) -> bool
         {
             return std::ranges::none_of(*clusterptr, &EffectSlotBase::InUse);
         });
-        context->mEffectSlotClusters.erase(slotcluster_rem.begin(), slotcluster_rem.end());
+        context.mEffectSlotClusters.erase(slotcluster_rem.begin(), slotcluster_rem.end());
 
         /* Free all wet buffers. Any in use will be reallocated with an updated
          * configuration in aluInitEffectPanning.
          */
-        std::ranges::for_each(context->mEffectSlotClusters
+        std::ranges::for_each(context.mEffectSlotClusters
             | std::views::transform(al::dereference{})
             | std::views::join, [](EffectSlotBase &slot)
         {
@@ -1809,13 +1809,13 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             slot.Wet.Buffer = {};
         });
 
-        if(auto *slot = context->mDefaultSlot.get())
+        if(auto* slot = context.mDefaultSlot.get())
         {
-            const auto slotbase = slot->mSlot;
-            aluInitEffectPanning(slotbase, context);
+            auto& slotbase = *slot->mSlot;
+            aluInitEffectPanning(slotbase, device.mAmbiOrder);
 
-            if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
-                AtomicReplaceHead(context->mFreeEffectSlotProps, props);
+            if(auto *props = slotbase.Update.exchange(nullptr, std::memory_order_relaxed))
+                AtomicReplaceHead(context.mFreeEffectSlotProps, props);
 
             auto *state = slot->mEffect.State.get();
             state->mOutTarget = device.Dry.Buffer;
@@ -1823,10 +1823,10 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             slot->mPropsDirty = true;
         }
 
-        if(auto *curarray = context->mActiveAuxSlots.load(std::memory_order_relaxed))
+        if(auto *curarray = context.mActiveAuxSlots.load(std::memory_order_relaxed))
             std::ranges::fill(*curarray | std::views::drop(curarray->size()>>1), nullptr);
-        std::ranges::for_each(context->mEffectSlotList,
-            [&device, context](EffectSlotSubList &sublist)
+        std::ranges::for_each(context.mEffectSlotList,
+            [&device, &context](EffectSlotSubList& sublist)
         {
             auto usemask = ~sublist.mFreeMask;
             while(usemask != 0)
@@ -1835,11 +1835,11 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 auto &slot = (*sublist.mEffectSlots)[idx];
                 usemask &= ~(std::uint64_t{1} << idx);
 
-                const auto slotbase = slot.mSlot;
-                aluInitEffectPanning(slotbase, context);
+                auto& slotbase = *slot.mSlot;
+                aluInitEffectPanning(slotbase, device.mAmbiOrder);
 
-                if(auto *props = slotbase->Update.exchange(nullptr, std::memory_order_relaxed))
-                    AtomicReplaceHead(context->mFreeEffectSlotProps, props);
+                if(auto *props = slotbase.Update.exchange(nullptr, std::memory_order_relaxed))
+                    AtomicReplaceHead(context.mFreeEffectSlotProps, props);
 
                 auto &state = *slot.mEffect.State;
                 state.mOutTarget = device.Dry.Buffer;
@@ -1849,13 +1849,13 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         });
 
         /* Clear all effect slot props to let them get allocated again. */
-        context->mEffectSlotPropClusters.clear();
-        context->mFreeEffectSlotProps.store(nullptr, std::memory_order_relaxed);
+        context.mEffectSlotPropClusters.clear();
+        context.mFreeEffectSlotProps.store(nullptr, std::memory_order_relaxed);
         slotlock.unlock();
 
-        auto srclock = std::unique_lock{context->mSourceLock};
+        auto srclock = std::unique_lock{context.mSourceLock};
         const auto num_sends = device.NumAuxSends;
-        std::ranges::for_each(context->mSourceList, [num_sends](SourceSubList &sublist)
+        std::ranges::for_each(context.mSourceList, [num_sends](SourceSubList& sublist)
         {
             auto usemask = ~sublist.mFreeMask;
             while(usemask != 0)
@@ -1873,7 +1873,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
             }
         });
 
-        std::ranges::for_each(context->getVoicesSpan(), [&device,num_sends,context](Voice *voice)
+        std::ranges::for_each(context.getVoicesSpan(), [&device, num_sends, &context](Voice* voice)
         {
             /* Clear extraneous property set sends. */
             std::ranges::fill(voice->mProps.Send | std::views::drop(num_sends),
@@ -1884,7 +1884,7 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
                 std::ranges::fill(chan.mWetParams | std::views::drop(num_sends), SendParams{});
 
             if(auto *props = voice->mUpdate.exchange(nullptr, std::memory_order_relaxed))
-                AtomicReplaceHead(context->mFreeVoiceProps, props);
+                AtomicReplaceHead(context.mFreeVoiceProps, props);
 
             /* Force the voice to "Stopped" if it was stopping. */
             auto vstate = Voice::Stopping;
@@ -1897,14 +1897,14 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         });
 
         /* Clear all voice props to let them get allocated again. */
-        context->mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
-        context->mVoicePropClusters.clear();
+        context.mFreeVoiceProps.store(nullptr, std::memory_order_relaxed);
+        context.mVoicePropClusters.clear();
         srclock.unlock();
 
-        context->mPropsDirty = false;
-        UpdateContextProps(*context);
-        UpdateAllEffectSlotProps(*context);
-        UpdateAllSourceProps(*context);
+        context.mPropsDirty = false;
+        UpdateContextProps(context);
+        UpdateAllEffectSlotProps(context);
+        UpdateAllSourceProps(context);
     });
     mixer_mode.leave();
 

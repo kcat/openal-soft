@@ -1463,15 +1463,14 @@ void aluInitRenderer(al::Device& device, int const hrtf_id,
 }
 
 
-void aluInitEffectPanning(EffectSlotBase *slot, al::Context *context)
+void aluInitEffectPanning(EffectSlotBase& slot, unsigned const ambi_order)
 {
-    auto &device = context->mDevice;
-    auto const count = AmbiChannelsFromOrder(device.mAmbiOrder);
+    auto const count = AmbiChannelsFromOrder(ambi_order);
 
-    slot->mWetBuffer.resize(count);
+    slot.mWetBuffer.resize(count);
 
-    slot->Wet.AmbiMap.fill(BFChannelConfig{});
-    std::ranges::transform(AmbiIndex::FromACN | std::views::take(count), slot->Wet.AmbiMap.begin(),
+    slot.Wet.AmbiMap.fill(BFChannelConfig{});
+    std::ranges::transform(AmbiIndex::FromACN | std::views::take(count), slot.Wet.AmbiMap.begin(),
         [](std::uint8_t const acn) noexcept { return BFChannelConfig{1.0f, acn}; });
-    slot->Wet.Buffer = slot->mWetBuffer;
+    slot.Wet.Buffer = slot.mWetBuffer;
 }

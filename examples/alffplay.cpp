@@ -150,8 +150,10 @@ const auto AudioAvgFilterCoeff = std::pow(0.01, 1.0/AudioDiffAvgNB); /* NOLINT(c
 
 /* Per-buffer size, in time */
 constexpr auto AudioBufferTime = milliseconds{20};
-/* Buffer total size, in time (should be divisible by the buffer time) */
+/* Buffer total size, in time */
 constexpr auto AudioBufferTotalTime = milliseconds{800};
+static_assert(AudioBufferTotalTime % AudioBufferTime == milliseconds::zero(),
+    "Total buffer time must be divisible by the per-buffer time");
 constexpr auto AudioBufferCount = AudioBufferTotalTime / AudioBufferTime;
 
 

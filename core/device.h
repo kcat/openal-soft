@@ -277,17 +277,17 @@ struct DeviceBase {
     { return bytesFromFmt() * channelsFromFmt(); }
 
     struct MixLock {
-        DeviceBase *const self;
+        DeviceBase& self;
         unsigned const mEndVal;
 
-        MixLock(DeviceBase *device, unsigned const endval) noexcept : self{device}, mEndVal{endval}
+        MixLock(DeviceBase& device, unsigned const endval) noexcept : self{device}, mEndVal{endval}
         { }
         MixLock(const MixLock&) = delete;
         void operator=(const MixLock&) = delete;
         /* Update the mix count when the lock goes out of scope to "release" it
          * (lsb should be 0).
          */
-        ~MixLock() { self->mMixCount.store(mEndVal, std::memory_order_release); }
+        ~MixLock() { self.mMixCount.store(mEndVal, std::memory_order_release); }
     };
     [[nodiscard]] auto getWriteMixLock() noexcept -> MixLock
     {
@@ -295,7 +295,7 @@ struct DeviceBase {
          * info (lsb should be 1).
          */
         auto const oldCount = mMixCount.fetch_add(1u, std::memory_order_acq_rel);
-        return MixLock{this, oldCount+2};
+        return MixLock{*this, oldCount+2};
     }
 
     /** Waits for the mixer to not be mixing or updating the clock. */

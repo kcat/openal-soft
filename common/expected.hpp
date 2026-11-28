@@ -10,7 +10,7 @@
 
 namespace al {
 
-struct monostate { };
+struct monostate { explicit monostate() = default; };
 
 template<typename Er>
 class bad_expected_access;
@@ -98,7 +98,7 @@ template<typename E>
 unexpected(E) -> unexpected<E>;
 
 
-struct unexpect_t { };
+struct unexpect_t { explicit unexpect_t() = default; };
 inline constexpr auto unexpect = unexpect_t{};
 
 

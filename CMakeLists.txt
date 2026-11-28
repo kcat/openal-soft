@@ -807,6 +807,7 @@ if(HAVE_CXXMODULES)
         common/bit.cppm
         common/cemath.cppm
         common/envutils.cppm
+        common/expected.cppm
         common/filesystem.cppm
         common/flexarray.cppm
         common/hann_window.cppm

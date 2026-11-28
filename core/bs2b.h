@@ -33,7 +33,7 @@
 
 namespace Bs2b {
 
-enum {
+enum Level {
     /* Normal crossfeed levels */
     LowCLevel    = 1,
     MiddleCLevel = 2,
@@ -47,9 +47,9 @@ enum {
     DefaultCLevel = HighECLevel
 };
 
-struct bs2b_processor {
-    int level{}; /* Crossfeed level */
-    int srate{}; /* Sample rate (Hz) */
+class bs2b_processor {
+    int mLevel{}; /* Crossfeed level */
+    int mSampleRate{}; /* Sample rate (Hz) */
 
     /* Lowpass IIR filter coefficients */
     float a0_lo{};
@@ -67,8 +67,11 @@ struct bs2b_processor {
         float lo{};
         float hi{};
     };
-    std::array<t_last_sample,2> history{};
+    std::array<t_last_sample, 2> history{};
 
+    auto init() -> void;
+
+public:
     /* Clear buffers and set new coefficients with new crossfeed level and
      * sample rate values.
      * level - crossfeed level of *Level enum values.
@@ -77,10 +80,10 @@ struct bs2b_processor {
     void set_params(int level, int srate);
 
     /* Return current crossfeed level value */
-    [[nodiscard]] auto get_level() const noexcept -> int { return level; }
+    [[nodiscard]] auto get_level() const noexcept -> int { return mLevel; }
 
     /* Return current sample rate value */
-    [[nodiscard]] auto get_srate() const noexcept -> int { return srate; }
+    [[nodiscard]] auto get_srate() const noexcept -> int { return mSampleRate; }
 
     /* Clear buffer */
     void clear();
@@ -92,6 +95,6 @@ struct bs2b : bs2b_processor {
     std::array<FloatBufferLine,2> mStorage{};
 };
 
-} // namespace Bs2b
+} /* namespace Bs2b */
 
 #endif /* CORE_BS2B_H */

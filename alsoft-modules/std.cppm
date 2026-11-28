@@ -835,11 +835,15 @@ export namespace std {
             using std::ranges::views::keys;
             using std::ranges::views::values;
         }
-#ifdef _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
         /* Implementation detail for libc++, which uses this accessible
          * operator to handle piping adaptors.
          */
         using std::ranges::operator|;
+#elif defined(_MSVC_STL_UPDATE)
+        namespace _Pipe {
+            using _Pipe::operator|;
+        }
 #endif
     }
     namespace views = std::ranges::views;

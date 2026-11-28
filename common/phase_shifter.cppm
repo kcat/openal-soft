@@ -9,7 +9,6 @@ module;
 #endif
 
 #include <cstddef>
-#include <ranges>
 #include <span>
 
 #include "opthelper_macros.hpp"

@@ -6,7 +6,6 @@
 #include "mainwindow.h"
 
 #include <memory>
-#include <ranges>
 #include <span>
 
 #include <QFileDialog>
@@ -35,6 +34,7 @@ import inout_ptr;
 
 #include <array>
 #include <cmath>
+#include <ranges>
 
 #include "gsl/gsl"
 #include "numeric.hpp"

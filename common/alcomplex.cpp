@@ -4,7 +4,6 @@
 #include "alcomplex.h"
 
 #include <cstdint>
-#include <ranges>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -20,6 +19,7 @@ import zudl;
 #include <array>
 #include <bit>
 #include <numbers>
+#include <ranges>
 
 #include "bit.hpp"
 #include "gsl/gsl"

@@ -33,7 +33,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <ranges>
 #include <span>
 
 #include "alc/effects/base.h"
@@ -57,6 +56,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <ranges>
 #include <variant>
 
 #include "core/device.h"

@@ -23,7 +23,6 @@
 
 #include "config.h"
 
-#include <ranges>
 #include <span>
 
 #include "opthelper_macros.hpp"
@@ -41,6 +40,7 @@ import gsl;
 #include <functional>
 #include <iterator>
 #include <numbers>
+#include <ranges>
 #include <stdexcept>
 
 #include "core/bs2b.hpp"

@@ -27,7 +27,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <ranges>
 #include <vector>
 
 #include "alc/events.h"
@@ -58,6 +57,7 @@ import zudl;
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <ranges>
 #include <string>
 #include <thread>
 

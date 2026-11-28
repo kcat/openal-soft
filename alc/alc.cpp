@@ -34,7 +34,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -119,6 +118,7 @@ import eax.effect;
 #include <new>
 #include <numbers>
 #include <optional>
+#include <ranges>
 #include <source_location>
 #include <stdexcept>
 #include <string>

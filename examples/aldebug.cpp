@@ -28,7 +28,6 @@
 
 #include <cstdio>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -50,6 +49,7 @@ import zstring_view;
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <ranges>
 
 #include "AL/alc.h"
 #include "AL/al.h"

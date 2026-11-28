@@ -26,7 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
-#include <ranges>
+#include <vector>
 
 #include "alc/events.h"
 #include "althrd_setname.h"
@@ -59,6 +59,8 @@ import zudl;
 #include <iterator>
 #include <mutex>
 #include <new>
+#include <ranges>
+#include <string>
 #include <thread>
 
 #include "alc/backends/base.hpp"

@@ -3,7 +3,6 @@
 
 #include "events.h"
 
-#include <ranges>
 #include <span>
 
 #include "bitset.hpp"
@@ -23,6 +22,7 @@ import opthelpers;
 #else
 
 #include <optional>
+#include <ranges>
 
 #include "AL/alc.h"
 #include "AL/al.h"

@@ -24,9 +24,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <ranges>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "alc/events.h"
 #include "pragmadefs.h"
@@ -60,6 +62,7 @@ import zudl;
 #else
 
 #include <algorithm>
+#include <ranges>
 #include <string>
 #include <utility>
 

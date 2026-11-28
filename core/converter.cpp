@@ -4,7 +4,6 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <ranges>
 #include <span>
 
 #include "core/bufferline.h"
@@ -31,6 +30,7 @@ import zudl;
 #include <bit>
 #include <cmath>
 #include <iterator>
+#include <ranges>
 
 #include "core/converter.hpp"
 #include "core/devfmttraits.hpp"

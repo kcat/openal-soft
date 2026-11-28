@@ -2,7 +2,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <ranges>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -30,6 +29,7 @@ import zudl;
 #include <bit>
 #include <istream>
 #include <iterator>
+#include <ranges>
 #include <stdexcept>
 
 #include "alformat.hpp"

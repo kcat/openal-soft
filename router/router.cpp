@@ -6,8 +6,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
-#include <ranges>
 #include <string_view>
 #include <vector>
 
@@ -28,6 +26,8 @@ import opthelpers;
 
 #include <algorithm>
 #include <array>
+#include <iostream>
+#include <ranges>
 #include <string>
 
 #include "AL/alc.h"

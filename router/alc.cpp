@@ -6,7 +6,6 @@
 #include <cstring>
 #include <cstdio>
 #include <memory>
-#include <ranges>
 #include <string_view>
 #include <unordered_map>
 
@@ -27,6 +26,7 @@ import zudl;
 #include <array>
 #include <mutex>
 #include <optional>
+#include <ranges>
 #include <tuple>
 
 #include "AL/alc.h"

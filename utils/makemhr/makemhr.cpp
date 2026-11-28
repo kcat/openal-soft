@@ -70,7 +70,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -100,6 +99,7 @@ import zstring_view;
 #include <iostream>
 #include <limits>
 #include <numbers>
+#include <ranges>
 #include <thread>
 
 #include "alformatzsv.hpp"

@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#include <ranges>
 #include <span>
 
 #include "direct_defs.h"
@@ -43,6 +42,7 @@ import zudl;
 #include <algorithm>
 #include <cmath>
 #include <mutex>
+#include <ranges>
 
 #include "AL/al.h"
 #include "AL/alext.h"

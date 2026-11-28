@@ -24,7 +24,6 @@
 #include "config.h"
 
 #include <memory>
-#include <ranges>
 #include <span>
 #include <vector>
 
@@ -35,12 +34,16 @@
 #include "win_main_utf8.h"
 
 #if HAVE_CXXMODULES
+import common.std;
+
 import fmtlib;
 import gsl;
 import zstring_view;
 import zudl;
 
 #else
+
+#include <ranges>
 
 #include "alformatzsv.hpp"
 #include "fmt/base.h"

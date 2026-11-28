@@ -3,8 +3,6 @@
 
 #include "bformatdec.h"
 
-#include <ranges>
-
 #include "bufferline.h"
 #include "filters/splitter.h"
 #include "mixer.h"
@@ -19,6 +17,7 @@ import zudl;
 
 #include <algorithm>
 #include <array>
+#include <ranges>
 
 #include "zudl.hpp"
 #endif

@@ -30,7 +30,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <ranges>
 #include <span>
 #include <vector>
 
@@ -53,6 +52,7 @@ import zstring_view;
 #include <chrono>
 #include <iostream>
 #include <limits>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <thread>

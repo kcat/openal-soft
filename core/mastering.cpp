@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
-#include <ranges>
 #include <span>
 
 #include "opthelper_macros.hpp"
@@ -21,6 +20,7 @@ import numeric;
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <ranges>
 
 #include "numeric.hpp"
 #endif

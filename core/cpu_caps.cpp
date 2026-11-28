@@ -18,7 +18,6 @@
 #endif
 
 #include <cctype>
-#include <ranges>
 
 #if HAVE_CXXMODULES
 import common.std;
@@ -28,6 +27,7 @@ import common.std;
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <ranges>
 #include <string>
 #endif
 

@@ -21,7 +21,6 @@
 #include "config.h"
 
 #include <cstdint>
-#include <ranges>
 #include <span>
 
 #include "alc/effects/base.h"
@@ -49,6 +48,7 @@ import zudl;
 #include <cmath>
 #include <functional>
 #include <numbers>
+#include <ranges>
 #include <variant>
 
 #include "core/context.h"

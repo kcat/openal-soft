@@ -861,7 +861,7 @@ set(CORE_SRCS
 set(CORE_HDRS
     core/allpass_conv.hpp
     core/allpass_iir.hpp
-    core/ambdec.h
+    core/ambdec.hpp
     core/ambidefs.h
     core/ambi_utils.hpp
     core/async_event.hpp
@@ -904,6 +904,7 @@ set(CORE_HDRS
 if(HAVE_CXXMODULES)
     list(APPEND CORE_MODS
         core/allpass_conv.cppm
+        core/ambdec.cppm
         core/ambi_utils.cppm
         core/async_event.cppm
         core/bsinc_tables.cppm
@@ -942,7 +943,10 @@ if(NOT WIN32)
         if(DBus1_FOUND OR DBUS_FOUND)
             set(HAVE_RTKIT 1)
             list(APPEND CORE_SRCS core/rtkit.cpp)
-            list(APPEND CORE_HDRS core/rtkit.h)
+            list(APPEND CORE_HDRS core/rtkit.hpp)
+            if(HAVE_CXXMODULES)
+                list(APPEND CORE_MODS core/rtkit.cppm)
+            endif()
             if(NOT DBus1_FOUND)
                 list(APPEND INC_PATHS ${DBUS_INCLUDE_DIRS})
                 list(APPEND CPP_DEFS ${DBUS_CFLAGS_OTHER})

@@ -1,5 +1,3 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
-
 #ifndef foortkithfoo
 #define foortkithfoo
 

@@ -1,5 +1,5 @@
-#ifndef CORE_AMBDEC_H
-#define CORE_AMBDEC_H
+#ifndef CORE_AMBDEC_HPP
+#define CORE_AMBDEC_HPP
 
 #include <array>
 #include <span>
@@ -53,4 +53,4 @@ struct AmbDecConf {
     auto load(std::string_view fname) noexcept -> al::expected<void, std::string>;
 };
 
-#endif /* CORE_AMBDEC_H */
+#endif /* CORE_AMBDEC_HPP */

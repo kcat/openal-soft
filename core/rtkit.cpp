@@ -32,11 +32,10 @@
 
 #include "config.h"
 
-#include "rtkit.h"
-
 #include <cerrno>
 #include <cstring>
 #include <dbus/dbus.h>
+#include <functional>
 #include <memory>
 #include <string_view>
 #include <unistd.h>
@@ -55,6 +54,7 @@
 import common.std;
 
 import core.logging;
+import core.rtkit;
 import gsl;
 import zstring_view;
 
@@ -63,8 +63,9 @@ import zstring_view;
 #include <mutex>
 
 #include "alformatzsv.hpp"
+#include "core/logging.h"
+#include "core/rtkit.hpp"
 #include "gsl/gsl"
-#include "logging.h"
 #endif
 
 namespace {

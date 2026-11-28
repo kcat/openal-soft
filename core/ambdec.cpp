@@ -1,17 +1,20 @@
 
 #include "config.h"
 
-#include "ambdec.h"
-
 #include <cctype>
 #include <cstddef>
 #include <iterator>
 #include <span>
+#include <string>
+
+#include "ambidefs.h"
+#include "expected.hpp"
 
 #if HAVE_CXXMODULES
 import common.std;
 
 import alstring;
+import core.ambdec;
 import filesystem;
 import format;
 import gsl;
@@ -29,6 +32,7 @@ import zudl;
 
 #include "alformat.hpp"
 #include "alstring.h"
+#include "core/ambdec.hpp"
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

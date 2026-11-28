@@ -31,7 +31,6 @@
 
 #include "alconfig.h"
 #include "alu.h"
-#include "core/ambdec.h"
 #include "core/bformatdec.h"
 #include "core/bs2b.h"
 #include "core/filters/nfc.h"
@@ -56,6 +55,7 @@ import openal;
 import alc.context;
 import alc.device;
 import alstring;
+import core.ambdec;
 import core.ambi_utils;
 import core.effectslot;
 import core.front_stablizer;
@@ -83,6 +83,7 @@ import zudl;
 #include "alc/context.hpp"
 #include "alc/device.h"
 #include "alstring.h"
+#include "core/ambdec.hpp"
 #include "core/ambi_utils.hpp"
 #include "core/effectslot.h"
 #include "core/front_stablizer.hpp"

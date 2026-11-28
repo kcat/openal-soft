@@ -654,17 +654,21 @@ export namespace std {
     using std::next;
     using std::prev;
     namespace ranges {
-#if defined(__GLIBCXX__)
-        /* HACK: Implementation detail for libstdc++, which uses objects with a
-         * function call operator in an inline namespace to avoid collisions
-         * with friend functions of the same names.
+        /* HACK: Implementation details for various STLs, which use objects
+         * with a function call operator in an inline namespace to avoid
+         * collisions with friend functions of the same names.
          */
+#if defined(__GLIBCXX__)
         inline namespace _Cpo {
             using _Cpo::iter_move;
             using _Cpo::iter_swap;
         }
+#elif defined(_LIBCPP_VERSION)
+        inline namespace __cpo {
+            using __cpo::iter_move;
+            using __cpo::iter_swap;
+        }
 #elif defined(_MSVC_STL_UPDATE)
-        /* HACK: MS STL does something similar. */
         inline namespace _Cpos {
             using _Cpos::iter_move;
             using _Cpos::iter_swap;

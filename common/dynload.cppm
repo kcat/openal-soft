@@ -4,8 +4,6 @@ module;
 
 export module dynload;
 
-using ::GetSymbol_;
-
 export {
 #if HAVE_DYNLOAD && (defined(_WIN32) || defined(HAVE_DLFCN_H))
     using ::LibHandleStruct;
@@ -13,6 +11,7 @@ export {
 
     using ::LoadLib;
     using ::CloseLib;
+    using ::GetSymbol_;
     using ::GetSymbolAddress;
 #endif
 }

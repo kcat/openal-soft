@@ -33,7 +33,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <iterator>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -114,6 +113,7 @@ import eax.effect;
 #include <cmath>
 #include <exception>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <mutex>
 #include <new>

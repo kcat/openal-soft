@@ -27,7 +27,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <iterator>
 #include <memory>
 #include <span>
 #include <string_view>
@@ -86,6 +85,7 @@ import zudl;
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>

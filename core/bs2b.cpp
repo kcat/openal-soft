@@ -23,7 +23,6 @@
 
 #include "config.h"
 
-#include <iterator>
 #include <ranges>
 #include <span>
 
@@ -40,6 +39,7 @@ import gsl;
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <numbers>
 #include <stdexcept>
 

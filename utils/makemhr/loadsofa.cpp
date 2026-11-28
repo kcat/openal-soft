@@ -27,8 +27,6 @@
 
 #include <atomic>
 #include <future>
-#include <iostream>
-#include <iterator>
 #include <memory>
 #include <span>
 #include <string_view>
@@ -53,6 +51,8 @@ import gsl;
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <iostream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <thread>

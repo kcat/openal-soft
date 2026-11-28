@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <iterator>
 #include <memory>
 #include <ranges>
 #include <span>
@@ -44,6 +43,7 @@ import zudl;
 #include <cmath>
 #include <functional>
 #include <istream>
+#include <iterator>
 #include <mutex>
 #include <numbers>
 #include <optional>

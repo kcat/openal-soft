@@ -48,7 +48,6 @@
 #include <cstdint>
 #include <cstring>
 #include <future>
-#include <iterator>
 #include <memory>
 #include <span>
 #include <string_view>
@@ -109,6 +108,7 @@ import zudl;
 #include <chrono>
 #include <condition_variable>
 #include <functional>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <thread>

@@ -27,7 +27,6 @@
 #include <cstring>
 #include <cerrno>
 #include <ctime>
-#include <iterator>
 #include <memory>
 #include <span>
 #include <string_view>
@@ -141,6 +140,7 @@ import zstring_view;
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <thread>

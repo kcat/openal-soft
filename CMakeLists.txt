@@ -868,7 +868,7 @@ set(CORE_HDRS
     core/ambi_utils.hpp
     core/async_event.hpp
     core/bformatdec.h
-    core/bs2b.h
+    core/bs2b.hpp
     core/bsinc_defs.h
     core/bsinc_tables.hpp
     core/bufferline.h
@@ -909,6 +909,7 @@ if(HAVE_CXXMODULES)
         core/ambdec.cppm
         core/ambi_utils.cppm
         core/async_event.cppm
+        core/bs2b.cppm
         core/bsinc_tables.cppm
         core/buffer_storage.cppm
         core/context.cppm

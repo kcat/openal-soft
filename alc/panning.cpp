@@ -32,7 +32,6 @@
 #include "alconfig.h"
 #include "alu.h"
 #include "core/bformatdec.h"
-#include "core/bs2b.h"
 #include "core/filters/nfc.h"
 #include "core/filters/splitter.h"
 #include "core/mixer/hrtfdefs.h"
@@ -57,6 +56,7 @@ import alc.device;
 import alstring;
 import core.ambdec;
 import core.ambi_utils;
+import core.bs2b;
 import core.effectslot;
 import core.front_stablizer;
 import core.hrtf;
@@ -85,6 +85,7 @@ import zudl;
 #include "alstring.h"
 #include "core/ambdec.hpp"
 #include "core/ambi_utils.hpp"
+#include "core/bs2b.hpp"
 #include "core/effectslot.h"
 #include "core/front_stablizer.hpp"
 #include "core/hrtf.hpp"

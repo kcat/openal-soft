@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef CORE_BS2B_H
-#define CORE_BS2B_H
+#ifndef CORE_BS2B_HPP
+#define CORE_BS2B_HPP
 
 #include <array>
 #include <span>
@@ -97,4 +97,4 @@ struct bs2b : bs2b_processor {
 
 } /* namespace Bs2b */
 
-#endif /* CORE_BS2B_H */
+#endif /* CORE_BS2B_HPP */

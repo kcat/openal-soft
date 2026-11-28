@@ -46,7 +46,6 @@
 #include "alu.h"
 #include "core/ambidefs.h"
 #include "core/bformatdec.h"
-#include "core/bs2b.h"
 #include "core/cpu_caps.h"
 #include "core/filters/nfc.h"
 #include "core/fpu_ctrl.h"
@@ -83,6 +82,7 @@ import alstring;
 import atomic;
 import backends.base;
 import backends.exception;
+import core.bs2b;
 import core.effectslot;
 import core.except;
 import core.front_stablizer;
@@ -143,6 +143,7 @@ import eax.effect;
 #include "alformat.hpp"
 #include "alstring.h"
 #include "atomic.hpp"
+#include "core/bs2b.hpp"
 #include "core/effectslot.h"
 #include "core/except.hpp"
 #include "core/front_stablizer.hpp"

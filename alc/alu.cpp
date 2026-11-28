@@ -33,7 +33,6 @@
 #include <string_view>
 
 #include "core/bformatdec.h"
-#include "core/bs2b.h"
 #include "core/bsinc_defs.h"
 #include "core/bufferline.h"
 #include "core/cpu_caps.h"
@@ -59,6 +58,7 @@ import atomic;
 import cemath;
 import core.ambi_utils;
 import core.async_event;
+import core.bs2b;
 import core.bsinc_tables;
 import core.buffer_storage;
 import core.context;
@@ -99,6 +99,7 @@ import zudl;
 #include "cemath.hpp"
 #include "core/ambi_utils.hpp"
 #include "core/async_event.hpp"
+#include "core/bs2b.hpp"
 #include "core/bsinc_tables.hpp"
 #include "core/context.h"
 #include "core/cubic_tables.hpp"

@@ -23,15 +23,16 @@
 
 #include "config.h"
 
-#include "bs2b.h"
-
 #include <iterator>
 #include <ranges>
 #include <span>
 
+#include "opthelper_macros.hpp"
+
 #if HAVE_CXXMODULES
 import common.std;
 
+import core.bs2b;
 import gsl;
 
 #else
@@ -42,6 +43,7 @@ import gsl;
 #include <numbers>
 #include <stdexcept>
 
+#include "core/bs2b.hpp"
 #include "gsl/gsl"
 #endif
 

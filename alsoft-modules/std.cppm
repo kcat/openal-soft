@@ -663,6 +663,12 @@ export namespace std {
             using _Cpo::iter_move;
             using _Cpo::iter_swap;
         }
+#elif defined(_MSVC_STL_UPDATE)
+        /* HACK: MS STL does something similar. */
+        inline namespace _Cpos {
+            using _Cpos::iter_move;
+            using _Cpos::iter_swap;
+        }
 #else
         using std::ranges::iter_move;
         using std::ranges::iter_swap;

@@ -2,6 +2,8 @@
 #include "config.h"
 
 #include <cstring>
+#include <span>
+#include <string_view>
 
 #include "alc/events.h"
 

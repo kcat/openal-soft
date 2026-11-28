@@ -25,6 +25,7 @@
 #include <cstring>
 #include <poll.h>
 #include <span>
+#include <string_view>
 #include <system_error>
 #include <vector>
 

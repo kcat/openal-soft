@@ -20,6 +20,7 @@
 
 #include "config.h"
 
+#include <string_view>
 #include <vector>
 
 #include "alc/events.h"

@@ -36,6 +36,7 @@
 #include <vector>
 
 #include <span>
+#include <string_view>
 
 #include "alc/alconfig.h"
 #include "alc/events.h"

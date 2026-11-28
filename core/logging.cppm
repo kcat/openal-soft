@@ -1,7 +1,6 @@
 module;
 
 #include <cstdint>
-#include <string_view>
 
 #include "opthelper_macros.hpp"
 

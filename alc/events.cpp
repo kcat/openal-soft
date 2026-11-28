@@ -18,6 +18,7 @@ import format;
 import gsl;
 import numeric;
 import opthelpers;
+import zstring_view;
 
 #else
 
@@ -35,6 +36,7 @@ import opthelpers;
 #include "gsl/gsl"
 #include "numeric.hpp"
 #include "opthelpers.hpp"
+#include "zstring_view.hpp"
 #endif
 
 

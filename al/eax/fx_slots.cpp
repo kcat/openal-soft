@@ -2,6 +2,8 @@
 
 #include "fx_slots.h"
 
+#include <string_view>
+
 #if HAVE_CXXMODULES
 import common.std;
 

@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include "alc/events.h"

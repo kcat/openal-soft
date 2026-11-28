@@ -2,6 +2,8 @@
 
 #include "fx_slot_index.h"
 
+#include <string_view>
+
 #include "api.h"
 
 #if HAVE_CXXMODULES

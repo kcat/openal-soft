@@ -2,6 +2,8 @@
 #include "config.h"
 
 #include <atomic>
+#include <cstddef>
+#include <span>
 
 #include "core/mixparams.hpp"
 

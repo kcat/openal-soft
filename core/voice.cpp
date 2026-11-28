@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <memory>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include "core/storage_formats.h"

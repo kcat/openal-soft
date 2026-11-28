@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <cstring>
 #include <span>
+#include <string_view>
 #include <system_error>
 #include <vector>
 

@@ -32,7 +32,6 @@
 #include "alc/events.h"
 #include "althrd_setname.h"
 #include "dlopennote.h"
-#include "dynload.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -46,6 +45,7 @@ import backends.exception;
 import core.device;
 import core.helpers;
 import core.logging;
+import dynload;
 import gsl;
 import opthelpers;
 import ringbuffer;
@@ -67,6 +67,7 @@ import zudl;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "dynload.hpp"
 #include "gsl/gsl"
 #include "opthelpers.hpp"
 #include "ringbuffer.hpp"

@@ -761,7 +761,7 @@ set(COMMON_HDRS
     common/cemath.hpp
     common/comptr.h
     common/disable_alloc.hpp
-    common/dynload.h
+    common/dynload.hpp
     common/dlopennote.h
     common/expected.hpp
     common/filesystem.h
@@ -806,6 +806,7 @@ if(HAVE_CXXMODULES)
         common/atomic.cppm
         common/bit.cppm
         common/cemath.cppm
+        common/dynload.cppm
         common/envutils.cppm
         common/expected.cppm
         common/filesystem.cppm

@@ -47,7 +47,6 @@
 #endif
 
 #include "dlopennote.h"
-#include "dynload.h"
 
 
 #if HAVE_CXXMODULES
@@ -55,6 +54,8 @@ import common.std;
 
 import core.logging;
 import core.rtkit;
+import dynload;
+import expected;
 import gsl;
 import zstring_view;
 
@@ -65,6 +66,8 @@ import zstring_view;
 #include "alformatzsv.hpp"
 #include "core/logging.h"
 #include "core/rtkit.hpp"
+#include "dynload.hpp"
+#include "expected.hpp"
 #include "gsl/gsl"
 #endif
 

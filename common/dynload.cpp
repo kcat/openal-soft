@@ -1,9 +1,9 @@
 
 #include "config.h"
 
-#include "dynload.h"
-
 #if HAVE_DYNLOAD
+
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -12,12 +12,32 @@
 import alstring;
 import format;
 import gsl;
+
 #else
+
 #include "alformat.hpp"
 #include "alstring.h"
 #include "gsl/gsl"
 #endif
 
+#elif defined(HAVE_DLFCN_H)
+
+#include <dlfcn.h>
+#endif
+
+#if HAVE_CXXMODULES
+import dynload;
+import expected;
+import zstring_view;
+
+#else
+
+#include "dynload.hpp"
+#include "expected.hpp"
+#include "zstring_view.hpp"
+#endif
+
+#ifdef _WIN32
 auto LoadLib(al::zstring_view const name) -> al::expected<LibHandle, std::string>
 {
     if(auto const res = LoadLibraryW(utf8_to_wstr(name).c_str())) [[likely]]
@@ -66,8 +86,6 @@ auto GetSymbol_(LibHandle const handle, al::zstring_view const name)
 }
 
 #elif defined(HAVE_DLFCN_H)
-
-#include <dlfcn.h>
 
 auto LoadLib(al::zstring_view const name) -> al::expected<LibHandle, std::string>
 {

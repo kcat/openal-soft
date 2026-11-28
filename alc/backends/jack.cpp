@@ -30,7 +30,6 @@
 #include "alc/events.h"
 #include "althrd_setname.h"
 #include "dlopennote.h"
-#include "dynload.h"
 
 #include <jack/jack.h>
 
@@ -42,6 +41,7 @@ import backends.exception;
 import core.device;
 import core.helpers;
 import core.logging;
+import dynload;
 import filesystem;
 import format;
 import gsl;
@@ -66,6 +66,7 @@ import zudl;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "dynload.hpp"
 #include "filesystem.h"
 #include "gsl/gsl"
 #include "numeric.hpp"

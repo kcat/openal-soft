@@ -1,5 +1,5 @@
-#ifndef AL_DYNLOAD_H
-#define AL_DYNLOAD_H
+#ifndef AL_DYNLOAD_HPP
+#define AL_DYNLOAD_HPP
 
 #include "config.h"
 
@@ -30,4 +30,4 @@ auto GetSymbolAddress(LibHandle const handle, al::zstring_view const name)
 
 #endif
 
-#endif /* AL_DYNLOAD_H */
+#endif /* AL_DYNLOAD_HPP */

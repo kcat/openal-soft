@@ -5,11 +5,13 @@
 #include <cstddef>
 #include <iterator>
 #include <span>
-#include <string>
 
 #include "ambidefs.h"
 
-#if HAVE_CXXMODULES
+/* HACK: GCC 16 seems to have an issue with the modules here, complaining about
+ * "recursive lazy load" and "failed to load pendings".
+ */
+#if HAVE_CXXMODULES && (defined(__INTEL_COMPILER) || defined(__clang__) || !defined(__GNUC__) || __GNUC__ > 16)
 import common.std;
 
 import alstring;

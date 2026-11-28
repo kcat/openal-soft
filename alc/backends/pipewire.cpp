@@ -36,7 +36,6 @@
 #include "alc/alconfig.h"
 #include "alc/events.h"
 #include "dlopennote.h"
-#include "dynload.h"
 #include "pragmadefs.h"
 
 /* Ignore warnings caused by PipeWire headers (lots in standard C++ mode). GCC
@@ -123,6 +122,7 @@ import backends.exception;
 import core.device;
 import core.helpers;
 import core.logging;
+import dynload;
 import filesystem;
 import fmtlib;
 import format;
@@ -155,6 +155,7 @@ import zstring_view;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "dynload.hpp"
 #include "filesystem.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"

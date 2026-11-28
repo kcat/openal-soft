@@ -38,7 +38,6 @@
 #include "alc/events.h"
 #include "althrd_setname.h"
 #include "comptr.h"
-#include "dynload.h"
 
 /* MinGW-w64 needs this for some unknown reason now. */
 using LPCWAVEFORMATEX = const WAVEFORMATEX*;
@@ -82,6 +81,7 @@ import backends.exception;
 import core.device;
 import core.helpers;
 import core.logging;
+import dynload;
 import format;
 import gsl;
 import inout_ptr;
@@ -103,6 +103,7 @@ import zstring_view;
 #include "core/device.h"
 #include "core/helpers.hpp"
 #include "core/logging.h"
+#include "dynload.hpp"
 #include "gsl/gsl"
 #include "inout_ptr.hpp"
 #include "numeric.hpp"

@@ -19,7 +19,8 @@
 
 #include <cctype>
 
-#if HAVE_CXXMODULES
+/* HACK: MSVC seems to crash here with modules. */
+#if HAVE_CXXMODULES && !defined(_MSVC_STL_UPDATE)
 import common.std;
 
 #else
